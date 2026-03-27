@@ -42,3 +42,5 @@ yarn-error.log*
 
 # 项目私有配置文件(包含个人设置)
 project.private.config.json
+
+package-lock.json
