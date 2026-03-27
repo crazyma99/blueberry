@@ -1,0 +1,11 @@
+// 接口环境配置
+export interface HttpConfig {
+  baseURL: string
+  timeout: number
+}
+
+export function getHttpConfig(): HttpConfig {
+  // TODO: 替换为你的域名
+  const baseURL = 'https://lanmei66.cloud'
+  return { baseURL, timeout: 15000 }
+}
