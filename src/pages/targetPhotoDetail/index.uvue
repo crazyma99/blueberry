@@ -1,0 +1,164 @@
+<template>
+	<view class="page">
+		<view class="title">
+			<view class="left">
+				<view>{{ detail.title }}</view>
+				<view class="price">
+					<view>服务价格：</view>
+					<view class="count">{{ detail.price }}</view>
+				</view>
+			</view>
+			<image
+			  :src="liked ? '/static/liked.svg' : '/static/like.svg'"
+			  class="heart"
+			  @click="handleCollect"
+			></image>
+		</view>
+		<view class="subtit">套餐内容：{{ detail.packageDesc }}</view>
+		<view class="photo-wrap">
+			<image
+			 v-for="(item, index) in detail.images"
+			 class="photo"
+			 :src="item.imageUrl"
+			 mode="widthFix"
+			 :key="index"
+			></image>
+		</view>
+		<view class="divide"></view>
+		<view class="bottomdesc">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
+	</view>
+</template>
+
+<script>
+	import { getalbumDetail } from '../../utils/api.uts'
+	export default {
+		data() {
+			return {
+				liked: false,
+				detail: null
+			}
+		},
+		onLoad(query) {
+			const id = query?.idx ?? ''
+			const type = query?.type ?? ''
+			this.liked = query?.liked === 'true'
+			this.getDetail(id, type)
+		},
+		methods: {
+			async getDetail (id: string, type: string) {
+				const res = await getalbumDetail('get', {
+					albumId: id,
+					type
+				})
+				const { code, data } = res
+				if (code !== 200) return
+				this.detail = data
+			},
+			handleCollect() {
+				const title = this.detail?.title
+				if (!title) {
+					uni.showToast({ title: '无效的标题', icon: 'none' })
+					return
+				}
+				uni.getStorage({
+					key: 'collectList',
+					success: (res) => {
+						let value = []
+						if (Array.isArray(res.data)) {
+							value = res.data
+						} else if (res.data && Array.isArray(res.data.value)) {
+							value = res.data.value
+						}
+						if (!value.includes(title)) {
+							value.push(title)
+							uni.setStorage({
+								key: 'collectList',
+								data: { id: 'list', value },
+								success: () => {
+									this.liked = true
+								}
+							})
+							return;
+						}
+						const newlist = value.filter(item => item !== title) ?? []
+						uni.setStorage({
+							key: 'collectList',
+							data: { id: 'list', value: newlist },
+							success: () => {
+								this.liked = false
+							}
+						})
+					},
+					fail: () => {
+						const value = [title]
+						uni.setStorage({
+							key: 'collectList',
+							data: { id: 'list', value },
+							success: () => {
+								this.liked = true
+							}
+						})
+					}
+				})
+			},
+		}
+	}
+</script>
+
+<style>
+.page{
+	background: #000;
+	min-height: 100%;
+	color: #fff;
+}
+.title{
+	display: flex;
+	flex-direction: row;
+	margin: 0 32rpx;
+	justify-content: space-between;
+	align-items: center;
+}
+.left{
+	font-size: 36rpx;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.9);
+}
+.price{
+	margin-top: 8rpx;
+	font-size: 28rpx;
+	color: rgba(255, 255, 255, 0.5);
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+.count{
+	color: rgba(255, 255, 255, 0.9);
+}
+.heart{
+	width: 48rpx;
+	height: 40rpx;
+}
+.subtit{
+	margin: 8rpx 32rpx 32rpx;
+	font-size: 28rpx;
+	color: rgba(255, 255, 255, 0.5);
+}
+.photo-wrap {
+	padding: 0 8rpx;
+}
+.photo {
+	width: 100%;
+	margin-bottom: 8rpx;
+	display: block;
+}
+.divide{
+	height: 2rpx;
+	width: 100%;
+	background: rgba(255, 255, 255, 0.15);
+}
+.bottomdesc{
+	margin: 32rpx auto;
+	font-size: 20rpx;
+	color: rgba(255, 255, 255, 0.5);
+}
+</style>
