@@ -1,0 +1,52 @@
+{
+	"pages": [ //pages数组中第一项表示应用启动页，参考：https://doc.dcloud.net.cn/uni-app-x/collocation/pagesjson.html
+		{
+			"path": "pages/index/index"
+		},
+		{
+			"path": "pages/demoDetail/index",
+			"style": {
+				"navigationBarTitleText": "客片欣赏"
+			}
+		},
+		{
+			"path": "pages/priceList/index"
+		},
+		{
+			"path": "pages/targetPhotoDetail/index",
+			"style": {
+				"navigationBarTitleText": "客片欣赏"
+			}
+		},
+		{
+			"path" : "pages/priceHomePage/index"
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "white",
+		"navigationBarBackgroundColor": "#000",
+		"navigationBarTitleText": "蓝梅旗袍·汉服·民...",
+		"backgroundColor": "#000"
+	},
+	"tabBar": {
+	    "color": "#fff", // 未选中时tab上文字和图标的颜色
+	    "selectedColor": "#F3D9AC", // 选中时tab上文字和图标的颜色（通常使用主题色）
+	    "backgroundColor": "#000", // tabBar自身的背景色
+	    "borderStyle": "black", // tabBar上边框的颜色，可选 "black" / "white"
+	    "list": [ // tab的列表，最少2个，最多5个
+	      {
+	        "pagePath": "pages/index/index", // 页面路径，必须是已经在pages数组里注册过的
+	        "iconPath": "static/homepage.png", // 图标路径（未选中状态），放在static目录下
+	        "selectedIconPath": "/static/homepage-choosed.png", // 选中时的图标路径
+	        "text": "首页" // tab上显示的文字
+	      },
+	      {
+	        "pagePath": "pages/priceHomePage/index",
+	        "iconPath": "/static/pricelist.png",
+	        "selectedIconPath": "/static/pricelist-choosed.png",
+	        "text": "价目表"
+	      }
+		]
+	},
+	"uniIdRouter": {}
+}
