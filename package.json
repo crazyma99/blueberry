@@ -6,14 +6,13 @@
     "build:mp-weixin": "uni build -p mp-weixin"
   },
   "dependencies": {
-    "@dcloudio/uni-app": "3.0.0-4020920250401001",
-    "@dcloudio/uni-mp-weixin": "3.0.0-4020920250401001",
-    "@dcloudio/uni-vue3-shared": "3.0.0-4020920250401001",
+    "@dcloudio/uni-app": "3.0.0-alpha-5000720260327001",
+    "@dcloudio/uni-mp-weixin": "3.0.0-alpha-5000720260327001",
     "vue": "^3.4.21"
   },
   "devDependencies": {
-    "@dcloudio/uni-cli-shared": "3.0.0-4020920250401001",
-    "@dcloudio/vite-plugin-uni": "3.0.0-4020920250401001",
+    "@dcloudio/uni-cli-shared": "3.0.0-alpha-5000720260327001",
+    "@dcloudio/vite-plugin-uni": "3.0.0-alpha-5000720260327001",
     "@vue/tsconfig": "^0.1.3",
     "typescript": "^5.0.0",
     "vite": "^5.2.8"
