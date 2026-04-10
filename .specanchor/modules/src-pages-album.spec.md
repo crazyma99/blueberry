@@ -55,10 +55,12 @@ specanchor:
 ## 页面路由
 
 ### demoDetail
+
 - **入口**: 从首页跳转 (参数: `from`, `idx`)
 - **出口**: `/pages/targetPhotoDetail/index` (参数: `from`, `idx`, `liked`, `type`)
 
 ### targetPhotoDetail
+
 - **入口**: 从 demoDetail 跳转
 - **参数**:
   - `idx`: 客片 ID
@@ -68,6 +70,7 @@ specanchor:
 ## 数据结构
 
 ### demoDetail
+
 ```typescript
 data() {
   return {
@@ -86,6 +89,7 @@ data() {
 ```
 
 ### 子分类数据结构
+
 ```typescript
 interface SubCategory {
   id: number
@@ -106,6 +110,7 @@ interface AlbumItem {
 ```
 
 ### targetPhotoDetail
+
 ```typescript
 data() {
   return {
@@ -118,6 +123,7 @@ data() {
 ## 关键方法
 
 ### demoDetail
+
 - `getAlbumInfo(id, page?, size?)`: 获取客片列表数据（支持分页）
 - `loadMore()`: 加载更多数据（分页模式下）
 - `changeTab(id, pos)`: 切换分类 (parent/child)，重置分页状态
@@ -127,6 +133,7 @@ data() {
 - `checkHasMore()`: 检查是否还有更多数据 `(currentPage + 1) * pageSize < albumTotal`
 
 ### targetPhotoDetail
+
 - `getDetail(id, type)`: 获取客片详情
 - `handleCollect()`: 收藏/取消收藏
 

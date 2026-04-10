@@ -30,6 +30,7 @@ specanchor:
 - **接口**: `POST /api/wx/login`
 - **认证**: 无需认证
 - **参数**:
+
   ```typescript
   {
     code: string        // wx.login() 返回的 code
@@ -37,7 +38,9 @@ specanchor:
     avatarUrl?: string  // 微信头像 URL（可选）
   }
   ```
+
 - **返回**:
+
   ```typescript
   {
     code: number
@@ -54,7 +57,9 @@ specanchor:
     }
   }
   ```
+
 - **错误响应**:
+
   ```typescript
   {
     code: 500
@@ -70,12 +75,15 @@ specanchor:
 - **接口**: `POST /api/wx/phone`
 - **认证**: 需要 Bearer Token
 - **参数**:
+
   ```typescript
   {
     code: string  // getPhoneNumber 返回的 code
   }
   ```
+
 - **返回**:
+
   ```typescript
   {
     code: number
@@ -98,6 +106,7 @@ specanchor:
 - **认证**: 需要 Bearer Token
 - **参数**: 无
 - **返回**:
+
   ```typescript
   {
     code: number
@@ -121,12 +130,15 @@ specanchor:
 - **接口**: `POST /api/like`
 - **认证**: 需要 Bearer Token
 - **参数**:
+
   ```typescript
   {
     albumId: number
   }
   ```
+
 - **返回**:
+
   ```typescript
   {
     code: number
@@ -144,12 +156,15 @@ specanchor:
 - **接口**: `GET /api/like/status?albumIds=1,2,3`
 - **认证**: 需要 Bearer Token
 - **参数**:
+
   ```typescript
   {
     albumIds: string  // 逗号分隔的相册 ID，如 "1,2,3"
   }
   ```
+
 - **返回**:
+
   ```typescript
   {
     code: number
@@ -170,12 +185,15 @@ specanchor:
 - **接口**: `POST /api/favorite`
 - **认证**: 需要 Bearer Token
 - **参数**:
+
   ```typescript
   {
     albumId: number
   }
   ```
+
 - **返回**:
+
   ```typescript
   {
     code: number
@@ -192,12 +210,15 @@ specanchor:
 - **接口**: `GET /api/favorite/status?albumIds=1,2,3`
 - **认证**: 需要 Bearer Token
 - **参数**:
+
   ```typescript
   {
     albumIds: string  // 逗号分隔的相册 ID
   }
   ```
+
 - **返回**:
+
   ```typescript
   {
     code: number
@@ -215,12 +236,15 @@ specanchor:
 - **接口**: `GET /api/favorite/list`
 - **认证**: 需要 Bearer Token
 - **参数**:
+
   ```typescript
   {
     shopId?: number  // 可选，按门店筛选
   }
   ```
+
 - **返回**:
+
   ```typescript
   {
     code: number
@@ -243,6 +267,7 @@ specanchor:
 - **接口**: `GET /api/search?keyword=写真&page=1&pageSize=10`
 - **认证**: 无需认证
 - **参数**:
+
   ```typescript
   {
     keyword: string    // 搜索关键词
@@ -250,7 +275,9 @@ specanchor:
     pageSize?: number  // 每页数量，默认 10
   }
   ```
+
 - **返回**:
+
   ```typescript
   {
     code: number
@@ -264,6 +291,7 @@ specanchor:
     }>
   }
   ```
+
 - **空结果处理**: 返回 `{ code: 200, data: [] }`，小程序端展示：「抱歉没有检索到您搜索的内容，请换个搜索词试试～」
 
 ### 5. 店铺模块
@@ -276,6 +304,7 @@ specanchor:
 - **认证**: 无需认证
 - **参数**: 无
 - **返回**:
+
   ```typescript
   {
     code: number
@@ -455,6 +484,7 @@ interface AlbumItem {
 ### 认证接口标识
 
 文档中标记为 🔒 的接口需要认证：
+
 - `/api/wx/phone`
 - `/api/wx/userinfo`
 - `/api/like` (POST)
@@ -593,6 +623,7 @@ export const logout = (): void => {
 ### 2. HTTP 请求增强
 
 需要修改 `http.uts` 以支持：
+
 - 动态 token 注入（从 storage 读取）
 - 401 错误统一处理（跳转登录页或提示登录）
 
@@ -771,11 +802,13 @@ interface ShopInfo {
 ### Q1: 现有 http.uts 的 token 机制如何改造？ ✅ 已确认
 
 **当前状态**: `http.uts` 使用硬编码的 token
+
 ```typescript
 const token = 'dXNlcjoyODY0Y2Q0MC01M2JkLTQxZmYtYTY2Yi0xY2NmMDA0OGUwZTY='
 ```
 
 **决策**: 需要改造为从 storage 动态读取 token。
+
 - 新增 `auth.uts` 工具模块管理 token
 - 修改 `http.uts` 中的 token 获取逻辑
 - 需要处理未登录状态（token 为空的情况）
@@ -783,6 +816,7 @@ const token = 'dXNlcjoyODY0Y2Q0MC01M2JkLTQxZmYtYTY2Yi0xY2NmMDA0OGUwZTY='
 ### Q2: 用户信息存储策略？ ✅ 已确认
 
 **决策**: 全局存储一份用户信息。
+
 - 登录成功后，将 `userInfo` 存储在 `uni.storage` 中
 - 使用 `uni.setStorageSync('userInfo', userInfo)` 存储
 - 页面需要用户信息时优先从 storage 读取
@@ -791,6 +825,7 @@ const token = 'dXNlcjoyODY0Y2Q0MC01M2JkLTQxZmYtYTY2Yi0xY2NmMDA0OGUwZTY='
 ### Q3: 收藏功能迁移策略？ ✅ 已确认
 
 **决策**: 放弃本地存储的所有收藏数据，直接切换至云端收藏功能。
+
 - 不需要数据迁移
 - 不需要兼容模式
 - 直接调用云端 API 即可
@@ -801,7 +836,8 @@ const token = 'dXNlcjoyODY0Y2Q0MC01M2JkLTQxZmYtYTY2Yi0xY2NmMDA0OGUwZTY='
 
 ### Q5: 多店铺场景下的数据展示？ ✅ 已确认
 
-**决策**: 
+**决策**:
+
 - 首页展示所有店铺列表
 - 用户点击店铺后进入对应店铺的客片列表页
 - 店铺 ID 通过路由参数传递给客片列表页
@@ -813,6 +849,7 @@ const token = 'dXNlcjoyODY0Y2Q0MC01M2JkLTQxZmYtYTY2Yi0xY2NmMDA0OGUwZTY='
 ### Q7: Base URL 配置？ ✅ 已确认
 
 **决策**: 使用现有项目中的 base URL：`https://lanmei66.cloud`（来自 `config.uts`）
+
 - 新接口的完整 URL 为：`https://lanmei66.cloud/api/xxx`
 
 ## 开发任务分解
@@ -820,24 +857,28 @@ const token = 'dXNlcjoyODY0Y2Q0MC01M2JkLTQxZmYtYTY2Yi0xY2NmMDA0OGUwZTY='
 基于上述接口，建议的开发任务顺序：
 
 ### Phase 1: 基础设施（认证体系）
+
 1. 创建 `auth.uts` 工具模块（包含 token 和用户信息管理）
 2. 改造 `http.uts` 支持动态 token
 3. 实现微信登录流程（`wxLogin`），登录成功后全局存储 token 和 userInfo
 4. 实现用户信息刷新（`wxGetUserInfo`，可选）
 
 ### Phase 2: 核心交互（点赞 + 收藏）
+
 5. 实现点赞接口（`toggleLike`, `getLikeStatus`）
-6. 实现收藏接口（`toggleFavorite`, `getFavoriteStatus`, `getFavoriteList`）
-7. 改造客片展示模块，使用云端收藏替代本地存储
+2. 实现收藏接口（`toggleFavorite`, `getFavoriteStatus`, `getFavoriteList`）
+3. 改造客片展示模块，使用云端收藏替代本地存储
 
 ### Phase 3: 增值功能（搜索 + 店铺）
+
 8. 实现搜索功能（`searchAlbums`）
-9. 实现店铺列表（`getShops`）
-10. 整合店铺选择逻辑
+2. 实现店铺列表（`getShops`）
+3. 整合店铺选择逻辑
 
 ### Phase 4: 手机号绑定
+
 11. 实现手机号绑定（`wxBindPhone`）
-12. 完善用户信息展示
+2. 完善用户信息展示
 
 ## 注意事项
 
