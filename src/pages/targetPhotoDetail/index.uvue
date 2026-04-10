@@ -1,106 +1,136 @@
 <template>
 	<view class="page">
-		<view class="title">
-			<view class="left">
-				<view>{{ detail.title }}</view>
-				<view class="price">
-					<view>服务价格：</view>
-					<view class="count">{{ detail.price }}</view>
+		<!-- Loading 态 -->
+		<view v-if="loading" class="loading-container">
+			<view class="loading-text">加载中...</view>
+		</view>
+
+		<!-- 主内容 -->
+		<view v-else>
+			<view class="title">
+				<view class="left">
+					<view>{{ detail?.title }}</view>
+					<view class="price">
+						<view>服务价格：</view>
+						<view class="count">{{ detail?.price }}</view>
+					</view>
+				</view>
+				<view class="collect" @click="handleLike">
+					<image
+						:src="liked ? '/static/liked.svg' : '/static/like.svg'"
+						class="heart"
+					></image>
+					<text class="like-num">{{ formatCount(likeCount) }}</text>
 				</view>
 			</view>
-			<image
-			  :src="liked ? '/static/liked.svg' : '/static/like.svg'"
-			  class="heart"
-			  @click="handleCollect"
-			></image>
+			<view class="subtit">套餐内容：{{ detail?.packageDesc }}</view>
+			<view class="photo-wrap">
+				<image
+					v-for="(item, index) in (detail?.images || [])"
+					class="photo"
+					:src="item.imageUrl"
+					mode="widthFix"
+					:key="index"
+				></image>
+			</view>
+			<view class="divide"></view>
+			<view class="bottomdesc">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
 		</view>
-		<view class="subtit">套餐内容：{{ detail.packageDesc }}</view>
-		<view class="photo-wrap">
-			<image
-			 v-for="(item, index) in detail.images"
-			 class="photo"
-			 :src="item.imageUrl"
-			 mode="widthFix"
-			 :key="index"
-			></image>
-		</view>
-		<view class="divide"></view>
-		<view class="bottomdesc">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
 	</view>
 </template>
 
 <script>
-	import { getalbumDetail } from '../../utils/api.uts'
+	import { getalbumDetail, toggleLike, getLikeStatus, wxLogin } from '../../utils/api.uts'
+	import { isLoggedIn, loginSuccess } from '../../utils/auth.uts'
+
 	export default {
 		data() {
 			return {
+				loading: true,
 				liked: false,
-				detail: null
+				likeCount: 0,
+				detail: null,
+				albumId: ''
 			}
 		},
 		onLoad(query) {
 			const id = query?.idx ?? ''
 			const type = query?.type ?? ''
+			this.albumId = id
 			this.liked = query?.liked === 'true'
 			this.getDetail(id, type)
 		},
 		methods: {
-			async getDetail (id: string, type: string) {
-				const res = await getalbumDetail('get', {
-					albumId: id,
-					type
-				})
-				const { code, data } = res
-				if (code !== 200) return
-				this.detail = data
+			async getDetail(id, type) {
+				try {
+					this.loading = true
+					const res = await getalbumDetail('get', {
+						albumId: id,
+						type
+					})
+					const { code, data } = res
+					if (code !== 200) return
+					this.detail = data
+					if (id) {
+						await this.refreshLikeStatus(id)
+					}
+				} catch (err) {
+					console.error('获取详情失败:', err)
+				} finally {
+					this.loading = false
+				}
 			},
-			handleCollect() {
-				const title = this.detail?.title
-				if (!title) {
-					uni.showToast({ title: '无效的标题', icon: 'none' })
+			async refreshLikeStatus(albumId) {
+				try {
+					const likeRes = await getLikeStatus(String(albumId)).catch(() => null)
+					if (likeRes && likeRes.code === 200 && likeRes.data && likeRes.data.length > 0) {
+						this.liked = likeRes.data[0].liked
+						this.likeCount = likeRes.data[0].likeCount
+					}
+				} catch (err) {
+					console.warn('获取点赞状态失败:', err)
+				}
+			},
+			async handleLike() {
+				if (!this.albumId) return
+				if (!isLoggedIn()) {
+					await this.doLogin()
 					return
 				}
-				uni.getStorage({
-					key: 'collectList',
-					success: (res) => {
-						let value = []
-						if (Array.isArray(res.data)) {
-							value = res.data
-						} else if (res.data && Array.isArray(res.data.value)) {
-							value = res.data.value
-						}
-						if (!value.includes(title)) {
-							value.push(title)
-							uni.setStorage({
-								key: 'collectList',
-								data: { id: 'list', value },
-								success: () => {
-									this.liked = true
-								}
-							})
-							return;
-						}
-						const newlist = value.filter(item => item !== title) ?? []
-						uni.setStorage({
-							key: 'collectList',
-							data: { id: 'list', value: newlist },
-							success: () => {
-								this.liked = false
-							}
-						})
-					},
-					fail: () => {
-						const value = [title]
-						uni.setStorage({
-							key: 'collectList',
-							data: { id: 'list', value },
-							success: () => {
-								this.liked = true
-							}
-						})
+				try {
+					const res = await toggleLike(Number(this.albumId))
+					if (res.code === 200 && res.data) {
+						this.liked = res.data.liked
+						this.likeCount = res.data.likeCount
 					}
-				})
+				} catch (err) {
+					console.error('点赞失败:', err)
+					uni.showToast({ title: '操作失败', icon: 'none' })
+				}
 			},
+			async doLogin() {
+				try {
+					const loginRes = await uni.login({ provider: 'weixin' })
+					if (loginRes.code) {
+						const res = await wxLogin({ code: loginRes.code })
+						if (res.code === 200 && res.data) {
+							loginSuccess(res.data.token, res.data.userInfo)
+							uni.showToast({ title: '登录成功', icon: 'success' })
+						} else {
+							uni.showToast({ title: res.message || '登录失败', icon: 'none' })
+						}
+					}
+				} catch (err) {
+					console.error('登录失败:', err)
+				}
+			},
+			formatCount(count) {
+				if (!count) return '0'
+				if (count >= 10000) {
+					return `${(count / 10000).toFixed(1)}万`
+				}
+				return String(count)
+			}
 		}
 	}
 </script>
@@ -110,6 +140,16 @@
 	background: #000;
 	min-height: 100%;
 	color: #fff;
+}
+.loading-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 60vh;
+}
+.loading-text {
+	font-size: 28rpx;
+	color: rgba(255, 255, 255, 0.5);
 }
 .title{
 	display: flex;
@@ -134,9 +174,19 @@
 .count{
 	color: rgba(255, 255, 255, 0.9);
 }
+.collect {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
 .heart{
 	width: 48rpx;
 	height: 40rpx;
+}
+.like-num {
+	font-size: 20rpx;
+	color: rgba(255, 255, 255, 0.6);
+	margin-top: 4rpx;
 }
 .subtit{
 	margin: 8rpx 32rpx 32rpx;

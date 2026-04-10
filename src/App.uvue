@@ -2,12 +2,47 @@
   // #ifdef APP-ANDROID || APP-HARMONY
 	let firstBackTime = 0
   // #endif
+
+	// 导入登录相关方法
+	import { isLoggedIn } from './utils/auth.uts'
+	import { wxLogin } from './utils/api.uts'
+
 	export default {
 		onLaunch: function () {
 			console.log('App Launch')
+			// 首次进入小程序时检查登录态
+			this.checkLoginOnLaunch()
 		},
 		onShow: function () {
 			console.log('App Show')
+		},
+
+		methods: {
+			// 应用启动时检查登录态（仅首次）
+			async checkLoginOnLaunch() {
+				try {
+					// 如果未登录，自动调用微信登录
+					if (!isLoggedIn()) {
+						console.log('首次启动：未登录，开始自动登录')
+						const loginRes = await uni.login({ provider: 'weixin' })
+						if (loginRes.code) {
+							const res = await wxLogin({ code: loginRes.code })
+							if (res.code === 200 && res.data) {
+								// 动态导入避免循环依赖
+								const auth = await import('./utils/auth.uts')
+								auth.loginSuccess(res.data.token, res.data.userInfo)
+								console.log('首次启动：自动登录成功')
+							} else {
+								console.warn('首次启动：登录失败', res.message)
+							}
+						}
+					} else {
+						console.log('首次启动：已登录')
+					}
+				} catch (err) {
+					console.error('首次启动：登录检查失败', err)
+				}
+			}
 		},
 		onHide: function () {
 			console.log('App Hide')

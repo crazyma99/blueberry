@@ -1,5 +1,36 @@
 import { request } from './http.uts'
 
+// ============ 类型定义 ============
+
+export interface UserInfo {
+  id: number
+  openid: string
+  phone: string | null
+  nickname: string | null
+  avatarUrl: string | null
+}
+
+export interface AlbumBasic {
+  id: number
+  title: string
+  coverImageUrl: string
+  shopId: number
+  price?: number
+  likeCount: number
+}
+
+export interface ShopInfo {
+  id: number
+  shopName: string
+  displayName: string
+  displayNameEn: string
+  homeImage: string
+  priceImage: string
+  sortOrder: number
+}
+
+// ============ 原有接口 ============
+
 // 导航栏接口
 export const getImage = async (method: string, params?: any) => {
 	const res = await request({
@@ -31,4 +62,160 @@ export const getalbumDetail = async (method: string, params?: any) => {
 		showLoading: false,
 	})
 	return res
+}
+
+// ============ 微信登录模块 ============
+
+/**
+ * 微信登录，code 换 token
+ */
+export const wxLogin = async (params: {
+  code: string
+  nickname?: string
+  avatarUrl?: string
+}) => {
+  const res = await request({
+    url: '/api/wx/login',
+    method: 'POST',
+    data: params,
+    showLoading: false,
+  })
+  return res as { code: number, message: string, data: { token: string, userInfo: UserInfo } }
+}
+
+/**
+ * 绑定手机号（需登录）
+ */
+export const wxBindPhone = async (code: string) => {
+  const res = await request({
+    url: '/api/wx/phone',
+    method: 'POST',
+    data: { code },
+    showLoading: false,
+  })
+  return res as { code: number, message: string, data: UserInfo }
+}
+
+/**
+ * 获取当前登录用户信息（需登录）
+ */
+export const wxGetUserInfo = async () => {
+  const res = await request({
+    url: '/api/wx/userinfo',
+    method: 'GET',
+    showLoading: false,
+  })
+  return res as { code: number, message: string, data: UserInfo }
+}
+
+// ============ 点赞模块 ============
+
+/**
+ * 点赞/取消点赞（toggle，需登录）
+ */
+export const toggleLike = async (albumId: number) => {
+  const res = await request({
+    url: '/api/like',
+    method: 'POST',
+    data: { albumId },
+    showLoading: false,
+  })
+  return res as { code: number, data: { liked: boolean, likeCount: number } }
+}
+
+/**
+ * 批量查询点赞状态（需登录）
+ */
+export const getLikeStatus = async (albumIds: string) => {
+  const res = await request({
+    url: '/api/like/status',
+    method: 'GET',
+    data: { albumIds },
+    showLoading: false,
+  })
+  return res as { code: number, data: Array<{ albumId: number, liked: boolean, likeCount: number }> }
+}
+
+// ============ 收藏模块 ============
+
+/**
+ * 收藏/取消收藏（toggle，需登录）
+ */
+export const toggleFavorite = async (albumId: number) => {
+  const res = await request({
+    url: '/api/favorite',
+    method: 'POST',
+    data: { albumId },
+    showLoading: false,
+  })
+  return res as { code: number, data: { favorited: boolean } }
+}
+
+/**
+ * 批量查询收藏状态（需登录）
+ */
+export const getFavoriteStatus = async (albumIds: string) => {
+  const res = await request({
+    url: '/api/favorite/status',
+    method: 'GET',
+    data: { albumIds },
+    showLoading: false,
+  })
+  return res as { code: number, data: Array<{ albumId: number, favorited: boolean }> }
+}
+
+/**
+ * 我的收藏列表（需登录，支持门店筛选）
+ */
+export const getFavoriteList = async (shopId?: number) => {
+  const res = await request({
+    url: '/api/favorite/list',
+    method: 'GET',
+    data: shopId ? { shopId } : undefined,
+    showLoading: false,
+  })
+  return res as { code: number, data: AlbumBasic[] }
+}
+
+// ============ 搜索模块 ============
+
+/**
+ * 相册模糊搜索（公开，无需登录，支持分页）
+ */
+export const searchAlbums = async (keyword: string, page: number = 1, pageSize: number = 10) => {
+  const res = await request({
+    url: '/api/search',
+    method: 'GET',
+    data: { keyword, page, pageSize },
+    showLoading: false,
+  })
+  return res as { code: number, data: AlbumBasic[] }
+}
+
+// ============ 店铺模块 ============
+
+/**
+ * 获取启用的店铺列表（公开，无需登录）
+ */
+export const getShops = async () => {
+  const res = await request({
+    url: '/api/shops',
+    method: 'GET',
+    showLoading: false,
+  })
+  return res as { code: number, data: ShopInfo[] }
+}
+
+// ============ 中台页配置 ============
+
+/**
+ * 获取中台页配置（金刚区+Banner，公开，无需登录）
+ */
+export const getPageConfig = async () => {
+  const res = await request({
+    url: '/api/page-config',
+    method: 'GET',
+    showLoading: false,
+  })
+  return res as { code: number, data: { menuItems: any[], banners: any[] } }
 }

@@ -1,0 +1,472 @@
+<template>
+  <view class="container">
+    <!-- Loading 骨架屏 -->
+    <view v-if="loading" class="skeleton">
+      <view class="skeleton-user-row">
+        <view class="skeleton-avatar skeleton-animate"></view>
+        <view class="skeleton-name skeleton-animate"></view>
+      </view>
+      <view class="skeleton-menu skeleton-animate"></view>
+      <view class="skeleton-banner-block skeleton-animate"></view>
+    </view>
+
+    <!-- 主内容 -->
+    <view v-else class="content">
+      <!-- 用户区域 -->
+      <view class="user-section" @click="handleUserClick">
+        <image
+          class="avatar"
+          :src="isLoggedIn ? (userInfo?.avatarUrl || defaultAvatar) : defaultAvatar"
+          mode="aspectFill"
+        ></image>
+        <view class="user-info">
+          <view class="nickname">
+            {{ isLoggedIn ? (userInfo?.nickname || '微信用户') : '点击立即登陆' }}
+          </view>
+        </view>
+      </view>
+
+      <!-- 金刚区 -->
+      <view class="menu-section">
+        <view
+          v-for="(item, index) in menuItems"
+          :key="index"
+          class="menu-item"
+          @click="handleMenuClick(item)"
+        >
+          <image class="menu-icon" :src="item.imageUrl" mode="aspectFill"></image>
+          <view class="menu-text">{{ item.title }}</view>
+        </view>
+      </view>
+
+      <!-- 轮播图 Banner -->
+      <view class="banner-section">
+        <swiper
+          class="banner-swiper"
+          autoplay
+          circular
+          :interval="5000"
+          :duration="500"
+          indicator-dots
+          indicator-color="rgba(255, 255, 255, 0.35)"
+          indicator-active-color="#fff"
+        >
+          <swiper-item v-for="(banner, index) in banners" :key="index">
+            <image
+              class="banner-image"
+              :src="banner.imageUrl"
+              mode="aspectFill"
+              @click="handleBannerClick(banner)"
+            ></image>
+          </swiper-item>
+        </swiper>
+      </view>
+    </view>
+
+    <!-- 登录弹窗 -->
+    <view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
+      <view class="login-popup" @click.stop>
+        <view class="login-popup-title">登录蓝梅</view>
+        <view class="login-popup-desc">授权手机号以获得完整体验</view>
+        <button
+          class="login-phone-btn"
+          open-type="getPhoneNumber"
+          @getphonenumber="onGetPhoneNumber"
+        >手机号快捷登录</button>
+        <view class="login-cancel" @click="closeLoginPopup">暂不登录</view>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+import { isLoggedIn, getUserInfo, loginSuccess, logout } from '../../utils/auth.uts'
+import { wxLogin, wxBindPhone, getPageConfig } from '../../utils/api.uts'
+
+interface UserInfo {
+  id: number
+  openid: string
+  phone: string | null
+  nickname: string | null
+  avatarUrl: string | null
+}
+
+export default {
+  data() {
+    return {
+      loading: true,
+      userInfo: null as UserInfo | null,
+      isLoggedIn: false,
+      banners: [] as any[],
+      menuItems: [] as any[],
+      defaultAvatar: '/static/default-avatar.png',
+      showLoginPopup: false
+    }
+  },
+
+  async onLoad() {
+    await this.loadData()
+  },
+
+  async onShow() {
+    // 页面显示时刷新登录状态（仅更新UI，不触发登录流程）
+    this.updateLoginState()
+  },
+
+  methods: {
+    // 加载页面数据
+    async loadData() {
+      try {
+        this.loading = true
+
+        // 更新登录状态
+        this.updateLoginState()
+
+        // 获取中台页配置（金刚区 + Banner）
+        const configRes = await getPageConfig()
+        if (configRes.code === 200 && configRes.data) {
+          const configMenus = configRes.data.filter(item => item.type === 'icon_grid')[0].items || []
+          this.menuItems = [...this.getDefaultMenuItems(), ...configMenus]
+          this.banners = configRes.data.filter(item => item.type === 'banner')[0].items || []
+        }
+        // 金刚区为空时，设置默认入口
+        if (this.menuItems.length === 0) {
+          this.menuItems = this.getDefaultMenuItems()
+        }
+      } catch (err) {
+        console.error('加载数据失败:', err)
+        // 拉取失败，使用默认金刚区
+        this.menuItems = this.getDefaultMenuItems()
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // 默认金刚区入口
+    getDefaultMenuItems() {
+      return [
+        { title: '我的喜欢', imageUrl: '/static/liked.svg', linkUrl: '/pages/favorites/index', needLogin: true }
+      ]
+    },
+
+    // 更新登录状态
+    updateLoginState() {
+      this.isLoggedIn = isLoggedIn()
+      this.userInfo = getUserInfo()
+    },
+
+    // 处理用户区域点击
+    handleUserClick() {
+      if (!this.isLoggedIn) {
+        // 未登录，显示登录弹窗
+        this.showLoginPopup = true
+      } else {
+        // 已登录，显示用户信息弹窗或跳转用户中心
+        uni.showToast({
+          title: '用户中心开发中',
+          icon: 'none'
+        })
+      }
+    },
+
+    // 关闭登录弹窗
+    closeLoginPopup() {
+      this.showLoginPopup = false
+    },
+
+    // 手机号授权回调
+    async onGetPhoneNumber(e: any) {
+      // 用户拒绝授权
+      if (e.detail.errMsg && e.detail.errMsg.indexOf('deny') !== -1) {
+        uni.showToast({ title: '已取消授权', icon: 'none' })
+        return
+      }
+
+      const phoneCode = e.detail.code
+      if (!phoneCode) {
+        uni.showToast({ title: '获取手机号失败', icon: 'none' })
+        return
+      }
+
+      try {
+        uni.showLoading({ title: '登录中...', mask: true })
+
+        // 第一步：静默登录获取 wx code
+        const loginRes = await uni.login({ provider: 'weixin' })
+        if (!loginRes.code) {
+          uni.hideLoading()
+          uni.showToast({ title: '获取登录凭证失败', icon: 'none' })
+          return
+        }
+
+        // 第二步：wx code 换 token
+        const wxRes = await wxLogin({ code: loginRes.code })
+        if (wxRes.code === 200 && wxRes.data) {
+          loginSuccess(wxRes.data.token, wxRes.data.userInfo)
+        } else {
+          uni.hideLoading()
+          uni.showToast({ title: wxRes.message || '登录失败', icon: 'none' })
+          return
+        }
+
+        // 第三步：用 phoneCode 绑定手机号
+        const phoneRes = await wxBindPhone(phoneCode)
+        if (phoneRes.code === 200 && phoneRes.data) {
+          // 更新本地用户信息（含手机号）
+          const { setUserInfo } = await import('../../utils/auth.uts')
+          setUserInfo(phoneRes.data)
+        }
+
+        // 完成
+        this.showLoginPopup = false
+        this.updateLoginState()
+        uni.hideLoading()
+        uni.showToast({ title: '登录成功', icon: 'success' })
+      } catch (err) {
+        console.error('手机号登录失败:', err)
+        uni.hideLoading()
+        uni.showToast({ title: '登录失败，请重试', icon: 'none' })
+      }
+    },
+
+    // 处理金刚区点击
+    handleMenuClick(item: any) {
+      if (item.linkUrl) {
+        // 需要登录的页面，先判断登录态
+        if (item.needLogin && !isLoggedIn()) {
+          this.showLoginPopup = true
+          return
+        }
+        uni.navigateTo({
+          url: item.linkUrl
+        })
+      } else {
+        uni.showToast({
+          title: '功能开发中',
+          icon: 'none'
+        })
+      }
+    },
+
+    // 处理 Banner 点击
+    handleBannerClick(banner: any) {
+      if (banner.link) {
+        // 跳转到对应链接
+        uni.navigateTo({
+          url: banner.link
+        })
+      }
+    }
+  }
+}
+</script>
+
+<style>
+.container {
+  background: #000;
+  min-height: 100vh;
+  color: #fff;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* 骨架屏 */
+.skeleton {
+  padding: 64rpx 32rpx;
+}
+.skeleton-user-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 40rpx;
+}
+.skeleton-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+.skeleton-name {
+  width: 200rpx;
+  height: 36rpx;
+  border-radius: 4rpx;
+  background: rgba(255, 255, 255, 0.08);
+  margin-left: 24rpx;
+}
+.skeleton-menu {
+  width: 100%;
+  height: 200rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.08);
+  margin-bottom: 32rpx;
+}
+.skeleton-banner-block {
+  width: 100%;
+  height: 384rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.08);
+}
+@keyframes skeletonPulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+.skeleton-animate {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+
+.content {
+  padding-bottom: 32rpx;
+}
+
+/* 用户区域 */
+.user-section {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 32rpx 32rpx 0;
+}
+
+.avatar {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 50%;
+  background: #333;
+}
+
+.user-info {
+  margin-left: 32rpx;
+  flex: 1;
+}
+
+.nickname {
+  font-size: 34rpx;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 1);
+}
+
+/* 金刚区 */
+.menu-section {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: 32rpx 60rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.15);
+  margin: 32rpx 32rpx;
+  gap: 60rpx;
+}
+
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.menu-icon {
+  width: 90rpx;
+  height: 90rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  margin-bottom: 16rpx;
+}
+
+.menu-text {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  font-weight: 500;
+}
+
+/* 轮播图 */
+.banner-section {
+  margin: 0 32rpx;
+}
+
+.banner-swiper {
+  width: 100%;
+  height: 352rpx;
+  overflow: hidden;
+}
+
+.banner-image {
+  width: 100%;
+  height: 100%;
+}
+
+/* 登录弹窗遮罩 */
+.login-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+/* 弹窗主体 */
+.login-popup {
+  width: 580rpx;
+  background: #1a1a1a;
+  border-radius: 24rpx;
+  padding: 64rpx 48rpx 48rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.login-popup-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 16rpx;
+}
+
+.login-popup-desc {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 56rpx;
+}
+
+/* 手机号授权按钮 */
+.login-phone-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: #F3D9AC;
+  color: #1a1a1a;
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: 44rpx;
+  text-align: center;
+  border: none;
+  margin-bottom: 24rpx;
+}
+
+.login-phone-btn::after {
+  border: none;
+}
+
+.login-cancel {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 16rpx 32rpx;
+}
+
+</style>

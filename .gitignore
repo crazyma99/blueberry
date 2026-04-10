@@ -44,3 +44,5 @@ yarn-error.log*
 project.private.config.json
 
 package-lock.json
+
+dist

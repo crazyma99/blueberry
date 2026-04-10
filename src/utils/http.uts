@@ -1,4 +1,5 @@
 import { getHttpConfig } from './config.uts'
+import { getToken, clearToken, clearUserInfo } from './auth.uts'
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
@@ -19,12 +20,20 @@ function withBaseURL(url: string): string {
 export function request<T = any>(opts: RequestOptions): Promise<T> {
   const { url, method = 'GET', data, header = {}, showLoading = false } = opts
   const fullUrl = withBaseURL(url)
-  const token = 'dXNlcjoyODY0Y2Q0MC01M2JkLTQxZmYtYTY2Yi0xY2NmMDA0OGUwZTY='
+  
+  // 动态获取 token（从 storage 读取）
+  const token = getToken()
+  
   const finalHeader: Record<string, string> = {
     'Content-Type': 'application/json',
     ...header,
   }
-  finalHeader['Authorization'] = `Bearer ${token}`
+  
+  // 只有当 token 存在时才添加 Authorization header
+  if (token) {
+    finalHeader['Authorization'] = `Bearer ${token}`
+  }
+  
   if (showLoading) uni.showLoading({ title: '加载中', mask: true })
   const { timeout } = getHttpConfig()
   return new Promise<T>((resolve, reject) => {
@@ -36,6 +45,20 @@ export function request<T = any>(opts: RequestOptions): Promise<T> {
       timeout,
       success: (res) => {
         const status = res.statusCode || 0
+        
+        // 处理 401 未授权错误
+        if (status === 401) {
+          clearToken()
+          clearUserInfo()
+          uni.showToast({
+            title: '登录已过期，请重新登录',
+            icon: 'none',
+            duration: 2000
+          })
+          reject(new Error('未授权'))
+          return
+        }
+        
         if (status >= 200 && status < 300) {
           resolve(res.data as T)
         } else {
