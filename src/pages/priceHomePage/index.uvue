@@ -17,8 +17,8 @@
 				<view v-if="shopList.length > 0" v-for="(shop, index) in shopList" :key="index" class="shopCard" @click="onShopClick(shop)">
 					<image class="demoPhoto" :src="shop.priceImage || shop.homeImage" mode="aspectFill"></image>
 					<view class="shopName">
-						<view>{{ shop.displayName || 1234 }}</view>
-						<view class="enName">{{ shop.displayNameEn || 1234 }}</view>
+						<view>{{ shop.displayName }}</view>
+						<view class="enName">{{ shop.displayNameEn }}</view>
 					</view>
 				</view>
 				<!-- 无店铺时 fallback -->
