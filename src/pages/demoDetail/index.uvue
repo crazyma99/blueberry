@@ -707,6 +707,7 @@
 	}
 	.collect{
 		display: flex;
+		flex-direction: row;
 		align-items: center;
 		font-size: 24rpx;
 		color: #fff;
@@ -722,11 +723,6 @@
 		height: 60rpx;
 		left: 0;
 		top: 0;
-	}
-	.stat-count {
-		font-size: 22rpx;
-		color: rgba(255, 255, 255, 0.7);
-		margin-left: 4rpx;
 	}
 	.divide{
 		height: 2rpx;

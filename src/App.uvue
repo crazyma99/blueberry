@@ -135,7 +135,7 @@
   margin-right: 0;
 }
 .sk-photo-item {
-  width: 362rpx;
+  width: 340rpx;
   height: 482rpx;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 8rpx;
