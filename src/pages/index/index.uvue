@@ -12,7 +12,7 @@
 		</view>
 
 		<!-- 主内容 -->
-		<view v-else>
+		<view v-else class="main-content">
 			<!-- 顶部轮播图 -->
 			<swiper class="banner" autoplay circular :interval="3000" :duration="500" indicator-dots
 				indicator-color="rgba(255, 255, 255, 0.35)" indicator-active-color="#fff">
@@ -47,7 +47,9 @@
 			></image>
 			<view class="contact">联系电话 & 商务合作</view>
 			<view class="contact">18068842642（微信同号）</view>
-			<view class="beian">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
+			<view class="page-footer">
+				<view class="beian">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
+			</view>
 		</view>
 
 		<!-- 登录弹窗 -->
@@ -195,8 +197,18 @@
 <style>
 	.container{
 		background: #000;
-		height: 100%;
+		min-height: 100vh;
+		display: flex;
+		flex-direction: column;
 		overflow: scroll;
+	}
+	.main-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+	}
+	.page-footer {
+		margin-top: auto;
 	}
 	.banner{
 		margin: 24rpx 0 32rpx;
