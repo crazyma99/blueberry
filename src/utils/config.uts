@@ -6,6 +6,6 @@ export interface HttpConfig {
 
 export function getHttpConfig(): HttpConfig {
   // TODO: 替换为你的域名
-  const baseURL = 'https://crazyma99.xyz:8155'
+  const baseURL = 'https://crazyma99.xyz'
   return { baseURL, timeout: 15000 }
 }

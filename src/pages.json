@@ -6,7 +6,8 @@
 		{
 			"path": "pages/demoDetail/index",
 			"style": {
-				"navigationStyle": "custom"
+				"navigationStyle": "custom",
+				"onReachBottomDistance": 80
 			}
 		},
 		{

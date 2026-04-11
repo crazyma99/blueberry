@@ -1,15 +1,24 @@
 <template>
 	<view class="page">
-		<!-- 顶部轮播图 -->
-		<swiper class="banner" autoplay circular :interval="3000" :duration="500" indicator-dots
-			indicator-color="rgba(255, 255, 255, 0.35)" indicator-active-color="#fff">
-			<swiper-item v-for="(item, idx) in banners" :key="idx">
-				<image class="banner-image" :src="item.imageUrl" mode="aspectFill"></image>
-			</swiper-item>
-		</swiper>
-		<image :class="id === '2' ? 'price' : 'honghe-price'" :src="getPriceBg"></image>
-		<view class="divide"></view>
-		<view class="bottomdesc">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
+		<!-- 骨架屏 -->
+		<view v-if="loading" class="sk-container">
+			<view class="sk-banner sk-animate"></view>
+			<view class="sk-block sk-animate" style="width: 100%; height: 600rpx;"></view>
+		</view>
+
+		<!-- 主内容 -->
+		<view v-else>
+			<!-- 顶部轮播图 -->
+			<swiper class="banner" autoplay circular :interval="3000" :duration="500" indicator-dots
+				indicator-color="rgba(255, 255, 255, 0.35)" indicator-active-color="#fff">
+				<swiper-item v-for="(item, idx) in banners" :key="idx">
+					<image class="banner-image" :src="item.imageUrl" mode="aspectFill"></image>
+				</swiper-item>
+			</swiper>
+			<image :class="id === '2' ? 'price' : 'honghe-price'" :src="getPriceBg"></image>
+			<view class="divide"></view>
+			<view class="bottomdesc">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
+		</view>
 	</view>
 </template>
 
@@ -19,6 +28,7 @@
 		data() {
 			return {
 				id: '',
+				loading: true,
 				// 轮播图图片列表
 				banners: []
 			}
@@ -33,16 +43,12 @@
 			  uni.setNavigationBarTitle({ title: '太平湖店价目表' })
 			this.getBanner(id)
 		},
-		computed: {
-			getPriceBg() {
-				return this.id === '1' ? '/static/honghe-price.png': '/static/price.png'
-			}
-		},
 		methods: {
 			async getBanner (id: string) {
 				try {
+					this.loading = true
 					const res = await getImage('get', {
-						type: id, // 首页轮播图
+						type: id,
 					})
 					console.log('carousel api result:', res)
 					const { code, data } = res
@@ -50,7 +56,14 @@
 					if (data?.length) this.banners = data
 				} catch (err) {
 					console.warn('获取轮播图失败', err)
+				} finally {
+					this.loading = false
 				}
+			}
+		},
+		computed: {
+			getPriceBg() {
+				return this.id === '1' ? '/static/honghe-price.png': '/static/price.png'
 			}
 		}
 	}

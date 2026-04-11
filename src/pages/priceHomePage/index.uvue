@@ -1,12 +1,12 @@
 <template>
 	<view class="container">
 		<!-- 骨架屏 -->
-		<view v-if="loading" class="skeleton">
-			<view class="skeleton-title skeleton-animate"></view>
-			<view class="skeleton-subtitle skeleton-animate"></view>
-			<view class="skeleton-photo-row">
-				<view class="skeleton-photo skeleton-animate"></view>
-				<view class="skeleton-photo skeleton-animate"></view>
+		<view v-if="loading" class="sk-container">
+			<view class="sk-title sk-animate" style="margin-top: 40rpx;"></view>
+			<view class="sk-subtitle sk-animate"></view>
+			<view class="sk-row">
+				<view class="sk-photo-card sk-animate"></view>
+				<view class="sk-photo-card sk-animate"></view>
 			</view>
 		</view>
 
@@ -160,44 +160,5 @@
 		color: rgba(255, 255, 255, 0.5);
 		text-align: center;
 	}
-	/* 骨架屏 */
-	.skeleton {
-		padding: 24rpx 8rpx;
-	}
-	.skeleton-title {
-		width: 200rpx;
-		height: 24rpx;
-		border-radius: 4rpx;
-		background: rgba(255, 255, 255, 0.08);
-		margin: 40rpx auto 16rpx;
-	}
-	.skeleton-subtitle {
-		width: 140rpx;
-		height: 36rpx;
-		border-radius: 4rpx;
-		background: rgba(255, 255, 255, 0.08);
-		margin: 0 auto 40rpx;
-	}
-	.skeleton-photo-row {
-		display: flex;
-		flex-direction: row;
-	}
-	.skeleton-photo {
-		width: 364rpx;
-		height: 226rpx;
-		border-radius: 8rpx;
-		background: rgba(255, 255, 255, 0.08);
-		margin-right: 8rpx;
-	}
-	.skeleton-photo:last-child {
-		margin-right: 0;
-	}
-	@keyframes skeletonPulse {
-		0% { opacity: 0.4; }
-		50% { opacity: 0.8; }
-		100% { opacity: 0.4; }
-	}
-	.skeleton-animate {
-		animation: skeletonPulse 1.5s ease-in-out infinite;
-	}
+	/* 骨架屏已移至全局样式 */
 </style>

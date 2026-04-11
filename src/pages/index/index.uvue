@@ -1,13 +1,13 @@
 <template>
 	<view class="container">
 		<!-- 骨架屏 -->
-		<view v-if="loading" class="skeleton">
-			<view class="skeleton-banner skeleton-animate"></view>
-			<view class="skeleton-title skeleton-animate"></view>
-			<view class="skeleton-subtitle skeleton-animate"></view>
-			<view class="skeleton-photo-row">
-				<view class="skeleton-photo skeleton-animate"></view>
-				<view class="skeleton-photo skeleton-animate"></view>
+		<view v-if="loading" class="sk-container">
+			<view class="sk-banner sk-animate"></view>
+			<view class="sk-title sk-animate"></view>
+			<view class="sk-subtitle sk-animate"></view>
+			<view class="sk-row">
+				<view class="sk-photo-card sk-animate"></view>
+				<view class="sk-photo-card sk-animate"></view>
 			</view>
 		</view>
 
@@ -49,19 +49,34 @@
 			<view class="contact">18068842642（微信同号）</view>
 			<view class="beian">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
 		</view>
+
+		<!-- 登录弹窗 -->
+		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
+			<view class="login-popup" @click.stop>
+				<view class="login-popup-title">登录蓝梅</view>
+				<view class="login-popup-desc">授权手机号以获得完整体验</view>
+				<button
+					class="login-phone-btn"
+					open-type="getPhoneNumber"
+					@getphonenumber="onGetPhoneNumber"
+				>手机号快捷登录</button>
+				<view class="login-cancel" @click="closeLoginPopup">暂不登录</view>
+			</view>
+		</view>
 	</view>
 </template>
 
 <script>
-	import { getImage, getShops, wxLogin } from '../../utils/api.uts'
-	import { isLoggedIn, loginSuccess } from '../../utils/auth.uts'
+	import { getImage, getShops, wxLogin, wxBindPhone } from '../../utils/api.uts'
+	import { isLoggedIn, loginSuccess, setUserInfo } from '../../utils/auth.uts'
 
 	export default {
 		data() {
 			return {
 				loading: true,
 				banners: [],
-				shopList: []
+				shopList: [],
+				showLoginPopup: false
 			}
 		},
 		async onLoad() {
@@ -84,26 +99,77 @@
 			}
 		},
 		onShow() {
-			// 登录态检查已移至 App.onLaunch，页面切换时不再重复检查
-			// 如需强制刷新登录态，可手动调用 doLogin
+			// 检查是否需要自动弹出登录弹窗（由 App.onLaunch 标记）
+			const app = getApp()
+			if (app.globalData && app.globalData.needShowLogin && !isLoggedIn()) {
+				this.showLoginPopup = true
+				app.globalData.needShowLogin = false
+			}
 		},
 		methods: {
-			async doLogin() {
-				try {
-					const loginRes = await uni.login({ provider: 'weixin' })
-					if (loginRes.code) {
-						const res = await wxLogin({ code: loginRes.code })
-						if (res.code === 200 && res.data) {
-							loginSuccess(res.data.token, res.data.userInfo)
-							uni.showToast({ title: '登录成功', icon: 'success' })
-						} else {
-							uni.showToast({ title: res.message || '登录失败', icon: 'none' })
-						}
+			// 关闭登录弹窗
+			closeLoginPopup() {
+				this.showLoginPopup = false
+			},
+
+			// 手机号授权回调
+			async onGetPhoneNumber(e) {
+				const detail = e.detail || {}
+				// 用户拒绝授权
+				if (detail.errMsg && detail.errMsg !== 'getPhoneNumber:ok') {
+					if (detail.errMsg.indexOf('deny') !== -1 || detail.errMsg.indexOf('cancel') !== -1) {
+						uni.showToast({ title: '已取消授权', icon: 'none' })
+					} else {
+						console.error('手机号授权失败:', detail.errMsg)
+						uni.showToast({ title: '授权失败，请重试', icon: 'none' })
 					}
+					return
+				}
+
+				const phoneCode = detail.code
+				if (!phoneCode) {
+					console.error('未获取到 phoneCode，detail:', JSON.stringify(detail))
+					uni.showToast({ title: '获取手机号失败，请检查小程序认证状态', icon: 'none' })
+					return
+				}
+
+				try {
+					uni.showLoading({ title: '登录中...', mask: true })
+
+					// 第一步：静默登录获取 wx code
+					const loginRes = await uni.login({ provider: 'weixin' })
+					if (!loginRes.code) {
+						uni.hideLoading()
+						uni.showToast({ title: '获取登录凭证失败', icon: 'none' })
+						return
+					}
+
+					// 第二步：wx code 换 token
+					const wxRes = await wxLogin({ code: loginRes.code })
+					if (wxRes.code === 200 && wxRes.data) {
+						loginSuccess(wxRes.data.token, wxRes.data.userInfo)
+					} else {
+						uni.hideLoading()
+						uni.showToast({ title: wxRes.message || '登录失败', icon: 'none' })
+						return
+					}
+
+					// 第三步：用 phoneCode 绑定手机号
+					const phoneRes = await wxBindPhone(phoneCode)
+					if (phoneRes.code === 200 && phoneRes.data) {
+						setUserInfo(phoneRes.data)
+					}
+
+					this.showLoginPopup = false
+					uni.hideLoading()
+					uni.showToast({ title: '登录成功', icon: 'success' })
 				} catch (err) {
-					console.error('登录失败:', err)
+					console.error('手机号登录失败:', err)
+					uni.hideLoading()
+					uni.showToast({ title: '登录失败，请重试', icon: 'none' })
 				}
 			},
+
 			onShopClick(shop) {
 				uni.navigateTo({
 					url: `/pages/demoDetail/index?from=banner&idx=${shop.id}`
@@ -182,7 +248,6 @@
 		color: rgba(255, 255, 255, 0.5);
 		text-align: center;
 	}
-	/* 店铺卡片 */
 	.shopCard {
 		position: relative;
 		margin-right: 8rpx;
@@ -211,52 +276,5 @@
 			font-size: 16rpx;
 			font-weight: 300;
 		}
-	}
-	/* 骨架屏 */
-	.skeleton {
-		padding: 24rpx 8rpx;
-	}
-	.skeleton-banner {
-		width: 100%;
-		height: 384rpx;
-		border-radius: 8rpx;
-		background: rgba(255, 255, 255, 0.08);
-		margin-bottom: 40rpx;
-	}
-	.skeleton-title {
-		width: 200rpx;
-		height: 24rpx;
-		border-radius: 4rpx;
-		background: rgba(255, 255, 255, 0.08);
-		margin: 0 auto 16rpx;
-	}
-	.skeleton-subtitle {
-		width: 140rpx;
-		height: 36rpx;
-		border-radius: 4rpx;
-		background: rgba(255, 255, 255, 0.08);
-		margin: 0 auto 40rpx;
-	}
-	.skeleton-photo-row {
-		display: flex;
-		flex-direction: row;
-	}
-	.skeleton-photo {
-		width: 364rpx;
-		height: 226rpx;
-		border-radius: 8rpx;
-		background: rgba(255, 255, 255, 0.08);
-		margin-right: 8rpx;
-	}
-	.skeleton-photo:last-child {
-		margin-right: 0;
-	}
-	@keyframes skeletonPulse {
-		0% { opacity: 0.4; }
-		50% { opacity: 0.8; }
-		100% { opacity: 0.4; }
-	}
-	.skeleton-animate {
-		animation: skeletonPulse 1.5s ease-in-out infinite;
 	}
 </style>

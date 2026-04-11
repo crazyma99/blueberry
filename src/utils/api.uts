@@ -42,7 +42,7 @@ export const getImage = async (method: string, params?: any) => {
 	return res
 }
 
-// 客片一级接口
+// 客片一级接口（支持分页）— 已废弃，请使用 getCategories + getAlbumList
 export const getalbum = async (method: string, params?: any) => {
 	const res = await request({
 		url: '/wechat/album',
@@ -51,6 +51,70 @@ export const getalbum = async (method: string, params?: any) => {
 		showLoading: false,
 	})
 	return res
+}
+
+// ============ 客片分类 + 列表（拆分后的新接口） ============
+
+/**
+ * 获取客片分类（公开，无需登录）
+ * @param shopId 店铺 ID
+ */
+export const getCategories = async (shopId: string | number) => {
+  const res = await request({
+    url: '/wechat/categories',
+    method: 'GET',
+    data: { shopId },
+    showLoading: false,
+  })
+  return res as {
+    code: number
+    message: string
+    data: Array<{
+      id: number
+      parentName: string
+      sortOrder?: number
+      subCategory: Array<{
+        name: string
+        sortOrder?: number
+        query: Record<string, any>
+      }>
+    }>
+  }
+}
+
+/**
+ * 获取客片列表（公开，无需登录，支持分页 + 搜索）
+ * @param params.shopId    店铺 ID（必填）
+ * @param params           其余参数由子分类 query 对象透传（parentId/childId/subName 等）
+ * @param params.keyword   搜索关键词（可选）
+ * @param params.page      页码（可选）
+ * @param params.size      每页大小（可选）
+ */
+export const getAlbumList = async (params: Record<string, any>) => {
+  const res = await request({
+    url: '/wechat/albums',
+    method: 'GET',
+    data: params,
+    showLoading: false,
+  })
+  return res as {
+    code: number
+    message: string
+    data: {
+      albums: Array<{
+        id: number
+        title: string
+        coverImageUrl: string
+        price: number
+        packageDesc: string
+        likeCount: number
+        liked: boolean
+      }>
+      total: number
+      page: number
+      size: number
+    }
+  }
 }
 
 // 客片详情页接口
@@ -181,15 +245,24 @@ export const getFavoriteList = async (shopId?: number) => {
 
 /**
  * 相册模糊搜索（公开，无需登录，支持分页）
+ * 返回分页数据结构
  */
-export const searchAlbums = async (keyword: string, page: number = 1, pageSize: number = 10) => {
+export interface SearchPageResult {
+  list: AlbumBasic[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export const searchAlbums = async (keyword: string, page: number = 1, size: number = 10) => {
   const res = await request({
     url: '/api/search',
     method: 'GET',
-    data: { keyword, page, pageSize },
+    data: { keyword, page, size },
     showLoading: false,
   })
-  return res as { code: number, data: AlbumBasic[] }
+  return res as { code: number, data: SearchPageResult }
 }
 
 // ============ 店铺模块 ============

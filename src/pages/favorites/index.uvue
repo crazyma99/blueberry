@@ -22,9 +22,11 @@
 		<!-- 占位 -->
 		<view :style="{height: (statusBarHeight + 44) + 'px'}"></view>
 
-		<!-- Loading 态 -->
-		<view v-if="loading" class="loading-container">
-			<view class="loading-text">加载中...</view>
+		<!-- 骨架屏 -->
+		<view v-if="loading" class="sk-container">
+			<view class="sk-row" style="flex-wrap: wrap;">
+				<view v-for="i in 4" :key="i" class="sk-photo-item sk-animate"></view>
+			</view>
 		</view>
 
 		<!-- 主内容 -->
@@ -248,17 +250,6 @@ export default {
 	font-size: 26rpx;
 	color: #fff;
 	margin-left: 12rpx;
-}
-
-.loading-container {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	height: 60vh;
-}
-.loading-text {
-	font-size: 28rpx;
-	color: rgba(255, 255, 255, 0.5);
 }
 
 .content {

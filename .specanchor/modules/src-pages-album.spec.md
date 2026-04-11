@@ -3,10 +3,10 @@ specanchor:
   level: module
   module_name: src-pages-album
   module_path: src/pages/demoDetail, src/pages/targetPhotoDetail
-  version: "1.1.0"
+  version: "2.0.0"
   owner: "@team"
   status: active
-  last_synced: "2026-03-29"
+  last_synced: "2026-04-11"
 ---
 
 # Module Spec: 客片展示模块
@@ -37,16 +37,20 @@ specanchor:
 
 ## 接口依赖
 
-- `getalbum` (from `utils/api.uts`): 获取客片列表数据
-  - 参数: `{ type?: string, page?: number, size?: number }`
-  - `type`: 搜索栏内容（可选）
-  - `page`: 页码，从0开始（可选，不传则返回全部）
-  - `size`: 每页数量，默认10（可选）
-  - 返回: `{ code, data: { alltabs: [{ id, parentName, sortOrder, subCategory: [{ id, name, parentId, sortOrder, albumTotal?, albumList: [{ id, title, coverImageUrl, price, packageDesc }] }] }] } }`
+- `getCategories` (from `utils/api.uts`): 获取客片分类
+  - 请求方法: GET
+  - 接口地址: `/wechat/categories`
+  - 参数: `shopId`（店铺 ID，必填）
+  - 返回: `{ code, message, data: { alltabs: [{ id, parentName, sortOrder, subCategory: [{ id, name, parentId, sortOrder }] }] } }`
+
+- `getAlbumList` (from `utils/api.uts`): 获取客片列表（支持分页 + 搜索）
+  - 请求方法: GET
+  - 接口地址: `/wechat/albums`
+  - 参数: `shopId`（必填）、`parentId`（父分类 ID，必填）、`childId`（子分类 ID，必填）、`keyword`（搜索关键词，可选）、`page`（页码，可选）、`size`（每页大小，可选）
+  - 返回: `{ code, message, data: { albums: [{ id, title, coverImageUrl, price, packageDesc, likeCount, liked }], total, page, size } }`
   - 分页说明：
-    - 不传 `page` 参数：返回全部相册，`albumTotal` 不返回（兼容老版本）
-    - 传 `page` 参数：每个子分类的 `albumList` 按分页返回，`albumTotal` 返回该子分类的相册总数
-    - 前端判断是否还有更多：`(page + 1) * size < albumTotal`
+    - 前端通过 `Math.ceil(total / size)` 计算总页数，当前页 >= 总页数时无更多数据
+    - `liked` 字段由服务端直接返回，无需单独查询
 
 - `getalbumDetail` (from `utils/api.uts`): 获取客片详情
   - 参数: `{ albumId, type }`
@@ -74,16 +78,18 @@ specanchor:
 ```typescript
 data() {
   return {
-    idx: '',           // 门店标识
+    idx: '',           // 店铺标识 (shopId)
     from: '',          // 来源
     selectedTab: {     // 当前选中的分类
       parentTab: '',   // 一级分类 ID
       childTab: ''     // 二级分类 ID
     },
-    alltabs: [],       // 全部分类数据
-    currentPage: 0,    // 当前页码（从0开始）
-    pageSize: 10,      // 每页数量
-    hasMore: true      // 是否有更多数据
+    alltabs: [],       // 全部分类数据（仅分类信息，不含 albumList）
+    albumList: [],     // 当前分类下的客片列表
+    albumTotal: 0,     // 当前分类客片总数
+    albumPage: 1,      // 当前页码
+    albumSize: 10,     // 每页数量
+    albumNoMore: false  // 是否还有更多数据
   }
 }
 ```
@@ -96,8 +102,6 @@ interface SubCategory {
   name: string
   parentId: number
   sortOrder: number
-  albumTotal?: number   // 分页模式下返回总数
-  albumList: AlbumItem[]
 }
 
 interface AlbumItem {
@@ -106,6 +110,8 @@ interface AlbumItem {
   coverImageUrl: string
   price: number
   packageDesc: string
+  likeCount: number
+  liked: boolean
 }
 ```
 
@@ -124,13 +130,15 @@ data() {
 
 ### demoDetail
 
-- `getAlbumInfo(id, page?, size?)`: 获取客片列表数据（支持分页）
-- `loadMore()`: 加载更多数据（分页模式下）
-- `changeTab(id, pos)`: 切换分类 (parent/child)，重置分页状态
-- `handleCollect(item)`: 收藏/取消收藏
+- `initPage(shopId)`: 初始化页面，先调用 `getCategories` 获取分类，再调用 `getAlbumList` 获取第一页客片
+- `fetchAlbumList(page)`: 调用 `getAlbumList` 获取指定页的客片列表
+- `loadMoreAlbum()`: 加载更多数据（分类模式）
+- `changeTab(id, pos)`: 切换分类，重置分页并重新加载客片列表
+- `handleSearch()`: 触发搜索，通过 `getAlbumList` 传 `keyword` 参数实现
+- `doSearch(keyword, page)`: 执行搜索请求
+- `handleLike(item)`: 点赞/取消点赞
 - `gotoDetail(item)`: 跳转至详情页
-- `refreshLikeStatus(list)`: 刷新收藏状态
-- `checkHasMore()`: 检查是否还有更多数据 `(currentPage + 1) * pageSize < albumTotal`
+- `refreshLikeStatus(list)`: 刷新收藏状态（onShow 时使用）
 
 ### targetPhotoDetail
 
@@ -170,12 +178,13 @@ data() {
 
 ## 业务规则
 
-1. 页面加载时默认选中第一个一级分类和第一个二级分类
-2. 切换分类后自动刷新收藏状态，并重置分页状态（`currentPage = 0`）
-3. 收藏状态存储在本地,跨页面共享
-4. 详情页返回后列表页需刷新收藏状态 (`onShow`)
-5. 分页模式下，滚动到底部时调用 `loadMore()` 加载下一页
-6. 分页判断：`(currentPage + 1) * pageSize < albumTotal` 时有更多数据
+1. 页面加载时先调用 `getCategories` 获取分类，默认选中第一个一级分类和第一个二级分类
+2. 分类选定后调用 `getAlbumList` 加载客片列表
+3. 切换分类时重置分页状态并重新调用 `getAlbumList`
+4. 搜索功能通过 `getAlbumList` 的 `keyword` 参数实现，不再使用独立搜索接口
+5. `liked` 字段由服务端在 `getAlbumList` 响应中直接返回
+6. 详情页返回后列表页通过 `refreshLikeStatus` 刷新点赞状态（`onShow`）
+7. 分页判断：`Math.ceil(total / size)` 计算总页数，当前页 >= 总页数时无更多数据
 
 ## 注意事项
 

@@ -5,45 +5,26 @@
 
 	// 导入登录相关方法
 	import { isLoggedIn } from './utils/auth.uts'
-	import { wxLogin } from './utils/api.uts'
 
 	export default {
+		globalData: {
+			needShowLogin: false
+		},
 		onLaunch: function () {
 			console.log('App Launch')
-			// 首次进入小程序时检查登录态
-			this.checkLoginOnLaunch()
+			// 检查登录态，标记是否需要弹出登录弹窗（由首页读取并展示）
+			if (!isLoggedIn()) {
+				console.log('首次启动：未登录，标记需要弹出登录弹窗')
+				this.globalData.needShowLogin = true
+			} else {
+				console.log('首次启动：已登录')
+			}
 		},
 		onShow: function () {
 			console.log('App Show')
 		},
 
-		methods: {
-			// 应用启动时检查登录态（仅首次）
-			async checkLoginOnLaunch() {
-				try {
-					// 如果未登录，自动调用微信登录
-					if (!isLoggedIn()) {
-						console.log('首次启动：未登录，开始自动登录')
-						const loginRes = await uni.login({ provider: 'weixin' })
-						if (loginRes.code) {
-							const res = await wxLogin({ code: loginRes.code })
-							if (res.code === 200 && res.data) {
-								// 动态导入避免循环依赖
-								const auth = await import('./utils/auth.uts')
-								auth.loginSuccess(res.data.token, res.data.userInfo)
-								console.log('首次启动：自动登录成功')
-							} else {
-								console.warn('首次启动：登录失败', res.message)
-							}
-						}
-					} else {
-						console.log('首次启动：已登录')
-					}
-				} catch (err) {
-					console.error('首次启动：登录检查失败', err)
-				}
-			}
-		},
+		methods: {},
 		onHide: function () {
 			console.log('App Hide')
 		},
@@ -83,8 +64,160 @@
   height: 0;
   color: transparent;
 }
-/* 通用隐藏滚动条类 */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* ========== 统一骨架屏样式 ========== */
+@keyframes skeletonPulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+.sk-animate {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+/* 骨架屏容器 */
+.sk-container {
+  padding: 32rpx;
+}
+/* 通用矩形块 */
+.sk-block {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8rpx;
+}
+/* 圆形（头像等） */
+.sk-circle {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+/* 横向排列 */
+.sk-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+/* 常用尺寸 */
+.sk-banner {
+  width: 100%;
+  height: 384rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8rpx;
+  margin-bottom: 32rpx;
+}
+.sk-title {
+  width: 200rpx;
+  height: 24rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4rpx;
+  margin: 0 auto 16rpx;
+}
+.sk-subtitle {
+  width: 140rpx;
+  height: 36rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4rpx;
+  margin: 0 auto 32rpx;
+}
+.sk-text {
+  height: 28rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4rpx;
+}
+.sk-photo-card {
+  width: 364rpx;
+  height: 226rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8rpx;
+  margin-right: 8rpx;
+}
+.sk-photo-card:last-child {
+  margin-right: 0;
+}
+.sk-photo-item {
+  width: 362rpx;
+  height: 482rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8rpx;
+  margin: 0 8rpx 8rpx 0;
+}
+.sk-photo-item:nth-child(2n) {
+  margin: 0 0 8rpx;
+}
+.sk-tab {
+  width: 128rpx;
+  height: 42rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8rpx;
+  margin-right: 16rpx;
+}
+.sk-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+.sk-menu {
+  width: 100%;
+  height: 200rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+/* ========== 登录弹窗样式 ========== */
+.login-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.login-popup {
+  width: 580rpx;
+  background: #1a1a1a;
+  border-radius: 24rpx;
+  padding: 64rpx 48rpx 48rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+.login-popup-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 16rpx;
+}
+.login-popup-desc {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 56rpx;
+}
+.login-phone-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: #F3D9AC;
+  color: #1a1a1a;
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: 44rpx;
+  text-align: center;
+  border: none;
+  margin-bottom: 24rpx;
+}
+.login-phone-btn::after {
+  border: none;
+}
+.login-cancel {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 16rpx 32rpx;
 }
 </style>
