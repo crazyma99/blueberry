@@ -251,7 +251,6 @@
 					this.loading = true
 					// 1. 获取分类
 					const catRes = await getCategories(shopId)
-					console.log('[initPage] catRes:', JSON.stringify(catRes))
 					const catSuccess = catRes && (catRes.code === 0 || catRes.code === 200)
 					if (!catSuccess || !catRes.data || !Array.isArray(catRes.data)) {
 						this.alltabs = []
