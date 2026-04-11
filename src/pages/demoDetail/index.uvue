@@ -222,6 +222,23 @@
 			goBack() {
 				uni.navigateBack()
 			},
+			// ====== 图片预加载工具方法 ======
+			preloadImage(url) {
+				return new Promise((resolve) => {
+					uni.getImageInfo({
+						src: url,
+						success: () => resolve(true),
+						fail: () => resolve(false)
+					})
+				})
+			},
+			// 预加载一组图片，带超时保护（避免无限等待）
+			async preloadImages(urls, timeout = 5000) {
+				if (!urls || urls.length === 0) return
+				const preloadPromise = Promise.all(urls.map(u => this.preloadImage(u)))
+				const timeoutPromise = new Promise(resolve => setTimeout(resolve, timeout))
+				await Promise.race([preloadPromise, timeoutPromise])
+			},
 			// ====== 初始化：先加载分类，再加载第一页客片 ======
 			async initPage(shopId) {
 				if (!shopId) {
@@ -250,6 +267,13 @@
 
 					// 3. 加载第一页客片
 					await this.fetchAlbumList(1)
+
+					// 4. 预加载首屏封面图（最多前6张），图片缓存就绪后再隐藏骨架屏
+					const coverUrls = this.albumList
+						.slice(0, 6)
+						.map(item => item.coverImageUrl)
+						.filter(Boolean)
+					await this.preloadImages(coverUrls, 2000)
 				} catch (err) {
 					console.error('初始化页面失败:', err)
 					this.alltabs = []

@@ -85,6 +85,22 @@
 			this.getDetail(id, type)
 		},
 		methods: {
+			// ====== 图片预加载工具方法 ======
+			preloadImage(url) {
+				return new Promise((resolve) => {
+					uni.getImageInfo({
+						src: url,
+						success: () => resolve(true),
+						fail: () => resolve(false)
+					})
+				})
+			},
+			async preloadImages(urls, timeout = 5000) {
+				if (!urls || urls.length === 0) return
+				const preloadPromise = Promise.all(urls.map(u => this.preloadImage(u)))
+				const timeoutPromise = new Promise(resolve => setTimeout(resolve, timeout))
+				await Promise.race([preloadPromise, timeoutPromise])
+			},
 			async getDetail(id, type) {
 				try {
 					this.loading = true
@@ -98,6 +114,13 @@
 					if (id) {
 						await this.refreshLikeStatus(id)
 					}
+
+					// 预加载前几张详情图片（最多前3张），图片缓存就绪后再隐藏骨架屏
+					const imageUrls = (data?.images || [])
+						.slice(0, 3)
+						.map(img => img.imageUrl)
+						.filter(Boolean)
+					await this.preloadImages(imageUrls, 2500)
 				} catch (err) {
 					console.error('获取详情失败:', err)
 				} finally {
