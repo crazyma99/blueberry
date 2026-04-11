@@ -45,12 +45,26 @@
 			<view class="divide"></view>
 			<view class="bottomdesc">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
 		</view>
+
+		<!-- 登录弹窗 -->
+		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
+			<view class="login-popup" @click.stop>
+				<view class="login-popup-title">登录蓝梅</view>
+				<view class="login-popup-desc">授权手机号以获得完整体验</view>
+				<button
+					class="login-phone-btn"
+					open-type="getPhoneNumber"
+					@getphonenumber="onGetPhoneNumber"
+				>手机号快捷登录</button>
+				<view class="login-cancel" @click="closeLoginPopup">暂不登录</view>
+			</view>
+		</view>
 	</view>
 </template>
 
 <script>
-	import { getalbumDetail, toggleLike, getLikeStatus, wxLogin } from '../../utils/api.uts'
-	import { isLoggedIn, loginSuccess } from '../../utils/auth.uts'
+	import { getalbumDetail, toggleLike, getLikeStatus, wxLogin, wxBindPhone } from '../../utils/api.uts'
+	import { isLoggedIn, loginSuccess, setUserInfo } from '../../utils/auth.uts'
 
 	export default {
 		data() {
@@ -59,7 +73,8 @@
 				liked: false,
 				likeCount: 0,
 				detail: null,
-				albumId: ''
+				albumId: '',
+				showLoginPopup: false
 			}
 		},
 		onLoad(query) {
@@ -103,9 +118,14 @@
 			async handleLike() {
 				if (!this.albumId) return
 				if (!isLoggedIn()) {
-					await this.doLogin()
+					// 未登录，弹出登录弹窗
+					this.showLoginPopup = true
 					return
 				}
+				await this.doToggleLike()
+			},
+			// 执行点赞切换
+			async doToggleLike() {
 				try {
 					const res = await toggleLike(Number(this.albumId))
 					if (res.code === 200 && res.data) {
@@ -117,20 +137,72 @@
 					uni.showToast({ title: '操作失败', icon: 'none' })
 				}
 			},
-			async doLogin() {
-				try {
-					const loginRes = await uni.login({ provider: 'weixin' })
-					if (loginRes.code) {
-						const res = await wxLogin({ code: loginRes.code })
-						if (res.code === 200 && res.data) {
-							loginSuccess(res.data.token, res.data.userInfo)
-							uni.showToast({ title: '登录成功', icon: 'success' })
-						} else {
-							uni.showToast({ title: res.message || '登录失败', icon: 'none' })
-						}
+			// 关闭登录弹窗
+			closeLoginPopup() {
+				this.showLoginPopup = false
+			},
+			// 手机号授权回调
+			async onGetPhoneNumber(e) {
+				const detail = e.detail || {}
+				// 用户拒绝授权
+				if (detail.errMsg && detail.errMsg !== 'getPhoneNumber:ok') {
+					if (detail.errMsg.indexOf('deny') !== -1 || detail.errMsg.indexOf('cancel') !== -1) {
+						uni.showToast({ title: '已取消授权', icon: 'none' })
+					} else {
+						console.error('手机号授权失败:', detail.errMsg)
+						uni.showToast({ title: '授权失败，请重试', icon: 'none' })
 					}
+					this.closeLoginPopup()
+					return
+				}
+
+				const phoneCode = detail.code
+				if (!phoneCode) {
+					console.error('未获取到 phoneCode，detail:', JSON.stringify(detail))
+					uni.showToast({ title: '获取手机号失败，请检查小程序认证状态', icon: 'none' })
+					this.closeLoginPopup()
+					return
+				}
+
+				try {
+					uni.showLoading({ title: '登录中...', mask: true })
+
+					// 第一步：静默登录获取 wx code
+					const loginRes = await uni.login({ provider: 'weixin' })
+					if (!loginRes.code) {
+						uni.hideLoading()
+						uni.showToast({ title: '获取登录凭证失败', icon: 'none' })
+						this.closeLoginPopup()
+						return
+					}
+
+					// 第二步：wx code 换 token
+					const wxRes = await wxLogin({ code: loginRes.code })
+					if (wxRes.code === 200 && wxRes.data) {
+						loginSuccess(wxRes.data.token, wxRes.data.userInfo)
+					} else {
+						uni.hideLoading()
+						uni.showToast({ title: wxRes.message || '登录失败', icon: 'none' })
+						this.closeLoginPopup()
+						return
+					}
+
+					// 第三步：用 phoneCode 绑定手机号
+					const phoneRes = await wxBindPhone(phoneCode)
+					if (phoneRes.code === 200 && phoneRes.data) {
+						setUserInfo(phoneRes.data)
+					}
+
+					uni.hideLoading()
+					uni.showToast({ title: '登录成功', icon: 'success' })
+					this.showLoginPopup = false
+
+					// 登录成功后，自动执行点赞操作
+					await this.doToggleLike()
 				} catch (err) {
+					uni.hideLoading()
 					console.error('登录失败:', err)
+					uni.showToast({ title: '登录失败，请重试', icon: 'none' })
 				}
 			},
 			formatCount(count) {

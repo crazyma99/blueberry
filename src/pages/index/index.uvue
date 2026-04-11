@@ -96,17 +96,25 @@
 				console.warn('加载首页数据失败', err)
 			} finally {
 				this.loading = false
+				// 接口请求完成后，检查是否需要弹出登录弹窗
+				this.checkAndShowLogin()
 			}
 		},
 		onShow() {
-			// 检查是否需要自动弹出登录弹窗（由 App.onLaunch 标记）
-			const app = getApp()
-			if (app.globalData && app.globalData.needShowLogin && !isLoggedIn()) {
-				this.showLoginPopup = true
-				app.globalData.needShowLogin = false
+			// 如果数据已加载完成且有待弹出的登录弹窗标记，立即弹出
+			if (!this.loading) {
+				this.checkAndShowLogin()
 			}
 		},
 		methods: {
+			// 检查并弹出登录弹窗（首次进入 + 未登录 + 接口加载完成后）
+			checkAndShowLogin() {
+				const app = getApp()
+				if (app.globalData && app.globalData.needShowLogin && !isLoggedIn()) {
+					this.showLoginPopup = true
+					app.globalData.needShowLogin = false
+				}
+			},
 			// 关闭登录弹窗
 			closeLoginPopup() {
 				this.showLoginPopup = false
