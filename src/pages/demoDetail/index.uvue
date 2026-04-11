@@ -222,7 +222,22 @@
 		},
 		methods: {
 			goBack() {
-				uni.navigateBack()
+				if (this.searchKeyword.trim()) {
+					// 搜索框有值：清空搜索并恢复分类模式
+					this.searchKeyword = ''
+					this.isSearching = false
+					this.searchList = []
+					this.searchDone = false
+					this.searchPage = 1
+					this.searchNoMore = false
+					// 重新加载分类数据
+					this.albumPage = 1
+					this.albumNoMore = false
+					this.albumList = []
+					this.fetchAlbumList(1)
+				} else {
+					uni.navigateBack()
+				}
 			},
 			// ====== 图片预加载工具方法 ======
 			preloadImage(url) {
