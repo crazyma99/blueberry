@@ -172,6 +172,30 @@ export const wxGetUserInfo = async () => {
   return res as { code: number, message: string, data: UserInfo }
 }
 
+/**
+ * 更新当前登录用户的头像 / 昵称（需登录）
+ * 接口：PUT /api/wx/userinfo
+ * 请求体：{ nickname?: string, avatarUrl?: string }（至少传一个）
+ * Authorization 由 http.uts 统一注入：Bearer {token}
+ * 返回：更新后的完整 UserInfo
+ */
+export const wxUpdateUserInfo = async (params: {
+  nickname?: string
+  avatarUrl?: string
+}) => {
+  // 仅保留有值的字段，避免把 '' / undefined 传给后端误覆盖
+  const body: Record<string, any> = {}
+  if (params.nickname != null && params.nickname !== '') body.nickname = params.nickname
+  if (params.avatarUrl != null && params.avatarUrl !== '') body.avatarUrl = params.avatarUrl
+  const res = await request({
+    url: '/api/wx/userinfo',
+    method: 'PUT',
+    data: body,
+    showLoading: false,
+  })
+  return res as { code: number, message: string, data: UserInfo }
+}
+
 // ============ 点赞模块 ============
 
 /**

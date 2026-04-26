@@ -65,12 +65,34 @@
 				<view class="login-cancel" @click="closeLoginPopup">暂不登录</view>
 			</view>
 		</view>
+
+		<!-- 头像昵称授权弹窗 -->
+		<view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
+			<view class="login-popup" @click.stop>
+				<view class="login-popup-title">完善个人资料</view>
+				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
+				<button
+					class="profile-avatar-btn"
+					open-type="chooseAvatar"
+					@chooseavatar="onChooseAvatar"
+				>
+					<image class="profile-avatar-img" :src="profileAvatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
+					<text class="profile-avatar-tip">点击选择头像</text>
+				</button>
+				<view class="profile-nickname-row">
+					<text class="profile-nickname-label">昵称</text>
+					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
+				</view>
+				<button class="login-phone-btn" @click="submitProfile">确认</button>
+				<view class="login-cancel" @click="skipProfile">跳过</view>
+			</view>
+		</view>
 	</view>
 </template>
 
 <script>
-	import { getImage, getShops, wxLogin, wxBindPhone } from '../../utils/api.uts'
-	import { isLoggedIn, loginSuccess, setUserInfo } from '../../utils/auth.uts'
+	import { getImage, getShops, wxLogin, wxBindPhone, wxUpdateUserInfo } from '../../utils/api.uts'
+	import { isLoggedIn, loginSuccess, setUserInfo, mergeUserInfo, getUserInfo } from '../../utils/auth.uts'
 
 	export default {
 		data() {
@@ -78,7 +100,11 @@
 				loading: true,
 				banners: [],
 				shopList: [],
-				showLoginPopup: false
+				showLoginPopup: false,
+				// 头像昵称授权弹窗
+				showProfilePopup: false,
+				profileAvatarUrl: '',
+				profileNickname: ''
 			}
 		},
 		async onLoad() {
@@ -166,18 +192,96 @@
 
 					// 第三步：用 phoneCode 绑定手机号
 					const phoneRes = await wxBindPhone(phoneCode)
+					let phoneHasFullProfile = false
 					if (phoneRes.code === 200 && phoneRes.data) {
-						setUserInfo(phoneRes.data)
+						// 合并写入，避免 step2 拿到的头像/昵称被 null 覆盖
+						mergeUserInfo(phoneRes.data)
+						// 若 phone 接口已下发 nickname & avatarUrl，则无需再让用户手动授权
+						const pNick = phoneRes.data.nickname
+						const pAvatar = phoneRes.data.avatarUrl
+						phoneHasFullProfile =
+							pNick != null && pNick !== '' &&
+							pAvatar != null && pAvatar !== ''
 					}
 
 					this.showLoginPopup = false
 					uni.hideLoading()
-					uni.showToast({ title: '登录成功', icon: 'success' })
+					if (phoneHasFullProfile) {
+						// 后端已带头像昵称 → 直接登录完成
+						uni.showToast({ title: '登录成功', icon: 'success' })
+					} else {
+						// 缺头像或昵称 → 弹出授权弹窗补齐
+						this.openProfilePopup()
+					}
 				} catch (err) {
 					console.error('手机号登录失败:', err)
 					uni.hideLoading()
 					uni.showToast({ title: '登录失败，请重试', icon: 'none' })
 				}
+			},
+
+			// 打开头像昵称授权弹窗
+			openProfilePopup() {
+				const info = getUserInfo()
+				this.profileAvatarUrl = info?.avatarUrl || ''
+				this.profileNickname = info?.nickname || ''
+				this.showProfilePopup = true
+			},
+
+			// 用户选择头像回调
+			onChooseAvatar(e) {
+				const url = e?.detail?.avatarUrl
+				if (url) this.profileAvatarUrl = String(url)
+			},
+
+			// 提交头像昵称：调用 PUT /api/wx/userinfo 更新后台用户信息
+			async submitProfile() {
+				const nickname = (this.profileNickname || '').trim()
+				const avatarUrl = this.profileAvatarUrl || ''
+				// 两项都未填，等同跳过
+				if (nickname === '' && avatarUrl === '') {
+					this.skipProfile()
+					return
+				}
+				// 乐观写入：先把用户刚选的头像/昵称同步到本地
+				const optimistic = {
+					id: 0,
+					openid: '',
+					phone: null,
+					nickname: nickname !== '' ? nickname : null,
+					avatarUrl: avatarUrl !== '' ? avatarUrl : null
+				}
+				mergeUserInfo(optimistic)
+				try {
+					uni.showLoading({ title: '更新中...', mask: true })
+					const updateRes = await wxUpdateUserInfo({
+						nickname: nickname !== '' ? nickname : undefined,
+						avatarUrl: avatarUrl !== '' ? avatarUrl : undefined
+					})
+					if (updateRes.code === 200 && updateRes.data) {
+						mergeUserInfo(updateRes.data)
+					} else {
+						uni.showToast({ title: updateRes.message || '更新失败', icon: 'none' })
+					}
+					uni.hideLoading()
+				} catch (err) {
+					console.error('更新头像昵称失败:', err)
+					uni.hideLoading()
+					uni.showToast({ title: '更新失败，请重试', icon: 'none' })
+				} finally {
+					this.finishProfile()
+				}
+			},
+
+			skipProfile() {
+				this.finishProfile()
+			},
+
+			finishProfile() {
+				this.showProfilePopup = false
+				this.profileAvatarUrl = ''
+				this.profileNickname = ''
+				uni.showToast({ title: '登录成功', icon: 'success' })
 			},
 
 			onShopClick(shop) {

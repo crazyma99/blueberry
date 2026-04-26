@@ -61,12 +61,34 @@
 				<view class="login-cancel" @click="closeLoginPopup">暂不登录</view>
 			</view>
 		</view>
+
+		<!-- 头像昵称授权弹窗 -->
+		<view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
+			<view class="login-popup" @click.stop>
+				<view class="login-popup-title">完善个人资料</view>
+				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
+				<button
+					class="profile-avatar-btn"
+					open-type="chooseAvatar"
+					@chooseavatar="onChooseAvatar"
+				>
+					<image class="profile-avatar-img" :src="profileAvatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
+					<text class="profile-avatar-tip">点击选择头像</text>
+				</button>
+				<view class="profile-nickname-row">
+					<text class="profile-nickname-label">昵称</text>
+					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
+				</view>
+				<button class="login-phone-btn" @click="submitProfile">确认</button>
+				<view class="login-cancel" @click="skipProfile">跳过</view>
+			</view>
+		</view>
 	</view>
 </template>
 
 <script>
 	import { getalbumDetail, toggleLike, getLikeStatus, wxLogin, wxBindPhone } from '../../utils/api.uts'
-	import { isLoggedIn, loginSuccess, setUserInfo } from '../../utils/auth.uts'
+	import { isLoggedIn, loginSuccess, setUserInfo, mergeUserInfo, getUserInfo } from '../../utils/auth.uts'
 
 	export default {
 		data() {
@@ -76,7 +98,11 @@
 				likeCount: 0,
 				detail: null,
 				albumId: '',
-				showLoginPopup: false
+				showLoginPopup: false,
+				// 头像昵称授权弹窗
+				showProfilePopup: false,
+				profileAvatarUrl: '',
+				profileNickname: ''
 			}
 		},
 		onLoad(query) {
@@ -215,20 +241,77 @@
 					// 第三步：用 phoneCode 绑定手机号
 					const phoneRes = await wxBindPhone(phoneCode)
 					if (phoneRes.code === 200 && phoneRes.data) {
-						setUserInfo(phoneRes.data)
+						// 合并写入，避免 step2 拿到的头像/昵称被 null 覆盖
+						mergeUserInfo(phoneRes.data)
 					}
 
 					uni.hideLoading()
-					uni.showToast({ title: '登录成功', icon: 'success' })
+					// 第四步：关闭手机号登录弹窗，弹出头像昵称授权弹窗
 					this.showLoginPopup = false
-
-					// 登录成功后，自动执行点赞操作
-					await this.doToggleLike()
+					this.openProfilePopup()
 				} catch (err) {
 					uni.hideLoading()
 					console.error('登录失败:', err)
 					uni.showToast({ title: '登录失败，请重试', icon: 'none' })
 				}
+			},
+
+			// 打开头像昵称授权弹窗
+			openProfilePopup() {
+				const info = getUserInfo()
+				this.profileAvatarUrl = info?.avatarUrl || ''
+				this.profileNickname = info?.nickname || ''
+				this.showProfilePopup = true
+			},
+
+			onChooseAvatar(e) {
+				const url = e?.detail?.avatarUrl
+				if (url) this.profileAvatarUrl = String(url)
+			},
+
+			async submitProfile() {
+				const nickname = (this.profileNickname || '').trim()
+				const avatarUrl = this.profileAvatarUrl || ''
+				if (nickname === '' && avatarUrl === '') {
+					this.skipProfile()
+					return
+				}
+				try {
+					uni.showLoading({ title: '更新中...', mask: true })
+					const loginRes = await uni.login({ provider: 'weixin' })
+					if (!loginRes.code) {
+						uni.hideLoading()
+						this.finishProfile()
+						return
+					}
+					const wxRes = await wxLogin({
+						code: loginRes.code,
+						nickname: nickname !== '' ? nickname : undefined,
+						avatarUrl: avatarUrl !== '' ? avatarUrl : undefined
+					})
+					if (wxRes.code === 200 && wxRes.data) {
+						loginSuccess(wxRes.data.token, wxRes.data.userInfo)
+					}
+					uni.hideLoading()
+				} catch (err) {
+					console.error('更新头像昵称失败:', err)
+					uni.hideLoading()
+				} finally {
+					await this.finishProfile()
+				}
+			},
+
+			skipProfile() {
+				this.finishProfile()
+			},
+
+			async finishProfile() {
+				this.showProfilePopup = false
+				this.profileAvatarUrl = ''
+				this.profileNickname = ''
+				uni.showToast({ title: '登录成功', icon: 'success' })
+				// 登录成功后，自动执行点赞操作
+				await this.doToggleLike()
 			},
 			formatCount(count) {
 				if (!count) return '0'

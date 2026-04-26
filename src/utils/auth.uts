@@ -83,6 +83,29 @@ export const setUserInfo = (userInfo: UserInfo): void => {
 }
 
 /**
+ * 合并写入用户信息（只有非空字段才覆盖）
+ * 场景：wxBindPhone 响应只返回 phone 与部分字段，
+ * 直接 setUserInfo 会将 step2 wxLogin 已写入的头像/昵称覆盖为空。
+ * 此函数用传入的非空字段 patch 到 storage，保障已有用户信息不被意外抹掉。
+ * @param partial 待合并的用户信息（可能字段缺失或为 null/空串）
+ */
+export const mergeUserInfo = (partial: UserInfo): void => {
+  const current = getUserInfo()
+  if (current == null) {
+    setUserInfo(partial)
+    return
+  }
+  const next: UserInfo = {
+    id: (partial.id != null && partial.id !== 0) ? partial.id : current.id,
+    openid: (partial.openid != null && partial.openid !== '') ? partial.openid : current.openid,
+    phone: (partial.phone != null && partial.phone !== '') ? partial.phone : current.phone,
+    nickname: (partial.nickname != null && partial.nickname !== '') ? partial.nickname : current.nickname,
+    avatarUrl: (partial.avatarUrl != null && partial.avatarUrl !== '') ? partial.avatarUrl : current.avatarUrl,
+  }
+  setUserInfo(next)
+}
+
+/**
  * 清除用户信息
  */
 export const clearUserInfo = (): void => {

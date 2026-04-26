@@ -220,4 +220,50 @@
   color: rgba(255, 255, 255, 0.4);
   padding: 16rpx 32rpx;
 }
+
+/* 头像昵称授权弹窗（复用 .login-overlay / .login-popup / .login-phone-btn / .login-cancel）*/
+.profile-avatar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: transparent;
+  padding: 0;
+  margin: 0 0 32rpx;
+  line-height: 1;
+}
+.profile-avatar-btn::after {
+  border: none;
+}
+.profile-avatar-img {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  background: #333;
+}
+.profile-avatar-tip {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.5);
+}
+.profile-nickname-row {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 16rpx 24rpx;
+  margin-bottom: 40rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12rpx;
+  box-sizing: border-box;
+}
+.profile-nickname-label {
+  font-size: 28rpx;
+  color: #fff;
+  margin-right: 24rpx;
+}
+.profile-nickname-input {
+  flex: 1;
+  font-size: 28rpx;
+  color: #fff;
+}
 </style>
