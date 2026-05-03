@@ -9,13 +9,15 @@
 		<!-- 主内容 -->
 		<view v-else>
 			<!-- 顶部轮播图 -->
-			<swiper class="banner" autoplay circular :interval="3000" :duration="500" indicator-dots
-				indicator-color="rgba(255, 255, 255, 0.35)" indicator-active-color="#fff">
-				<swiper-item v-for="(item, idx) in banners" :key="idx">
-					<image class="banner-image" :src="item.imageUrl" mode="aspectFill"></image>
-				</swiper-item>
-			</swiper>
-			<image :class="id === '2' ? 'price' : 'honghe-price'" :src="getPriceBg"></image>
+			<view v-if="banners.length">
+				<swiper class="banner" autoplay circular :interval="3000" :duration="500" indicator-dots
+					indicator-color="rgba(255, 255, 255, 0.35)" indicator-active-color="#fff">
+					<swiper-item v-for="(item, idx) in banners" :key="idx">
+						<image class="banner-image" :src="item.imageUrl" mode="aspectFill"></image>
+					</swiper-item>
+				</swiper>
+			</view>
+			<image class="price" :src="priceImage" mode="widthFix"></image>
 			<view class="divide"></view>
 			<view class="bottomdesc">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
 		</view>
@@ -30,18 +32,18 @@
 				id: '',
 				loading: true,
 				// 轮播图图片列表
-				banners: []
+				banners: [],
+				priceImage: ''
 			}
 		},
 		onLoad(query) {
 			const id = query.idx ?? ''
+			const priceImage = query.priceImage ?? ''
+			const shopName = query.shopName ?? ''
 			this.id = id
-			id === '1'
-			?
-			  uni.setNavigationBarTitle({ title: '红河水乡店价目表' })
-			:
-			  uni.setNavigationBarTitle({ title: '太平湖店价目表' })
+			uni.setNavigationBarTitle({ title: `${shopName}价目表` })
 			this.getBanner(id)
+			this.priceImage = priceImage
 		},
 		methods: {
 			async getBanner (id: string) {
@@ -89,12 +91,6 @@
 }
 .price{
 	width: 734rpx;
-	height: 1478rpx;
-	margin: 8rpx;
-}
-.honghe-price{
-    width: 734rpx;
-	height: 1664rpx;
 	margin: 8rpx;
 }
 .divide{

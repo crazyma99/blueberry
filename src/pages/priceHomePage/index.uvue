@@ -15,7 +15,7 @@
 			<view class="demoPhotoTit">价目表</view>
 			<view class="demoPhotoContaner">
 				<view v-if="shopList.length > 0" v-for="(shop, index) in shopList" :key="index" class="shopCard" @click="onShopClick(shop)">
-					<image class="demoPhoto" :src="shop.priceImage || shop.homeImage" mode="aspectFill"></image>
+					<image class="demoPhoto" :src="shop.homeImage" mode="aspectFill"></image>
 					<view class="shopName">
 						<view>{{ shop.displayName }}</view>
 						<view class="enName">{{ shop.displayNameEn }}</view>
@@ -67,7 +67,7 @@
 		methods: {
 			onShopClick(shop) {
 				uni.navigateTo({
-					url: `/pages/priceList/index?from=banner&idx=${shop.id}`
+					url: `/pages/priceList/index?from=banner&idx=${shop.id}&shopName=${shop.shopName}&priceImage=${shop.priceImage}`
 				})
 			},
 			onDemoClick(idx) {
@@ -106,11 +106,7 @@
 	.demoPhoto{
 		width: 364rpx;
 		height: 226rpx;
-		margin-right: 8rpx;
 		border-radius: 8rpx;
-	}
-	.demoPhoto:last-child{
-		margin-right: 0;
 	}
 	.shopCard {
 		position: relative;
