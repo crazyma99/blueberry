@@ -3,10 +3,10 @@ specanchor:
   level: module
   module_name: src-pages-album
   module_path: src/pages/demoDetail, src/pages/targetPhotoDetail
-  version: "2.0.0"
+  version: "2.1.0"
   owner: "@team"
   status: active
-  last_synced: "2026-04-11"
+  last_synced: "2026-05-07"
 ---
 
 # Module Spec: 客片展示模块
@@ -18,7 +18,7 @@ specanchor:
 
 ## 模块职责
 
-客片展示模块提供客片浏览功能,支持分类筛选、收藏功能和详情查看。
+客片展示模块提供客片浏览功能,支持分类筛选、搜索、点赞和详情查看。
 
 ## 核心功能
 
@@ -26,14 +26,14 @@ specanchor:
 
 1. **分类筛选**: 支持两级分类 (套餐分类 + 子系分类)
 2. **客片列表**: 网格展示客片封面
-3. **收藏功能**: 本地存储收藏状态
+3. **点赞功能**: 服务端返回 `liked` / `likeCount`,登录后可切换点赞状态
 4. **详情跳转**: 点击客片跳转至详情页
 
 ### targetPhotoDetail (客片详情页)
 
 1. **详情展示**: 展示客片标题、价格、套餐内容
 2. **图片浏览**: 展示客片图片列表
-3. **收藏功能**: 收藏/取消收藏当前客片
+3. **点赞功能**: 点赞/取消点赞当前客片
 
 ## 接口依赖
 
@@ -68,7 +68,7 @@ specanchor:
 - **入口**: 从 demoDetail 跳转
 - **参数**:
   - `idx`: 客片 ID
-  - `liked`: 收藏状态 ('true'/'false')
+  - `liked`: 点赞状态 ('true'/'false')
   - `type`: 门店标识
 
 ## 数据结构
@@ -120,7 +120,7 @@ interface AlbumItem {
 ```typescript
 data() {
   return {
-    liked: false,      // 收藏状态
+    liked: false,      // 点赞状态
     detail: null       // 详情数据
   }
 }
@@ -138,34 +138,30 @@ data() {
 - `doSearch(keyword, page)`: 执行搜索请求
 - `handleLike(item)`: 点赞/取消点赞
 - `gotoDetail(item)`: 跳转至详情页
-- `refreshLikeStatus(list)`: 刷新收藏状态（onShow 时使用）
+- `refreshLikeStatus(list)`: 刷新点赞状态（onShow 时使用）
 
 ### targetPhotoDetail
 
 - `getDetail(id, type)`: 获取客片详情
-- `handleCollect()`: 收藏/取消收藏
+- `handleLike()`: 点赞/取消点赞
 
-## 收藏功能实现
+## 点赞功能实现
 
-收藏数据存储在 `uni.getStorage` 的 `collectList` 键中:
+点赞状态以服务端为准:
 
 ```typescript
-// 存储结构
 {
-  key: 'collectList',
-  data: {
-    id: 'list',
-    value: [title1, title2, ...]  // 收藏的客片标题列表
-  }
+  liked: boolean,
+  likeCount: number
 }
 ```
 
-### 收藏逻辑
+### 点赞逻辑
 
-1. 获取本地存储的收藏列表
-2. 判断当前客片是否在收藏列表中
-3. 存在则取消收藏,不存在则添加收藏
-4. 更新 UI 收藏状态
+1. 列表接口优先使用 `getAlbumList` 返回的 `liked` / `likeCount`
+2. 页面显示后通过 `getLikeStatus(albumIds)` 批量刷新状态
+3. 用户点击心形按钮时调用 `toggleLike(albumId)`
+4. 更新 UI 点赞状态
 
 ## 样式规范
 
@@ -174,7 +170,7 @@ data() {
   - 未选中: `128rpx × 42rpx`, 灰色文字
   - 选中: `32rpx` 字号, 白色文字
 - 客片卡片: `362rpx × 482rpx` (两列网格)
-- 渐变遮罩: 底部渐变显示标题和收藏按钮
+- 渐变遮罩: 底部渐变显示标题、点赞按钮和点赞数
 
 ## 业务规则
 
@@ -188,8 +184,8 @@ data() {
 
 ## 注意事项
 
-1. 收藏功能依赖本地存储,需处理存储失败情况
+1. 点赞操作依赖登录态,未登录时先弹出登录弹窗
 2. 客片列表数据层级较深,需安全访问 (使用 `?.`)
-3. 分类切换使用 `$nextTick` 确保数据更新后刷新收藏状态
-4. 收藏按钮使用 `@click.stop` 阻止事件冒泡
+3. 分类切换使用 `$nextTick` 确保数据更新后刷新点赞状态
+4. 点赞按钮使用 `@click.stop` 阻止事件冒泡
 5. 页面使用垂直滚动布局,分类标签区域支持横向滚动

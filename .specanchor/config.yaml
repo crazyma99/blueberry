@@ -18,6 +18,7 @@ specanchor:
     ignore_paths:
       - "src/**/*.test.*"
       - "src/**/*.stories.*"
+      - "dist/**"
       - "unpackage/**"
       - "node_modules/**"
 

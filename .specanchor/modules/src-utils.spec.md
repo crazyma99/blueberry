@@ -3,10 +3,10 @@ specanchor:
   level: module
   module_name: src-utils
   module_path: src/utils
-  version: "1.0.0"
+  version: "1.1.0"
   owner: "@team"
   status: active
-  last_synced: "2026-03-27"
+  last_synced: "2026-05-07"
 ---
 
 # Module Spec: 工具模块
@@ -17,7 +17,7 @@ specanchor:
 
 ## 模块职责
 
-工具模块提供全局通用的网络请求、API 接口定义和配置管理功能。
+工具模块提供全局通用的网络请求、API 接口定义、认证状态和配置管理功能。
 
 ## 文件结构
 
@@ -25,7 +25,8 @@ specanchor:
 src/utils/
 ├── config.uts    # 配置管理
 ├── http.uts      # HTTP 请求封装
-└── api.uts       # API 接口定义
+├── api.uts       # API 接口定义
+└── auth.uts      # token 与用户信息管理
 ```
 
 ## config.uts - 配置管理
@@ -93,7 +94,7 @@ interface RequestOptions {
 1. 拼接完整 URL (`baseURL` + `url`)
 2. 添加请求头:
    - `Content-Type: application/json`
-   - `Authorization: Bearer <token>`
+   - `Authorization: Bearer <token>` (登录后由 `auth.uts` 提供)
 3. 可选显示 Loading 提示
 4. 发起请求
 5. 处理响应:
@@ -103,18 +104,13 @@ interface RequestOptions {
 
 ### 认证机制
 
-当前使用硬编码的 Bearer Token:
-
-```typescript
-const token = 'dXNlcjoyODY0Y2Q0MC01M2JkLTQxZmYtYTY2Yi0xY2NmMDA0OGUwZTY='
-```
+`http.uts` 从 `auth.uts` 读取 token。响应状态码为 401 时清除 token 和用户信息,并提示重新登录。
 
 ### 注意事项
 
-1. Token 为硬编码,生产环境应使用动态获取方式
-2. 错误处理较简单,仅检查状态码
-3. 未实现请求重试机制
-4. Loading 提示需手动控制 (`showLoading` 参数)
+1. token 不在 `http.uts` 内硬编码
+2. 未实现请求重试机制
+3. Loading 提示需手动控制 (`showLoading` 参数)
 
 ## api.uts - API 接口定义
 
@@ -157,6 +153,48 @@ const token = 'dXNlcjoyODY0Y2Q0MC01M2JkLTQxZmYtYTY2Yi0xY2NmMDA0OGUwZTY='
 - **接口**: `/wechat/album/detail`
 - **用途**: 客片详情页数据
 
+#### 4. getCategories(shopId)
+
+- **接口**: `/wechat/categories`
+- **用途**: 客片列表页分类
+
+#### 5. getAlbumList(params)
+
+- **接口**: `/wechat/albums`
+- **用途**: 客片列表页分页、分类和搜索
+
+#### 6. getShops()
+
+- **接口**: `/api/shops`
+- **用途**: 首页和价目表首页的店铺入口
+
+#### 7. 登录/用户接口
+
+- `wxLogin(params)`: `POST /api/wx/login`
+- `wxBindPhone(code)`: `POST /api/wx/phone`
+- `wxGetUserInfo()`: `GET /api/wx/userinfo`
+- `wxUpdateUserInfo(params)`: `PUT /api/wx/userinfo`
+
+#### 8. 点赞/收藏/搜索/配置接口
+
+- `toggleLike(albumId)`, `getLikeStatus(albumIds)`
+- `toggleFavorite(albumId)`, `getFavoriteStatus(albumIds)`, `getFavoriteList(shopId?)`
+- `searchAlbums(keyword, page?, size?)`
+- `getPageConfig()`
+
+## auth.uts - 认证状态
+
+### 职责
+
+集中管理 token 和用户信息,供 `http.uts` 与页面读取。
+
+### 导出方法
+
+- `getToken()`, `setToken(token)`, `clearToken()`
+- `getUserInfo()`, `setUserInfo(userInfo)`, `mergeUserInfo(userInfo)`, `clearUserInfo()`
+- `isLoggedIn()`
+- `loginSuccess(token, userInfo)`, `logout()`
+
 ### 接口调用规范
 
 所有 API 接口遵循统一的调用模式:
@@ -171,14 +209,15 @@ if (code !== 200) return
 ### 注意事项
 
 1. 所有接口使用 `showLoading: false`,需页面自行控制加载状态
-2. 返回类型均为 `any`,缺少类型定义
-3. 接口方法参数中的 `method` 参数实际未使用 (固定为 GET)
-4. 错误处理在页面层进行
+2. 旧接口仍保留 `method` 参数以兼容调用方,新增接口直接固定 HTTP 方法
+3. 错误处理在页面层进行
 
 ## 依赖关系
 
 ```
 api.uts → http.uts → config.uts
+           ↓
+        auth.uts
            ↓
        uni.request
 ```
@@ -187,7 +226,7 @@ api.uts → http.uts → config.uts
 
 ### 新增 API 接口
 
-在 `api.uts` 中添加新方法:
+在 `src/utils/api.uts` 中添加新方法:
 
 ```typescript
 export const newApi = async (method: string, params?: any) => {
@@ -203,11 +242,11 @@ export const newApi = async (method: string, params?: any) => {
 
 ### 修改配置
 
-在 `config.uts` 中修改 `getHttpConfig()` 返回值。
+在 `src/utils/config.uts` 中修改 `getHttpConfig()` 返回值。
 
 ### 增强 HTTP 请求
 
-可在 `http.uts` 中添加:
+可在 `src/utils/http.uts` 中添加:
 - 请求拦截器
 - 响应拦截器
 - 错误重试机制

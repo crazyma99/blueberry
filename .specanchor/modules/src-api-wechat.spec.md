@@ -3,10 +3,10 @@ specanchor:
   level: module
   module_name: src-api-wechat
   module_path: src/utils/api.uts
-  version: "1.1.0"
+  version: "1.2.0"
   owner: "@team"
   status: active
-  last_synced: "2026-03-29"
+  last_synced: "2026-05-07"
 ---
 
 # Module Spec: 微信小程序 API 模块
@@ -120,6 +120,23 @@ specanchor:
     }
   }
   ```
+
+#### 1.4 wxUpdateUserInfo(params)
+
+更新当前登录用户头像/昵称（需登录）
+
+- **接口**: `PUT /api/wx/userinfo`
+- **认证**: 需要 Bearer Token
+- **参数**:
+
+  ```typescript
+  {
+    nickname?: string
+    avatarUrl?: string
+  }
+  ```
+
+- **返回**: 更新后的 `UserInfo`
 
 ### 2. 点赞模块
 
@@ -260,11 +277,11 @@ specanchor:
 
 ### 4. 搜索模块
 
-#### 4.1 searchAlbums(keyword, page?, pageSize?)
+#### 4.1 searchAlbums(keyword, page?, size?)
 
 相册模糊搜索（公开，无需登录，支持分页）
 
-- **接口**: `GET /api/search?keyword=写真&page=1&pageSize=10`
+- **接口**: `GET /api/search?keyword=写真&page=1&size=10`
 - **认证**: 无需认证
 - **参数**:
 
@@ -272,7 +289,7 @@ specanchor:
   {
     keyword: string    // 搜索关键词
     page?: number      // 页码，默认 1
-    pageSize?: number  // 每页数量，默认 10
+    size?: number      // 每页数量，默认 10
   }
   ```
 
@@ -281,18 +298,24 @@ specanchor:
   ```typescript
   {
     code: number
-    data: Array<{
-      id: number
-      title: string
-      coverImageUrl: string
-      shopId: number
-      price: number
-      likeCount: number
-    }>
+    data: {
+      list: Array<{
+        id: number
+        title: string
+        coverImageUrl: string
+        shopId: number
+        price?: number
+        likeCount: number
+      }>
+      total: number
+      page: number
+      pageSize: number
+      totalPages: number
+    }
   }
   ```
 
-- **空结果处理**: 返回 `{ code: 200, data: [] }`，小程序端展示：「抱歉没有检索到您搜索的内容，请换个搜索词试试～」
+- **空结果处理**: 返回 `{ code: 200, data: { list: [], ... } }`，小程序端展示：「抱歉没有检索到您搜索的内容，请换个搜索词试试～」
 
 ### 5. 店铺模块
 
@@ -684,6 +707,22 @@ export const wxGetUserInfo = async () => {
   return res as { code: number, message: string, data: UserInfo }
 }
 
+export const wxUpdateUserInfo = async (params: {
+  nickname?: string
+  avatarUrl?: string
+}) => {
+  const body: Record<string, any> = {}
+  if (params.nickname != null && params.nickname !== '') body.nickname = params.nickname
+  if (params.avatarUrl != null && params.avatarUrl !== '') body.avatarUrl = params.avatarUrl
+  const res = await request({
+    url: '/api/wx/userinfo',
+    method: 'PUT',
+    data: body,
+    showLoading: false,
+  })
+  return res as { code: number, message: string, data: UserInfo }
+}
+
 // ============ 点赞模块 ============
 
 export const toggleLike = async (albumId: number) => {
@@ -740,14 +779,23 @@ export const getFavoriteList = async (shopId?: number) => {
 
 // ============ 搜索模块 ============
 
-export const searchAlbums = async (keyword: string, page: number = 1, pageSize: number = 10) => {
+export const searchAlbums = async (keyword: string, page: number = 1, size: number = 10) => {
   const res = await request({
     url: '/api/search',
     method: 'GET',
-    data: { keyword, page, pageSize },
+    data: { keyword, page, size },
     showLoading: false,
   })
-  return res as { code: number, data: AlbumBasic[] }
+  return res as {
+    code: number
+    data: {
+      list: AlbumBasic[]
+      total: number
+      page: number
+      pageSize: number
+      totalPages: number
+    }
+  }
 }
 
 // ============ 店铺模块 ============
@@ -801,13 +849,9 @@ interface ShopInfo {
 
 ### Q1: 现有 http.uts 的 token 机制如何改造？ ✅ 已确认
 
-**当前状态**: `http.uts` 使用硬编码的 token
+**当前状态**: `http.uts` 已从 `auth.uts` 动态读取 storage 中的 token。
 
-```typescript
-const token = 'dXNlcjoyODY0Y2Q0MC01M2JkLTQxZmYtYTY2Yi0xY2NmMDA0OGUwZTY='
-```
-
-**决策**: 需要改造为从 storage 动态读取 token。
+**决策**: token 统一由 `auth.uts` 管理,不在 `http.uts` 中硬编码。
 
 - 新增 `auth.uts` 工具模块管理 token
 - 修改 `http.uts` 中的 token 获取逻辑
