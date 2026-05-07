@@ -168,9 +168,12 @@ export default {
 
 				const res = await searchAlbums(keyword, 1, this.pageSize)
 				if (res.code === 200 && res.data) {
-					this.favoriteList = res.data
+					const dataList = this.getSearchItems(res.data)
+					const total = this.getSearchTotal(res.data, dataList.length)
+					const totalPages = Math.ceil(total / this.pageSize)
+					this.favoriteList = dataList
 					this.isEmpty = this.favoriteList.length === 0
-					if (res.data.length < this.pageSize) {
+					if (1 >= totalPages || dataList.length < this.pageSize) {
 						this.noMore = true
 					}
 				} else {
@@ -195,9 +198,12 @@ export default {
 				const nextPage = this.page + 1
 				const res = await searchAlbums(this.searchKeyword.trim(), nextPage, this.pageSize)
 				if (res.code === 200 && res.data) {
-					this.favoriteList = this.favoriteList.concat(res.data)
+					const dataList = this.getSearchItems(res.data)
+					const total = this.getSearchTotal(res.data, this.favoriteList.length + dataList.length)
+					const totalPages = Math.ceil(total / this.pageSize)
+					this.favoriteList = this.favoriteList.concat(dataList)
 					this.page = nextPage
-					if (res.data.length < this.pageSize) {
+					if (nextPage >= totalPages || dataList.length < this.pageSize) {
 						this.noMore = true
 					}
 				} else {
@@ -208,6 +214,17 @@ export default {
 			} finally {
 				this.loadingMore = false
 			}
+		},
+
+		getSearchItems(data: any): any[] {
+			if (Array.isArray(data)) return data
+			if (data != null && Array.isArray(data.list)) return data.list
+			return []
+		},
+
+		getSearchTotal(data: any, fallback: number): number {
+			if (data != null && data.total != null) return Number(data.total)
+			return fallback
 		},
 
 		handleItemClick(item: any) {
