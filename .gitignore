@@ -31,6 +31,16 @@ yarn-error.log*
 *.temp
 .cache/
 
+# 源码统一放在 src/，根目录同名源文件/目录会造成漂移
+/App.uvue
+/main.uts
+/manifest.json
+/pages.json
+/uni.scss
+/pages/
+/static/
+/utils/
+
 # 编辑器配置
 .editorconfig
 .eslintrc.js
