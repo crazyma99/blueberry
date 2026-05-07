@@ -25,7 +25,7 @@
 </template>
 
 <script>
-	import { getImage } from '../../utils/api'
+	import { getImage } from '../../utils/api.uts'
 	export default {
 		data() {
 			return {
@@ -38,14 +38,25 @@
 		},
 		onLoad(query) {
 			const id = query.idx ?? ''
-			const priceImage = query.priceImage ?? ''
-			const shopName = query.shopName ?? ''
+			const priceImage = this.decodeRouteValue(query.priceImage ?? '')
+			const shopName = this.decodeRouteValue(query.shopName ?? '')
 			this.id = id
-			uni.setNavigationBarTitle({ title: `${shopName}价目表` })
+			uni.setNavigationBarTitle({ title: shopName ? `${shopName}价目表` : '蓝梅价目表' })
 			this.getBanner(id)
-			this.priceImage = priceImage
+			this.priceImage = priceImage || this.getFallbackPriceImage(id)
 		},
 		methods: {
+			decodeRouteValue(value) {
+				if (!value) return ''
+				try {
+					return decodeURIComponent(value)
+				} catch (_err) {
+					return value
+				}
+			},
+			getFallbackPriceImage(id) {
+				return id === '1' ? '/static/honghe-price.png' : '/static/price.png'
+			},
 			async getBanner (id: string) {
 				try {
 					this.loading = true
@@ -61,11 +72,6 @@
 				} finally {
 					this.loading = false
 				}
-			}
-		},
-		computed: {
-			getPriceBg() {
-				return this.id === '1' ? '/static/honghe-price.png': '/static/price.png'
 			}
 		}
 	}
