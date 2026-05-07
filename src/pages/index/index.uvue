@@ -342,6 +342,8 @@
 		width: 100%;
 		display: flex;
 		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 8rpx;
 	}
 	.demoPhoto{
 		width: 364rpx;
@@ -374,7 +376,6 @@
 	}
 	.shopCard {
 		position: relative;
-		margin-right: 8rpx;
 	}
 	.shopCard:last-child {
 		margin-right: 0;
