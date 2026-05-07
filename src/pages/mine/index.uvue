@@ -70,15 +70,23 @@
 
     <!-- 登录弹窗 -->
     <view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
-      <view class="login-popup" @click.stop>
-        <view class="login-popup-title">登录蓝梅</view>
-        <view class="login-popup-desc">授权手机号以获得完整体验</view>
+      <view class="login-popup login-auth-popup" @click.stop>
+        <view class="login-popup-title">微信授权登陆</view>
+        <view class="login-agreement-row">
+          <view
+            :class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
+            @click.stop="toggleLoginAgreement"
+          >
+            <view v-if="loginAgreementChecked" class="login-agreement-dot"></view>
+          </view>
+          <text class="login-agreement-text"><text>登录即代表同意 </text><text class="login-agreement-link" @click.stop="openUserAgreement">{{ userAgreementName }}</text><text>、</text><text class="login-agreement-link" @click.stop="openPrivacyPolicy">{{ privacyPolicyName }}</text></text>
+        </view>
         <button
           class="login-phone-btn"
           open-type="getPhoneNumber"
           @getphonenumber="onGetPhoneNumber"
-        >手机号快捷登录</button>
-        <view class="login-cancel" @click="closeLoginPopup">暂不登录</view>
+        >一键登录</button>
+        <view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
       </view>
     </view>
 
@@ -118,6 +126,12 @@
 <script lang="uts">
 import { isLoggedIn, getUserInfo, loginSuccess, logout, setUserInfo, mergeUserInfo } from '../../utils/auth.uts'
 import { wxLogin, wxBindPhone, wxGetUserInfo, wxUpdateUserInfo, getPageConfig } from '../../utils/api.uts'
+import {
+  USER_AGREEMENT_NAME,
+  PRIVACY_POLICY_NAME,
+  openUserAgreement,
+  openPrivacyPolicy
+} from '../../utils/legal.uts'
 
 interface UserInfo {
   id: number
@@ -141,6 +155,9 @@ export default {
       // 仅供 profile 弹窗里 chooseAvatar 占位使用，user-section 不再用兜底图
       defaultAvatar: '/static/mine.svg',
       showLoginPopup: false,
+      loginAgreementChecked: false,
+      userAgreementName: USER_AGREEMENT_NAME,
+      privacyPolicyName: PRIVACY_POLICY_NAME,
       // 头像昵称授权弹窗
       showProfilePopup: false,
       profileAvatarUrl: '',
@@ -250,10 +267,27 @@ export default {
     // 关闭登录弹窗
     closeLoginPopup() {
       this.showLoginPopup = false
+      this.loginAgreementChecked = false
+    },
+
+    toggleLoginAgreement() {
+      this.loginAgreementChecked = !this.loginAgreementChecked
+    },
+
+    openUserAgreement() {
+      openUserAgreement()
+    },
+
+    openPrivacyPolicy() {
+      openPrivacyPolicy()
     },
 
     // 手机号授权回调
     async onGetPhoneNumber(e: any) {
+      if (!this.loginAgreementChecked) {
+        uni.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' })
+        return
+      }
       const detail = e.detail || {}
       console.log('[login] step0 getPhoneNumber detail=', JSON.stringify(detail))
 
