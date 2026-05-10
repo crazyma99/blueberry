@@ -1,0 +1,152 @@
+<template>
+  <scroll-view class="policy-container" scroll-y="true">
+    <view class="policy-content">
+      <view class="policy-title">{{ miniAppName }} 小程序用户服务协议</view>
+
+      <view class="policy-meta">
+        <text class="policy-meta-line">更新日期：2026年5月7日</text>
+        <text class="policy-meta-line">生效日期：2026年5月7日</text>
+      </view>
+
+      <view class="policy-divider"></view>
+
+      <view class="policy-section-title">一、总则</view>
+      <view class="policy-paragraph"><text>1.1 本协议是用户（以下简称"您"）与弥勒蓝梅网络传媒有限公司（以下简称"我们"）之间关于使用"{{ miniAppName }}"微信小程序（以下简称"本小程序"）所订立的协议。</text></view>
+      <view class="policy-paragraph"><text>1.2 您在使用本小程序前，请务必仔细阅读并充分理解本协议各条款。一旦您开始使用本小程序，即表示您已充分阅读、理解并同意接受本协议的全部内容。</text></view>
+      <view class="policy-paragraph"><text>1.3 我们有权根据需要不时修改本协议，修改后的协议一经公布即有效代替原协议。您可在本小程序内查阅最新版协议条款。</text></view>
+
+      <view class="policy-section-title">二、服务内容</view>
+      <view class="policy-paragraph"><text>2.1 本小程序为用户提供客片浏览和收藏服务，用户可在线查看摄影作品并收藏喜欢的照片。</text></view>
+      <view class="policy-paragraph"><text>2.2 我们有权随时对服务内容进行调整，并以公告或通知的方式告知用户。</text></view>
+
+      <view class="policy-section-title">三、用户账号</view>
+      <view class="policy-paragraph"><text>3.1 您通过微信授权登录本小程序，使用微信账号相关信息作为您的身份标识。</text></view>
+      <view class="policy-paragraph"><text>3.2 您应妥善保管微信账号信息，因您个人原因导致的账号安全问题，由您自行承担责任。</text></view>
+      <view class="policy-paragraph"><text>3.3 您不得将账号转让、借用或赠与他人使用。</text></view>
+
+      <view class="policy-section-title">四、用户行为规范</view>
+      <view class="policy-paragraph"><text>4.1 您在使用本小程序时，应遵守中华人民共和国相关法律法规。</text></view>
+      <view class="policy-paragraph"><text>4.2 您不得利用本小程序从事以下行为：</text></view>
+      <view class="policy-list-item"><text>· 侵犯他人知识产权或其他合法权益；</text></view>
+      <view class="policy-list-item"><text>· 干扰本小程序的正常运行；</text></view>
+      <view class="policy-list-item"><text>· 利用技术手段非法获取数据；</text></view>
+      <view class="policy-list-item"><text>· 未经授权下载、传播小程序内的摄影作品；</text></view>
+      <view class="policy-list-item"><text>· 其他违反法律法规或本协议的行为。</text></view>
+      <view class="policy-paragraph"><text>4.3 如您违反上述规定，我们有权采取警告、限制功能、暂停或终止服务等措施。</text></view>
+
+      <view class="policy-section-title">五、知识产权</view>
+      <view class="policy-paragraph"><text>5.1 本小程序中的所有内容，包括但不限于文字、图片、音频、视频、软件、程序、版面设计等，其知识产权归我们或相关权利人所有。</text></view>
+      <view class="policy-paragraph"><text>5.2 小程序内展示的摄影作品，其著作权归我们或原始权利人所有。未经权利人许可，任何人不得擅自下载、复制、传播。</text></view>
+      <view class="policy-paragraph"><text>5.3 用户收藏功能仅供个人浏览使用，不得用于商业用途。</text></view>
+
+      <view class="policy-section-title">六、隐私保护</view>
+      <view class="policy-paragraph"><text>6.1 我们重视对您个人信息的保护。关于个人信息的收集、使用、存储和保护等内容，请参阅《{{ miniAppName }} 小程序隐私政策》。</text></view>
+      <view class="policy-paragraph"><text>6.2 您使用本小程序即表示同意我们按照隐私政策收集和使用您的相关信息。</text></view>
+
+      <view class="policy-section-title">七、服务变更与中断</view>
+      <view class="policy-paragraph"><text>7.1 我们可能因业务调整、系统维护、升级等原因暂时中断或终止部分或全部服务。</text></view>
+      <view class="policy-paragraph"><text>7.2 因不可抗力（包括但不限于自然灾害、政府行为、网络攻击等）导致的服务中断，我们不承担责任。</text></view>
+
+      <view class="policy-section-title">八、免责声明</view>
+      <view class="policy-paragraph"><text>8.1 本小程序按"现状"提供服务，我们不对服务的及时性、安全性、准确性作出保证。</text></view>
+      <view class="policy-paragraph"><text>8.2 因您自身原因导致的任何损失，我们不承担责任。</text></view>
+      <view class="policy-paragraph"><text>8.3 对于因第三方原因（包括但不限于微信平台政策变化）导致的服务影响，我们不承担责任。</text></view>
+
+      <view class="policy-section-title">九、争议解决</view>
+      <view class="policy-paragraph"><text>9.1 本协议适用中华人民共和国法律。</text></view>
+      <view class="policy-paragraph"><text>9.2 因本协议引起的任何争议，双方应友好协商解决；协商不成的，任何一方有权向弥勒蓝梅网络传媒有限公司所在地有管辖权的人民法院提起诉讼。</text></view>
+
+      <view class="policy-section-title">十、联系方式</view>
+      <view class="policy-paragraph"><text>如您对本协议有任何疑问或建议，可通过以下方式联系我们：</text></view>
+      <view class="policy-list-item"><text>· 公司名称：弥勒蓝梅网络传媒有限公司</text></view>
+      <view class="policy-list-item"><text>· 电子邮箱：m1130254909@gmail.com</text></view>
+
+      <view class="policy-divider"></view>
+
+      <view class="policy-footer"><text>本协议最终解释权归弥勒蓝梅网络传媒有限公司所有。</text></view>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+import { MINI_APP_NAME } from '../../utils/legal.uts'
+
+export default {
+  data() {
+    return {
+      miniAppName: MINI_APP_NAME
+    }
+  }
+}
+</script>
+
+<style>
+.policy-container {
+  width: 100%;
+  height: 100vh;
+  background-color: #ffffff;
+}
+
+.policy-content {
+  padding: 32rpx 36rpx 80rpx 36rpx;
+}
+
+.policy-title {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #1a1a1a;
+  text-align: center;
+  margin-top: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.policy-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.policy-meta-line {
+  font-size: 26rpx;
+  color: #888888;
+  line-height: 44rpx;
+}
+
+.policy-divider {
+  height: 1rpx;
+  background-color: #e5e5e5;
+  margin: 24rpx 0;
+}
+
+.policy-section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin-top: 32rpx;
+  margin-bottom: 16rpx;
+}
+
+.policy-paragraph {
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 48rpx;
+  margin-bottom: 16rpx;
+}
+
+.policy-list-item {
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 48rpx;
+  margin-bottom: 8rpx;
+  padding-left: 16rpx;
+}
+
+.policy-footer {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 44rpx;
+  text-align: center;
+  margin-top: 16rpx;
+}
+</style>

@@ -21,8 +21,7 @@ const required = [
   'CONTACT_QR_SRC',
   'PRICE_FALLBACK_TITLE',
   'API_BASE_URL',
-  'USER_AGREEMENT_NAME',
-  'PRIVACY_POLICY_NAME'
+  'MINI_APP_NAME'
 ]
 
 for (const key of required) {
@@ -92,9 +91,47 @@ function updateManifest() {
 }
 
 function updatePagesJson() {
-  replaceText('src/pages.json', [
-    [/("globalStyle"\s*:\s*\{[\s\S]*?"navigationBarTitleText"\s*:\s*)"[^"]*"/, `$1"${env.NAVIGATION_TITLE}"`]
-  ])
+  let content = read('src/pages.json')
+  content = content.replace(
+    /("globalStyle"\s*:\s*\{[\s\S]*?"navigationBarTitleText"\s*:\s*)"[^"]*"/,
+    `$1"${env.NAVIGATION_TITLE}"`
+  )
+
+  const requiredRoutes = [
+    {
+      path: 'pages/policies/user',
+      block: [
+        '\t\t{',
+        '\t\t\t"path": "pages/policies/user",',
+        '\t\t\t"style": {',
+        '\t\t\t\t"navigationBarTitleText": "用户协议"',
+        '\t\t\t}',
+        '\t\t}'
+      ].join('\n')
+    },
+    {
+      path: 'pages/policies/privacy',
+      block: [
+        '\t\t{',
+        '\t\t\t"path": "pages/policies/privacy",',
+        '\t\t\t"style": {',
+        '\t\t\t\t"navigationBarTitleText": "隐私政策"',
+        '\t\t\t}',
+        '\t\t}'
+      ].join('\n')
+    }
+  ]
+
+  for (const route of requiredRoutes) {
+    if (content.includes(`"path": "${route.path}"`)) continue
+    const insertPattern = /\n\t\],\n\t"globalStyle"/
+    if (!insertPattern.test(content)) {
+      throw new Error('pattern not found in src/pages.json: pages array closing marker')
+    }
+    content = content.replace(insertPattern, `,\n${route.block}\n\t],\n\t"globalStyle"`)
+  }
+
+  writeIfChanged('src/pages.json', content)
 }
 
 function updateConfig() {
@@ -114,10 +151,7 @@ function updateHttp() {
 
 function updateLegal() {
   replaceText('src/utils/legal.uts', [
-    [/export const USER_AGREEMENT_NAME = '[^']*'/, `export const USER_AGREEMENT_NAME = ${utsString(env.USER_AGREEMENT_NAME)}`],
-    [/export const PRIVACY_POLICY_NAME = '[^']*'/, `export const PRIVACY_POLICY_NAME = ${utsString(env.PRIVACY_POLICY_NAME)}`],
-    [/export const USER_AGREEMENT_URL = '[^']*'/, `export const USER_AGREEMENT_URL = ${utsString(env.USER_AGREEMENT_URL || '')}`],
-    [/export const PRIVACY_POLICY_URL = '[^']*'/, `export const PRIVACY_POLICY_URL = ${utsString(env.PRIVACY_POLICY_URL || '')}`]
+    [/export const MINI_APP_NAME = '[^']*'/, `export const MINI_APP_NAME = ${utsString(env.MINI_APP_NAME)}`]
   ])
 }
 

@@ -39,6 +39,18 @@
 			"style": {
 				"navigationBarTitleText": ""
 			}
+		},
+		{
+			"path": "pages/policies/user",
+			"style": {
+				"navigationBarTitleText": "用户协议"
+			}
+		},
+		{
+			"path": "pages/policies/privacy",
+			"style": {
+				"navigationBarTitleText": "隐私政策"
+			}
 		}
 	],
 	"globalStyle": {

@@ -78,10 +78,7 @@ PRICE_FALLBACK_TITLE="花花旅拍价目表"
 API_BASE_URL="https://crazyma99.xyz"
 APP_CODE="huahua"
 
-USER_AGREEMENT_NAME="《花花旅拍 SKILL 用户协议》"
-PRIVACY_POLICY_NAME="《花花旅拍 SKILL 隐私政策》"
-USER_AGREEMENT_URL="https://qcni02zjwcg1.feishu.cn/docx/NeY3dBnEno8sI2xYXxxcfsRZnsh"
-PRIVACY_POLICY_URL="https://qcni02zjwcg1.feishu.cn/docx/XKptdH2UKoD0uzxuRNHcPovHnZe"
+MINI_APP_NAME="花花旅拍"
 ```
 
 如果需要替换本地素材，把文件放到 `profiles/<project-key>/static/`。执行 apply/build 时会复制到目标 repo 的 `src/static/`。
@@ -184,6 +181,8 @@ scripts/build-miniapp.sh huahua --repo /Users/leolin/Desktop/huahua --sync-templ
 scripts/build-miniapp.sh huahua --repo /Users/leolin/Desktop/huahua
 ```
 
+已有目标仓库如果需要接收 `blueBerry` 的上游源码改动，必须加 `--sync-template`。不加时只会把 profile 字段写入目标仓库已有的配置占位，无法把旧模板代码升级成新版逻辑。
+
 ## 配置修改清单
 
 脚本会根据 profile 写入这些位置：
@@ -196,7 +195,7 @@ scripts/build-miniapp.sh huahua --repo /Users/leolin/Desktop/huahua
 | `NAVIGATION_TITLE` | `src/pages.json` 的 `globalStyle.navigationBarTitleText` |
 | `API_BASE_URL` | `src/utils/config.uts` |
 | `APP_CODE` | `src/utils/http.uts` 的 `X-App-Code`，为空时移除 |
-| `USER_AGREEMENT_NAME`、`PRIVACY_POLICY_NAME`、`USER_AGREEMENT_URL`、`PRIVACY_POLICY_URL` | `src/utils/legal.uts` |
+| `MINI_APP_NAME` | `src/utils/legal.uts`，用于生成登录协议名称和本地协议页面中的小程序名称 |
 | `CONTACT_QR_SRC`、`CONTACT_PHONE_TEXT`、`COPYRIGHT_TEXT` | 首页、价目表首页等页面 |
 | `PRICE_FALLBACK_TITLE` | `src/pages/priceList/index.uvue` |
 | `profiles/<project-key>/static/*` | 复制到目标 repo 的 `src/static/` |

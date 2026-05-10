@@ -1,0 +1,251 @@
+<template>
+  <scroll-view class="policy-container" scroll-y="true">
+    <view class="policy-content">
+      <view class="policy-title">{{ miniAppName }} 小程序隐私政策</view>
+
+      <view class="policy-meta">
+        <text class="policy-meta-line">更新日期：2026年5月7日</text>
+        <text class="policy-meta-line">生效日期：2026年5月7日</text>
+      </view>
+
+      <view class="policy-divider"></view>
+
+      <view class="policy-section-title">引言</view>
+      <view class="policy-paragraph"><text>"{{ miniAppName }}"小程序由弥勒蓝梅网络传媒有限公司（以下简称"开发者"）提供服务。本指引是小程序开发者"弥勒蓝梅网络传媒有限公司"为处理你的个人信息而制定。</text></view>
+      <view class="policy-paragraph"><text>开发者深知个人信息对你的重要性，将尽全力保护你的个人信息安全。开发者致力于维持你对我们的信任，恪守以下原则保护你的个人信息：权责一致原则、目的明确原则、选择同意原则、最少够用原则、确保安全原则、主体参与原则、公开透明原则等。</text></view>
+      <view class="policy-paragraph"><text>请在使用本小程序前，仔细阅读并了解本隐私政策。</text></view>
+
+      <view class="policy-section-title">一、开发者处理的信息</view>
+      <view class="policy-paragraph"><text>开发者在提供服务过程中，需要收集和使用以下与你有关的信息：</text></view>
+
+      <view class="policy-subsection-title">1.1 收集的个人信息</view>
+      <view class="policy-table">
+        <view class="policy-table-row policy-table-header-row">
+          <view class="policy-table-cell policy-table-cell-left"><text class="policy-table-header">信息类型</text></view>
+          <view class="policy-table-cell policy-table-cell-right"><text class="policy-table-header">使用目的</text></view>
+        </view>
+        <view class="policy-table-row">
+          <view class="policy-table-cell policy-table-cell-left"><text class="policy-table-body">用户头像</text></view>
+          <view class="policy-table-cell policy-table-cell-right"><text class="policy-table-body">用于用户登录后在个人中心展示</text></view>
+        </view>
+        <view class="policy-table-row">
+          <view class="policy-table-cell policy-table-cell-left"><text class="policy-table-body">用户昵称</text></view>
+          <view class="policy-table-cell policy-table-cell-right"><text class="policy-table-body">用于用户登录后在个人中心展示</text></view>
+        </view>
+        <view class="policy-table-row policy-table-row-last">
+          <view class="policy-table-cell policy-table-cell-left"><text class="policy-table-body">电话号码</text></view>
+          <view class="policy-table-cell policy-table-cell-right"><text class="policy-table-body">用于用户登录验证身份、个人中心展示、记录用户资产（收藏记录）归属</text></view>
+        </view>
+      </view>
+
+      <view class="policy-subsection-title">1.2 信息使用场景</view>
+      <view class="policy-list-item"><text>· 用户登录：通过微信授权获取你的头像、昵称用于身份识别，通过手机号进行身份验证；</text></view>
+      <view class="policy-list-item"><text>· 个人中心展示：在小程序个人中心页面展示你的头像、昵称和绑定手机号；</text></view>
+      <view class="policy-list-item"><text>· 记录用户资产：将你的个人信息与你在平台上的客片收藏记录关联，确保资产归属准确。</text></view>
+
+      <view class="policy-subsection-title">1.3 服务功能说明</view>
+      <view class="policy-paragraph"><text>本小程序核心功能为客片浏览和收藏，你可以在线查看摄影作品并收藏喜欢的照片。</text></view>
+
+      <view class="policy-subsection-title">1.4 第三方插件信息</view>
+      <view class="policy-paragraph"><text>本小程序目前未接入第三方插件。如后续接入，将在本政策中更新并告知你。</text></view>
+
+      <view class="policy-section-title">二、信息的使用规则</view>
+      <view class="policy-paragraph"><text>2.1 开发者将严格按照本政策所述目的使用收集的信息，如需超出上述用途使用，将再次征得你的同意。</text></view>
+      <view class="policy-paragraph"><text>2.2 在收集你的个人信息后，开发者将通过技术手段对信息进行去标识化处理，去标识化处理的信息将无法识别你的身份。</text></view>
+      <view class="policy-paragraph"><text>2.3 当开发者要将信息用于本政策未载明的其他用途，或将基于特定目的收集的信息用于其他目的时，会事先征得你的同意。</text></view>
+
+      <view class="policy-section-title">三、信息对外提供</view>
+      <view class="policy-paragraph"><text>3.1 开发者承诺：未经你本人同意，不会主动将你的个人信息共享或转让给第三方。如存在确需共享或转让的情形，将直接征得或确认第三方已征得你的同意。</text></view>
+      <view class="policy-paragraph"><text>3.2 开发者承诺：不会对外公开披露你的个人信息。如确需公开披露，将告知你公开披露的目的和类型，并征得你的同意。</text></view>
+      <view class="policy-paragraph"><text>3.3 以下情形除外：</text></view>
+      <view class="policy-list-item"><text>· 根据法律法规要求提供的；</text></view>
+      <view class="policy-list-item"><text>· 与国家安全、国防安全直接相关的；</text></view>
+      <view class="policy-list-item"><text>· 与公共安全、公共卫生、重大公共利益直接相关的；</text></view>
+      <view class="policy-list-item"><text>· 与犯罪侦查、起诉、审判和判决执行等直接相关的；</text></view>
+      <view class="policy-list-item"><text>· 为维护你或其他个人的生命、财产等重大合法权益但又很难得到本人同意的。</text></view>
+
+      <view class="policy-section-title">四、开发者对信息的存储</view>
+      <view class="policy-paragraph"><text>4.1 存储地点：中华人民共和国境内。</text></view>
+      <view class="policy-paragraph"><text>4.2 存储期限：开发者仅在为实现上述目的所必需的期限内保存你的个人信息。超出上述存储期限后，开发者将对你的个人信息进行删除或匿名化处理。</text></view>
+      <view class="policy-paragraph"><text>4.3 具体存储期限如下：</text></view>
+      <view class="policy-list-item"><text>· 账号信息（头像、昵称、电话号码）：自你注销账号之日起30日内删除；</text></view>
+      <view class="policy-list-item"><text>· 收藏记录：自你注销账号之日起30日内删除；</text></view>
+      <view class="policy-list-item"><text>· 日志信息：产生后保留不超过6个月。</text></view>
+
+      <view class="policy-section-title">五、你的权利</view>
+      <view class="policy-paragraph"><text>5.1 访问权：你可以通过小程序"个人中心"查看你的个人信息。</text></view>
+      <view class="policy-paragraph"><text>5.2 更正权：当你发现个人信息有误时，你可以联系我们进行更正。</text></view>
+      <view class="policy-paragraph"><text>5.3 删除权：在以下情形中，你可以向我们提出删除个人信息的请求：</text></view>
+      <view class="policy-list-item"><text>· 处理目的已实现或无法实现；</text></view>
+      <view class="policy-list-item"><text>· 我们停止提供服务；</text></view>
+      <view class="policy-list-item"><text>· 保存期限已届满；</text></view>
+      <view class="policy-list-item"><text>· 你撤回同意；</text></view>
+      <view class="policy-list-item"><text>· 我们违反法律或与你的约定处理个人信息的。</text></view>
+      <view class="policy-paragraph"><text>5.4 撤回同意：你可以通过微信"设置-隐私-授权管理"中取消对本小程序的相关授权。撤回同意后，我们将无法继续为你提供撤回同意所对应的服务，但不会影响此前基于你的授权而开展的信息处理。</text></view>
+      <view class="policy-paragraph"><text>5.5 注销账号：你可以联系我们申请注销账号。注销后，我们将停止为你提供服务，并根据适用法律的要求删除你的个人信息或进行匿名化处理。</text></view>
+
+      <view class="policy-section-title">六、信息安全</view>
+      <view class="policy-paragraph"><text>6.1 开发者采取以下安全措施保护你的个人信息：</text></view>
+      <view class="policy-list-item"><text>· 数据加密传输（HTTPS/SSL）；</text></view>
+      <view class="policy-list-item"><text>· 访问权限控制与审计；</text></view>
+      <view class="policy-list-item"><text>· 数据存储加密；</text></view>
+      <view class="policy-list-item"><text>· 安全事件应急响应机制。</text></view>
+      <view class="policy-paragraph"><text>6.2 如发生个人信息安全事件，我们将及时向你告知安全事件的基本情况、影响和已采取的处置措施。</text></view>
+
+      <view class="policy-section-title">七、未成年人保护</view>
+      <view class="policy-paragraph"><text>7.1 本小程序主要面向成年人。如果你是未满14周岁的未成年人，请在监护人的陪同下阅读本政策，并在征得监护人同意后使用我们的服务。</text></view>
+      <view class="policy-paragraph"><text>7.2 对于经监护人同意而收集未成年人个人信息的情况，我们只会在法律法规允许、监护人明确同意或保护未成年人所必要的情况下使用或公开披露该信息。</text></view>
+
+      <view class="policy-section-title">八、联系开发者</view>
+      <view class="policy-paragraph"><text>如果你对本政策有任何疑问、意见或建议，或你需要行使个人信息相关权利，可通过以下方式联系我们：</text></view>
+      <view class="policy-list-item"><text>· 公司名称：弥勒蓝梅网络传媒有限公司</text></view>
+      <view class="policy-list-item"><text>· 电子邮箱：m1130254909@gmail.com</text></view>
+      <view class="policy-paragraph"><text>我们将在收到你的请求后15个工作日内予以回复。</text></view>
+
+      <view class="policy-section-title">九、政策更新</view>
+      <view class="policy-paragraph"><text>我们可能适时对本政策进行修订。当政策的条款发生变更时，我们会在版本更新时以弹窗或其他适当方式向你展示变更后的内容。</text></view>
+
+      <view class="policy-divider"></view>
+
+      <view class="policy-footer"><text>弥勒蓝梅网络传媒有限公司</text></view>
+      <view class="policy-footer"><text>更新日期：2026年5月7日</text></view>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+import { MINI_APP_NAME } from '../../utils/legal.uts'
+
+export default {
+  data() {
+    return {
+      miniAppName: MINI_APP_NAME
+    }
+  }
+}
+</script>
+
+<style>
+.policy-container {
+  width: 100%;
+  height: 100vh;
+  background-color: #ffffff;
+}
+
+.policy-content {
+  padding: 32rpx 36rpx 80rpx 36rpx;
+}
+
+.policy-title {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #1a1a1a;
+  text-align: center;
+  margin-top: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.policy-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.policy-meta-line {
+  font-size: 26rpx;
+  color: #888888;
+  line-height: 44rpx;
+}
+
+.policy-divider {
+  height: 1rpx;
+  background-color: #e5e5e5;
+  margin: 24rpx 0;
+}
+
+.policy-section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin-top: 32rpx;
+  margin-bottom: 16rpx;
+}
+
+.policy-subsection-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #222222;
+  margin-top: 20rpx;
+  margin-bottom: 12rpx;
+}
+
+.policy-paragraph {
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 48rpx;
+  margin-bottom: 16rpx;
+}
+
+.policy-list-item {
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 48rpx;
+  margin-bottom: 8rpx;
+  padding-left: 16rpx;
+}
+
+.policy-table {
+  border: 1rpx solid #e0e0e0;
+  border-radius: 8rpx;
+  margin: 12rpx 0 20rpx 0;
+  overflow: hidden;
+}
+
+.policy-table-row {
+  display: flex;
+  flex-direction: row;
+  border-bottom: 1rpx solid #e0e0e0;
+}
+
+.policy-table-row-last {
+  border-bottom-width: 0;
+}
+
+.policy-table-header-row {
+  background-color: #f5f5f5;
+}
+
+.policy-table-cell {
+  padding: 16rpx 20rpx;
+}
+
+.policy-table-cell-left {
+  width: 180rpx;
+  border-right: 1rpx solid #e0e0e0;
+}
+
+.policy-table-cell-right {
+  flex: 1;
+}
+
+.policy-table-header {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #1a1a1a;
+  line-height: 44rpx;
+}
+
+.policy-table-body {
+  font-size: 26rpx;
+  color: #333333;
+  line-height: 44rpx;
+}
+
+.policy-footer {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 44rpx;
+  text-align: center;
+}
+</style>

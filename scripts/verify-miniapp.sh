@@ -113,6 +113,21 @@ if [ -n "${APP_CODE:-}" ]; then
   fi
 fi
 
+if [ -n "${MINI_APP_NAME:-}" ]; then
+  if ! rg -F -q "$MINI_APP_NAME" "$TARGET_REPO/src/utils/legal.uts" "$OUTPUT_ABS/utils/legal.js" 2>/dev/null; then
+    echo "MINI_APP_NAME not found in legal source or build output." >&2
+    echo "If this target repo has old template code, rebuild with --sync-template first." >&2
+    exit 1
+  fi
+  for policy_page in pages/policies/user pages/policies/privacy; do
+    if [ ! -f "$OUTPUT_ABS/$policy_page.js" ]; then
+      echo "Missing local policy page in build output: $OUTPUT_ABS/$policy_page.js" >&2
+      echo "If this target repo has old template code, rebuild with --sync-template first." >&2
+      exit 1
+    fi
+  done
+fi
+
 if [ -n "${RESIDUAL_SEARCH_REGEX:-}" ]; then
   if rg -n "$RESIDUAL_SEARCH_REGEX" "$TARGET_REPO/src" "$TARGET_REPO/project.config.json" "$TARGET_REPO/package.json" "$OUTPUT_ABS"; then
     echo "Residual template strings found. See matches above." >&2

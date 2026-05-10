@@ -1,25 +1,15 @@
-export const USER_AGREEMENT_NAME = '《蓝梅旅拍 SKILL 用户协议》'
-export const PRIVACY_POLICY_NAME = '《蓝梅旅拍 SKILL 隐私政策》'
-
-export const USER_AGREEMENT_URL = 'https://qcni02zjwcg1.feishu.cn/docx/NeY3dBnEno8sI2xYXxxcfsRZnsh'
-export const PRIVACY_POLICY_URL = 'https://qcni02zjwcg1.feishu.cn/docx/XKptdH2UKoD0uzxuRNHcPovHnZe'
+export const MINI_APP_NAME = '蓝梅旅拍 SKILL'
+export const USER_AGREEMENT_NAME = `《${MINI_APP_NAME} 用户协议》`
+export const PRIVACY_POLICY_NAME = `《${MINI_APP_NAME} 隐私政策》`
 
 export function openUserAgreement(): void {
-  if (USER_AGREEMENT_URL === '') {
-    uni.showToast({
-      title: '用户协议链接未配置',
-      icon: 'none'
-    })
-    return
-  }
-
   uni.navigateTo({
-    url: `/pages/webview/index?url=${encodeURIComponent(USER_AGREEMENT_URL)}`
+    url: '/pages/policies/user'
   })
 }
 
 export function openPrivacyPolicy(): void {
   uni.navigateTo({
-    url: `/pages/webview/index?url=${encodeURIComponent(PRIVACY_POLICY_URL)}`
+    url: '/pages/policies/privacy'
   })
 }
