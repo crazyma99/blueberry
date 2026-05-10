@@ -3,7 +3,13 @@
   "version": "1.0.0",
   "scripts": {
     "dev:mp-weixin": "uni -p mp-weixin",
-    "build:mp-weixin": "uni build -p mp-weixin"
+    "build:mp-weixin": "uni build -p mp-weixin",
+    "profile:create": "scripts/create-profile.sh",
+    "profile:apply": "scripts/apply-profile.sh",
+    "profile:build": "scripts/build-miniapp.sh",
+    "profile:release": "scripts/release-miniapp.sh",
+    "profile:new": "scripts/new-miniapp-project.sh",
+    "profile:verify": "scripts/verify-miniapp.sh"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-alpha-5000720260327001",
