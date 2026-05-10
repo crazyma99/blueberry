@@ -1,9 +1,8 @@
 export const USER_AGREEMENT_NAME = '《蓝梅旅拍 SKILL 用户协议》'
 export const PRIVACY_POLICY_NAME = '《蓝梅旅拍 SKILL 隐私政策》'
 
-// 小程序后台/微信开发者工具生成的用户协议 URL 放这里。
-// 目前仓库和项目配置里没有可读取的真实用户协议地址，避免写死不存在的链接。
-export const USER_AGREEMENT_URL = ''
+export const USER_AGREEMENT_URL = 'https://qcni02zjwcg1.feishu.cn/docx/NeY3dBnEno8sI2xYXxxcfsRZnsh'
+export const PRIVACY_POLICY_URL = 'https://qcni02zjwcg1.feishu.cn/docx/XKptdH2UKoD0uzxuRNHcPovHnZe'
 
 export function openUserAgreement(): void {
   if (USER_AGREEMENT_URL === '') {
@@ -20,22 +19,7 @@ export function openUserAgreement(): void {
 }
 
 export function openPrivacyPolicy(): void {
-  // #ifdef MP-WEIXIN
-  if (typeof wx !== 'undefined' && wx.openPrivacyContract != null) {
-    wx.openPrivacyContract({
-      fail: () => {
-        uni.showToast({
-          title: '暂无法打开隐私政策',
-          icon: 'none'
-        })
-      }
-    })
-    return
-  }
-  // #endif
-
-  uni.showToast({
-    title: '当前环境不支持打开隐私政策',
-    icon: 'none'
+  uni.navigateTo({
+    url: `/pages/webview/index?url=${encodeURIComponent(PRIVACY_POLICY_URL)}`
   })
 }

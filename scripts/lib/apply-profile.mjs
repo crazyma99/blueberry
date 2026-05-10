@@ -116,7 +116,8 @@ function updateLegal() {
   replaceText('src/utils/legal.uts', [
     [/export const USER_AGREEMENT_NAME = '[^']*'/, `export const USER_AGREEMENT_NAME = ${utsString(env.USER_AGREEMENT_NAME)}`],
     [/export const PRIVACY_POLICY_NAME = '[^']*'/, `export const PRIVACY_POLICY_NAME = ${utsString(env.PRIVACY_POLICY_NAME)}`],
-    [/export const USER_AGREEMENT_URL = '[^']*'/, `export const USER_AGREEMENT_URL = ${utsString(env.USER_AGREEMENT_URL || '')}`]
+    [/export const USER_AGREEMENT_URL = '[^']*'/, `export const USER_AGREEMENT_URL = ${utsString(env.USER_AGREEMENT_URL || '')}`],
+    [/export const PRIVACY_POLICY_URL = '[^']*'/, `export const PRIVACY_POLICY_URL = ${utsString(env.PRIVACY_POLICY_URL || '')}`]
   ])
 }
 

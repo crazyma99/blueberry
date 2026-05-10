@@ -80,7 +80,8 @@ APP_CODE="huahua"
 
 USER_AGREEMENT_NAME="《花花旅拍 SKILL 用户协议》"
 PRIVACY_POLICY_NAME="《花花旅拍 SKILL 隐私政策》"
-USER_AGREEMENT_URL=""
+USER_AGREEMENT_URL="https://qcni02zjwcg1.feishu.cn/docx/NeY3dBnEno8sI2xYXxxcfsRZnsh"
+PRIVACY_POLICY_URL="https://qcni02zjwcg1.feishu.cn/docx/XKptdH2UKoD0uzxuRNHcPovHnZe"
 ```
 
 如果需要替换本地素材，把文件放到 `profiles/<project-key>/static/`。执行 apply/build 时会复制到目标 repo 的 `src/static/`。
@@ -195,7 +196,7 @@ scripts/build-miniapp.sh huahua --repo /Users/leolin/Desktop/huahua
 | `NAVIGATION_TITLE` | `src/pages.json` 的 `globalStyle.navigationBarTitleText` |
 | `API_BASE_URL` | `src/utils/config.uts` |
 | `APP_CODE` | `src/utils/http.uts` 的 `X-App-Code`，为空时移除 |
-| `USER_AGREEMENT_NAME`、`PRIVACY_POLICY_NAME`、`USER_AGREEMENT_URL` | `src/utils/legal.uts` |
+| `USER_AGREEMENT_NAME`、`PRIVACY_POLICY_NAME`、`USER_AGREEMENT_URL`、`PRIVACY_POLICY_URL` | `src/utils/legal.uts` |
 | `CONTACT_QR_SRC`、`CONTACT_PHONE_TEXT`、`COPYRIGHT_TEXT` | 首页、价目表首页等页面 |
 | `PRICE_FALLBACK_TITLE` | `src/pages/priceList/index.uvue` |
 | `profiles/<project-key>/static/*` | 复制到目标 repo 的 `src/static/` |
