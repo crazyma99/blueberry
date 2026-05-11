@@ -3,79 +3,87 @@ specanchor:
   level: module
   module_name: src-pages-price
   module_path: src/pages/priceHomePage, src/pages/priceList
-  version: "1.1.0"
+  version: "1.2.0"
   owner: "@team"
   status: active
-  last_synced: "2026-05-07"
+  last_synced: "2026-05-11"
 ---
 
 # Module Spec: 价目表模块
 
 ## 模块路径
 
-- `src/pages/priceHomePage/` - 价目表首页 (TabBar)
-- `src/pages/priceList/` - 价目表详情页
+- `src/pages/priceHomePage/` - 价目表首页（TabBar）
+- `src/pages/priceList/` - 价目详情
 
 ## 模块职责
 
-价目表模块展示门店价格信息和服务说明,支持两个门店的价目表切换。
+展示门店价格信息与服务说明；支持多门店的价目表切换与详情浏览。
 
 ## 核心功能
 
-### priceHomePage (价目表首页)
+### priceHomePage（价目表首页）
 
-1. **店铺价目入口**: 从店铺接口获取门店列表,展示价目封面图,点击跳转至价目详情
-2. **服务说明**: 展示服务信息图片
-3. **联系方式**: 展示二维码和联系电话
+| 功能       | 说明                                                  |
+| ---------- | ----------------------------------------------------- |
+| 店铺价目入口 | `getShops()` 返回门店列表，展示 `priceImage` 封面     |
+| 服务说明   | 静态服务信息图                                        |
+| 联系方式   | 二维码 + 联系电话（profile 注入）                     |
 
-### priceList (价目表详情)
+### priceList（价目详情）
 
-1. **轮播图展示**: 根据门店展示不同轮播图
-2. **价目表展示**: 根据门店 ID 展示不同价目表图片
-3. **动态标题**: 根据门店切换导航栏标题
+| 功能       | 说明                                                   |
+| ---------- | ------------------------------------------------------ |
+| 轮播图     | `getImage('get', { type: id })`，按门店 ID 加载         |
+| 价目表图   | 显示大图；优先路由传参 `priceImage`，否则按门店 ID 回退本地兜底 |
+| 动态标题   | 根据门店切换导航栏标题，使用 profile 的 `PRICE_FALLBACK_TITLE` 兜底 |
 
 ## 接口依赖
 
-- `getShops` (from `src/utils/api.uts`): 获取店铺列表
-  - 返回: `{ code, data: [{ id, displayName, displayNameEn, homeImage, priceImage }] }`
-- `getImage` (from `src/utils/api.uts`): 获取轮播图数据
-  - 参数: `{ type: id }` (id 为门店标识)
-  - 返回: `{ code, data: [{ imageUrl }] }`
+| 接口        | 位置            | 用途                                                       |
+| ----------- | --------------- | ---------------------------------------------------------- |
+| `getShops`  | `utils/api.uts` | 门店列表 `{ id, displayName, displayNameEn, homeImage, priceImage }` |
+| `getImage`  | `utils/api.uts` | 轮播图 `{ type: id }`                                      |
 
 ## 页面路由
 
 ### priceHomePage
-- **入口**: TabBar 价目表
-- **出口**: `/pages/priceList/index` (参数: `from`, `idx`)
+
+- **入口**：TabBar 价目表
+- **出口**：
+  - `/pages/priceList/index?from=&idx=<shopId>&shopName=<encoded>&priceImage=<encoded>`
 
 ### priceList
-- **入口**: 从 priceHomePage 跳转
-- **参数**:
-  - `idx`: 门店 ID
-  - `from`: 来源标识
-  - `shopName`: 门店名称,需通过 `encodeURIComponent` 传递
-  - `priceImage`: 店铺接口返回的价目图 URL,需通过 `encodeURIComponent` 传递
+
+- **入口**：从 priceHomePage 跳转
+- **路由参数**：
+  - `idx`：门店 ID
+  - `from`：来源标识
+  - `shopName`：门店名称（需 `encodeURIComponent` 传参）
+  - `priceImage`：店铺价目图 URL（需 `encodeURIComponent` 传参）
 
 ## 数据结构
 
 ### priceHomePage
+
 ```typescript
 data() {
   return {
     loading: true,
-    shopList: []
+    shopList: [] as any[]
   }
 }
 ```
 
 ### priceList
+
 ```typescript
 data() {
   return {
-    id: '',       // 门店标识
+    id: '',           // 门店 ID
     loading: true,
-    banners: [],  // 轮播图列表
-    priceImage: ''
+    banners: [] as any[],
+    priceImage: ''    // 路由参数解码后的价目图 URL，或兜底静态图
   }
 }
 ```
@@ -83,37 +91,42 @@ data() {
 ## 关键方法
 
 ### priceHomePage
-- `onLoad()`: 调用 `getShops()` 获取店铺列表
-- `onShopClick(shop)`: 跳转至价目列表页,传递 `idx`、URL 编码后的 `shopName` 和 `priceImage`
-- `onDemoClick(idx)`: 无店铺数据时使用静态兜底门店跳转
-- 店铺卡片样式: 横向滚动卡片条,每张价目封面保持 `364rpx × 226rpx`,滚动内容宽度按图片数量计算
+
+| 方法                | 职责                                                              |
+| ------------------- | ----------------------------------------------------------------- |
+| `onLoad()`          | `getShops()` 获取店铺列表                                         |
+| `onShopClick(shop)` | 跳 priceList，`idx=shop.id`，`shopName`/`priceImage` 均 URL 编码   |
+| `onDemoClick(idx)`  | 无店铺数据时的静态兜底跳转                                        |
 
 ### priceList
-- `onLoad(query)`: 页面加载时设置门店 ID 和标题
-- `getBanner(id)`: 获取对应门店的轮播图
-- `decodeRouteValue(value)`: 解码路由传入的字符串参数
-- `getFallbackPriceImage(id)`: 当未传 `priceImage` 时按门店 ID 回退本地静态价目图
+
+| 方法                              | 职责                                                       |
+| --------------------------------- | ---------------------------------------------------------- |
+| `onLoad(query)`                   | 设置 `id`、导航栏标题、解码 `priceImage`                   |
+| `getBanner(id)`                   | 请求 `getImage('get', { type: id })`                       |
+| `decodeRouteValue(value)`         | 对路由字符串参数做 `decodeURIComponent`                    |
+| `getFallbackPriceImage(id)`       | 路由未传 `priceImage` 时按门店 ID 回退本地静态图           |
 
 ## 样式规范
 
-- 背景色: `#000`
-- 轮播图尺寸: `384rpx` 高度
-- 价目表图片:
-  - 太平湖店: `734rpx × 1478rpx`
-  - 红河水乡店: `734rpx × 1664rpx`
+| 元素       | 尺寸                       |
+| ---------- | -------------------------- |
+| 背景       | `#000`                     |
+| 轮播图高   | `384rpx`                   |
+| 价目图     | 宽 `734rpx`，高度随图像比例 |
 
 ## 业务规则
 
-1. `priceHomePage` 优先显示 `shop.priceImage`,缺失时回退 `shop.homeImage`
-2. 进入 `priceList` 时优先显示路由参数 `priceImage`
-3. 未传 `priceImage` 时,门店 ID 为 '1' 显示 `/static/honghe-price.png`
-4. 未传 `priceImage` 且门店 ID 为其他值时显示 `/static/price.png`
-5. 轮播图仍通过 `getImage('get', { type: id })` 获取
-6. 店铺卡片不按数量平分宽度;超过两张时通过横向滚动查看,避免多个价目图被压缩或纵向重叠
+1. `priceHomePage` 优先显示 `shop.priceImage`，缺失时回退 `shop.homeImage`
+2. `priceList` 优先显示路由传参的 `priceImage`
+3. 路由未传 `priceImage` 且 `id === '1'` → `/static/honghe-price.png`
+4. 路由未传 `priceImage` 且其它门店 → `/static/price.png`
+5. 轮播图一律通过 `getImage('get', { type: id })` 动态获取
+6. 店铺卡片支持横向滚动，不按数量平分宽度
 
 ## 注意事项
 
-1. priceHomePage 调用 `getShops`,失败或空列表时显示本地 `demo1.png` / `demo2.png`
-2. priceList 需要获取轮播图数据
-3. 价目表图片可能来自后端 URL 或本地静态兜底图
-4. 页面使用垂直滚动布局
+1. `getShops` 失败或空列表 → 本地 `demo1.png` / `demo2.png` 兜底
+2. 路由传参中文需 URL 编码，否则 iOS 小程序可能丢失
+3. 价目图大图需保持原始比例；避免被容器裁切
+4. 兜底标题 `PRICE_FALLBACK_TITLE` 为 profile 注入，禁止硬编码

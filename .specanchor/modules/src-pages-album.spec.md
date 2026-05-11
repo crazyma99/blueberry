@@ -3,73 +3,71 @@ specanchor:
   level: module
   module_name: src-pages-album
   module_path: src/pages/demoDetail, src/pages/targetPhotoDetail
-  version: "2.1.0"
+  version: "2.2.0"
   owner: "@team"
   status: active
-  last_synced: "2026-05-07"
+  last_synced: "2026-05-11"
 ---
 
 # Module Spec: 客片展示模块
 
 ## 模块路径
 
-- `src/pages/demoDetail/` - 客片列表页
-- `src/pages/targetPhotoDetail/` - 客片详情页
+- `src/pages/demoDetail/` - 客片列表（自定义导航栏）
+- `src/pages/targetPhotoDetail/` - 客片详情
 
 ## 模块职责
 
-客片展示模块提供客片浏览功能,支持分类筛选、搜索、点赞和详情查看。
+客片浏览的两级页面：列表页按门店 + 两级分类筛选，详情页展示完整图文与点赞收藏操作。
 
 ## 核心功能
 
-### demoDetail (客片列表页)
+### demoDetail（客片列表）
 
-1. **分类筛选**: 支持两级分类 (套餐分类 + 子系分类)
-2. **客片列表**: 网格展示客片封面
-3. **点赞功能**: 服务端返回 `liked` / `likeCount`,登录后可切换点赞状态
-4. **详情跳转**: 点击客片跳转至详情页
+| 功能       | 说明                                                       |
+| ---------- | ---------------------------------------------------------- |
+| 分类筛选   | 两级分类（套餐分类 + 子系分类）                            |
+| 列表展示   | 网格卡片；`getAlbumList` 分页加载                          |
+| 点赞       | 服务端返回 `liked` / `likeCount`；登录用户可切换           |
+| 搜索       | 通过 `getAlbumList` 的 `keyword` 参数                      |
+| 下拉触底   | `onReachBottom` 触发 `loadMoreAlbum`                       |
+| 详情跳转   | 点击客片跳 targetPhotoDetail                               |
 
-### targetPhotoDetail (客片详情页)
+### targetPhotoDetail（客片详情）
 
-1. **详情展示**: 展示客片标题、价格、套餐内容
-2. **图片浏览**: 展示客片图片列表
-3. **点赞功能**: 点赞/取消点赞当前客片
+| 功能       | 说明                                            |
+| ---------- | ----------------------------------------------- |
+| 详情展示   | 标题、价格、套餐说明                            |
+| 图片浏览   | 客片图片列表                                    |
+| 点赞       | 对当前客片 `toggleLike`                         |
+| 收藏       | 对当前客片 `toggleFavorite`                     |
 
 ## 接口依赖
 
-- `getCategories` (from `utils/api.uts`): 获取客片分类
-  - 请求方法: GET
-  - 接口地址: `/wechat/categories`
-  - 参数: `shopId`（店铺 ID，必填）
-  - 返回: `{ code, message, data: { alltabs: [{ id, parentName, sortOrder, subCategory: [{ id, name, parentId, sortOrder }] }] } }`
-
-- `getAlbumList` (from `utils/api.uts`): 获取客片列表（支持分页 + 搜索）
-  - 请求方法: GET
-  - 接口地址: `/wechat/albums`
-  - 参数: `shopId`（必填）、`parentId`（父分类 ID，必填）、`childId`（子分类 ID，必填）、`keyword`（搜索关键词，可选）、`page`（页码，可选）、`size`（每页大小，可选）
-  - 返回: `{ code, message, data: { albums: [{ id, title, coverImageUrl, price, packageDesc, likeCount, liked }], total, page, size } }`
-  - 分页说明：
-    - 前端通过 `Math.ceil(total / size)` 计算总页数，当前页 >= 总页数时无更多数据
-    - `liked` 字段由服务端直接返回，无需单独查询
-
-- `getalbumDetail` (from `utils/api.uts`): 获取客片详情
-  - 参数: `{ albumId, type }`
-  - 返回: `{ code, data: { title, price, packageDesc, images: [{ imageUrl }] } }`
+| 接口              | 方法 | 路径                       | 用途                                     |
+| ----------------- | ---- | -------------------------- | ---------------------------------------- |
+| `getCategories`   | GET  | `/wechat/categories`       | 两级分类；参数 `shopId`                  |
+| `getAlbumList`    | GET  | `/wechat/albums`           | 分页列表 + 搜索；参数透传子分类 `query` 对象 |
+| `getalbumDetail`  | GET  | `/wechat/album/detail`     | 详情；参数 `{ albumId, type }`           |
+| `toggleLike`      | POST | `/api/like`                | 切换点赞                                 |
+| `getLikeStatus`   | GET  | `/api/like/status`         | 批量刷新点赞状态                         |
+| `toggleFavorite`  | POST | `/api/favorite`            | 切换收藏                                 |
+| `getFavoriteStatus`| GET | `/api/favorite/status`     | 批量刷新收藏状态                         |
 
 ## 页面路由
 
 ### demoDetail
 
-- **入口**: 从首页跳转 (参数: `from`, `idx`)
-- **出口**: `/pages/targetPhotoDetail/index` (参数: `from`, `idx`, `liked`, `type`)
+- **入口**：首页店铺卡片跳转 `?from=banner&idx=<shopId>`
+- **出口**：`/pages/targetPhotoDetail/index?from=&idx=<albumId>&liked=<bool>&type=<shopId>`
 
 ### targetPhotoDetail
 
-- **入口**: 从 demoDetail 跳转
-- **参数**:
-  - `idx`: 客片 ID
-  - `liked`: 点赞状态 ('true'/'false')
-  - `type`: 门店标识
+- **入口**：从 demoDetail 或 favorites 跳转
+- **路由参数**：
+  - `idx`：客片 ID（albumId）
+  - `liked`：点赞初始状态（'true' / 'false'）
+  - `type`：门店标识（shopId），**必填**，缺失会导致详情接口 400
 
 ## 数据结构
 
@@ -78,32 +76,25 @@ specanchor:
 ```typescript
 data() {
   return {
-    idx: '',           // 店铺标识 (shopId)
-    from: '',          // 来源
-    selectedTab: {     // 当前选中的分类
-      parentTab: '',   // 一级分类 ID
-      childTab: ''     // 二级分类 ID
+    idx: '',                // shopId
+    from: '',
+    selectedTab: {
+      parentTab: '',        // 一级分类 ID
+      childTab: ''          // 二级分类 ID
     },
-    alltabs: [],       // 全部分类数据（仅分类信息，不含 albumList）
-    albumList: [],     // 当前分类下的客片列表
-    albumTotal: 0,     // 当前分类客片总数
-    albumPage: 1,      // 当前页码
-    albumSize: 10,     // 每页数量
-    albumNoMore: false  // 是否还有更多数据
+    alltabs: [] as any[],   // 分类结构（仅分类信息）
+    albumList: [] as any[], // 当前分类下客片
+    albumTotal: 0,
+    albumPage: 1,
+    albumSize: 10,
+    albumNoMore: false
   }
 }
 ```
 
-### 子分类数据结构
+### 类型约定
 
 ```typescript
-interface SubCategory {
-  id: number
-  name: string
-  parentId: number
-  sortOrder: number
-}
-
 interface AlbumItem {
   id: number
   title: string
@@ -120,8 +111,9 @@ interface AlbumItem {
 ```typescript
 data() {
   return {
-    liked: false,      // 点赞状态
-    detail: null       // 详情数据
+    liked: false,
+    favorited: false,
+    detail: null as any
   }
 }
 ```
@@ -130,62 +122,61 @@ data() {
 
 ### demoDetail
 
-- `initPage(shopId)`: 初始化页面，先调用 `getCategories` 获取分类，再调用 `getAlbumList` 获取第一页客片
-- `fetchAlbumList(page)`: 调用 `getAlbumList` 获取指定页的客片列表
-- `loadMoreAlbum()`: 加载更多数据（分类模式）
-- `changeTab(id, pos)`: 切换分类，重置分页并重新加载客片列表
-- `handleSearch()`: 触发搜索，通过 `getAlbumList` 传 `keyword` 参数实现
-- `doSearch(keyword, page)`: 执行搜索请求
-- `handleLike(item)`: 点赞/取消点赞
-- `gotoDetail(item)`: 跳转至详情页
-- `refreshLikeStatus(list)`: 刷新点赞状态（onShow 时使用）
+| 方法                          | 职责                                                          |
+| ----------------------------- | ------------------------------------------------------------- |
+| `initPage(shopId)`            | 先 `getCategories`，再 `getAlbumList` 获取第一页              |
+| `fetchAlbumList(page)`        | 分页请求 `getAlbumList`                                       |
+| `loadMoreAlbum()`             | 加载下一页（按分类或搜索模式）                                |
+| `changeTab(id, pos)`          | 切换分类，重置分页并重新加载                                  |
+| `handleSearch()` / `doSearch` | 通过 `getAlbumList` 的 `keyword` 参数实现                     |
+| `handleLike(item)`            | 点赞/取消点赞；未登录触发登录弹窗                             |
+| `gotoDetail(item)`            | 跳详情页，**必传** `idx / liked / type`                       |
+| `refreshLikeStatus(list)`     | `onShow` 时批量刷新点赞状态                                   |
 
 ### targetPhotoDetail
 
-- `getDetail(id, type)`: 获取客片详情
-- `handleLike()`: 点赞/取消点赞
+| 方法               | 职责                        |
+| ------------------ | --------------------------- |
+| `getDetail(id, type)` | 拉取客片详情              |
+| `handleLike()`     | 点赞/取消                   |
+| `handleFavorite()` | 收藏/取消                   |
 
-## 点赞功能实现
-
-点赞状态以服务端为准:
-
-```typescript
-{
-  liked: boolean,
-  likeCount: number
-}
-```
-
-### 点赞逻辑
+## 点赞与收藏业务规则
 
 1. 列表接口优先使用 `getAlbumList` 返回的 `liked` / `likeCount`
-2. 页面显示后通过 `getLikeStatus(albumIds)` 批量刷新状态
-3. 用户点击心形按钮时调用 `toggleLike(albumId)`
-4. 更新 UI 点赞状态
+2. 列表展示后可通过 `getLikeStatus(albumIds)` 批量刷新
+3. 点击心形按钮 → `toggleLike(albumId)`，更新当前卡片 UI
+4. 收藏逻辑同理，使用 `toggleFavorite` / `getFavoriteStatus`
+5. 未登录 → 触发登录弹窗，不直接调接口
+
+## pages.json 约束
+
+- `demoDetail`：`navigationStyle: custom`、`onReachBottomDistance: 80`
+- `targetPhotoDetail`：`navigationBarTitleText: "客片欣赏"`
 
 ## 样式规范
 
-- 背景色: `#000`
-- 分类标签:
-  - 未选中: `128rpx × 42rpx`, 灰色文字
-  - 选中: `32rpx` 字号, 白色文字
-- 客片卡片: `362rpx × 482rpx` (两列网格)
-- 渐变遮罩: 底部渐变显示标题、点赞按钮和点赞数
+| 元素         | 规格                                           |
+| ------------ | ---------------------------------------------- |
+| 背景         | `#000`                                         |
+| 分类标签未选 | `128rpx × 42rpx`，灰色文字                     |
+| 分类标签选中 | 字号 `32rpx`，白色文字                         |
+| 客片卡片     | `362rpx × 482rpx`（两列网格）                  |
+| 卡片底部遮罩 | 线性渐变（透明 → 黑色），展示标题与点赞数      |
 
 ## 业务规则
 
-1. 页面加载时先调用 `getCategories` 获取分类，默认选中第一个一级分类和第一个二级分类
-2. 分类选定后调用 `getAlbumList` 加载客片列表
-3. 切换分类时重置分页状态并重新调用 `getAlbumList`
-4. 搜索功能通过 `getAlbumList` 的 `keyword` 参数实现，不再使用独立搜索接口
-5. `liked` 字段由服务端在 `getAlbumList` 响应中直接返回
-6. 详情页返回后列表页通过 `refreshLikeStatus` 刷新点赞状态（`onShow`）
-7. 分页判断：`Math.ceil(total / size)` 计算总页数，当前页 >= 总页数时无更多数据
+1. 初始化默认选中第一个一级分类 + 第一个二级分类
+2. 切换分类必须重置 `albumPage=1 / albumNoMore=false / albumList=[]`
+3. 搜索走 `getAlbumList(keyword=...)`，不用独立搜索接口
+4. 分页判断：`Math.ceil(total / size)` 为总页数，当前页 >= 总页数即无更多
+5. 详情页返回后 `onShow` 调 `refreshLikeStatus` 刷新列表点赞
+6. 跳转 targetPhotoDetail **必须** 带 `type=shopId`，否则 400
 
 ## 注意事项
 
-1. 点赞操作依赖登录态,未登录时先弹出登录弹窗
-2. 客片列表数据层级较深,需安全访问 (使用 `?.`)
-3. 分类切换使用 `$nextTick` 确保数据更新后刷新点赞状态
-4. 点赞按钮使用 `@click.stop` 阻止事件冒泡
-5. 页面使用垂直滚动布局,分类标签区域支持横向滚动
+1. 点赞/收藏依赖登录态；未登录时先走登录弹窗流程
+2. 列表数据安全访问使用可选链 `?.`
+3. 分类切换用 `$nextTick` 保证数据更新后再刷新点赞
+4. 点赞按钮 `@click.stop` 防止冒泡触发卡片跳详情
+5. 列表页垂直滚动；分类标签区域支持横向滚动
