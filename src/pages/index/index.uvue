@@ -66,9 +66,15 @@
 					<text class="login-agreement-text"><text>登录即代表同意 </text><text class="login-agreement-link" @click.stop="openUserAgreement">{{ userAgreementName }}</text><text>、</text><text class="login-agreement-link" @click.stop="openPrivacyPolicy">{{ privacyPolicyName }}</text></text>
 				</view>
 				<button
+					v-if="loginAgreementChecked"
 					class="login-phone-btn"
 					open-type="getPhoneNumber"
 					@getphonenumber="onGetPhoneNumber"
+				>一键登录</button>
+				<button
+					v-else
+					class="login-phone-btn"
+					@click="showLoginAgreementToast"
 				>一键登录</button>
 				<view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
 			</view>
@@ -154,6 +160,10 @@
 				this.loginAgreementChecked = !this.loginAgreementChecked
 			},
 
+			showLoginAgreementToast() {
+				uni.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' })
+			},
+
 			openUserAgreement() {
 				openUserAgreement()
 			},
@@ -165,7 +175,7 @@
 			// 手机号授权回调
 			async onGetPhoneNumber(e) {
 				if (!this.loginAgreementChecked) {
-					uni.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' })
+					this.showLoginAgreementToast()
 					return
 				}
 				const detail = e.detail || {}
@@ -399,7 +409,7 @@
 		margin-right: 0;
 	}
 	.mr {
-		margin-right: 8rpx;
+		margin-right: 0rpx;
 	}
 	.shopName {
 		position: absolute;

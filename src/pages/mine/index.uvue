@@ -66,6 +66,10 @@
           </swiper-item>
         </swiper>
       </view>
+
+      <view v-if="isLoggedIn" class="logout-section">
+        <button class="logout-button" @click.stop="confirmLogout">退出登录</button>
+      </view>
     </view>
 
     <!-- 登录弹窗 -->
@@ -82,9 +86,15 @@
           <text class="login-agreement-text"><text>登录即代表同意 </text><text class="login-agreement-link" @click.stop="openUserAgreement">{{ userAgreementName }}</text><text>、</text><text class="login-agreement-link" @click.stop="openPrivacyPolicy">{{ privacyPolicyName }}</text></text>
         </view>
         <button
+          v-if="loginAgreementChecked"
           class="login-phone-btn"
           open-type="getPhoneNumber"
           @getphonenumber="onGetPhoneNumber"
+        >一键登录</button>
+        <button
+          v-else
+          class="login-phone-btn"
+          @click="showLoginAgreementToast"
         >一键登录</button>
         <view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
       </view>
@@ -274,6 +284,10 @@ export default {
       this.loginAgreementChecked = !this.loginAgreementChecked
     },
 
+    showLoginAgreementToast() {
+      uni.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' })
+    },
+
     openUserAgreement() {
       openUserAgreement()
     },
@@ -285,7 +299,7 @@ export default {
     // 手机号授权回调
     async onGetPhoneNumber(e: any) {
       if (!this.loginAgreementChecked) {
-        uni.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' })
+        this.showLoginAgreementToast()
         return
       }
       const detail = e.detail || {}
@@ -429,6 +443,25 @@ export default {
     // 跳过头像昵称授权
     skipProfile() {
       this.finishProfile()
+    },
+
+    confirmLogout() {
+      uni.showModal({
+        title: '确认退出登录',
+        content: '退出后将清除当前账号登录状态',
+        cancelText: '取消',
+        confirmText: '确认',
+        success: (res) => {
+          if (res.confirm) {
+            logout()
+            this.showLoginPopup = false
+            this.showProfilePopup = false
+            this.loginAgreementChecked = false
+            this.updateLoginState()
+            uni.showToast({ title: '已退出登录', icon: 'success' })
+          }
+        }
+      })
     },
 
     // 关闭头像昵称弹窗并刷新登录态
@@ -577,6 +610,27 @@ export default {
 .banner-image {
   width: 100%;
   height: 100%;
+}
+
+.logout-section {
+  margin: 56rpx 32rpx 0;
+  padding-bottom: 24rpx;
+}
+
+.logout-button {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ff6b6b;
+  font-size: 28rpx;
+  font-weight: 500;
+  border: 2rpx solid rgba(255, 107, 107, 0.45);
+}
+
+.logout-button::after {
+  border: none;
 }
 
 </style>
