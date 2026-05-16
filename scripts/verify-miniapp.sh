@@ -8,6 +8,29 @@ PROFILE_FILE=""
 PROFILE_KEY=""
 OUTPUT_DIR="dist/build/mp-weixin"
 
+# rg 不存在时回退到 grep，保证脚本在未安装 ripgrep 的环境下也可用
+rg_quiet_regex() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -q "$@" 2>/dev/null
+  else
+    grep -Eq --no-messages "$@"
+  fi
+}
+rg_quiet_fixed() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -F -q "$@" 2>/dev/null
+  else
+    grep -Fq --no-messages "$@"
+  fi
+}
+rg_show_regex() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -n "$@"
+  else
+    grep -EnR --no-messages "$@"
+  fi
+}
+
 usage() {
   cat <<'USAGE'
 Usage:
@@ -107,14 +130,14 @@ if [[ "${CONTACT_QR_SRC:-}" == /static/* ]]; then
 fi
 
 if [ -n "${APP_CODE:-}" ]; then
-  if ! rg -q "X-App-Code[\"']?:[\"']?$APP_CODE|X-App-Code[\"']?\\s*[:,]\\s*[\"']$APP_CODE" "$TARGET_REPO/src/utils/http.uts" "$OUTPUT_ABS/utils/http.js" 2>/dev/null; then
+  if ! rg_quiet_regex "X-App-Code[\"']?:[\"']?$APP_CODE|X-App-Code[\"']?\\s*[:,]\\s*[\"']$APP_CODE" "$TARGET_REPO/src/utils/http.uts" "$OUTPUT_ABS/utils/http.js"; then
     echo "X-App-Code not found for APP_CODE=$APP_CODE" >&2
     exit 1
   fi
 fi
 
 if [ -n "${MINI_APP_NAME:-}" ]; then
-  if ! rg -F -q "$MINI_APP_NAME" "$TARGET_REPO/src/utils/legal.uts" "$OUTPUT_ABS/utils/legal.js" 2>/dev/null; then
+  if ! rg_quiet_fixed "$MINI_APP_NAME" "$TARGET_REPO/src/utils/legal.uts" "$OUTPUT_ABS/utils/legal.js"; then
     echo "MINI_APP_NAME not found in legal source or build output." >&2
     echo "If this target repo has old template code, rebuild with --sync-template first." >&2
     exit 1
@@ -129,7 +152,7 @@ if [ -n "${MINI_APP_NAME:-}" ]; then
 fi
 
 if [ -n "${RESIDUAL_SEARCH_REGEX:-}" ]; then
-  if rg -n "$RESIDUAL_SEARCH_REGEX" "$TARGET_REPO/src" "$TARGET_REPO/project.config.json" "$TARGET_REPO/package.json" "$OUTPUT_ABS"; then
+  if rg_show_regex "$RESIDUAL_SEARCH_REGEX" "$TARGET_REPO/src" "$TARGET_REPO/project.config.json" "$TARGET_REPO/package.json" "$OUTPUT_ABS"; then
     echo "Residual template strings found. See matches above." >&2
     exit 1
   fi

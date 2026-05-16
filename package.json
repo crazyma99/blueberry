@@ -9,7 +9,8 @@
     "profile:build": "scripts/build-miniapp.sh",
     "profile:release": "scripts/release-miniapp.sh",
     "profile:new": "scripts/new-miniapp-project.sh",
-    "profile:verify": "scripts/verify-miniapp.sh"
+    "profile:verify": "scripts/verify-miniapp.sh",
+    "profiles:build-all": "scripts/build-all-profiles.sh"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-alpha-5000720260327001",
