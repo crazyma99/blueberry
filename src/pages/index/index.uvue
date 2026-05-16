@@ -23,16 +23,16 @@
 			<view class="divideTit">PHOTOGRAPHY</view>
 			<view class="demoPhotoTit">客片欣赏</view>
 			<view class="demoPhotoContaner">
-				<view v-if="shopList.length > 0" v-for="(shop, index) in shopList" :key="index" class="shopCard" @click="onShopClick(shop)">
-					<image class="demoPhoto" :src="shop.homeImage" mode="aspectFill"></image>
+				<view v-if="shopList.length > 0" v-for="(shop, index) in shopList" :key="index" :class="shopList.length === 1 ? 'shopCard full-width' : 'shopCard'" @click="onShopClick(shop)">
+					<image :class="shopList.length === 1 ? 'demoPhoto full-width' : 'demoPhoto'" :src="shop.homeImage" mode="aspectFill"></image>
 					<view class="shopName">
 						<view>{{ shop.displayName }}</view>
 						<view class="enName">{{ shop.displayNameEn }}</view>
 					</view>
 				</view>
 				<!-- 无店铺时 fallback -->
-				<image v-if="shopList.length === 0" class="demoPhoto mr" src="/static/demo1.png" @click="onDemoClick(1)"></image>
-				<image v-if="shopList.length === 0" class="demoPhoto" src="/static/demo2.png" @click="onDemoClick(2)"></image>
+				<image v-if="shopList.length === 0" class="demoPhoto full-width" src="/static/demo1.png" @click="onDemoClick(1)"></image>
+				<image v-if="shopList.length === 0" class="demoPhoto full-width" src="/static/demo2.png" @click="onDemoClick(2)"></image>
 			</view>
 			<view class="divideTit">SERVICE INFORMATION</view>
 			<view class="demoPhotoTit">服务说明</view>
@@ -404,6 +404,12 @@
 	}
 	.shopCard {
 		position: relative;
+	}
+	.full-width {
+		width: 100%;
+	}
+	.full-width.demoPhoto {
+		width: 100%;
 	}
 	.shopCard:last-child {
 		margin-right: 0;
