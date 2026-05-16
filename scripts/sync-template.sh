@@ -19,6 +19,7 @@ Overwritten:
   src/main.uts
   src/pages/
   src/utils/
+  src/components/
 
 Not overwritten:
   package.json
@@ -70,5 +71,10 @@ fi
 
 rsync -a --delete "$TEMPLATE_ROOT/src/pages"/ "$TARGET_REPO/src/pages"/
 rsync -a --delete "$TEMPLATE_ROOT/src/utils"/ "$TARGET_REPO/src/utils"/
+
+# src/components/ 是 easycom 自动引入的共享组件目录（AppFooter 等）。
+# 必须同步到外部项目，否则 apply-profile.mjs 会因找不到组件文件报 ENOENT。
+mkdir -p "$TARGET_REPO/src/components"
+rsync -a --delete "$TEMPLATE_ROOT/src/components"/ "$TARGET_REPO/src/components"/
 
 echo "Synced template code to $TARGET_REPO"

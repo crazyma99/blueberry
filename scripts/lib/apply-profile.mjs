@@ -158,20 +158,20 @@ function updateLegal() {
 function updateContactPage(relativePath) {
   replaceText(relativePath, [
     [/(<image\s+class="code"[\s\S]*?\bsrc=)"[^"]*"/, `$1"${xmlAttr(env.CONTACT_QR_SRC)}"`],
-    [/(<view class="contact">联系电话 & 商务合作<\/view>\s*\n\s*)<view class="contact">[^<]*<\/view>/, `$1<view class="contact">${env.CONTACT_PHONE_TEXT}</view>`],
-    [/Copyright 2025 [^<]+ - 版权所有/g, env.COPYRIGHT_TEXT]
+    [/(<view class="contact">联系电话 & 商务合作<\/view>\s*\n\s*)<view class="contact">[^<]*<\/view>/, `$1<view class="contact">${env.CONTACT_PHONE_TEXT}</view>`]
   ])
 }
 
-function updateCopyrightOnly(relativePath) {
-  replaceText(relativePath, [
-    [/Copyright 2025 [^<]+ - 版权所有/g, env.COPYRIGHT_TEXT]
+function updateAppFooter() {
+  // 全项唯一 Copyright 注入点：由 src/components/AppFooter/AppFooter.uvue 的 default props 集中提供。
+  // 6 个使用页（favorites / demoDetail / priceList / index / priceHomePage / targetPhotoDetail）不再含硬编码文本。
+  replaceText('src/components/AppFooter/AppFooter.uvue', [
+    [/default: 'Copyright 2025 [^']+'/, `default: '${env.COPYRIGHT_TEXT}'`]
   ])
 }
 
 function updatePriceList() {
   replaceText('src/pages/priceList/index.uvue', [
-    [/Copyright 2025 [^<]+ - 版权所有/g, env.COPYRIGHT_TEXT],
     [/(shopName \? `\$\{shopName\}价目表` : ')[^']*(')/, `$1${env.PRICE_FALLBACK_TITLE}$2`]
   ])
 }
@@ -183,9 +183,7 @@ updatePagesJson()
 updateConfig()
 updateHttp()
 updateLegal()
+updateAppFooter()
 updateContactPage('src/pages/index/index.uvue')
 updateContactPage('src/pages/priceHomePage/index.uvue')
 updatePriceList()
-updateCopyrightOnly('src/pages/demoDetail/index.uvue')
-updateCopyrightOnly('src/pages/targetPhotoDetail/index.uvue')
-updateCopyrightOnly('src/pages/favorites/index.uvue')

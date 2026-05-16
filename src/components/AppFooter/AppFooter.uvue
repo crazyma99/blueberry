@@ -1,0 +1,24 @@
+<!--
+  AppFooter — 全局页脚 Copyright 文本提供者
+
+  设计目标：
+  - 把原本散落在 6 页的 Copyright 字符串硬编码（favorites / demoDetail / priceList / index
+    / priceHomePage / targetPhotoDetail）收敛到本组件的 default props，由 profile 注入脚本
+    （scripts/lib/apply-profile.mjs）一处替换。
+  - 渲染为行内 <text>，外层包裹由各页保留（.copyright / .bottomdesc / .beian），保证视觉零变化。
+-->
+<template>
+  <text>{{ copyrightText }}</text>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'AppFooter',
+  props: {
+    copyrightText: {
+      type: String,
+      default: 'Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有'
+    }
+  }
+}
+</script>

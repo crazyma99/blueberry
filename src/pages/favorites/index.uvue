@@ -70,7 +70,7 @@
 		<!-- 页脚 Copyright -->
 		<view class="page-footer">
 			<view class="divide"></view>
-			<view class="copyright">Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有</view>
+			<view class="copyright"><AppFooter /></view>
 		</view>
 	</view>
 </template>

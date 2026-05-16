@@ -371,6 +371,59 @@ specanchor:
 
 > 下一步：依赖用户验证。Phase 3（登录弹窗 mixin 化）为中风险，建议 Phase 2 验证通过后单独启动。
 
+### Phase 3 — SKIPPED（2026-05-15，用户决策）
+
+**状态**：SKIPPED
+
+**跳过原因**（预调研发现的三个风险点）：
+
+1. **项目从未使用 mixins**（`grep -rn 'mixins' src/` 返回空）— 无先例，uni-app x 对 `.uts` 导出 Vue Options Mixin 的编译支持需 spike。
+2. **微信小程序 button `open-type="getPhoneNumber"` 跨组件限制**— `open-type` 必须挂原生 button 上，子组件 emit `getphonenumber` payload（iv/encryptedData）传递完整性未验证，一旦失效，4 页登录同时坏。
+3. **收益不高**— 调研 mine/index/demoDetail/targetPhotoDetail 发现核心三方法（`onGetPhoneNumber` / `submitProfile` / `finishProfile`）均含页面特化分支（demo/target 登录后重做 `doToggleLike`；mine 调 `updateLoginState`），实际可抽仅 9 个零副作用方法 + 5 个 data 字段，预估减【代码】 ≈ 200 行，远低于 Phase 4 预估 1500+ 行。
+
+**补偿措施**：Phase 4 抽 PhotoCard / CustomNavBar / AppFooter / ContactQR 时，如果验证出小程序允许跨组件 emit `getphonenumber`，重新启动 LoginPopup 组件抽取（作为 Phase 4.X 补量项）。
+
+> 状态转移：Phase 3 SKIPPED → 直接进入 Phase 4 组件化 + SCSS 变量化
+
+### Phase 4a — AppFooter 组件 + apply-profile.mjs Copyright 收敛（2026-05-15）
+
+**事实修正**（原 Plan vs 实际）：原计划表述 "7 页 Copyright" 实为 6 页（mine 页不含 Copyright）。
+
+- [x] 4a.1 创建 `src/components/AppFooter/AppFooter.uvue`（easycom 路径规范，25 行）。仅渲染行内 `<text>{{ copyrightText }}</text>`，props `copyrightText` default 为 blueberry 默认文本。不含任何样式 → 页面外层 wrapper（`.copyright` / `.bottomdesc` / `.beian`）保留 → **视觉零变化**。
+- [x] 4a.2 替换 6 页的 `<view class="xxx">Copyright 2025...</view>` 为 `<view class="xxx"><AppFooter /></view>`：favorites / demoDetail / priceList / index / priceHomePage / targetPhotoDetail。验证每页 `<AppFooter` 计数为 1。
+- [x] 4a.3 `scripts/lib/apply-profile.mjs` 改造：
+  - 删除 `updateCopyrightOnly` 函数及 3 次调用
+  - `updateContactPage` 内删除 Copyright pattern（仅保留 contact + image src 两个）
+  - `updatePriceList` 内删除 Copyright pattern（仅保留 PRICE_FALLBACK_TITLE）
+  - 新增 `updateAppFooter()`：单文件单 pattern `[/default: 'Copyright 2025 [^']+'/, ...]`
+  - **注入点从 6 个收敛为 1 个**（-83%）
+- [x] 4a.4 双 profile 静态验证：`apply-profile.sh huahua` 后 AppFooter 字符串变为「Copyright 2025 花花旅拍 - 版权所有」；`apply-profile.sh blueberry` 后恢复为「Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有」。全项仅 AppFooter.uvue L20 一处含 Copyright 字符串。
+
+- [ ] 4a.5 行为验证（运行期）：**待用户跑**：
+  - `npm run dev:mp-weixin` 验证 6 页页脚 Copyright 文本正确显示，原 `.copyright`/`.bottomdesc`/`.beian` 三套样式依然生效（margin / text-align / divide 不变）
+  - `apply-profile.sh huahua && npm run build:mp-weixin && npm run profile:verify`（如现有这个 script）验证双 profile。
+- [ ] 4a.6 commit：`refactor(footer): extract AppFooter component and consolidate copyright injection (6 sites → 1 component)`
+
+**代码减袉估算**：
+
+- 6 页每页减 1 行（原 Copyright 文本词）= -6 行
+- apply-profile.mjs 减 9 行（-3 pattern + -3 函数调用 + -3 函数体 + 7 行新 helper）= net -2 行
+- AppFooter.uvue 新增 25 行。**总体 ≈ +17 行**，但是：详细收益为「字符串含义集中（6→1）+ 注入合同简化」，ROI 主要体现在未来双 profile 调试与多项目试装上。
+
+> 下一步：依赖用户运行验证。4a 验证通过后可进入 4b（ContactQR）。
+
+**事后修复（2026-05-15）— sync-template 遗漏 components 目录**
+
+用户运行 `npm run build:all` 批量构建报错：`ENOENT: no such file or directory, open '/Users/leolin/Desktop/huahua/src/components/AppFooter/AppFooter.uvue'`
+
+**根因**：`scripts/sync-template.sh` 仅 rsync `src/pages/` 与 `src/utils/`，**未同步 `src/components/`**（本次重构新建的目录）。外部项目同步完 .uvue 页面后、页面中的 `<AppFooter />` 引用无法解析；apply-profile.mjs 调 `updateAppFooter()` 试图读不存在的组件文件 → 中断。
+
+**修复**：`scripts/sync-template.sh` rsync pages/utils 之后补上同步 components；同步更新脚本头部 "Overwritten" 文档加入 `src/components/`。
+
+**用户需重跑**：`npm run build:all`。修复后 sync 会重新下发 `src/components/AppFooter/`，apply-profile 能正常找到文件。
+
+**教训**：未来添加任何「需要同步到外部项目」的顶层目录（mixins/ / store/ / composables/ 等）时，**必须同步修订 `scripts/sync-template.sh`** 的 rsync 白名单，否则会造成模板项目 ↔ 外部项目 不一致。
+
 ## 5. Verify
 
 > 待全部 Phase 执行完毕后填充。
