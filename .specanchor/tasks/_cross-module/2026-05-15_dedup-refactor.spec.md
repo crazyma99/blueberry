@@ -119,6 +119,7 @@ specanchor:
 #### 重构范围
 
 **新增**：
+
 - `src/components/LoginPopup.uvue`
 - `src/components/PhotoCard.uvue`
 - `src/components/CustomNavBar.uvue`
@@ -129,6 +130,7 @@ specanchor:
 - `src/utils/imageLoader.uts`
 
 **修改**：
+
 - `src/pages/index/index.uvue`（登录弹窗、Copyright、ContactQR）
 - `src/pages/priceHomePage/index.uvue`（Copyright、ContactQR）
 - `src/pages/priceList/index.uvue`（Copyright）
@@ -141,6 +143,7 @@ specanchor:
 - `scripts/lib/apply-profile.mjs`（Copyright 注入收敛为单 pattern；新增 ContactQR 组件 props 注入路径）
 
 **不动**：
+
 - `src/utils/http.uts` / `config.uts` / `legal.uts` 的导出 API 与注入合同
 - `src/utils/auth.uts` 的所有方法签名（仅 export 现有的 `UserInfo` 类型）
 - `src/pages.json` 路由结构（不新增不删除路由）
@@ -218,12 +221,14 @@ specanchor:
 - [ ] 4.7 `src/pages/index/index.uvue` 与 `src/pages/priceHomePage/index.uvue` 替换为 `<ContactQR>`
 - [ ] 4.8 7 个页面（index / priceHomePage / priceList / demoDetail / targetPhotoDetail / mine / favorites）替换底部 Copyright 为 `<AppFooter>`
 - [ ] 4.9 `src/uni.scss` 新增 SCSS 变量（不破坏现有 uni-app 默认变量）：
+
   ```scss
   $brand-primary: #F3D9AC;
   $brand-bg-dark: #000;
   $spacing-xs: 8rpx;  $spacing-sm: 16rpx;  $spacing-md: 24rpx;  $spacing-lg: 32rpx;  $spacing-xl: 48rpx;
   $font-xs: 22rpx;  $font-sm: 26rpx;  $font-md: 30rpx;  $font-lg: 36rpx;  $font-xl: 44rpx;
   ```
+
 - [ ] 4.10 修改 `scripts/lib/apply-profile.mjs`：
   - **Copyright 注入收敛**：从原本对 `index/priceHomePage/priceList/demoDetail/targetPhotoDetail/mine/favorites` 的 6+ 套 pattern 收敛为对 `src/components/AppFooter.uvue` 单文件单 pattern（默认值替换）
   - **ContactQR 注入收敛**：从原本对 `index` + `priceHomePage` 的两套 pattern 收敛为对 `src/components/ContactQR.uvue` 单文件单 pattern
@@ -276,6 +281,7 @@ specanchor:
 #### 验证方式
 
 **自动化（每 Phase 后必跑）：**
+
 1. `npm run profile:apply blueberry`
 2. `npm run build:mp-weixin`
 3. `npm run profile:verify`
@@ -327,11 +333,13 @@ specanchor:
 - [ ] 1.7 commit（由用户验证后手动提交）
 
 **实施决策记录**：
+
 - 采用 alias import + thin wrapper 策略（`import { formatCount as _formatCount }`）不是完全删除页面 method。
 - **原因**：页面模板（如 `{{ formatCount(item.likeCount) }}`）及其它 method 内部（如 `this.preloadImage(u)`）均通过 `this` 访问；Options API 中模板上下文只能访问 instance 上的 method，要让模板能用必须保留同名 method。
 - **价值**：本地 method 仅剩 1 行转发，逻辑单一真相源在 utils；未来修改只改 utils。重复行数从 ~50 行 → ~9 行，同时保持 `<script lang="uts">` 与以前的本地 method 调用礼仪一致。
 
 **变更验证（静态）**： PASS
+
 - `grep formatCount` 三页都已转发至 `_formatCount`；原始实现已移除
 - `grep preloadImage` 两页都已转发至 `_preloadImage` / `_preloadImages`；`uni.getImageInfo` 在页面中不再出现
 - `wc -l`：demoDetail 919 行（-11）、targetPhotoDetail 430 行（-14）、favorites 减少 ~3 行
@@ -339,6 +347,29 @@ specanchor:
 > 下一步：依赖用户人工验证与 commit；Phase 2 可同步并进（纯类型重构，零运行时风险）。
 
 **事后修复（2026-05-15）**：用户运行构建报 `Identifier '_formatCount' has already been declared. (favorites/index.uvue:81:24)`。原因：search_replace 工具多次误报 `save file failed` 但实际已下盘，retry 时造成 favorites 的 `import { formatCount as _formatCount }` 被插入两次。修复：删除重复的 L80；全项都检查三页 import 计数均为 1，未发现其它重复。后续 Phase 必须仅以 `awk`/`grep` 的实际输出作为验证根据，忽略工具报告的 partial success / save failed 提示。
+
+### Phase 2 — UserInfo 类型统一（2026-05-15）
+
+- [x] 2.1 `src/utils/auth.uts` L7 原本已是 `export interface UserInfo`，无需修改（原计划中的 `interface → type` 转换不必要，interface 同样可 import）
+- [x] 2.2 `src/utils/api.uts`：删除本地 L5-11 `UserInfo` 声明，加 `import { UserInfo } from './auth.uts'`。L147 / L160 / L172 / L196 四处作为返回类型的引用不变
+- [x] 2.3 `src/pages/mine/index.uvue`：在 L137 现有的 `from '../../utils/auth.uts'` import 中追加 `UserInfo`；删除 L146-152 本地 `interface UserInfo` 声明。L405 `const optimistic: UserInfo` 使用不变
+
+**实施决策记录**：
+
+- 保持 `interface UserInfo`（未改为 `type UserInfo`）——三处原本均是 interface，转换为 type 会额外引入 diff 面，与本 Phase "纯类型统一" 目标不加分。
+- mine 页采用普通 `import { UserInfo }` 而非 `import type`——跟随项目现有 import 风格（demoDetail / targetPhotoDetail 也是普通值导入），避免混使两种语法
+
+**变更验证（静态）**： PASS
+
+- `grep -rn '^export interface UserInfo\|^interface UserInfo' src/` 结果仅 1 行：`src/utils/auth.uts:7`，完成单一真相源
+- `api.uts` 顶部现为 `import { request } / import { UserInfo }`，两个导入计数均为 1
+- `mine/index.uvue` L137 import 追加 UserInfo 后，本地 `interface UserInfo` 已移除；`UserInfo` 在页面中仅 L137（import）+ L405（实例化）两处出现
+- 4 个 `UserInfo` 用点（api.uts L147/L160/L172/L196 作为 `data: UserInfo` 返回类型）均能通过 import 解析
+
+- [ ] 2.4 行为验证：**待用户重新 `npm run dev:mp-weixin` 验证编译通过；人工验证 mine 页登录后头像/昵称显示、wxUpdateUserInfo 提交后后台返回不丢字段**
+- [ ] 2.5 commit（由用户验证后手动提交）
+
+> 下一步：依赖用户验证。Phase 3（登录弹窗 mixin 化）为中风险，建议 Phase 2 验证通过后单独启动。
 
 ## 5. Verify
 

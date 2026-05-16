@@ -1,14 +1,7 @@
 import { request } from './http.uts'
+import { UserInfo } from './auth.uts'
 
 // ============ 类型定义 ============
-
-export interface UserInfo {
-  id: number
-  openid: string
-  phone: string | null
-  nickname: string | null
-  avatarUrl: string | null
-}
 
 export interface AlbumBasic {
   id: number

@@ -134,7 +134,7 @@
 </template>
 
 <script lang="uts">
-import { isLoggedIn, getUserInfo, loginSuccess, logout, setUserInfo, mergeUserInfo } from '../../utils/auth.uts'
+import { isLoggedIn, getUserInfo, loginSuccess, logout, setUserInfo, mergeUserInfo, UserInfo } from '../../utils/auth.uts'
 import { wxLogin, wxBindPhone, wxGetUserInfo, wxUpdateUserInfo, getPageConfig } from '../../utils/api.uts'
 import {
   USER_AGREEMENT_NAME,
@@ -142,14 +142,6 @@ import {
   openUserAgreement,
   openPrivacyPolicy
 } from '../../utils/legal.uts'
-
-interface UserInfo {
-  id: number
-  openid: string
-  phone: string | null
-  nickname: string | null
-  avatarUrl: string | null
-}
 
 export default {
   data() {
