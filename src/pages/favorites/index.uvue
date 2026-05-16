@@ -77,6 +77,7 @@
 
 <script lang="uts">
 import { getFavoriteList, searchAlbums } from '../../utils/api.uts'
+import { formatCount as _formatCount } from '../../utils/format.uts'
 
 export default {
 	data() {
@@ -237,10 +238,7 @@ export default {
 		},
 
 		formatCount(count: number): string {
-			if (count >= 10000) {
-				return `${(count / 10000).toFixed(1)}万`
-			}
-			return String(count || 0)
+			return _formatCount(count)
 		}
 	}
 }

@@ -1,0 +1,27 @@
+// 图片预加载工具：避免列表/详情切换时白屏
+// 行为与原 demoDetail/targetPhotoDetail 两处实现等价
+
+/**
+ * 预加载单张图片。无论成功或失败都 resolve（成功 true、失败 false），不 reject。
+ * 之所以不 reject 是为了配合 Promise.all 不被任何一张失败图片打断。
+ */
+export function preloadImage(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    uni.getImageInfo({
+      src: url,
+      success: () => resolve(true),
+      fail: () => resolve(false)
+    })
+  })
+}
+
+/**
+ * 预加载一组图片，带超时保护避免无限等待。
+ * 任一图片失败不影响整体；超时后立即返回，不阻塞调用方。
+ */
+export async function preloadImages(urls: string[], timeout: number = 5000): Promise<void> {
+  if (!urls || urls.length === 0) return
+  const preloadPromise = Promise.all(urls.map(u => preloadImage(u)))
+  const timeoutPromise = new Promise<void>(resolve => setTimeout(resolve, timeout))
+  await Promise.race([preloadPromise, timeoutPromise])
+}

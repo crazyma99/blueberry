@@ -109,6 +109,8 @@
 		openUserAgreement,
 		openPrivacyPolicy
 	} from '../../utils/legal.uts'
+	import { formatCount as _formatCount } from '../../utils/format.uts'
+	import { preloadImage as _preloadImage, preloadImages as _preloadImages } from '../../utils/imageLoader.uts'
 
 	export default {
 		data() {
@@ -136,21 +138,12 @@
 			this.getDetail(id, type)
 		},
 		methods: {
-			// ====== 图片预加载工具方法 ======
+			// ====== 图片预加载工具方法（转发至 utils/imageLoader） ======
 			preloadImage(url) {
-				return new Promise((resolve) => {
-					uni.getImageInfo({
-						src: url,
-						success: () => resolve(true),
-						fail: () => resolve(false)
-					})
-				})
+				return _preloadImage(url)
 			},
 			async preloadImages(urls, timeout = 5000) {
-				if (!urls || urls.length === 0) return
-				const preloadPromise = Promise.all(urls.map(u => this.preloadImage(u)))
-				const timeoutPromise = new Promise(resolve => setTimeout(resolve, timeout))
-				await Promise.race([preloadPromise, timeoutPromise])
+				return _preloadImages(urls, timeout)
 			},
 			async getDetail(id, type) {
 				try {
@@ -354,11 +347,7 @@
 				await this.doToggleLike()
 			},
 			formatCount(count) {
-				if (!count) return '0'
-				if (count >= 10000) {
-					return `${(count / 10000).toFixed(1)}万`
-				}
-				return String(count)
+				return _formatCount(count)
 			}
 		}
 	}

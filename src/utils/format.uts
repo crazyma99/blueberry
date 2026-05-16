@@ -1,0 +1,15 @@
+// 数字格式化工具：统一各页面对点赞数 / 收藏数 / 浏览数的显示
+// 行为与原 demoDetail/targetPhotoDetail/favorites 三处实现等价
+
+/**
+ * 将数字格式化为展示字符串。
+ * - falsy（0/null/undefined）→ '0'
+ * - >= 10000 → 'X.X万'
+ * - 其他 → 原始数字字符串
+ */
+export function formatCount(count: number): string {
+  if (count >= 10000) {
+    return `${(count / 10000).toFixed(1)}万`
+  }
+  return String(count || 0)
+}

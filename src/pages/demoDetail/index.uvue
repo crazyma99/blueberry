@@ -195,6 +195,8 @@
 		openUserAgreement,
 		openPrivacyPolicy
 	} from '../../utils/legal.uts'
+	import { formatCount as _formatCount } from '../../utils/format.uts'
+	import { preloadImage as _preloadImage, preloadImages as _preloadImages } from '../../utils/imageLoader.uts'
 
 	export default {
 		data() {
@@ -288,22 +290,13 @@
 					uni.navigateBack()
 				}
 			},
-			// ====== 图片预加载工具方法 ======
+			// ====== 图片预加载工具方法（转发至 utils/imageLoader） ======
 			preloadImage(url) {
-				return new Promise((resolve) => {
-					uni.getImageInfo({
-						src: url,
-						success: () => resolve(true),
-						fail: () => resolve(false)
-					})
-				})
+				return _preloadImage(url)
 			},
 			// 预加载一组图片，带超时保护（避免无限等待）
 			async preloadImages(urls, timeout = 5000) {
-				if (!urls || urls.length === 0) return
-				const preloadPromise = Promise.all(urls.map(u => this.preloadImage(u)))
-				const timeoutPromise = new Promise(resolve => setTimeout(resolve, timeout))
-				await Promise.race([preloadPromise, timeoutPromise])
+				return _preloadImages(urls, timeout)
 			},
 			// ====== 初始化：先加载分类，再加载第一页客片 ======
 			async initPage(shopId) {
@@ -567,10 +560,7 @@
 				})
 			},
 			formatCount(count) {
-				if (count >= 10000) {
-					return `${(count / 10000).toFixed(1)}万`
-				}
-				return String(count || 0)
+				return _formatCount(count)
 			},
 			// 关闭登录弹窗
 			closeLoginPopup() {
