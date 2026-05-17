@@ -103,6 +103,7 @@
 <script>
 	import { getalbumDetail, toggleLike, getLikeStatus, wxLogin, wxBindPhone } from '../../utils/api.uts'
 	import { isLoggedIn, loginSuccess, setUserInfo, mergeUserInfo, getUserInfo } from '../../utils/auth.uts'
+	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -250,36 +251,21 @@
 
 				try {
 					uni.showLoading({ title: '登录中...', mask: true })
-
-					// 第一步：静默登录获取 wx code
-					const loginRes = await uni.login({ provider: 'weixin' })
-					if (!loginRes.code) {
-						uni.hideLoading()
-						uni.showToast({ title: '获取登录凭证失败', icon: 'none' })
-						this.closeLoginPopup()
-						return
-					}
-
-					// 第二步：wx code 换 token
-					const wxRes = await wxLogin({ code: loginRes.code })
-					if (wxRes.code === 200 && wxRes.data) {
-						loginSuccess(wxRes.data.token, wxRes.data.userInfo)
-					} else {
-						uni.hideLoading()
-						uni.showToast({ title: wxRes.message || '登录失败', icon: 'none' })
-						this.closeLoginPopup()
-						return
-					}
-
-					// 第三步：用 phoneCode 绑定手机号
-					const phoneRes = await wxBindPhone(phoneCode)
-					if (phoneRes.code === 200 && phoneRes.data) {
-						// 合并写入，避免 step2 拿到的头像/昵称被 null 覆盖
-						mergeUserInfo(phoneRes.data)
-					}
-
+					// 登录三步骤已下沉到 utils/loginFlow.uts
+					const result = await runPhoneLogin(phoneCode)
 					uni.hideLoading()
-					// 第四步：关闭手机号登录弹窗，弹出头像昵称授权弹窗
+
+					if (!result.ok) {
+						if (result.errorKind === 'login') {
+							uni.showToast({ title: '获取登录凭证失败', icon: 'none' })
+						} else {
+							uni.showToast({ title: result.errorMsg || '登录失败', icon: 'none' })
+						}
+						this.closeLoginPopup()
+						return
+					}
+
+					// 本页无 phoneHasFullProfile 短路：始终弹 profile 补齐（保持现状）
 					this.showLoginPopup = false
 					this.openProfilePopup()
 				} catch (err) {

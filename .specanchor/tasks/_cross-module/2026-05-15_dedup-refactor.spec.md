@@ -371,6 +371,48 @@ specanchor:
 
 > 下一步：依赖用户验证。Phase 3（登录弹窗 mixin 化）为中风险，建议 Phase 2 验证通过后单独启动。
 
+### Phase 3' — 登录流程纯逻辑下沉 utils（2026-05-17，补做）
+
+**状态**：IMPLEMENTED（待用户验证）
+
+**背景**：原 Phase 3 mixin 化 SKIPPED（三大风险：uts mixin 在 uni-app x 下无先例、跨组件 button `getPhoneNumber` 未验证、收益不足）。本次采取「纯逻辑下沉 utils」最低风险路径补做。
+
+**决策记录**：
+
+1. **仅抽逻辑、不抽视图**：不抽 mixin、不抽组件、不动 template / data / 样式——视觉零变化、跨组件 button 风险零。
+2. **4 页实际差异比原评估更大**：重新梳理后发现 mine 的 `updateLoginState`、demoDetail 的 `pendingLikeItem` 回放、targetPhotoDetail 的 `submitProfile` 走老 `wxLogin` 路径 + `finishProfile` 内 `doToggleLike` 都是页面特化逻辑，不能粗暴抽 mixin。
+3. **targetPhotoDetail.submitProfile 保持现状**（用户决策）：其走 `uni.login + wxLogin` 老路径与其它三页不一致，但仅做去重、不做不一致修复，避免行为漂移。
+
+**实施清单**：
+
+- [x] 新建 `src/utils/loginFlow.uts`：导出 `runPhoneLogin(phoneCode)` + `PhoneLoginResult` / `PhoneLoginErrorKind` 类型。内部三步骤：`uni.login` → `wxLogin` → `wxBindPhone`；phone 接口失败不视为整体失败（与原 4 页等价）。
+- [x] 新建 `src/utils/profileSubmit.uts`：导出 `submitUserProfile({ nickname, avatarUrl })` + `ProfileSubmitResult`。仅负责 `wxUpdateUserInfo` + `mergeUserInfo`，乐观写入仍留页面侧。
+- [x] `src/pages/mine/index.uvue`：`onGetPhoneNumber` 三步骤 → `runPhoneLogin`；`submitProfile` 调 `submitUserProfile`。保留 `updateLoginState()` 刷新、乐观 merge。
+- [x] `src/pages/index/index.uvue`：同 mine；无 `updateLoginState` 。
+- [x] `src/pages/demoDetail/index.uvue`：同上；保留 `pendingLikeItem` 回放 + `closeLoginPopup` 失败分支。
+- [x] `src/pages/targetPhotoDetail/index.uvue`：仅 `onGetPhoneNumber` 调 `runPhoneLogin`；`submitProfile` 走老 `wxLogin + nickname/avatarUrl` 路径不动；本页无 `phoneHasFullProfile` 短路，始终弹 profile。
+
+**变更验证（静态）**：PASS
+
+- 4 页 import + call 计数：mine/index/demoDetail 各 4（2 import + 2 call），targetPhotoDetail 2（1 import + 1 call）——符合预期
+- 页面行数变化：mine 629→603（-26）、index 440→418（-22）、demoDetail 920→896（-24）、targetPhotoDetail 433→418（-15），合计 -87 行
+- 残留的 `uni.login` / `wxLogin` 调用点：
+  - `targetPhotoDetail.submitProfile` L300/306（预期保留、老路径）
+  - `demoDetail.doLogin` L543-557（独立遗留方法，不在本次范围）
+
+- [ ] 行为验证：**待用户跨 4 页 + 双 profile 跑完整登录三步骤与头像昵称提交链路**
+  - mine：未登录 → 勾选协议 → 三步骤 → profile 提交 → mine 页头像/昵称立即刷新；已登录点头像 → openProfilePopup；退出登录二次确认
+  - index：三步骤 → 接口带全头像昵称 → 短路不弹 profile
+  - demoDetail：未登点赞 → pendingLikeItem 设置 → 三步骤 → 短路后自动回放点赞；以及非短路路径下弹 profile
+  - targetPhotoDetail：未登点赞 → 三步骤 → 始终弹 profile → finishProfile 内自动 doToggleLike
+  - 双 profile：`apply-profile.sh blueberry/huahua` → `npm run profile:verify` 都要过
+- [ ] commit（用户验证后手动提交）：`refactor(auth): extract runPhoneLogin and submitUserProfile helpers (Phase 3 dedup)`
+
+**遗留 follow-up**：
+
+- targetPhotoDetail.submitProfile 与其它三页对齐到 `wxUpdateUserInfo`——独立任务跟进
+- LoginPopup 视图层组件抽取（需 spike 跨组件 `getPhoneNumber`）——后续可选
+
 ### Phase 3 — SKIPPED（2026-05-15，用户决策）
 
 **状态**：SKIPPED

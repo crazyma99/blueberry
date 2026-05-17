@@ -1,0 +1,70 @@
+// 登录三步骤纯逻辑封装（Phase 3 dedup）
+// 行为与原 4 页 onGetPhoneNumber 中的 try 段等价：
+//   1. uni.login({ provider: 'weixin' }) 拿 wx code
+//   2. wxLogin({ code }) 拿 token + userInfo（成功后 loginSuccess）
+//   3. wxBindPhone(phoneCode) 合并写入 phone/可能的 nickname/avatarUrl
+// 不调 showLoading / showToast / closeLoginPopup / openProfilePopup —— 调用方按页面策略处理 UX。
+
+import { wxLogin, wxBindPhone } from './api.uts'
+import { loginSuccess, mergeUserInfo } from './auth.uts'
+
+export type PhoneLoginErrorKind = 'login' | 'wxlogin' | 'unknown'
+
+export type PhoneLoginResult = {
+  ok: boolean
+  phoneHasFullProfile: boolean
+  errorKind?: PhoneLoginErrorKind
+  errorMsg?: string
+}
+
+/**
+ * 执行登录三步骤。
+ * - phoneCode：来自 button getPhoneNumber 回调的 e.detail.code
+ * - 内部不抛错；任何步骤异常都收敛为 { ok:false, errorKind:'unknown' }
+ * - phone 接口失败不视为整体失败（与原 4 页等价：wxLogin 已 setToken 即认为登录成功，
+ *   此时 phoneHasFullProfile=false，调用方通常会再弹 profile 弹窗补齐）
+ */
+export async function runPhoneLogin(phoneCode: string): Promise<PhoneLoginResult> {
+  try {
+    // step 1: 静默登录拿 wx code
+    const loginRes = await uni.login({ provider: 'weixin' })
+    if (!loginRes.code) {
+      return { ok: false, phoneHasFullProfile: false, errorKind: 'login' }
+    }
+
+    // step 2: wx code 换 token
+    const wxRes = await wxLogin({ code: loginRes.code })
+    if (wxRes.code === 200 && wxRes.data) {
+      loginSuccess(wxRes.data.token, wxRes.data.userInfo)
+    } else {
+      return {
+        ok: false,
+        phoneHasFullProfile: false,
+        errorKind: 'wxlogin',
+        errorMsg: wxRes.message,
+      }
+    }
+
+    // step 3: phoneCode 绑定手机号；失败不视为整体失败
+    let phoneHasFullProfile = false
+    try {
+      const phoneRes = await wxBindPhone(phoneCode)
+      if (phoneRes.code === 200 && phoneRes.data) {
+        // 合并写入，避免 step2 拿到的头像/昵称被 null 覆盖
+        mergeUserInfo(phoneRes.data)
+        const pNick = phoneRes.data.nickname
+        const pAvatar = phoneRes.data.avatarUrl
+        phoneHasFullProfile =
+          pNick != null && pNick !== '' &&
+          pAvatar != null && pAvatar !== ''
+      }
+    } catch (phoneErr) {
+      console.warn('[runPhoneLogin] wxBindPhone 异常，继续走 profile 补齐流程:', phoneErr)
+    }
+
+    return { ok: true, phoneHasFullProfile }
+  } catch (err) {
+    console.error('[runPhoneLogin] 异常:', err)
+    return { ok: false, phoneHasFullProfile: false, errorKind: 'unknown' }
+  }
+}

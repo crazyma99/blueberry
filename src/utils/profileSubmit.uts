@@ -1,0 +1,36 @@
+// 头像昵称授权 submit 纯逻辑封装（Phase 3 dedup）
+// 行为与原 mine/index/demoDetail 三页 submitProfile 中的 wxUpdateUserInfo + mergeUserInfo 段等价。
+// 不做乐观写入（保留页面侧的 optimistic merge 风格差异）；不调 showLoading / showToast。
+
+import { wxUpdateUserInfo } from './api.uts'
+import { mergeUserInfo } from './auth.uts'
+
+export type ProfileSubmitResult = {
+  ok: boolean
+  errorMsg?: string
+}
+
+/**
+ * 提交头像 / 昵称到后端并合并写入本地。
+ * - 调用方需自己保证至少一个字段非空（与原页面行为一致）
+ * - 失败不抛错；异常会收敛为 { ok:false }
+ */
+export async function submitUserProfile(payload: {
+  nickname?: string
+  avatarUrl?: string
+}): Promise<ProfileSubmitResult> {
+  try {
+    const updateRes = await wxUpdateUserInfo({
+      nickname: payload.nickname,
+      avatarUrl: payload.avatarUrl,
+    })
+    if (updateRes.code === 200 && updateRes.data) {
+      mergeUserInfo(updateRes.data)
+      return { ok: true }
+    }
+    return { ok: false, errorMsg: updateRes.message }
+  } catch (err) {
+    console.error('[submitUserProfile] 异常:', err)
+    return { ok: false }
+  }
+}
