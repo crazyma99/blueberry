@@ -13,18 +13,7 @@
 		<view v-else>
 			<view class="divideTit">PRICE LIST</view>
 			<view class="demoPhotoTit">价目表</view>
-			<view class="demoPhotoContaner">
-				<view v-if="shopList.length > 0" v-for="(shop, index) in shopList" :key="index" :class="shopList.length === 1 ? 'shopCard full-width' : 'shopCard'" @click="onShopClick(shop)">
-					<image :class="shopList.length === 1 ? 'demoPhoto full-width' : 'demoPhoto'" :src="shop.homeImage" mode="aspectFill"></image>
-					<view class="shopName">
-						<view>{{ shop.displayName }}</view>
-						<view class="enName">{{ shop.displayNameEn }}</view>
-					</view>
-				</view>
-				<!-- 无店铺时 fallback -->
-				<image v-if="shopList.length === 0" class="demoPhoto full-width" src="/static/demo1.png" @click="onDemoClick(1)"></image>
-				<image v-if="shopList.length === 0" class="demoPhoto full-width" src="/static/demo2.png" @click="onDemoClick(2)"></image>
-			</view>
+			<PhotoGrid :shop-list="shopList" @shop-click="onShopClick" @demo-click="onDemoClick" />
 			<view class="divideTit">SERVICE INFORMATION</view>
 			<view class="demoPhotoTit">服务说明</view>
 			<image class="service" src="/static/service.png"></image>
@@ -96,51 +85,7 @@
 		color: rgba(255, 255, 255, 0.9);
 		text-align: center;
 	}
-	.demoPhotoContaner{
-		margin: 40rpx 0;
-		padding: 0 8rpx;
-		width: 100%;
-		display: flex;
-		flex-direction: row;
-		flex-wrap: wrap;
-		gap: 8rpx;
-	}
-	.demoPhoto{
-		width: 364rpx;
-		height: 226rpx;
-		border-radius: 8rpx;
-	}
-	.shopCard {
-		position: relative;
-	}
-	.full-width {
-		width: 100%;
-	}
-	.full-width.demoPhoto {
-		width: 100%;
-	}
-	.shopCard:last-child {
-		margin-right: 0;
-	}
-	.shopName {
-		position: absolute;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		font-size: 34rpx;
-		color: #fff;
-		font-weight: 600;
-		background: linear-gradient(0deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3));
-		.enName {
-			margin-top: 4rpx;
-			font-size: 16rpx;
-			font-weight: 300;
-		}
-	}
+	/* demoPhotoContaner / demoPhoto / shopCard / shopName 等样式已收敛至 PhotoGrid 组件 */
 	.service{
 		margin: 40rpx 8rpx 40rpx;
 		width: 736rpx;

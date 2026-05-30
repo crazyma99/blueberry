@@ -1,0 +1,118 @@
+<!--
+  PhotoGrid — 店铺/客片网格展示组件
+
+  设计目标：
+  - 收敛 pages/index/index.uvue 与 pages/priceHomePage/index.uvue 中重复的
+    demoPhotoContaner 结构与样式，统一店铺卡片网格的渲染规则。
+  - 布局规则（基于首页 index.uvue 实现）：
+    * 容器内 flex-wrap，gap 8rpx；
+    * 单店铺时整行铺满（full-width）；
+    * 多店铺时每行 2 个，每个占 (100% - 8rpx) / 2；
+    * 奇数时最后一个落单仍占一半宽度，自然左对齐；
+    * shopList 为空时回退到 2 张 demo 图（同样按 2 列展示）。
+  - 点击交互通过事件透传给父组件（不同页面跳转目标不同）：
+    * @shop-click(shop)  ：点击列表中的某个店铺
+    * @demo-click(idx)   ：点击 fallback demo 图（idx = 1 或 2）
+-->
+<template>
+	<view class="demoPhotoContaner">
+		<view
+			v-if="shopList.length > 0"
+			v-for="(shop, index) in shopList"
+			:key="index"
+			:class="shopList.length === 1 ? 'shopCard full-width' : 'shopCard'"
+			@click="onShopClick(shop)"
+		>
+			<image
+				:class="shopList.length === 1 ? 'demoPhoto full-width' : 'demoPhoto'"
+				:src="shop.homeImage"
+				mode="aspectFill"
+			></image>
+			<view class="shopName">
+				<view>{{ shop.displayName }}</view>
+				<view class="enName">{{ shop.displayNameEn }}</view>
+			</view>
+		</view>
+		<!-- 无店铺时 fallback：复用 shopCard 布局，自动按 2 列展示 -->
+		<view v-if="shopList.length === 0" class="shopCard" @click="onDemoClick(1)">
+			<image class="demoPhoto" src="/static/demo1.png" mode="aspectFill"></image>
+		</view>
+		<view v-if="shopList.length === 0" class="shopCard" @click="onDemoClick(2)">
+			<image class="demoPhoto" src="/static/demo2.png" mode="aspectFill"></image>
+		</view>
+	</view>
+</template>
+
+<script lang="uts">
+export default {
+	name: 'PhotoGrid',
+	props: {
+		shopList: {
+			type: Array,
+			required: true
+		}
+	},
+	emits: ['shop-click', 'demo-click'],
+	methods: {
+		onShopClick(shop) {
+			this.$emit('shop-click', shop)
+		},
+		onDemoClick(idx) {
+			this.$emit('demo-click', idx)
+		}
+	}
+}
+</script>
+
+<style>
+	.demoPhotoContaner{
+		margin: 40rpx 0;
+		padding: 0 8rpx;
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 8rpx;
+	}
+	.shopCard {
+		position: relative;
+		/* 多个店铺时：每行 2 个，gap 为 8rpx，故每个占 (100% - 8rpx) / 2；
+		   奇数时最后一个仍按一半宽度展示，自然左对齐 */
+		width: calc((100% - 8rpx) / 2);
+	}
+	.full-width {
+		width: 100%;
+	}
+	/* 单店铺时由模板加上 .full-width 类，覆盖默认的一半宽度 */
+	.shopCard.full-width {
+		width: 100%;
+	}
+	.demoPhoto{
+		/* 默认填满外层 .shopCard（.shopCard 已为容器一半宽），
+		   单店铺/无店铺 fallback 通过 .full-width 覆盖为 100% */
+		width: 100%;
+		height: 226rpx;
+	}
+	.full-width.demoPhoto {
+		width: 100%;
+	}
+	.shopName {
+		position: absolute;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		font-size: 34rpx;
+		color: #fff;
+		font-weight: 600;
+		background: linear-gradient(0deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3));
+		.enName {
+			margin-top: 4rpx;
+			font-size: 16rpx;
+			font-weight: 300;
+		}
+	}
+</style>

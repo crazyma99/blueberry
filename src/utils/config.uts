@@ -6,6 +6,6 @@ export interface HttpConfig {
 
 export function getHttpConfig(): HttpConfig {
   // TODO: 替换为你的域名，当前测试环境https://crazyma99.xyz
-  const baseURL = 'https://lanmei66.cloud/'
+  const baseURL = 'https://crazyma99.xyz'
   return { baseURL, timeout: 15000 }
 }
