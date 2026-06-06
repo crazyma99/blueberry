@@ -1,0 +1,428 @@
+<template>
+	<view class="page">
+		<!-- 提示文案 -->
+		<view class="tip-bar">
+			<text class="tip-text">左右横向滑动支持切换模板</text>
+		</view>
+
+		<!-- 服饰模板轮播 -->
+		<view class="swiper-wrap">
+			<swiper
+				class="template-swiper"
+				:indicator-dots="true"
+				indicator-color="rgba(255,255,255,0.3)"
+				indicator-active-color="#fff"
+				:circular="true"
+				:current="currentTemplateIndex"
+				@change="onSwiperChange"
+			>
+				<swiper-item v-for="(item, index) in templates" :key="index">
+					<image class="template-img" :src="item.imageUrl" mode="aspectFill"></image>
+				</swiper-item>
+			</swiper>
+		</view>
+
+		<!-- 体型选择 -->
+		<view class="section">
+			<text class="section-label">选择您的体型：</text>
+			<view class="body-type-row">
+				<view
+					:class="bodyType === 'slim' ? 'body-btn body-btn-active' : 'body-btn'"
+					@click="selectBodyType('slim')"
+				>
+					<text :class="bodyType === 'slim' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">瘦</text>
+				</view>
+				<view
+					:class="bodyType === 'medium' ? 'body-btn body-btn-active' : 'body-btn'"
+					@click="selectBodyType('medium')"
+				>
+					<text :class="bodyType === 'medium' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">微胖</text>
+				</view>
+				<view
+					:class="bodyType === 'fat' ? 'body-btn body-btn-active' : 'body-btn'"
+					@click="selectBodyType('fat')"
+				>
+					<text :class="bodyType === 'fat' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">胖</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 年龄选择 -->
+		<view class="section">
+			<text class="section-label">选择您的年龄：</text>
+			<picker mode="selector" :range="ageOptions" :value="ageIndex" @change="selectAge">
+				<view class="age-picker">
+					<text class="age-picker-text">{{ ageRange }}</text>
+					<view class="age-picker-arrow"></view>
+				</view>
+			</picker>
+		</view>
+
+		<!-- 照片上传 -->
+		<view class="section">
+			<text class="section-label">上传你的照片：</text>
+			<view class="upload-area" @click="choosePhoto">
+				<image v-if="photoPreviewUrl" class="upload-preview" :src="photoPreviewUrl" mode="aspectFill"></image>
+				<view v-else class="upload-placeholder">
+					<text class="upload-plus">+</text>
+					<text class="upload-hint">点击上传你的照片</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 底部占位（给固定按钮腾出空间） -->
+		<view class="bottom-spacer"></view>
+
+		<!-- 底部固定生成按钮 -->
+		<view class="fixed-bottom">
+			<view
+				:class="photoPath ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
+				@click="handleGenerate"
+			>
+				<text class="generate-btn-text">生成 </text>
+				<text class="generate-btn-ai">AI试衣</text>
+				<text class="generate-btn-text"> 效果</text>
+			</view>
+			<view class="footer-copyright">
+				<AppFooter />
+			</view>
+		</view>
+	</view>
+</template>
+
+<script lang="uts">
+import { getAiTemplates, uploadPhoto, submitAiTryOn } from '../../utils/api.uts'
+import { isLoggedIn } from '../../utils/auth.uts'
+
+export default {
+	data() {
+		return {
+			albumId: 0,
+			templates: [] as any[],
+			currentTemplateIndex: 0,
+			bodyType: 'slim',
+			ageRange: '10岁及以下',
+			ageOptions: ['10岁及以下', '11-18岁', '19-30岁', '31-45岁', '46-60岁', '60岁以上'],
+			ageIndex: 0,
+			photoPath: '',
+			photoPreviewUrl: '',
+			isSubmitting: false
+		}
+	},
+	onLoad(options) {
+		if (options && options.albumId) {
+			this.albumId = parseInt(options.albumId) || 0
+		}
+		this.loadTemplates()
+	},
+	methods: {
+		async loadTemplates() {
+			if (!this.albumId) return
+			try {
+				const res = await getAiTemplates(this.albumId)
+				if (res.code === 200 && res.data) {
+					this.templates = res.data
+				}
+			} catch (err) {
+				console.error('加载模板失败:', err)
+			}
+		},
+
+		onSwiperChange(e: any) {
+			this.currentTemplateIndex = e.detail.current
+		},
+
+		selectBodyType(type: string) {
+			this.bodyType = type
+		},
+
+		selectAge(e: any) {
+			const index = e.detail.value
+			this.ageIndex = index
+			this.ageRange = this.ageOptions[index]
+		},
+
+		choosePhoto() {
+			uni.chooseImage({
+				count: 1,
+				sizeType: ['compressed'],
+				sourceType: ['album', 'camera'],
+				success: (res) => {
+					const tempFile = res.tempFiles[0]
+					// 检查文件大小 10MB
+					if (tempFile.size > 10 * 1024 * 1024) {
+						uni.showToast({ title: '照片大小不能超过10MB', icon: 'none' })
+						return
+					}
+					this.photoPath = res.tempFilePaths[0]
+					this.photoPreviewUrl = res.tempFilePaths[0]
+				}
+			})
+		},
+
+		async handleGenerate() {
+			if (this.isSubmitting) return
+
+			// 检查登录态
+			if (!isLoggedIn()) {
+				uni.showToast({ title: '请先登录', icon: 'none' })
+				return
+			}
+
+			// 检查是否已上传照片
+			if (!this.photoPath) {
+				uni.showToast({ title: '请先上传照片', icon: 'none' })
+				return
+			}
+
+			// 检查模板
+			if (this.templates.length === 0) {
+				uni.showToast({ title: '暂无可用模板', icon: 'none' })
+				return
+			}
+
+			const currentTemplate = this.templates[this.currentTemplateIndex]
+			if (!currentTemplate) {
+				uni.showToast({ title: '请选择模板', icon: 'none' })
+				return
+			}
+
+			this.isSubmitting = true
+			uni.showLoading({ title: '提交中...', mask: true })
+
+			try {
+				// 上传照片
+				const uploadRes = await uploadPhoto(this.photoPath)
+				if (uploadRes.code !== 200 || !uploadRes.data) {
+					uni.showToast({ title: uploadRes.message || '照片上传失败', icon: 'none' })
+					return
+				}
+
+				const photoUrl = uploadRes.data.url
+
+				// 提交生成请求
+				const submitRes = await submitAiTryOn({
+					templateId: currentTemplate.id,
+					bodyType: this.bodyType,
+					ageRange: this.ageRange,
+					photoUrl: photoUrl
+				})
+
+				if (submitRes.code === 200 && submitRes.data) {
+					uni.navigateTo({
+						url: `/pages/aiTryOnResult/index?taskId=${submitRes.data.taskId}`
+					})
+				} else {
+					uni.showToast({ title: submitRes.message || '提交失败', icon: 'none' })
+				}
+			} catch (err) {
+				console.error('生成AI试衣失败:', err)
+				uni.showToast({ title: '提交失败，请重试', icon: 'none' })
+			} finally {
+				this.isSubmitting = false
+				uni.hideLoading()
+			}
+		}
+	}
+}
+</script>
+
+<style>
+.page {
+	background: #000;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	padding-bottom: 0;
+}
+
+/* 提示文案 */
+.tip-bar {
+	padding: 20rpx 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.tip-text {
+	font-size: 26rpx;
+	color: rgba(255, 255, 255, 0.5);
+}
+
+/* 模板轮播 */
+.swiper-wrap {
+	width: 100%;
+	padding: 0 0 20rpx;
+}
+.template-swiper {
+	width: 100%;
+	height: 780rpx;
+}
+.template-img {
+	width: 100%;
+	height: 780rpx;
+}
+.template-empty {
+	width: 100%;
+	height: 780rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(255, 255, 255, 0.05);
+}
+.template-empty-text {
+	font-size: 28rpx;
+	color: rgba(255, 255, 255, 0.3);
+}
+
+/* 通用 section */
+.section {
+	padding: 24rpx 40rpx;
+}
+.section-label {
+	font-size: 28rpx;
+	color: rgba(255, 255, 255, 0.7);
+	margin-bottom: 20rpx;
+}
+
+/* 体型选择 */
+.body-type-row {
+	display: flex;
+	flex-direction: row;
+	margin-top: 20rpx;
+	border-radius: 44rpx;
+	overflow: hidden;
+	border-width: 1rpx;
+	border-style: solid;
+	border-color: rgba(255, 255, 255, 0.1);
+}
+.body-btn {
+	flex: 1;
+	height: 72rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: transparent;
+  margin: 8rpx;
+  border-radius: 44rpx;
+}
+.body-btn-active {
+	background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.body-btn-text {
+	font-size: 28rpx;
+	color: #fff;
+}
+
+/* 年龄选择 */
+.age-picker {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	height: 80rpx;
+	border-radius: 44rpx;
+	border-width: 1rpx;
+	border-style: solid;
+	border-color: rgba(255, 255, 255, 0.1);
+	padding: 0 32rpx;
+	margin-top: 20rpx;
+}
+.age-picker-text {
+	font-size: 28rpx;
+	color: #fff;
+}
+.age-picker-arrow {
+	width: 0;
+	height: 0;
+	border-left: 8rpx solid transparent;
+	border-right: 8rpx solid transparent;
+	border-top: 10rpx solid rgba(255, 255, 255, 0.6);
+}
+
+/* 照片上传 */
+.upload-area {
+	margin-top: 20rpx;
+	width: 100%;
+	height: 320rpx;
+	border-radius: 16rpx;
+	border-width: 2rpx;
+	border-style: dashed;
+	border-color: rgba(255, 255, 255, 0.3);
+	background-color: rgba(255, 255, 255, 0.05);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+.upload-placeholder {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+.upload-plus {
+	font-size: 64rpx;
+	color: rgba(255, 255, 255, 0.5);
+	margin-bottom: 16rpx;
+}
+.upload-hint {
+	font-size: 26rpx;
+	color: rgba(255, 255, 255, 0.4);
+}
+.upload-preview {
+	width: 100%;
+	height: 100%;
+}
+
+/* 底部占位 */
+.bottom-spacer {
+	height: 260rpx;
+}
+
+/* 底部固定 */
+.fixed-bottom {
+	position: fixed;
+	left: 0;
+	bottom: 0;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 24rpx 40rpx;
+	padding-bottom: 40rpx;
+	background-color: #000;
+}
+
+/* 生成按钮 */
+.generate-btn {
+	width: 520rpx;
+	height: 88rpx;
+	border-radius: 44rpx;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(109deg, #f2949f 12%, #d7a3bf 31%, #a0a6ec 51%, #9daeea 71%, #7bace3 91%);
+}
+.generate-btn-disabled {
+	opacity: 0.4;
+}
+.generate-btn-text {
+	font-size: 32rpx;
+	color: #fff;
+	font-weight: 500;
+}
+.generate-btn-ai {
+	font-size: 32rpx;
+	color: #fff;
+	font-weight: 700;
+}
+
+/* Copyright */
+.footer-copyright {
+	margin-top: 20rpx;
+	font-size: 20rpx;
+	color: rgba(255, 255, 255, 0.5);
+}
+</style>

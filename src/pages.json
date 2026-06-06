@@ -51,6 +51,18 @@
 			"style": {
 				"navigationBarTitleText": "隐私政策"
 			}
+		},
+		{
+			"path": "pages/aiTryOn/index",
+			"style": {
+				"navigationBarTitleText": "AI试衣"
+			}
+		},
+		{
+			"path": "pages/aiTryOnResult/index",
+			"style": {
+				"navigationBarTitleText": "正在生成"
+			}
 		}
 	],
 	"globalStyle": {

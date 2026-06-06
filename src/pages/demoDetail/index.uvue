@@ -60,6 +60,7 @@
 									</image>
 									<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 								</view>
+								<view class="ai-tryon-tag" @click.stop="goToAiTryOn(item)">AI试衣</view>
 							</view>
 						</view>
 					</view>
@@ -104,16 +105,25 @@
 						<image :src="item?.coverImageUrl" class="photo" mode="aspectFill" />
 						<view class="mask" @click="gotoDetail(item)">
 							<view class="desc">
-								<view class="photoName">{{ item?.title }}</view>
-								<view class="collect">
+								<view class="left">
+									<view class="photoName">{{ item?.title }}</view>
+									<view class="collect">
+										<image
+											class="heart"
+											mode="aspectFit"
+											:src="item.liked ? '/static/liked.svg' : '/static/like.svg'"
+										>
+											<view class="clickArea" @click.stop="handleLike(item)"></view>
+										</image>
+										<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
+									</view>
+								</view>
+								<view class="ai-tryon-tag" @click.stop="goToAiTryOn(item)">
 									<image
-										class="heart"
+										class="aitry"
 										mode="aspectFit"
-										:src="item.liked ? '/static/liked.svg' : '/static/like.svg'"
-									>
-										<view class="clickArea" @click.stop="handleLike(item)"></view>
-									</image>
-									<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
+										src="/static/aitry.svg"
+									/>
 								</view>
 							</view>
 						</view>
@@ -561,6 +571,11 @@
 					url: `/pages/targetPhotoDetail/index?idx=${item.id}&liked=${item.liked}&type=${this.idx}`
 				})
 			},
+			goToAiTryOn(item) {
+				uni.navigateTo({
+					url: '/pages/aiTryOn/index?albumId=' + item.id
+				})
+			},
 			formatCount(count) {
 				return _formatCount(count)
 			},
@@ -852,7 +867,7 @@
 		background: linear-gradient(180deg, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.4) 75%, rgba(0, 0, 0, 0.7) 89%, #000000 100%);
 	}
 	.desc{
-		margin: 436rpx 16rpx 0;
+		margin: 400rpx 16rpx 0;
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
@@ -891,6 +906,26 @@
 		margin: 32rpx auto;
 		font-size: 20rpx;
 		color: rgba(255, 255, 255, 0.5);
+	}
+	.left{
+		display: flex;
+		flex-direction:column;
+		gap: 4rpx;
+	}
+	/* AI试衣标签 */
+	.ai-tryon-tag {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 16rpx 20rpx;
+		background-color: rgba(255, 255, 255, 0.1);
+		border-radius: 300rpx;
+		font-size: 22rpx;
+		color: #fff;
+		.aitry{
+			width: 76rpx;
+			height: 22.5rpx;
+		}
 	}
 	/* 骨架屏已移至全局样式 */
 </style>

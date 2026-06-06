@@ -1,0 +1,368 @@
+<template>
+	<view class="page">
+		<!-- 购买照片按钮 -->
+		<view class="buy-photo-btn">
+			<text class="buy-photo-text">购买照片</text>
+		</view>
+
+		<!-- 加载态 -->
+		<view v-if="status === 'processing'" class="center-content">
+			<view class="loading-wrapper">
+				<view class="loading-spinner">
+					<view class="spinner-dot dot1"></view>
+					<view class="spinner-dot dot2"></view>
+					<view class="spinner-dot dot3"></view>
+				</view>
+				<text class="loading-tip">正在生成中，生成需要1分钟左右，您可以在历史记录页查看哦</text>
+				<text class="elapsed-text" v-if="elapsedSeconds > 0">已等待 {{ elapsedSeconds }} 秒</text>
+			</view>
+		</view>
+
+		<!-- 成功态 -->
+		<view v-if="status === 'success'" class="result-content">
+			<view class="result-image-wrapper">
+				<image class="result-image" :src="resultImageUrl" mode="widthFix"></image>
+			</view>
+			<view class="action-bar">
+				<view class="save-btn" @click="saveToAlbum">
+					<text class="save-btn-text">保存到相册</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 失败态 -->
+		<view v-if="status === 'failed'" class="center-content">
+			<view class="fail-wrapper">
+				<text class="fail-text" v-if="failCount >= 3">当前服务繁忙，请稍后再试</text>
+				<text class="fail-text" v-else>生成失败，请重试</text>
+				<view class="retry-btn" @click="handleRetry" v-if="failCount < 3">
+					<text class="retry-btn-text">重试</text>
+				</view>
+				<view class="back-btn-wrapper" @click="handleBack">
+					<text class="back-btn-text">返回</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 底部 Copyright -->
+		<view class="page-footer">
+			<view class="divide"></view>
+			<view class="bottomdesc"><AppFooter /></view>
+		</view>
+	</view>
+</template>
+
+<script lang="uts">
+import { getAiTryOnResult } from '../../utils/api.uts'
+
+export default {
+	data() {
+		return {
+			taskId: '',
+			status: 'processing' as string,  // 'processing' | 'success' | 'failed'
+			resultImageUrl: '',
+			failCount: 0,
+			pollingTimer: null as any,
+			elapsedSeconds: 0,
+			countdownTimer: null as any
+		}
+	},
+	onLoad(options : any) {
+		this.taskId = options?.taskId ?? ''
+		if (this.taskId !== '') {
+			this.startPolling()
+		} else {
+			this.status = 'failed'
+		}
+	},
+	onUnload() {
+		this.stopPolling()
+	},
+	methods: {
+		startPolling() {
+			this.status = 'processing'
+			this.elapsedSeconds = 0
+
+			// 启动计时器，每秒更新已等待时间
+			this.countdownTimer = setInterval(() => {
+				this.elapsedSeconds += 1
+				// 超时 60 秒，停止轮询，展示失败
+				if (this.elapsedSeconds >= 60) {
+					this.stopPolling()
+					this.status = 'failed'
+				}
+			}, 1000)
+
+			// 立即查询一次
+			this.pollResult()
+
+			// 每 3 秒轮询
+			this.pollingTimer = setInterval(() => {
+				this.pollResult()
+			}, 3000)
+		},
+
+		async pollResult() {
+			try {
+				const res = await getAiTryOnResult(this.taskId)
+				if (res.code === 200 && res.data) {
+					const taskStatus = res.data.status
+					if (taskStatus === 'success') {
+						this.stopPolling()
+						this.resultImageUrl = res.data.resultImageUrl || ''
+						this.status = 'success'
+						// 更新导航栏标题
+						uni.setNavigationBarTitle({ title: 'AI试衣结果' })
+					} else if (taskStatus === 'failed') {
+						this.stopPolling()
+						this.status = 'failed'
+					}
+					// processing / pending → 继续轮询
+				}
+			} catch (err) {
+				console.error('轮询AI试衣结果失败:', err)
+			}
+		},
+
+		stopPolling() {
+			if (this.pollingTimer != null) {
+				clearInterval(this.pollingTimer)
+				this.pollingTimer = null
+			}
+			if (this.countdownTimer != null) {
+				clearInterval(this.countdownTimer)
+				this.countdownTimer = null
+			}
+		},
+
+		handleRetry() {
+			this.failCount += 1
+			if (this.failCount >= 3) {
+				// 连续3次失败，不再重试
+				this.status = 'failed'
+				return
+			}
+			// 重新启动轮询
+			this.startPolling()
+		},
+
+		async saveToAlbum() {
+			if (this.resultImageUrl === '') {
+				uni.showToast({ title: '图片地址为空', icon: 'none' })
+				return
+			}
+
+			try {
+				uni.showLoading({ title: '保存中...', mask: true })
+
+				// 网络图片需要先下载
+				let savedPath = this.resultImageUrl
+				if (this.resultImageUrl.startsWith('http')) {
+					const downloadRes = await new Promise<any>((resolve, reject) => {
+						uni.downloadFile({
+							url: this.resultImageUrl,
+							success: (res : any) => {
+								if (res.statusCode === 200) {
+									resolve(res)
+								} else {
+									reject(new Error('下载失败'))
+								}
+							},
+							fail: (err : any) => {
+								reject(err)
+							}
+						})
+					})
+					savedPath = downloadRes.tempFilePath
+				}
+
+				// 保存到相册
+				await new Promise<void>((resolve, reject) => {
+					uni.saveImageToPhotosAlbum({
+						filePath: savedPath,
+						success: () => {
+							resolve()
+						},
+						fail: (err : any) => {
+							reject(err)
+						}
+					})
+				})
+
+				uni.hideLoading()
+				uni.showToast({ title: '已保存到相册', icon: 'success' })
+			} catch (err : any) {
+				uni.hideLoading()
+				// 处理权限拒绝
+				const errMsg = (err && err.errMsg) ? String(err.errMsg) : ''
+				if (errMsg.indexOf('auth deny') !== -1 || errMsg.indexOf('authorize') !== -1) {
+					uni.showModal({
+						title: '提示',
+						content: '需要您授权保存图片到相册',
+						confirmText: '去设置',
+						success: (modalRes : any) => {
+							if (modalRes.confirm) {
+								uni.openSetting({})
+							}
+						}
+					})
+				} else {
+					uni.showToast({ title: '保存失败，请重试', icon: 'none' })
+				}
+			}
+		},
+
+		handleBack() {
+			this.stopPolling()
+			uni.navigateBack()
+		}
+	}
+}
+</script>
+
+<style>
+.page {
+	background: #000;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+}
+
+/* 购买照片按钮 */
+.buy-photo-btn {
+	margin: 24rpx auto 0;
+	background: rgba(255, 255, 255, 0.15);
+	border-radius: 40rpx;
+	padding: 16rpx 48rpx;
+	align-self: center;
+}
+.buy-photo-text {
+	font-size: 28rpx;
+	color: #fff;
+}
+
+/* 居中内容区域（加载态/失败态） */
+.center-content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 0 64rpx;
+}
+
+/* 加载态 */
+.loading-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+.loading-spinner {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 48rpx;
+}
+.spinner-dot {
+	width: 16rpx;
+	height: 16rpx;
+	border-radius: 8rpx;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0 8rpx;
+}
+.loading-tip {
+	font-size: 28rpx;
+	color: rgba(255, 255, 255, 0.7);
+	text-align: center;
+	line-height: 44rpx;
+}
+.elapsed-text {
+	font-size: 24rpx;
+	color: rgba(255, 255, 255, 0.4);
+	margin-top: 24rpx;
+}
+
+/* 成功态 */
+.result-content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 32rpx 24rpx;
+}
+.result-image-wrapper {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+}
+.result-image {
+	width: 100%;
+	border-radius: 16rpx;
+}
+.action-bar {
+	width: 100%;
+	padding: 32rpx 0;
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+}
+.save-btn {
+	background: #fff;
+	border-radius: 48rpx;
+	padding: 24rpx 80rpx;
+}
+.save-btn-text {
+	font-size: 32rpx;
+	color: #000;
+	font-weight: 500;
+}
+
+/* 失败态 */
+.fail-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+.fail-text {
+	font-size: 30rpx;
+	color: rgba(255, 255, 255, 0.7);
+	margin-bottom: 48rpx;
+	text-align: center;
+}
+.retry-btn {
+	background: #fff;
+	border-radius: 48rpx;
+	padding: 24rpx 80rpx;
+	margin-bottom: 24rpx;
+}
+.retry-btn-text {
+	font-size: 32rpx;
+	color: #000;
+	font-weight: 500;
+}
+.back-btn-wrapper {
+	padding: 24rpx 80rpx;
+}
+.back-btn-text {
+	font-size: 28rpx;
+	color: rgba(255, 255, 255, 0.5);
+}
+
+/* 底部 */
+.page-footer {
+	margin-top: auto;
+}
+.divide {
+	height: 2rpx;
+	width: 100%;
+	background: rgba(255, 255, 255, 0.15);
+}
+.bottomdesc {
+	margin: 32rpx auto;
+	font-size: 20rpx;
+	color: rgba(255, 255, 255, 0.5);
+}
+</style>
