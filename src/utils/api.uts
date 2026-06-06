@@ -1,5 +1,6 @@
 import { request } from './http.uts'
-import { UserInfo } from './auth.uts'
+import { getHttpConfig } from './config.uts'
+import { UserInfo, getToken } from './auth.uts'
 
 // ============ 类型定义 ============
 
@@ -308,4 +309,194 @@ export const getPageConfig = async () => {
     showLoading: false,
   })
   return res as { code: number, data: { menuItems: any[], banners: any[] } }
+}
+
+// ============ AI试衣相关接口（注意：aiface 接口成功 code === 0，非 200） ============
+
+export interface AiTemplate {
+  id: number
+  style_name: string
+  category: string
+  package_type: string
+  sub_category: string
+  gender: string
+  image_url: string
+  scene_prompt: string
+  is_active: number
+}
+
+/**
+ * 获取AI试衣模板列表
+ * 注意：code === 0 表示成功
+ */
+export const getAiTemplates = async (params?: {
+  style?: string
+  keyword?: string
+  category?: string
+  package_type?: string
+  sub_category?: string
+  shop_id?: number
+  gender?: string
+}) => {
+  const res = await request({
+    url: '/api/aiface/templates',
+    method: 'GET',
+    data: params,
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: AiTemplate[] }
+}
+
+/**
+ * 获取AI试衣风格分组
+ * 注意：code === 0 表示成功
+ */
+export const getAiStyles = async (params?: {
+  category?: string
+  package_type?: string
+  sub_category?: string
+  shop_id?: number
+}) => {
+  const res = await request({
+    url: '/api/aiface/styles',
+    method: 'GET',
+    data: params,
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: Array<{ style_name: string; count: number; cover_url: string }> }
+}
+
+/**
+ * 获取AI试衣模板详情
+ * 注意：code === 0 表示成功
+ */
+export const getAiTemplateDetail = async (id: number) => {
+  const res = await request({
+    url: `/api/aiface/templates/${id}`,
+    method: 'GET',
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: AiTemplate }
+}
+
+/**
+ * 上传用户照片（用于AI试衣，需登录）
+ * form field name 为 photo
+ * 注意：code === 0 表示成功
+ */
+export const uploadPhoto = async (filePath: string) => {
+  const { baseURL } = getHttpConfig()
+  return new Promise<{ code: number; message: string; data: { file_url: string; filename: string } }>((resolve, reject) => {
+    uni.uploadFile({
+      url: `${baseURL}/api/aiface/upload`,
+      filePath: filePath,
+      name: 'photo',
+      header: {
+        'Authorization': `Bearer ${getToken()}`
+      },
+      success: (res) => {
+        const data = JSON.parse(res.data)
+        resolve(data)
+      },
+      fail: (err) => {
+        reject(err)
+      }
+    })
+  })
+}
+
+/**
+ * 创建AI试衣任务（需登录）
+ * 注意：code === 0 表示成功；code !== 0 表示失败（如：功能未启用 / 配额不足 / 缺少参数 / 店铺不存在），message 为错误提示
+ */
+export const submitAiTryOn = async (params: {
+  templateId: number
+  userPhotoFilename: string
+  shopId: number
+  userOpenid?: string
+  category?: string
+  bodyType?: string
+  ageRange?: string
+}) => {
+  const res = await request({
+    url: '/api/aiface/tasks',
+    method: 'POST',
+    data: params,
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: { task_id: number } }
+}
+
+/**
+ * 查询AI试衣任务状态（轮询）
+ * 注意：code === 0 表示成功
+ */
+export const getAiTryOnResult = async (taskId: string) => {
+  const res = await request({
+    url: `/api/aiface/tasks/${taskId}`,
+    method: 'GET',
+    showLoading: false,
+  })
+  return res as {
+    code: number
+    message: string
+    data: {
+      id: number
+      user_openid: string
+      template_id: number
+      // 任务状态：'pending' | 'processing' | 'completed' | 'failed'
+      status: string
+      result_image_url: string
+      error_message: string
+      template_image_url: string
+      style_name: string
+      category: string
+      created_at: string
+      updated_at: string
+    }
+  }
+}
+
+/**
+ * 获取AI试衣历史记录列表（需登录）
+ * 注意：code === 0 表示成功
+ */
+export const getAiTasks = async (openid: string) => {
+  const res = await request({
+    url: '/api/aiface/tasks',
+    method: 'GET',
+    data: { openid },
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: Array<{ id: number; status: string; result_image_url: string; template_image_url: string; style_name: string; created_at: string }> }
+}
+
+/**
+ * 删除AI试衣历史记录（需登录）
+ * 注意：code === 0 表示成功
+ */
+export const deleteAiTask = async (id: number) => {
+  const res = await request({
+    url: `/api/aiface/tasks/${id}`,
+    method: 'DELETE',
+    showLoading: false,
+  })
+  return res as { code: number; message: string }
+}
+
+/**
+ * AI推荐模板（需登录）
+ * 注意：code === 0 表示成功；参数为 camelCase
+ */
+export const getAiRecommend = async (params: {
+  userPhotoFilename: string
+  shopId: number
+}) => {
+  const res = await request({
+    url: '/api/aiface/recommend',
+    method: 'POST',
+    data: params,
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: AiTemplate[] }
 }
