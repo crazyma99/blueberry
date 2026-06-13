@@ -130,8 +130,8 @@ export default {
 				}
 
 				const res = await getAiTasks(openid)
-				// 注意：aiface 接口成功 code === 0
-				if (res.code === 0 && res.data != null) {
+				// aiface 接口 code === 0 或 200 表示成功
+				if ((res.code === 0 || res.code === 200) && res.data != null) {
 					this.taskList = res.data
 					this.isEmpty = this.taskList.length === 0
 				} else {

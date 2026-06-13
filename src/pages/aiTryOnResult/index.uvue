@@ -1,15 +1,11 @@
 <template>
 	<view class="page">
-		<!-- 购买照片按钮 -->
-		<view class="buy-photo-btn">
-			<text class="buy-photo-text">购买照片</text>
-		</view>
 
 		<!-- 加载态 -->
 		<view v-if="status === 'processing'" class="center-content">
 			<view class="loading-wrapper">
 				<view class="loading-spinner"></view>
-				<text class="loading-tip">正在生成中，生成需要1分钟左右，您可以在历史记录页查看哦</text>
+				<text class="loading-tip">正在生成中，生成需要3分钟左右，您可以在历史记录页查看哦</text>
 				<text class="elapsed-text" v-if="elapsedSeconds > 0">已等待 {{ elapsedSeconds }} 秒</text>
 			</view>
 		</view>
@@ -108,8 +104,8 @@ export default {
 		async pollResult() {
 			try {
 				const res = await getAiTryOnResult(this.taskId)
-				// aiface 接口 code === 0 表示成功
-				if (res.code === 0 && res.data) {
+				// aiface 接口 code === 0 或 200 表示成功
+				if ((res.code === 0 || res.code === 200) && res.data) {
 					const taskStatus = res.data.status
 					if (taskStatus === 'completed') {
 						this.stopPolling()
@@ -299,7 +295,7 @@ export default {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding: 32rpx 24rpx;
+	padding: 8rpx;
 }
 .result-image-wrapper {
 	flex: 1;
@@ -321,19 +317,20 @@ export default {
 }
 .action-bar {
 	width: 100%;
-	padding: 32rpx 0;
+	padding: 24rpx 0;
 	display: flex;
 	flex-direction: row;
 	justify-content: center;
 }
 .save-btn {
-	background: #fff;
+	background: rgba(255, 255, 255, 0.1);
 	border-radius: 48rpx;
-	padding: 24rpx 80rpx;
+	padding: 24rpx 48rpx;
+	box-shadow: 0px 6px 20px 0px rgba(0, 0, 0, 0.16);
 }
 .save-btn-text {
-	font-size: 32rpx;
-	color: #000;
+	font-size: 28rpx;
+	color: #fff;
 	font-weight: 500;
 }
 
