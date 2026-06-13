@@ -234,6 +234,11 @@ export default {
 
 		choosePhoto() {
 			if (this.isUploading) return
+			// 上传前检查登录态，未登录先拉起登录弹窗
+			if (!isLoggedIn()) {
+				this.showLoginPopup = true
+				return
+			}
 			uni.chooseImage({
 				count: 1,
 				sizeType: ['compressed'],

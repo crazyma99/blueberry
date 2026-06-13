@@ -40,7 +40,7 @@
           @click="handleMenuClick(item)"
         >
           <image class="menu-icon" :src="item.imageUrl" mode="aspectFill"></image>
-          <view class="menu-text">{{ item.title }}</view>
+          <view :class="['menu-text', { 'special-font': item.specialFont }]">{{ item.title }}</view>
         </view>
       </view>
 
@@ -239,7 +239,7 @@ export default {
     getDefaultMenuItems() {
       return [
         { title: '我的喜欢', imageUrl: '/static/liked.svg', linkUrl: '/pages/favorites/index', needLogin: true },
-        { title: 'AI试衣记录', imageUrl: '/static/ai-tryon-history.svg', linkUrl: '/pages/aiTryOnHistory/index', needLogin: true }
+        { title: 'AI试衣', imageUrl: '/static/starred.svg', linkUrl: '/pages/aiTryOnHistory/index', needLogin: true, specialFont: true }
       ]
     },
 
@@ -562,6 +562,14 @@ export default {
   color: rgba(255, 255, 255, 0.9);
   text-align: center;
   font-weight: 500;
+}
+
+.special-font {
+  background: linear-gradient(76deg, #ffb26f 15%, #fcc18e 25%, #bbb0ff 38%, #8d7aff 61%, #699bff 79%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
 }
 
 /* 轮播图 */
