@@ -335,7 +335,7 @@ export const getAiTemplates = async (params?: {
   category?: string
   package_type?: string
   sub_category?: string
-  shop_id?: number
+  shop_id?: string
   gender?: string
 }) => {
   const res = await request({

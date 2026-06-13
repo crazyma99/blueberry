@@ -17,7 +17,7 @@
 				@change="onSwiperChange"
 			>
 				<swiper-item v-for="(item, index) in templates" :key="index">
-					<image class="template-img" :src="item.image_url" mode="aspectFill"></image>
+					<image class="template-img" :src="item.imageUrl" mode="aspectFill"></image>
 				</swiper-item>
 			</swiper>
 		</view>
@@ -97,7 +97,9 @@ import { isLoggedIn } from '../../utils/auth.uts'
 export default {
 	data() {
 		return {
-			shopId: 0,
+			shopId: '',
+			category: '',
+			subCategory: '',
 			templates: [] as any[],
 			currentTemplateIndex: 0,
 			bodyType: 'slim',
@@ -111,15 +113,26 @@ export default {
 	},
 	onLoad(options) {
 		if (options && options.shopId) {
-			this.shopId = parseInt(options.shopId) || 0
+			this.shopId = String(options.shopId)
+		}
+		if (options && options.category) {
+			this.category = String(options.category)
+		}
+		if (options && options.subCategory) {
+			this.subCategory = String(options.subCategory)
+		} else if (options && options.sub_category) {
+			this.subCategory = String(options.sub_category)
 		}
 		this.loadTemplates()
 	},
 	methods: {
 		async loadTemplates() {
 			try {
-				const params = this.shopId ? { shop_id: this.shopId } : undefined
-				const res = await getAiTemplates(params)
+				const params: Record<string, any> = {}
+				if (this.shopId) params.shop_id = this.shopId
+				if (this.category) params.category = this.category
+				if (this.subCategory) params.sub_category = this.subCategory
+				const res = await getAiTemplates(Object.keys(params).length > 0 ? params : undefined)
 				if (res.code === 0 && res.data) {
 					this.templates = res.data
 				}
@@ -204,7 +217,7 @@ export default {
 				const submitRes = await submitAiTryOn({
 					templateId: currentTemplate.id,
 					userPhotoFilename: userPhotoFilename,
-					shopId: this.shopId,
+					shopId: parseInt(this.shopId) || 0,
 					bodyType: this.bodyType,
 					ageRange: this.ageRange
 				})

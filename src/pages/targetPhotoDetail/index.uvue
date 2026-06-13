@@ -124,6 +124,9 @@
 				likeCount: 0,
 				detail: null,
 				albumId: '',
+				shopId: '',
+				category: '',
+				subCategory: '',
 				showLoginPopup: false,
 				loginAgreementChecked: false,
 				userAgreementName: USER_AGREEMENT_NAME,
@@ -138,6 +141,9 @@
 			const id = query?.idx ?? ''
 			const type = query?.type ?? ''
 			this.albumId = id
+			this.shopId = type
+			this.category = query?.category ?? ''
+			this.subCategory = query?.subCategory ?? ''
 			this.liked = query?.liked === 'true'
 			this.getDetail(id, type)
 		},
@@ -341,7 +347,7 @@
 			goToAiTryOn() {
 				const albumId = this.albumId || ''
 				uni.navigateTo({
-					url: '/pages/aiTryOn/index?albumId=' + albumId
+					url: `/pages/aiTryOn/index?albumId=${albumId}&shopId=${this.shopId}&category=${this.category}&subCategory=${this.subCategory}`
 				})
 			}
 		}

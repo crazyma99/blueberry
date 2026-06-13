@@ -567,13 +567,22 @@
 				}
 			},
 			gotoDetail(item) {
+				const parent = this.alltabs[this.selectedTab.parentIndex]
+				const child = parent?.subCategory?.[this.selectedTab.childIndex]
+				const category = parent?.id ?? ''
+				const subCategory = child?.query?.childId ?? ''
 				uni.navigateTo({
-					url: `/pages/targetPhotoDetail/index?idx=${item.id}&liked=${item.liked}&type=${this.idx}`
+					url: `/pages/targetPhotoDetail/index?idx=${item.id}&liked=${item.liked}&type=${this.idx}&category=${category}&subCategory=${subCategory}`
 				})
 			},
 			goToAiTryOn(item) {
+				const parent = this.alltabs[this.selectedTab.parentIndex]
+				const child = parent?.subCategory?.[this.selectedTab.childIndex]
+				const category = parent?.id ?? ''
+				const subCategory = child?.query?.childId ?? ''
+				const shopId = this.idx
 				uni.navigateTo({
-					url: '/pages/aiTryOn/index?albumId=' + item.id
+					url: `/pages/aiTryOn/index?albumId=${item.id}&shopId=${shopId}&category=${category}&subCategory=${subCategory}`
 				})
 			},
 			formatCount(count) {
