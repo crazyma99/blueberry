@@ -89,8 +89,8 @@ export default {
 			// 启动计时器，每秒更新已等待时间
 			this.countdownTimer = setInterval(() => {
 				this.elapsedSeconds += 1
-				// 超时 60 秒，停止轮询，展示失败
-				if (this.elapsedSeconds >= 60) {
+				// 超时 180 秒（3分钟），停止轮询，展示失败
+				if (this.elapsedSeconds >= 180) {
 					this.stopPolling()
 					this.status = 'failed'
 				}
@@ -99,10 +99,10 @@ export default {
 			// 立即查询一次
 			this.pollResult()
 
-			// 每 3 秒轮询
+			// 每 20 秒轮询
 			this.pollingTimer = setInterval(() => {
 				this.pollResult()
-			}, 3000)
+			}, 20000)
 		},
 
 		async pollResult() {
