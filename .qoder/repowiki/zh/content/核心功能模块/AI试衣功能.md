@@ -15,6 +15,13 @@
 - [package.json](file://package.json)
 </cite>
 
+## 更新摘要
+**所做更改**
+- 增强了模板过滤能力，新增category和subCategory参数支持
+- 改进了shopId参数处理机制
+- 优化了导航系统集成，更新了页面标题管理
+- 完善了参数传递和验证逻辑
+
 ## 目录
 1. [简介](#简介)
 2. [项目结构](#项目结构)
@@ -29,6 +36,8 @@
 ## 简介
 
 AI试衣功能是基于uni-app x框架开发的微信小程序特色功能，允许用户上传自己的照片，选择不同的服饰模板进行虚拟试穿，生成AI生成的试穿效果图片。该功能集成了完整的用户认证系统、图片上传处理、AI任务调度和结果轮询机制。
+
+**更新** 新增了增强的模板过滤能力和改进的参数处理机制，提升了功能的灵活性和用户体验。
 
 ## 项目结构
 
@@ -58,12 +67,12 @@ B --> G
 ```
 
 **图表来源**
-- [src/pages/aiTryOn/index.uvue:1-442](file://src/pages/aiTryOn/index.uvue#L1-L442)
+- [src/pages/aiTryOn/index.uvue:1-653](file://src/pages/aiTryOn/index.uvue#L1-L653)
 - [src/pages/aiTryOnResult/index.uvue:1-386](file://src/pages/aiTryOnResult/index.uvue#L1-L386)
 - [src/utils/api.uts:1-503](file://src/utils/api.uts#L1-L503)
 
 **章节来源**
-- [src/pages/aiTryOn/index.uvue:1-442](file://src/pages/aiTryOn/index.uvue#L1-L442)
+- [src/pages/aiTryOn/index.uvue:1-653](file://src/pages/aiTryOn/index.uvue#L1-L653)
 - [src/pages/aiTryOnResult/index.uvue:1-386](file://src/pages/aiTryOnResult/index.uvue#L1-L386)
 - [src/utils/api.uts:1-503](file://src/utils/api.uts#L1-L503)
 
@@ -78,17 +87,19 @@ AI试衣功能由两个主要页面和一系列工具模块组成：
    - 用户参数选择（体型、年龄）
    - 照片上传功能
    - 生成按钮控制
+   - **新增**：增强的模板过滤参数（shopId、category、subCategory）
 
 2. **试衣结果页面** (`src/pages/aiTryOnResult/index.uvue`)
    - 任务状态轮询
    - 结果图片展示
    - 保存到相册功能
    - 错误处理机制
+   - **优化**：导航标题动态管理
 
 ### 工具模块
 
 1. **API封装** (`src/utils/api.uts`)
-   - AI模板获取
+   - AI模板获取（**增强**：支持category、sub_category参数）
    - 照片上传处理
    - 任务提交和查询
    - 历史记录管理
@@ -104,9 +115,9 @@ AI试衣功能由两个主要页面和一系列工具模块组成：
    - 错误处理机制
 
 **章节来源**
-- [src/pages/aiTryOn/index.uvue:93-242](file://src/pages/aiTryOn/index.uvue#L93-L242)
-- [src/pages/aiTryOnResult/index.uvue:57-231](file://src/pages/aiTryOnResult/index.uvue#L57-L231)
-- [src/utils/api.uts:314-503](file://src/utils/api.uts#L314-L503)
+- [src/pages/aiTryOn/index.uvue:155-452](file://src/pages/aiTryOn/index.uvue#L155-L452)
+- [src/pages/aiTryOnResult/index.uvue:60-230](file://src/pages/aiTryOnResult/index.uvue#L60-L230)
+- [src/utils/api.uts:332-503](file://src/utils/api.uts#L332-L503)
 
 ## 架构概览
 
@@ -150,7 +161,7 @@ style H fill:#fff3e0
 ```
 
 **图表来源**
-- [src/pages/aiTryOn/index.uvue:94-95](file://src/pages/aiTryOn/index.uvue#L94-L95)
+- [src/pages/aiTryOn/index.uvue:144-147](file://src/pages/aiTryOn/index.uvue#L144-L147)
 - [src/pages/aiTryOnResult/index.uvue:58](file://src/pages/aiTryOnResult/index.uvue#L58)
 - [src/utils/api.uts:1-5](file://src/utils/api.uts#L1-L5)
 
@@ -163,6 +174,9 @@ AI试衣主页面实现了完整的用户交互流程，包括模板选择、参
 ```mermaid
 classDiagram
 class AiTryOnPage {
++String shopId
++String category
++String subCategory
 +Array templates
 +Number currentTemplateIndex
 +String bodyType
@@ -192,7 +206,7 @@ AiTryOnPage --> AuthUtils : checks
 ```
 
 **图表来源**
-- [src/pages/aiTryOn/index.uvue:97-241](file://src/pages/aiTryOn/index.uvue#L97-L241)
+- [src/pages/aiTryOn/index.uvue:155-452](file://src/pages/aiTryOn/index.uvue#L155-L452)
 - [src/utils/api.uts:332-428](file://src/utils/api.uts#L332-L428)
 - [src/utils/auth.uts:125-128](file://src/utils/auth.uts#L125-L128)
 
@@ -206,6 +220,7 @@ participant Page as AI试衣页面
 participant API as API封装
 participant Server as 后端服务器
 User->>Page : 打开页面
+Page->>Page : 解析URL参数shopId/category/subCategory
 Page->>API : getAiTemplates(params)
 API->>Server : GET /api/aiface/templates
 Server-->>API : 模板列表数据
@@ -237,8 +252,10 @@ Task-->>Page : 任务ID
 Page->>Result : 跳转到结果页面
 ```
 
+**更新** 新增了参数解析和验证机制，确保模板过滤的准确性和可靠性。
+
 **章节来源**
-- [src/pages/aiTryOn/index.uvue:128-239](file://src/pages/aiTryOn/index.uvue#L128-L239)
+- [src/pages/aiTryOn/index.uvue:181-306](file://src/pages/aiTryOn/index.uvue#L181-L306)
 - [src/utils/api.uts:387-428](file://src/utils/api.uts#L387-L428)
 
 ### 试衣结果页面组件分析
@@ -259,20 +276,20 @@ back --> [*] : 返回上一页
 ```
 
 **图表来源**
-- [src/pages/aiTryOnResult/index.uvue:60-141](file://src/pages/aiTryOnResult/index.uvue#L60-L141)
+- [src/pages/aiTryOnResult/index.uvue:84-141](file://src/pages/aiTryOnResult/index.uvue#L84-L141)
 
 #### 轮询机制分析
 
 试衣结果页面实现了智能的任务状态轮询机制：
 
 1. **定时器管理**
-   - 3秒间隔轮询任务状态
-   - 60秒超时保护机制
+   - 20秒间隔轮询任务状态
+   - 180秒超时保护机制
    - 页面卸载时自动清理定时器
 
 2. **状态处理逻辑**
    - `pending`/`processing`: 继续轮询
-   - `completed`: 显示结果图片
+   - `completed`: 显示结果图片并更新导航标题
    - `failed`: 显示错误状态
 
 3. **图片处理流程**
@@ -291,6 +308,8 @@ OpenSetting --> End([结束])
 ShowError --> End
 Success --> End
 ```
+
+**优化** 导航标题动态管理，在任务完成后自动更新为"AI试衣结果"。
 
 **章节来源**
 - [src/pages/aiTryOnResult/index.uvue:84-229](file://src/pages/aiTryOnResult/index.uvue#L84-L229)
@@ -339,11 +358,15 @@ AI试衣功能使用了专门的数据模型定义：
    - 模板基本信息（ID、名称、分类）
    - 图片URL和场景描述
    - 性别和激活状态
+   - **新增**：category和sub_category字段
 
 2. **任务状态接口**
    - 任务ID和用户信息
    - 状态枚举（pending/processing/completed/failed）
    - 结果图片URL和错误信息
+   - **新增**：category字段支持
+
+**更新** 接口参数和返回值增加了对category和sub_category的支持，提升了模板筛选的精确度。
 
 **章节来源**
 - [src/utils/api.uts:316-458](file://src/utils/api.uts#L316-L458)
@@ -384,7 +407,7 @@ E --> G
 ```
 
 **图表来源**
-- [src/pages/aiTryOn/index.uvue:94-95](file://src/pages/aiTryOn/index.uvue#L94-L95)
+- [src/pages/aiTryOn/index.uvue:144-147](file://src/pages/aiTryOn/index.uvue#L144-L147)
 - [src/pages/aiTryOnResult/index.uvue:58](file://src/pages/aiTryOnResult/index.uvue#L58)
 - [src/utils/api.uts:1-5](file://src/utils/api.uts#L1-L5)
 
@@ -405,6 +428,8 @@ E --> G
    - 应用清单配置应用基本信息
    - 组件依赖全局页脚组件
 
+**更新** 导航系统集成得到优化，页面标题管理更加智能化。
+
 **章节来源**
 - [src/pages.json:56-66](file://src/pages.json#L56-L66)
 - [src/manifest.json:1-73](file://src/manifest.json#L1-L73)
@@ -421,7 +446,7 @@ AI试衣功能在性能方面采用了多项优化策略：
 ### 2. 网络请求优化
 - 统一的请求头管理，包含认证信息
 - 自动超时处理和错误重试机制
-- 轮询间隔合理设置（3秒），避免过度请求
+- **优化**：轮询间隔合理设置（20秒），避免过度请求
 
 ### 3. 内存管理
 - 页面卸载时自动清理定时器
@@ -432,6 +457,9 @@ AI试衣功能在性能方面采用了多项优化策略：
 - 加载状态反馈
 - 错误处理和重试机制
 - 本地缓存用户选择的参数
+- **新增**：智能参数解析和验证
+
+**更新** 参数处理机制得到改进，提升了模板过滤的准确性和响应速度。
 
 ## 故障排除指南
 
@@ -468,8 +496,18 @@ AI试衣功能在性能方面采用了多项优化策略：
 - 打开系统设置手动开启权限
 - 检查iOS/Android系统版本兼容性
 
+#### 5. **新增**：模板过滤失效
+**症状**: 模板列表显示不正确
+**原因**: 参数传递或解析错误
+**解决方法**:
+- 检查URL参数格式（shopId、category、subCategory）
+- 验证参数类型转换（shopId必须为数字）
+- 确认后端接口支持相应的过滤条件
+
+**更新** 新增了模板过滤相关的故障排除指导。
+
 **章节来源**
-- [src/pages/aiTryOn/index.uvue:176-239](file://src/pages/aiTryOn/index.uvue#L176-L239)
+- [src/pages/aiTryOn/index.uvue:243-306](file://src/pages/aiTryOn/index.uvue#L243-L306)
 - [src/pages/aiTryOnResult/index.uvue:159-223](file://src/pages/aiTryOnResult/index.uvue#L159-L223)
 
 ## 结论
@@ -481,14 +519,18 @@ AI试衣功能展现了现代小程序开发的最佳实践，具有以下特点
 2. **用户体验**: 完整的加载状态反馈和错误处理机制
 3. **性能优化**: 合理的资源管理和网络请求策略
 4. **安全性**: 完善的认证和授权机制
+5. ****增强**：灵活的模板过滤和参数处理能力
 
 ### 功能完整性
 - 支持多种服饰模板选择
 - 用户友好的参数配置界面
 - 实时的任务状态轮询
 - 结果图片的便捷保存功能
+- **新增**：多维度模板过滤支持
 
 ### 可扩展性
 该架构为未来的功能扩展提供了良好的基础，可以轻松添加新的AI服务、改进用户界面或增加更多个性化功能。
+
+**更新** 最新版本显著增强了模板过滤能力和参数处理机制，为用户提供更加精准和个性化的试衣体验。
 
 通过合理的组件划分和清晰的依赖关系，AI试衣功能不仅满足了当前的业务需求，也为后续的功能演进奠定了坚实的技术基础。

@@ -238,7 +238,8 @@ export default {
     // 默认金刚区入口
     getDefaultMenuItems() {
       return [
-        { title: '我的喜欢', imageUrl: '/static/liked.svg', linkUrl: '/pages/favorites/index', needLogin: true }
+        { title: '我的喜欢', imageUrl: '/static/liked.svg', linkUrl: '/pages/favorites/index', needLogin: true },
+        { title: 'AI试衣记录', imageUrl: '/static/ai-tryon-history.svg', linkUrl: '/pages/aiTryOnHistory/index', needLogin: true }
       ]
     },
 

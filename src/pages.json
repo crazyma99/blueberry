@@ -63,6 +63,12 @@
 			"style": {
 				"navigationBarTitleText": "正在生成"
 			}
+		},
+		{
+			"path": "pages/aiTryOnHistory/index",
+			"style": {
+				"navigationStyle": "custom"
+			}
 		}
 	],
 	"globalStyle": {

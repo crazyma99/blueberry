@@ -187,7 +187,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 
 ### 客片管理接口
 - getCategories
-  - 参数：shopId（必填）
+  - 参数：shopId（必填，类型：string | number）
   - 返回：分类树结构（父级、子级、查询参数透传）
   - 错误处理：非 200/0 视为失败，需在调用方判断并降级
 - getAlbumList
@@ -303,15 +303,17 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 
 ### AI试衣模板管理接口
 - **getAiTemplates**
-  - 参数：style（可选）、keyword（可选）、category（可选）、package_type（可选）、sub_category（可选）、shop_id（可选）、gender（可选）
+  - 参数：style（可选）、keyword（可选）、category（可选）、package_type（可选）、sub_category（可选）、**shop_id（可选，类型：string）**、gender（可选）
   - 返回：{ code: number; message: string; data: AiTemplate[] }
   - 错误处理：code === 0 表示成功，其他值表示失败
   - 适用场景：获取可用的AI试衣模板列表
+  - **更新**：shop_id 参数类型从 number 改为 string，以匹配页面传参方式
 - **getAiStyles**
-  - 参数：category（可选）、package_type（可选）、sub_category（可选）、shop_id（可选）
+  - 参数：category（可选）、package_type（可选）、sub_category（可选）、**shop_id（可选，类型：number）**
   - 返回：{ code: number; message: string; data: Array<{ style_name: string; count: number; cover_url: string }> }
   - 错误处理：code === 0 表示成功
   - 适用场景：获取AI试衣风格分组信息
+  - **更新**：shop_id 参数类型保持 number 类型，与任务提交接口一致
 - **getAiTemplateDetail**
   - 参数：id（必填）
   - 返回：{ code: number; message: string; data: AiTemplate }
@@ -328,10 +330,11 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 
 ### AI试衣任务接口
 - **submitAiTryOn**
-  - 参数：templateId（必填）、userPhotoFilename（必填）、shopId（必填）、userOpenid（可选）、category（可选）、bodyType（可选）、ageRange（可选）
+  - 参数：templateId（必填）、userPhotoFilename（必填）、**shopId（必填，类型：number）**、userOpenid（可选）、category（可选）、bodyType（可选）、ageRange（可选）
   - 返回：{ code: number; message: string; data: { task_id: number } }
   - 错误处理：code === 0 表示成功；非0时表示失败（如：功能未启用 / 配额不足 / 缺少参数 / 店铺不存在）
   - 适用场景：创建AI试衣任务
+  - **更新**：shopId 参数类型保持 number 类型，与后端期望一致
 - **getAiTryOnResult**
   - 参数：taskId（必填，字符串形式）
   - 返回：{
@@ -368,10 +371,11 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 
 ### AI推荐接口
 - **getAiRecommend**
-  - 参数：userPhotoFilename（必填）、shopId（必填）
+  - 参数：userPhotoFilename（必填）、**shopId（必填，类型：number）**
   - 返回：{ code: number; message: string; data: AiTemplate[] }
   - 错误处理：code === 0 表示成功
   - 适用场景：基于用户照片的AI模板推荐
+  - **更新**：shopId 参数类型保持 number 类型
 
 最佳实践
 - **AI试衣接口特殊处理**：aiface 接口成功 code === 0，非 200
@@ -379,6 +383,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **错误重试机制**：连续失败3次后停止重试
 - **文件上传限制**：严格控制照片大小不超过10MB
 - **登录态检查**：所有AI试衣相关接口均需登录状态
+- **参数类型一致性**：注意不同接口间 shop_id 参数类型的差异（string vs number）
 
 **章节来源**
 - [api.uts:314-502](file://src/utils/api.uts#L314-L502)
@@ -462,6 +467,7 @@ HTTP --> CONFIG : "使用"
   - **轮询优化**：合理的轮询间隔（3秒）和超时控制（60秒）
   - **图片预加载**：结果页图片懒加载，提升用户体验
   - **文件大小限制**：前端严格控制照片大小，减少服务器压力
+  - **参数类型优化**：统一 shop_id 参数类型，减少类型转换开销
 
 **章节来源**
 - [index.uvue:142-151](file://src/pages/index/index.uvue#L142-L151)
@@ -492,6 +498,7 @@ HTTP --> CONFIG : "使用"
   - **任务提交失败**：检查必填参数（templateId、userPhotoFilename、shopId），查看错误消息
   - **结果查询超时**：60秒后自动转为失败，可手动重试
   - **保存图片失败**：检查相册保存权限，用户可能需要授权
+  - **参数类型错误**：注意 shop_id 在不同接口间的类型差异（string vs number）
 
 **章节来源**
 - [http.uts:50-61](file://src/utils/http.uts#L50-L61)
@@ -506,6 +513,8 @@ HTTP --> CONFIG : "使用"
 API 接口封装层以清晰的分层设计实现了业务接口的统一管理，结合认证与 HTTP 层的自动化处理，显著降低了页面开发复杂度。通过规范化的数据模型、参数与返回值约定以及错误处理策略，开发者可以更专注于业务逻辑实现。
 
 **新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交和结果查询等核心功能。该模块采用了专门的错误处理策略（aiface 接口成功 code === 0），并实现了智能的轮询机制和超时控制，确保了良好的用户体验。**
+
+**本次更新重点关注了参数类型的一致性和兼容性，特别是 getAiTemplates 和 getAiStyles 函数中 shop_id 参数类型的差异化设计，既满足了页面传参的便利性（string），又保持了与后端接口的兼容性（number）。这种设计体现了对前后端协作的细致考量，为后续的功能扩展奠定了坚实的技术基础。**
 
 建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，AI试衣功能的成功实施为其他AI相关功能的扩展奠定了坚实的技术基础。
 
@@ -532,6 +541,7 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
   - **结果查询**：使用 getAiTryOnResult 轮询查询任务状态，设置60秒超时
   - **历史记录**：使用 getAiTasks 获取历史记录，deleteAiTask 删除记录
   - **推荐功能**：使用 getAiRecommend 基于用户照片推荐模板
+  - **参数类型注意事项**：注意不同接口间 shop_id 参数类型的差异（string vs number）
 
 **章节来源**
 - [demoDetail.uvue:304-477](file://src/pages/demoDetail/index.uvue#L304-L477)
