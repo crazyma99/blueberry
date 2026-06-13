@@ -127,6 +127,7 @@
 				shopId: '',
 				category: '',
 				subCategory: '',
+				style: '',
 				showLoginPopup: false,
 				loginAgreementChecked: false,
 				userAgreementName: USER_AGREEMENT_NAME,
@@ -144,6 +145,7 @@
 			this.shopId = type
 			this.category = query?.category ?? ''
 			this.subCategory = query?.subCategory ?? ''
+			this.style = query?.style ? decodeURIComponent(query.style) : ''
 			this.liked = query?.liked === 'true'
 			this.getDetail(id, type)
 		},
@@ -346,8 +348,9 @@
 			},
 			goToAiTryOn() {
 				const albumId = this.albumId || ''
+				const style = encodeURIComponent(this.style || '')
 				uni.navigateTo({
-					url: `/pages/aiTryOn/index?albumId=${albumId}&shopId=${this.shopId}&category=${this.category}&subCategory=${this.subCategory}`
+					url: `/pages/aiTryOn/index?albumId=${albumId}&shopId=${this.shopId}&category=${this.category}&subCategory=${this.subCategory}&style=${style}`
 				})
 			}
 		}

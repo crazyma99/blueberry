@@ -67,6 +67,12 @@
 					<text class="upload-plus">+</text>
 					<text class="upload-hint">点击上传你的照片</text>
 				</view>
+				<view v-if="isUploading" class="upload-mask">
+					<text class="upload-mask-text">上传中...</text>
+				</view>
+				<view v-else-if="photoPreviewUrl && uploadedFilename === ''" class="upload-mask upload-mask-fail">
+					<text class="upload-mask-text">上传失败，点击重试</text>
+				</view>
 			</view>
 		</view>
 
@@ -76,7 +82,7 @@
 		<!-- 底部固定生成按钮 -->
 		<view class="fixed-bottom">
 			<view
-				:class="photoPath ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
+				:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
 				@click="handleGenerate"
 			>
 				<text class="generate-btn-text">生成 </text>
@@ -158,6 +164,7 @@ export default {
 			shopId: '',
 			category: '',
 			subCategory: '',
+			style: '',
 			templates: [] as any[],
 			currentTemplateIndex: 0,
 			bodyType: 'slim',
@@ -166,6 +173,8 @@ export default {
 			ageIndex: 0,
 			photoPath: '',
 			photoPreviewUrl: '',
+			uploadedFilename: '',
+			isUploading: false,
 			isSubmitting: false,
 			// 登录弹窗
 			showLoginPopup: false,
@@ -190,17 +199,18 @@ export default {
 		} else if (options && options.sub_category) {
 			this.subCategory = String(options.sub_category)
 		}
+		if (options && options.style) {
+			this.style = decodeURIComponent(String(options.style))
+		}
 		this.loadTemplates()
 	},
 	methods: {
 		async loadTemplates() {
 			try {
-				const params: Record<string, any> = {}
-				if (this.shopId) params.shop_id = this.shopId
-				if (this.category) params.category = this.category
-				if (this.subCategory) params.sub_category = this.subCategory
-				const res = await getAiTemplates(Object.keys(params).length > 0 ? params : undefined)
-				if (res.code === 0 && res.data) {
+				const params: Record<string, any> = { category: 'travel' }
+				if (this.style) params.style = this.style
+				const res = await getAiTemplates(params)
+				if ((res.code === 0 || res.code === 200) && res.data) {
 					this.templates = res.data
 				}
 			} catch (err) {
@@ -223,6 +233,7 @@ export default {
 		},
 
 		choosePhoto() {
+			if (this.isUploading) return
 			uni.chooseImage({
 				count: 1,
 				sizeType: ['compressed'],
@@ -236,8 +247,39 @@ export default {
 					}
 					this.photoPath = res.tempFilePaths[0]
 					this.photoPreviewUrl = res.tempFilePaths[0]
+					// 选择后立即上传
+					this.uploadSelectedPhoto()
 				}
 			})
+		},
+
+		async uploadSelectedPhoto() {
+			if (!this.photoPath) return
+			this.isUploading = true
+			this.uploadedFilename = ''
+			uni.showLoading({ title: '上传中...', mask: true })
+			try {
+				const uploadRes = await uploadPhoto(this.photoPath)
+				if ((uploadRes.code === 0 || uploadRes.code === 200) && uploadRes.data) {
+					this.uploadedFilename = uploadRes.data.filename
+				} else {
+					this.uploadedFilename = ''
+					uni.showToast({ title: uploadRes.message || '照片上传失败，请重新选择', icon: 'none' })
+				}
+			} catch (err) {
+				console.error('照片上传失败:', err)
+				this.uploadedFilename = ''
+				uni.showToast({ title: '照片上传失败，请重新选择', icon: 'none' })
+			} finally {
+				this.isUploading = false
+				uni.hideLoading()
+			}
+		},
+
+		bodyTypeText(): string {
+			if (this.bodyType === 'medium') return '微胖'
+			if (this.bodyType === 'fat') return '胖'
+			return '瘦'
 		},
 
 		async handleGenerate() {
@@ -249,9 +291,19 @@ export default {
 				return
 			}
 
-			// 检查是否已上传照片
+			// 上传中提示
+			if (this.isUploading) {
+				uni.showToast({ title: '照片上传中，请稍候', icon: 'none' })
+				return
+			}
+
+			// 检查是否已上传完成
 			if (!this.photoPath) {
 				uni.showToast({ title: '请先上传照片', icon: 'none' })
+				return
+			}
+			if (this.uploadedFilename === '') {
+				uni.showToast({ title: '照片上传失败，请重新选择', icon: 'none' })
 				return
 			}
 
@@ -271,25 +323,22 @@ export default {
 			uni.showLoading({ title: '提交中...', mask: true })
 
 			try {
-				// 上传照片（code === 0 表示成功）
-				const uploadRes = await uploadPhoto(this.photoPath)
-				if (uploadRes.code !== 0 || !uploadRes.data) {
-					uni.showToast({ title: uploadRes.message || '照片上传失败', icon: 'none' })
-					return
+				const userInfo = getUserInfo()
+				const userOpenid = userInfo?.openid || ''
+				const submitParams: Record<string, any> = {
+					templateId: currentTemplate.id,
+					userPhotoFilename: this.uploadedFilename,
+					shopId: parseInt(this.shopId) || 0,
+					category: 'travel',
+					bodyType: this.bodyTypeText(),
+					ageRange: this.ageRange
 				}
-
-				const userPhotoFilename = uploadRes.data.filename
+				if (userOpenid !== '') submitParams.userOpenid = userOpenid
 
 				// 创建AI试衣任务（code === 0 表示成功；code !== 0 统一以 message toast）
-				const submitRes = await submitAiTryOn({
-					templateId: currentTemplate.id,
-					userPhotoFilename: userPhotoFilename,
-					shopId: parseInt(this.shopId) || 0,
-					bodyType: this.bodyType,
-					ageRange: this.ageRange
-				})
+				const submitRes = await submitAiTryOn(submitParams as any)
 
-				if (submitRes.code === 0 && submitRes.data) {
+				if ((submitRes.code === 0 || submitRes.code === 200) && submitRes.data) {
 					uni.navigateTo({
 						url: `/pages/aiTryOnResult/index?taskId=${submitRes.data.task_id}`
 					})
@@ -567,6 +616,7 @@ export default {
 
 /* 照片上传 */
 .upload-area {
+	position: relative;
 	margin-top: 20rpx;
 	width: 100%;
 	min-height: 320rpx;
@@ -597,6 +647,24 @@ export default {
 }
 .upload-preview {
 	width: 100%;
+}
+.upload-mask {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: rgba(0, 0, 0, 0.55);
+}
+.upload-mask-fail {
+	background-color: rgba(0, 0, 0, 0.65);
+}
+.upload-mask-text {
+	font-size: 28rpx;
+	color: #fff;
 }
 
 /* 底部占位 */

@@ -569,20 +569,21 @@
 			gotoDetail(item) {
 				const parent = this.alltabs[this.selectedTab.parentIndex]
 				const child = parent?.subCategory?.[this.selectedTab.childIndex]
-				const category = parent?.id ?? ''
-				const subCategory = child?.query?.childId ?? ''
+				const category = (parent?.parentName === '全部') ? '' : (parent?.id ?? '')
+				const subCategory = (child?.name === '全部') ? '' : (child?.query?.childId ?? '')
 				uni.navigateTo({
-					url: `/pages/targetPhotoDetail/index?idx=${item.id}&liked=${item.liked}&type=${this.idx}&category=${category}&subCategory=${subCategory}`
+					url: `/pages/targetPhotoDetail/index?idx=${item.id}&liked=${item.liked}&type=${this.idx}&category=${category}&subCategory=${subCategory}&style=${encodeURIComponent(item.title || '')}`
 				})
 			},
 			goToAiTryOn(item) {
 				const parent = this.alltabs[this.selectedTab.parentIndex]
 				const child = parent?.subCategory?.[this.selectedTab.childIndex]
-				const category = parent?.id ?? ''
-				const subCategory = child?.query?.childId ?? ''
+				const category = (parent?.parentName === '全部') ? '' : (parent?.id ?? '')
+				const subCategory = (child?.name === '全部') ? '' : (child?.query?.childId ?? '')
 				const shopId = this.idx
+				const style = encodeURIComponent(item.title || '')
 				uni.navigateTo({
-					url: `/pages/aiTryOn/index?albumId=${item.id}&shopId=${shopId}&category=${category}&subCategory=${subCategory}`
+					url: `/pages/aiTryOn/index?albumId=${item.id}&shopId=${shopId}&category=${category}&subCategory=${subCategory}&style=${style}`
 				})
 			},
 			formatCount(count) {

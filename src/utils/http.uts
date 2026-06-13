@@ -26,7 +26,7 @@ export function request<T = any>(opts: RequestOptions): Promise<T> {
   
   const finalHeader: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-App-Code': 'blueBerry',
+    'X-App-Code': 'lanmei',
     ...header,
   }
   

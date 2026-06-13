@@ -17,6 +17,7 @@
 - [priceList.uvue](file://src/pages/priceList/index.uvue)
 - [aiTryOn.uvue](file://src/pages/aiTryOn/index.uvue)
 - [aiTryOnResult.uvue](file://src/pages/aiTryOnResult/index.uvue)
+- [aiTryOnHistory.uvue](file://src/pages/aiTryOnHistory/index.uvue)
 </cite>
 
 ## 目录
@@ -40,7 +41,7 @@
 - 最佳实践：参数校验、错误码处理、响应数据结构
 - 使用示例与常见问题解决方案
 
-该封装层通过统一的 HTTP 层（http.uts）进行网络请求，自动注入认证头与基础配置，并在需要时进行 401 未授权处理。**新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交和结果查询等核心功能。**
+该封装层通过统一的 HTTP 层（http.uts）进行网络请求，自动注入认证头与基础配置，并在需要时进行 401 未授权处理。**新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交、结果查询、历史记录管理等核心功能。**
 
 ## 项目结构
 API 封装层位于 src/utils 目录下，核心文件如下：
@@ -71,6 +72,7 @@ PHOME["pages/priceHomePage/index.uvue"]
 PLIST["pages/priceList/index.uvue"]
 AITRYON["pages/aiTryOn/index.uvue"]
 AITRYONRESULT["pages/aiTryOnResult/index.uvue"]
+AITRYONHISTORY["pages/aiTryOnHistory/index.uvue"]
 end
 API --> HTTP
 API --> AUTH
@@ -88,6 +90,7 @@ PHOME --> API
 PLIST --> API
 AITRYON --> API
 AITRYONRESULT --> API
+AITRYONHISTORY --> API
 ```
 
 **图表来源**
@@ -363,6 +366,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 返回：{ code: number; message: string; data: Array<{ id: number; status: string; result_image_url: string; template_image_url: string; style_name: string; created_at: string }> }
   - 错误处理：code === 0 表示成功
   - 适用场景：获取用户AI试衣历史记录
+  - **新增**：这是本次更新新增的核心接口，提供完整的AI试衣历史记录管理功能
 - **deleteAiTask**
   - 参数：id（必填）
   - 返回：{ code: number; message: string }
@@ -377,6 +381,14 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 适用场景：基于用户照片的AI模板推荐
   - **更新**：shopId 参数类型保持 number 类型
 
+### AI试衣历史记录页面集成
+- **aiTryOnHistory 页面**：新增的AI试衣历史记录页面，集成了 getAiTasks 接口，提供历史记录的展示、状态管理和交互功能
+- **功能特性**：
+  - 支持历史记录列表展示，包含状态遮罩（生成中/失败）
+  - 支持点击跳转到结果详情页
+  - 支持封面图智能选择（已完成使用结果图，其他状态使用模板图）
+  - 支持时间格式化显示
+
 最佳实践
 - **AI试衣接口特殊处理**：aiface 接口成功 code === 0，非 200
 - **任务轮询策略**：每3秒轮询一次，最长等待60秒
@@ -384,18 +396,20 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **文件上传限制**：严格控制照片大小不超过10MB
 - **登录态检查**：所有AI试衣相关接口均需登录状态
 - **参数类型一致性**：注意不同接口间 shop_id 参数类型的差异（string vs number）
+- **历史记录管理**：新增的 getAiTasks 接口提供完整的AI试衣历史记录查询功能，支持用户查看和管理自己的试衣历史
 
 **章节来源**
 - [api.uts:314-502](file://src/utils/api.uts#L314-L502)
 - [aiTryOn.uvue:94-239](file://src/pages/aiTryOn/index.uvue#L94-L239)
 - [aiTryOnResult.uvue:57-229](file://src/pages/aiTryOnResult/index.uvue#L57-L229)
+- [aiTryOnHistory.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 
 ## 依赖关系分析
 - api.uts 依赖 http.uts 进行网络请求，依赖 auth.uts 获取/注入 token
 - http.uts 依赖 config.uts 获取 baseURL 与 timeout
 - 页面组件通过 import api.uts 使用业务接口
 - 登录流程与头像/昵称提交分别封装在 loginFlow.uts 与 profileSubmit.uts 中，内部调用 api.uts 与 auth.uts
-- **AI试衣功能依赖：aiTryOn 页面使用 getAiTemplates、uploadPhoto、submitAiTryOn；aiTryOnResult 页面使用 getAiTryOnResult**
+- **AI试衣功能依赖：aiTryOn 页面使用 getAiTemplates、uploadPhoto、submitAiTryOn；aiTryOnResult 页面使用 getAiTryOnResult；aiTryOnHistory 页面使用 getAiTasks**
 
 ```mermaid
 classDiagram
@@ -468,6 +482,7 @@ HTTP --> CONFIG : "使用"
   - **图片预加载**：结果页图片懒加载，提升用户体验
   - **文件大小限制**：前端严格控制照片大小，减少服务器压力
   - **参数类型优化**：统一 shop_id 参数类型，减少类型转换开销
+  - **历史记录优化**：新增的历史记录页面支持智能封面图选择和状态管理
 
 **章节来源**
 - [index.uvue:142-151](file://src/pages/index/index.uvue#L142-L151)
@@ -475,6 +490,7 @@ HTTP --> CONFIG : "使用"
 - [http.uts:50-61](file://src/utils/http.uts#L50-L61)
 - [aiTryOn.uvue:129-142](file://src/pages/aiTryOn/index.uvue#L129-L142)
 - [aiTryOnResult.uvue:85-106](file://src/pages/aiTryOnResult/index.uvue#L85-L106)
+- [aiTryOnHistory.uvue:166-176](file://src/pages/aiTryOnHistory/index.uvue#L166-L176)
 
 ## 故障排除指南
 - 未授权（401）
@@ -499,6 +515,7 @@ HTTP --> CONFIG : "使用"
   - **结果查询超时**：60秒后自动转为失败，可手动重试
   - **保存图片失败**：检查相册保存权限，用户可能需要授权
   - **参数类型错误**：注意 shop_id 在不同接口间的类型差异（string vs number）
+  - **历史记录获取失败**：检查 openid 参数是否正确传递，确认用户已登录
 
 **章节来源**
 - [http.uts:50-61](file://src/utils/http.uts#L50-L61)
@@ -508,13 +525,14 @@ HTTP --> CONFIG : "使用"
 - [favorites.uvue:180-183](file://src/pages/favorites/index.uvue#L180-L183)
 - [aiTryOn.uvue:176-239](file://src/pages/aiTryOn/index.uvue#L176-L239)
 - [aiTryOnResult.uvue:108-130](file://src/pages/aiTryOnResult/index.uvue#L108-L130)
+- [aiTryOnHistory.uvue:132-147](file://src/pages/aiTryOnHistory/index.uvue#L132-L147)
 
 ## 结论
 API 接口封装层以清晰的分层设计实现了业务接口的统一管理，结合认证与 HTTP 层的自动化处理，显著降低了页面开发复杂度。通过规范化的数据模型、参数与返回值约定以及错误处理策略，开发者可以更专注于业务逻辑实现。
 
 **新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交和结果查询等核心功能。该模块采用了专门的错误处理策略（aiface 接口成功 code === 0），并实现了智能的轮询机制和超时控制，确保了良好的用户体验。**
 
-**本次更新重点关注了参数类型的一致性和兼容性，特别是 getAiTemplates 和 getAiStyles 函数中 shop_id 参数类型的差异化设计，既满足了页面传参的便利性（string），又保持了与后端接口的兼容性（number）。这种设计体现了对前后端协作的细致考量，为后续的功能扩展奠定了坚实的技术基础。**
+**本次更新重点关注了AI试衣历史记录管理功能的完善，新增的 getAiTasks 接口为用户提供了完整的试衣历史记录查询能力，配合 aiTryOnHistory 页面实现了完整的用户交互体验。这一功能增强了AI试衣服务的可用性和用户粘性，为后续的功能扩展奠定了坚实的技术基础。**
 
 建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，AI试衣功能的成功实施为其他AI相关功能的扩展奠定了坚实的技术基础。
 
@@ -542,6 +560,7 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
   - **历史记录**：使用 getAiTasks 获取历史记录，deleteAiTask 删除记录
   - **推荐功能**：使用 getAiRecommend 基于用户照片推荐模板
   - **参数类型注意事项**：注意不同接口间 shop_id 参数类型的差异（string vs number）
+  - **历史记录管理**：新增的 getAiTasks 接口提供完整的AI试衣历史记录查询功能
 
 **章节来源**
 - [demoDetail.uvue:304-477](file://src/pages/demoDetail/index.uvue#L304-L477)
@@ -552,3 +571,4 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
 - [profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
 - [aiTryOn.uvue:94-239](file://src/pages/aiTryOn/index.uvue#L94-L239)
 - [aiTryOnResult.uvue:57-229](file://src/pages/aiTryOnResult/index.uvue#L57-L229)
+- [aiTryOnHistory.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
