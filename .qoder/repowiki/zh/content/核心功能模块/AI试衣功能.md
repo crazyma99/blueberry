@@ -30,6 +30,9 @@
 - **新增**：照片上传状态指示器，提供实时上传进度反馈
 - **新增**：自动上传机制，优化用户上传体验
 - **新增**：样式参数支持，增强模板自定义能力
+- **更新**：AI试衣页面集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗
+- **更新**：AI试衣历史和结果页面改进API响应处理，支持多种成功码格式（0和200）
+- **更新**：结果页面进行UI样式优化和加载提示调整
 
 ## 目录
 1. [简介](#简介)
@@ -48,7 +51,7 @@
 
 AI试衣功能是基于uni-app x框架开发的微信小程序特色功能，允许用户上传自己的照片，选择不同的服饰模板进行虚拟试穿，生成AI生成的试穿效果图片。该功能集成了完整的用户认证系统、图片上传处理、AI任务调度和结果轮询机制。
 
-**更新** 新增了AI试衣历史记录页面，提供用户试衣历史查询和管理功能。增强了模板过滤能力，支持category和subCategory参数。优化了参数处理机制，改进了shopId参数处理逻辑。新增了微信认证系统集成，实现了完整的三步登录流程（微信登录、手机号授权、头像昵称完善）。**新增**：照片上传状态指示器提供实时上传进度反馈，自动上传机制优化用户上传体验，样式参数支持增强模板自定义能力。
+**更新** 新增了AI试衣历史记录页面，提供用户试衣历史查询和管理功能。增强了模板过滤能力，支持category和subCategory参数。优化了参数处理机制，改进了shopId参数处理逻辑。新增了微信认证系统集成，实现了完整的三步登录流程（微信登录、手机号授权、头像昵称完善）。**新增**：照片上传状态指示器提供实时上传进度反馈，自动上传机制优化用户上传体验，样式参数支持增强模板自定义能力。**更新**：AI试衣页面集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗；AI试衣历史和结果页面改进API响应处理，支持多种成功码格式（0和200）；结果页面进行UI样式优化和加载提示调整。
 
 ## 项目结构
 
@@ -92,16 +95,16 @@ C --> M
 ```
 
 **图表来源**
-- [src/pages/aiTryOn/index.uvue:1-653](file://src/pages/aiTryOn/index.uvue#L1-L653)
-- [src/pages/aiTryOnResult/index.uvue:1-386](file://src/pages/aiTryOnResult/index.uvue#L1-L386)
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOn/index.uvue:1-726](file://src/pages/aiTryOn/index.uvue#L1-L726)
+- [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 - [src/utils/api.uts:1-503](file://src/utils/api.uts#L1-L503)
 - [src/utils/loginFlow.uts:1-100](file://src/utils/loginFlow.uts#L1-L100)
 
 **章节来源**
-- [src/pages/aiTryOn/index.uvue:1-653](file://src/pages/aiTryOn/index.uvue#L1-L653)
-- [src/pages/aiTryOnResult/index.uvue:1-386](file://src/pages/aiTryOnResult/index.uvue#L1-L386)
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOn/index.uvue:1-726](file://src/pages/aiTryOn/index.uvue#L1-L726)
+- [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 - [src/utils/api.uts:1-503](file://src/utils/api.uts#L1-L503)
 
 ## 核心组件
@@ -120,6 +123,7 @@ AI试衣功能由三个主要页面和一系列工具模块组成：
    - **增强**：增强的模板过滤参数（shopId、category、subCategory）
    - **新增**：照片上传状态指示器，提供实时上传进度反馈
    - **新增**：自动上传机制，优化用户上传体验
+   - **更新**：集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗
 
 2. **试衣结果页面** (`src/pages/aiTryOnResult/index.uvue`)
    - 任务状态轮询
@@ -127,6 +131,7 @@ AI试衣功能由三个主要页面和一系列工具模块组成：
    - 保存到相册功能
    - 错误处理机制
    - **优化**：导航标题动态管理
+   - **更新**：UI样式优化和加载提示调整
 
 3. **AI试衣历史记录页面** (`src/pages/aiTryOnHistory/index.uvue`)
    - **新增**：用户试衣历史查询
@@ -134,6 +139,7 @@ AI试衣功能由三个主要页面和一系列工具模块组成：
    - **新增**：历史记录删除功能
    - **新增**：历史记录详情查看
    - **优化**：与主页面的导航集成
+   - **更新**：改进API响应处理，支持多种成功码格式（0和200）
 
 ### 工具模块
 
@@ -145,6 +151,7 @@ AI试衣功能由三个主要页面和一系列工具模块组成：
    - **新增**：微信登录接口
    - **新增**：手机号绑定接口
    - **新增**：样式参数支持接口
+   - **更新**：改进API响应处理，支持多种成功码格式（0和200）
 
 2. **认证管理** (`src/utils/auth.uts`)
    - Token管理
@@ -185,7 +192,7 @@ AI试衣功能由三个主要页面和一系列工具模块组成：
 **章节来源**
 - [src/pages/aiTryOn/index.uvue:155-452](file://src/pages/aiTryOn/index.uvue#L155-L452)
 - [src/pages/aiTryOnResult/index.uvue:60-230](file://src/pages/aiTryOnResult/index.uvue#L60-L230)
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 - [src/utils/api.uts:332-503](file://src/utils/api.uts#L332-L503)
 - [src/utils/loginFlow.uts:1-100](file://src/utils/loginFlow.uts#L1-L100)
 
@@ -252,7 +259,7 @@ style N fill:#f3e5f5
 **图表来源**
 - [src/pages/aiTryOn/index.uvue:144-147](file://src/pages/aiTryOn/index.uvue#L144-L147)
 - [src/pages/aiTryOnResult/index.uvue:58](file://src/pages/aiTryOnResult/index.uvue#L58)
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 - [src/utils/api.uts:1-5](file://src/utils/api.uts#L1-L5)
 
 ## 详细组件分析
@@ -337,16 +344,18 @@ API-->>Page : 返回模板数组
 Page->>Page : 渲染模板轮播
 ```
 
-2. **微信认证登录流程**
+2. **统一登录状态检查流程**
    ```mermaid
 sequenceDiagram
 participant User as 用户
 participant Page as AI试衣页面
+participant Auth as 认证工具
 participant LoginFlow as 登录流程
 participant WeChat as 微信登录
 participant API as API接口
-participant Auth as 认证工具
-User->>Page : 点击生成按钮
+User->>Page : 点击照片选择
+Page->>Auth : 检查登录状态
+Auth-->>Page : 未登录
 Page->>Page : 显示登录弹窗
 User->>Page : 授权手机号
 Page->>LoginFlow : runPhoneLogin(phoneCode)
@@ -389,7 +398,7 @@ Task-->>Page : 任务ID
 Page->>Result : 跳转到结果页面
 ```
 
-**更新** 新增了完整的微信认证系统，实现了三步登录流程和头像昵称完善功能。**新增**：照片上传状态指示器提供实时上传进度反馈，自动上传机制优化用户上传体验。
+**更新** 新增了完整的微信认证系统，实现了三步登录流程和头像昵称完善功能。**新增**：照片上传状态指示器提供实时上传进度反馈，自动上传机制优化用户上传体验。**更新**：AI试衣页面集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗。
 
 **章节来源**
 - [src/pages/aiTryOn/index.uvue:181-306](file://src/pages/aiTryOn/index.uvue#L181-L306)
@@ -430,7 +439,24 @@ back --> [*] : 返回上一页
    - `completed`: 显示结果图片并更新导航标题
    - `failed`: 显示错误状态
 
-3. **图片处理流程**
+3. **API响应处理优化**
+   ```mermaid
+flowchart TD
+Start([开始轮询]) --> CallAPI[调用getAiTryOnResult]
+CallAPI --> CheckCode{检查响应码}
+CheckCode --> |code===0或200| CheckStatus{检查任务状态}
+CheckCode --> |其他| HandleError[处理错误]
+CheckStatus --> |completed| ShowResult[显示结果]
+CheckStatus --> |failed| ShowFailed[显示失败]
+CheckStatus --> |pending/processing| ContinuePolling[继续轮询]
+ShowResult --> UpdateTitle[更新导航标题]
+UpdateTitle --> End([结束])
+ShowFailed --> End
+ContinuePolling --> CallAPI
+HandleError --> End
+```
+
+4. **图片处理流程**
    ```mermaid
 flowchart TD
 Start([开始保存]) --> CheckURL{"结果URL是否为HTTP?"}
@@ -447,7 +473,7 @@ ShowError --> End
 Success --> End
 ```
 
-**优化** 导航标题动态管理，在任务完成后自动更新为"AI试衣结果"。
+**更新** 导航标题动态管理，在任务完成后自动更新为"AI试衣结果"。**更新**：改进API响应处理，支持多种成功码格式（0和200）；结果页面进行UI样式优化和加载提示调整。
 
 **章节来源**
 - [src/pages/aiTryOnResult/index.uvue:84-229](file://src/pages/aiTryOnResult/index.uvue#L84-L229)
@@ -485,7 +511,7 @@ AiTryOnHistoryPage --> HistoryItem : manages
 ```
 
 **图表来源**
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 
 #### 历史记录功能流程
 
@@ -533,10 +559,10 @@ HistoryPage->>ResultPage : 跳转到结果页面
 ResultPage->>ResultPage : 加载对应任务状态
 ```
 
-**新增** AI试衣历史记录页面提供了完整的用户试衣历史查询、删除和查看详情功能。
+**新增** AI试衣历史记录页面提供了完整的用户试衣历史查询、删除和查看详情功能。**更新**：改进API响应处理，支持多种成功码格式（0和200）。
 
 **章节来源**
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 
 ### API接口封装分析
 
@@ -612,7 +638,7 @@ AI试衣功能使用了专门的数据模型定义：
    - **新增**：wxBindPhone接口用于手机号绑定
    - **新增**：wxGetUserInfo接口用于获取用户信息
 
-**更新** 接口参数和返回值增加了对category和sub_category的支持，提升了模板筛选的精确度。新增了微信认证相关接口和历史记录管理接口。**新增**：样式参数支持接口，增强模板自定义能力。
+**更新** 接口参数和返回值增加了对category和sub_category的支持，提升了模板筛选的精确度。新增了微信认证相关接口和历史记录管理接口。**新增**：样式参数支持接口，增强模板自定义能力。**更新**：改进API响应处理，支持多种成功码格式（0和200）。
 
 **章节来源**
 - [src/utils/api.uts:316-458](file://src/utils/api.uts#L316-L458)
@@ -648,7 +674,7 @@ HistoryItem --> HistoryListResponse : contains
 ```
 
 **图表来源**
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 
 ### 核心功能特性
 
@@ -701,12 +727,12 @@ ResetList --> End
 ```
 
 **图表来源**
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 
-**新增** AI试衣历史记录页面提供了完整的用户试衣历史查询、删除和管理功能，增强了用户体验和功能完整性。
+**新增** AI试衣历史记录页面提供了完整的用户试衣历史查询、删除和管理功能，增强了用户体验和功能完整性。**更新**：改进API响应处理，支持多种成功码格式（0和200）。
 
 **章节来源**
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 
 ## 微信认证系统
 
@@ -868,7 +894,7 @@ O --> V
 **图表来源**
 - [src/pages/aiTryOn/index.uvue:144-147](file://src/pages/aiTryOn/index.uvue#L144-L147)
 - [src/pages/aiTryOnResult/index.uvue:58](file://src/pages/aiTryOnResult/index.uvue#L58)
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 - [src/utils/api.uts:1-5](file://src/utils/api.uts#L1-L5)
 
 ### 关键依赖关系
@@ -897,7 +923,7 @@ O --> V
    - 应用清单配置应用基本信息
    - 登录配置管理认证相关设置
 
-**更新** 新增了AI试衣历史记录页面的依赖关系，优化了导航系统集成，新增了登录流程管理和资料提交工具的依赖关系。
+**更新** 新增了AI试衣历史记录页面的依赖关系，优化了导航系统集成，新增了登录流程管理和资料提交工具的依赖关系。**更新**：改进API响应处理，支持多种成功码格式（0和200）。
 
 **章节来源**
 - [src/pages.json:56-66](file://src/pages.json#L56-L66)
@@ -931,6 +957,7 @@ AI试衣功能在性能方面采用了多项优化策略：
 - **新增**：历史记录分页加载，提升大数据量下的性能
 - **新增**：照片上传状态指示器，提供实时上传进度反馈
 - **新增**：自动上传机制，优化用户上传体验
+- **更新**：统一登录状态检查，提升用户体验
 
 ### 5. 认证流程优化
 - **新增**：runPhoneLogin三步登录流程，减少重复请求
@@ -941,13 +968,24 @@ AI试衣功能在性能方面采用了多项优化策略：
 - **新增**：分页加载历史记录，避免一次性加载大量数据
 - **新增**：历史记录缓存机制，提升重复访问性能
 - **新增**：批量操作支持，减少多次请求开销
+- **更新**：改进API响应处理，支持多种成功码格式（0和200）
 
 ### 7. **新增**：样式参数优化
 - **新增**：样式参数缓存机制，提升模板切换性能
 - **新增**：参数验证和默认值处理，减少无效请求
 - **新增**：模板过滤优化，提升搜索效率
 
-**更新** 新增了微信认证系统的性能优化策略，包括三步登录流程和状态检查机制。新增了历史记录页面的性能优化，包括分页加载和缓存机制。**新增**：照片上传状态指示器和自动上传机制的性能优化策略。
+### 8. **更新**：API响应处理优化
+- **更新**：支持多种成功码格式（0和200），提升兼容性
+- **更新**：改进错误处理机制，提供更准确的错误提示
+- **更新**：优化轮询机制，减少不必要的请求
+
+### 9. **更新**：UI样式优化
+- **更新**：结果页面UI样式优化，提升视觉体验
+- **更新**：加载提示调整，提供更清晰的状态反馈
+- **更新**：状态遮罩和动画效果优化
+
+**更新** 新增了微信认证系统的性能优化策略，包括三步登录流程和状态检查机制。新增了历史记录页面的性能优化，包括分页加载和缓存机制。**新增**：照片上传状态指示器和自动上传机制的性能优化策略。**更新**：API响应处理优化，支持多种成功码格式（0和200）；结果页面进行UI样式优化和加载提示调整。
 
 ## 故障排除指南
 
@@ -961,6 +999,7 @@ AI试衣功能在性能方面采用了多项优化策略：
 - 重新登录获取新的Token
 - 检查Token存储是否正常
 - **新增**：检查微信登录凭证有效性
+- **更新**：统一登录状态检查，避免重复登录
 
 #### 2. 照片上传失败
 **症状**: 照片上传后无法继续
@@ -970,6 +1009,7 @@ AI试衣功能在性能方面采用了多项优化策略：
 - 确认图片格式为支持的格式
 - 重新选择照片进行上传
 - **新增**：检查上传状态指示器是否正常显示
+- **更新**：自动上传机制优化，提升上传成功率
 
 #### 3. 任务状态轮询失败
 **症状**: 结果页面长时间显示加载状态
@@ -978,6 +1018,7 @@ AI试衣功能在性能方面采用了多项优化策略：
 - 检查网络连接状态
 - 等待一段时间后重试
 - 查看服务器状态和API响应
+- **更新**：改进API响应处理，支持多种成功码格式（0和200）
 
 #### 4. 图片保存失败
 **症状**: 保存到相册时出现权限错误
@@ -1029,6 +1070,7 @@ AI试衣功能在性能方面采用了多项优化策略：
 - 验证用户登录状态
 - 确认openid参数正确传递
 - 重新加载历史记录
+- **更新**：改进API响应处理，支持多种成功码格式（0和200）
 
 #### 10. **新增**：历史记录删除失败
 **症状**: 删除历史记录后仍然显示
@@ -1057,12 +1099,30 @@ AI试衣功能在性能方面采用了多项优化策略：
 - 确认自动上传触发条件
 - 重新尝试手动上传
 
-**更新** 新增了微信认证系统相关的故障排除指导，包括登录失败、手机号授权失败和头像昵称完善失败等问题的解决方案。新增了历史记录页面相关的故障排除指导。**新增**：样式参数应用失败和自动上传功能异常的故障排除指导。
+#### 13. **新增**：API响应处理异常
+**症状**: API调用返回错误或状态不正确
+**原因**: 成功码格式不匹配或响应数据异常
+**解决方法**:
+- 检查API响应中的code字段
+- 验证是否支持多种成功码格式（0和200）
+- 确认响应数据结构是否符合预期
+- 重新调用API接口
+
+#### 14. **新增**：结果页面UI显示异常
+**症状**: 结果页面布局错乱或状态显示不正确
+**原因**: UI样式冲突或状态更新异常
+**解决方法**:
+- 检查CSS样式是否正确加载
+- 验证状态变量更新逻辑
+- 确认图片加载和显示逻辑
+- 重新加载页面或清理缓存
+
+**更新** 新增了微信认证系统相关的故障排除指导，包括登录失败、手机号授权失败和头像昵称完善失败等问题的解决方案。新增了历史记录页面相关的故障排除指导。**新增**：样式参数应用失败和自动上传功能异常的故障排除指导。**更新**：API响应处理异常和结果页面UI显示异常的故障排除指导。
 
 **章节来源**
 - [src/pages/aiTryOn/index.uvue:243-306](file://src/pages/aiTryOn/index.uvue#L243-L306)
 - [src/pages/aiTryOnResult/index.uvue:159-223](file://src/pages/aiTryOnResult/index.uvue#L159-L223)
-- [src/pages/aiTryOnHistory/index.uvue:1-400](file://src/pages/aiTryOnHistory/index.uvue#L1-L400)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 - [src/utils/loginFlow.uts:1-100](file://src/utils/loginFlow.uts#L1-L100)
 
 ## 结论
@@ -1082,6 +1142,9 @@ AI试衣功能展现了现代小程序开发的最佳实践，具有以下特点
 10. **微信认证集成**: 完整的三步登录流程，包括微信登录、手机号授权、头像昵称完善
 11. **上传体验优化**: **新增**：照片上传状态指示器提供实时上传进度反馈，自动上传机制优化用户上传体验
 12. **样式定制增强**: **新增**：样式参数支持增强模板自定义能力
+13. **API响应优化**: **更新**：改进API响应处理，支持多种成功码格式（0和200）
+14. **UI体验优化**: **更新**：结果页面进行UI样式优化和加载提示调整
+15. **登录状态检查**: **更新**：AI试衣页面集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗
 
 ### 功能完整性
 - 支持多种服饰模板选择
@@ -1096,10 +1159,11 @@ AI试衣功能展现了现代小程序开发的最佳实践，具有以下特点
 - **新增**：照片上传状态指示器
 - **新增**：自动上传机制
 - **新增**：样式参数支持
+- **更新**：统一登录状态检查
+- **更新**：API响应处理优化
+- **更新**：UI样式优化
 
 ### 可扩展性
-该架构为未来的功能扩展提供了良好的基础，可以轻松添加新的AI服务、改进用户界面或增加更多个性化功能。微信认证系统的引入为后续的用户运营和数据分析奠定了坚实的基础。AI试衣历史记录页面的加入进一步增强了用户粘性和功能完整性。**新增**：上传体验优化和样式参数支持为后续的功能扩展提供了技术基础。
+该架构为未来的功能扩展提供了良好的基础，可以轻松添加新的AI服务、改进用户界面或增加更多个性化功能。微信认证系统的引入为后续的用户运营和数据分析奠定了坚实的基础。AI试衣历史记录页面的加入进一步增强了用户粘性和功能完整性。**新增**：上传体验优化和样式参数支持为后续的功能扩展提供了技术基础。**更新**：API响应处理优化和UI体验优化为后续的功能迭代提供了更好的技术基础。
 
-**更新** 最新版本显著增强了模板过滤能力和参数处理机制，新增了完整的微信认证系统，新增了AI试衣历史记录页面功能，新增了照片上传状态指示器和自动上传机制，新增了样式参数支持，为用户提供更加安全、合规、个性化、完整且体验优化的试衣体验。
-
-通过合理的组件划分和清晰的依赖关系，AI试衣功能不仅满足了当前的业务需求，也为后续的功能演进和合规要求提供了坚实的技术基础。**新增**：上传体验优化和样式参数支持的引入进一步提升了用户满意度和功能完整性。
+通过合理的组件划分和清晰的依赖关系，AI试衣功能不仅满足了当前的业务需求，也为后续的功能演进和合规要求提供了坚实的技术基础。**新增**：上传体验优化和样式参数支持的引入进一步提升了用户满意度和功能完整性。**更新**：API响应处理优化和UI体验优化的引入进一步提升了系统的稳定性和用户体验。

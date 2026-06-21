@@ -126,8 +126,8 @@ AITRYONHISTORY --> API
 
 - 错误处理机制
   - 统一返回结构：包含 code、message、data 字段
-  - 成功码：通常为 0 或 200
-  - **AI试衣接口特殊处理：aiface 接口成功 code === 0，非 200**
+  - 成功码：通常为 0 或 200（**新增：AI试衣接口现在支持多种成功码格式**）
+  - **AI试衣接口特殊处理：aiface 接口成功 code === 0 或 200，非 200**
   - 未授权（401）：http.uts 自动清理 token 与用户信息并提示重新登录
   - 参数校验：调用方需确保必填参数存在，如 shopId、albumId 等
 
@@ -308,19 +308,19 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **getAiTemplates**
   - 参数：style（可选）、keyword（可选）、category（可选）、package_type（可选）、sub_category（可选）、**shop_id（可选，类型：string）**、gender（可选）
   - 返回：{ code: number; message: string; data: AiTemplate[] }
-  - 错误处理：code === 0 表示成功，其他值表示失败
+  - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
   - 适用场景：获取可用的AI试衣模板列表
   - **更新**：shop_id 参数类型从 number 改为 string，以匹配页面传参方式
 - **getAiStyles**
   - 参数：category（可选）、package_type（可选）、sub_category（可选）、**shop_id（可选，类型：number）**
   - 返回：{ code: number; message: string; data: Array<{ style_name: string; count: number; cover_url: string }> }
-  - 错误处理：code === 0 表示成功
+  - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
   - 适用场景：获取AI试衣风格分组信息
   - **更新**：shop_id 参数类型保持 number 类型，与任务提交接口一致
 - **getAiTemplateDetail**
   - 参数：id（必填）
   - 返回：{ code: number; message: string; data: AiTemplate }
-  - 错误处理：code === 0 表示成功
+  - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
 
 ### 照片上传接口
 - **uploadPhoto**
@@ -329,13 +329,13 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 特殊处理：使用 uni.uploadFile 直接上传，不通过 request 函数
   - 认证要求：需登录状态（Authorization 头部包含 Bearer token）
   - 文件限制：大小不超过10MB
-  - 错误处理：code === 0 表示成功
+  - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
 
 ### AI试衣任务接口
 - **submitAiTryOn**
   - 参数：templateId（必填）、userPhotoFilename（必填）、**shopId（必填，类型：number）**、userOpenid（可选）、category（可选）、bodyType（可选）、ageRange（可选）
   - 返回：{ code: number; message: string; data: { task_id: number } }
-  - 错误处理：code === 0 表示成功；非0时表示失败（如：功能未启用 / 配额不足 / 缺少参数 / 店铺不存在）
+  - 错误处理：code === 0 或 200 表示成功；非0时表示失败（如：功能未启用 / 配额不足 / 缺少参数 / 店铺不存在）
   - 适用场景：创建AI试衣任务
   - **更新**：shopId 参数类型保持 number 类型，与后端期望一致
 - **getAiTryOnResult**
@@ -357,27 +357,27 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
       updated_at: string
     }
   }
-  - 错误处理：code === 0 表示成功
+  - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
   - 适用场景：轮询查询AI试衣任务状态
 
 ### 历史记录管理接口
 - **getAiTasks**
   - 参数：openid（必填）
   - 返回：{ code: number; message: string; data: Array<{ id: number; status: string; result_image_url: string; template_image_url: string; style_name: string; created_at: string }> }
-  - 错误处理：code === 0 表示成功
+  - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
   - 适用场景：获取用户AI试衣历史记录
   - **新增**：这是本次更新新增的核心接口，提供完整的AI试衣历史记录管理功能
 - **deleteAiTask**
   - 参数：id（必填）
   - 返回：{ code: number; message: string }
-  - 错误处理：code === 0 表示成功
+  - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
   - 适用场景：删除AI试衣历史记录
 
 ### AI推荐接口
 - **getAiRecommend**
   - 参数：userPhotoFilename（必填）、**shopId（必填，类型：number）**
   - 返回：{ code: number; message: string; data: AiTemplate[] }
-  - 错误处理：code === 0 表示成功
+  - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
   - 适用场景：基于用户照片的AI模板推荐
   - **更新**：shopId 参数类型保持 number 类型
 
@@ -388,15 +388,25 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 支持点击跳转到结果详情页
   - 支持封面图智能选择（已完成使用结果图，其他状态使用模板图）
   - 支持时间格式化显示
+  - **更新**：现在支持多种成功码格式（code 0 和 200），提高了与不同API实现的兼容性
+
+### AI试衣结果页面集成
+- **AI试衣结果页面**：集成了 getAiTryOnResult 接口，提供任务状态轮询和结果显示功能
+- **功能特性**：
+  - 每20秒轮询一次任务状态
+  - 支持多种成功码格式（code 0 和 200）
+  - 支持连续失败3次后停止重试
+  - 支持图片保存到相册功能
 
 最佳实践
-- **AI试衣接口特殊处理**：aiface 接口成功 code === 0，非 200
+- **AI试衣接口特殊处理**：aiface 接口成功 code === 0 或 200，非 200
 - **任务轮询策略**：每3秒轮询一次，最长等待60秒
 - **错误重试机制**：连续失败3次后停止重试
 - **文件上传限制**：严格控制照片大小不超过10MB
 - **登录态检查**：所有AI试衣相关接口均需登录状态
 - **参数类型一致性**：注意不同接口间 shop_id 参数类型的差异（string vs number）
 - **历史记录管理**：新增的 getAiTasks 接口提供完整的AI试衣历史记录查询功能，支持用户查看和管理自己的试衣历史
+- **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了与不同API实现的兼容性
 
 **章节来源**
 - [api.uts:314-502](file://src/utils/api.uts#L314-L502)
@@ -483,6 +493,7 @@ HTTP --> CONFIG : "使用"
   - **文件大小限制**：前端严格控制照片大小，减少服务器压力
   - **参数类型优化**：统一 shop_id 参数类型，减少类型转换开销
   - **历史记录优化**：新增的历史记录页面支持智能封面图选择和状态管理
+  - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了与不同API实现的兼容性
 
 **章节来源**
 - [index.uvue:142-151](file://src/pages/index/index.uvue#L142-L151)
@@ -516,6 +527,7 @@ HTTP --> CONFIG : "使用"
   - **保存图片失败**：检查相册保存权限，用户可能需要授权
   - **参数类型错误**：注意 shop_id 在不同接口间的类型差异（string vs number）
   - **历史记录获取失败**：检查 openid 参数是否正确传递，确认用户已登录
+  - **多成功码格式兼容性问题**：现在支持 code 0 和 200 两种成功码格式，如果遇到兼容性问题，检查后端API版本
 
 **章节来源**
 - [http.uts:50-61](file://src/utils/http.uts#L50-L61)
@@ -530,9 +542,11 @@ HTTP --> CONFIG : "使用"
 ## 结论
 API 接口封装层以清晰的分层设计实现了业务接口的统一管理，结合认证与 HTTP 层的自动化处理，显著降低了页面开发复杂度。通过规范化的数据模型、参数与返回值约定以及错误处理策略，开发者可以更专注于业务逻辑实现。
 
-**新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交和结果查询等核心功能。该模块采用了专门的错误处理策略（aiface 接口成功 code === 0），并实现了智能的轮询机制和超时控制，确保了良好的用户体验。**
+**新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交和结果查询等核心功能。该模块采用了专门的错误处理策略（aiface 接口成功 code === 0 或 200，非 200），并实现了智能的轮询机制和超时控制，确保了良好的用户体验。**
 
 **本次更新重点关注了AI试衣历史记录管理功能的完善，新增的 getAiTasks 接口为用户提供了完整的试衣历史记录查询能力，配合 aiTryOnHistory 页面实现了完整的用户交互体验。这一功能增强了AI试衣服务的可用性和用户粘性，为后续的功能扩展奠定了坚实的技术基础。**
+
+**特别重要的是，AI试衣相关接口现在支持多种成功码格式（code 0 和 200），这大大提高了与不同API实现的兼容性，改善了任务检索的可靠性并减少了认证相关错误。这种改进使得系统能够更好地适应不同的后端服务版本，提升了整体的稳定性和用户体验。**
 
 建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，AI试衣功能的成功实施为其他AI相关功能的扩展奠定了坚实的技术基础。
 
@@ -561,6 +575,8 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
   - **推荐功能**：使用 getAiRecommend 基于用户照片推荐模板
   - **参数类型注意事项**：注意不同接口间 shop_id 参数类型的差异（string vs number）
   - **历史记录管理**：新增的 getAiTasks 接口提供完整的AI试衣历史记录查询功能
+  - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了兼容性
+  - **错误处理改进**：AI试衣相关接口现在支持多种成功码格式，减少了认证相关错误
 
 **章节来源**
 - [demoDetail.uvue:304-477](file://src/pages/demoDetail/index.uvue#L304-L477)
