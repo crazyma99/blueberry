@@ -69,6 +69,18 @@
 			"style": {
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/aiRecommend/index",
+			"style": {
+				"navigationBarTitleText": "AI智能推荐"
+			}
+		},
+		{
+			"path": "pages/aiRecommendLoading/index",
+			"style": {
+				"navigationBarTitleText": "AI分析中"
+			}
 		}
 	],
 	"globalStyle": {

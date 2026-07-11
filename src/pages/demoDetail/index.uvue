@@ -75,6 +75,10 @@
 
 			<!-- 正常分类模式 -->
 			<view v-if="!isSearching && alltabs.length > 0">
+				<!-- AI智能推荐入口 -->
+				<view class="ai-recommend-banner" @click="goToAiRecommend">
+					<text class="ai-recommend-text">AI智能推荐-拍照选服饰</text>
+				</view>
 				<view class="title">套餐与子系分类：</view>
 				<view class="tabcontainer">
 					<view
@@ -599,6 +603,11 @@
 					url: `/pages/aiTryOn/index?albumId=${item.id}&shopId=${shopId}&category=${category}&subCategory=${subCategory}&style=${style}`
 				})
 			},
+			goToAiRecommend() {
+				uni.navigateTo({
+					url: '/pages/aiRecommend/index'
+				})
+			},
 			formatCount(count) {
 				return _formatCount(count)
 			},
@@ -952,6 +961,22 @@
 			width: 76rpx;
 			height: 22.5rpx;
 		}
+	}
+	/* AI智能推荐入口按钮 */
+	.ai-recommend-banner {
+		margin: 16rpx 32rpx 24rpx;
+		width: calc(100% - 64rpx);
+		height: 88rpx;
+		border-radius: 44rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: linear-gradient(109deg, #f2949f 12%, #d7a3bf 31%, #a0a6ec 51%, #9daeea 71%, #7bace3 91%);
+	}
+	.ai-recommend-text {
+		font-size: 30rpx;
+		color: #fff;
+		font-weight: 500;
 	}
 	/* 骨架屏已移至全局样式 */
 </style>

@@ -26,7 +26,7 @@ Not overwritten:
   project.config.json
   src/manifest.json
   src/pages.json
-  src/static/
+  src/static/ (except shared *.svg / *.png UI icons)
   profiles/
 USAGE
 }
@@ -76,5 +76,11 @@ rsync -a --delete "$TEMPLATE_ROOT/src/utils"/ "$TARGET_REPO/src/utils"/
 # 必须同步到外部项目，否则 apply-profile.mjs 会因找不到组件文件报 ENOENT。
 mkdir -p "$TARGET_REPO/src/components"
 rsync -a --delete "$TEMPLATE_ROOT/src/components"/ "$TARGET_REPO/src/components"/
+
+# src/static/ 整体不同步（各 profile 有自己的二维码等资源），
+# 但 SVG / PNG 等共享 UI 图标需要同步，否则新图标在子项目中缺失。
+mkdir -p "$TARGET_REPO/src/static"
+rsync -a --include='*.svg' --include='*.png' --exclude='*' \
+  "$TEMPLATE_ROOT/src/static"/ "$TARGET_REPO/src/static"/
 
 echo "Synced template code to $TARGET_REPO"
