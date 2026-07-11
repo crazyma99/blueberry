@@ -147,10 +147,11 @@
 </template>
 
 <script lang="uts">
-import { getAiTemplates, uploadPhoto, submitAiTryOn } from '../../utils/api.uts'
-import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo } from '../../utils/auth.uts'
+import { getAiTemplates, uploadPhoto, submitAiTryOn, rejectAllPendingUploads } from '../../utils/api.uts'
+import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
+import { rejectAllPending } from '../../utils/http.uts'
 import {
 	USER_AGREEMENT_NAME,
 	PRIVACY_POLICY_NAME,
@@ -203,6 +204,20 @@ export default {
 			this.style = decodeURIComponent(String(options.style))
 		}
 		this.loadTemplates()
+	},
+	onShow() {
+		// 监听 401 登录过期事件，自动拉起登录弹窗
+		uni.$off('login-required')
+		uni.$on('login-required', () => {
+			this.showLoginPopup = true
+		})
+		// 兑底：其他页面触发 401 后导航回来时自动弹出
+		if (consumeLoginExpired()) {
+			this.showLoginPopup = true
+		}
+	},
+	onHide() {
+		uni.$off('login-required')
 	},
 	methods: {
 		async loadTemplates() {
@@ -363,6 +378,9 @@ export default {
 		closeLoginPopup() {
 			this.showLoginPopup = false
 			this.loginAgreementChecked = false
+			// 用户主动取消登录，reject 所有挂起的 401 请求
+			rejectAllPending()
+			rejectAllPendingUploads()
 		},
 
 		toggleLoginAgreement() {

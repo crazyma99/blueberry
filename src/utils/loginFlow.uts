@@ -5,8 +5,9 @@
 //   3. wxBindPhone(phoneCode) 合并写入 phone/可能的 nickname/avatarUrl
 // 不调 showLoading / showToast / closeLoginPopup / openProfilePopup —— 调用方按页面策略处理 UX。
 
-import { wxLogin, wxBindPhone } from './api.uts'
+import { wxLogin, wxBindPhone, flushPendingUploads } from './api.uts'
 import { loginSuccess, mergeUserInfo } from './auth.uts'
+import { flushPendingRequests } from './http.uts'
 
 export type PhoneLoginErrorKind = 'login' | 'wxlogin' | 'unknown'
 
@@ -36,6 +37,9 @@ export async function runPhoneLogin(phoneCode: string): Promise<PhoneLoginResult
     const wxRes = await wxLogin({ code: loginRes.code })
     if (wxRes.code === 200 && wxRes.data) {
       loginSuccess(wxRes.data.token, wxRes.data.userInfo)
+      // 登录成功后，自动重试所有因 401 挂起的请求和上传
+      flushPendingRequests()
+      flushPendingUploads()
     } else {
       return {
         ok: false,

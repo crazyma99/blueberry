@@ -94,8 +94,9 @@
 </template>
 
 <script>
-	import { getImage, getShops, wxLogin, wxBindPhone, wxUpdateUserInfo } from '../../utils/api.uts'
-	import { loginSuccess, setUserInfo, mergeUserInfo, getUserInfo } from '../../utils/auth.uts'
+	import { getImage, getShops, wxLogin, wxBindPhone, wxUpdateUserInfo, rejectAllPendingUploads } from '../../utils/api.uts'
+	import { rejectAllPending } from '../../utils/http.uts'
+	import { loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import { submitUserProfile } from '../../utils/profileSubmit.uts'
 	import {
@@ -140,11 +141,28 @@
 				this.loading = false
 			}
 		},
+		onShow() {
+			// 监听 401 登录过期事件，自动拉起登录弹窗
+			uni.$off('login-required')
+			uni.$on('login-required', () => {
+				this.showLoginPopup = true
+			})
+			// 兑底：其他页面触发 401 后导航回来时自动弹出
+			if (consumeLoginExpired()) {
+				this.showLoginPopup = true
+			}
+		},
+		onHide() {
+			uni.$off('login-required')
+		},
 		methods: {
 			// 关闭登录弹窗
 			closeLoginPopup() {
 				this.showLoginPopup = false
 				this.loginAgreementChecked = false
+				// 用户主动取消登录，reject 所有挂起的 401 请求
+				rejectAllPending()
+				rejectAllPendingUploads()
 			},
 
 			toggleLoginAgreement() {

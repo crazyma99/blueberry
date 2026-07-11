@@ -1,5 +1,5 @@
 import { getHttpConfig } from './config.uts'
-import { getToken, clearToken, clearUserInfo } from './auth.uts'
+import { getToken, clearToken, clearUserInfo, markLoginExpired } from './auth.uts'
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
@@ -11,10 +11,83 @@ interface RequestOptions {
   showLoading?: boolean
 }
 
+// ============ 401 请求挂起队列 ============
+// 当接口返回 401 时，将请求挂起（不 resolve/reject），等待用户重新登录后自动重试
+
+interface PendingRequest {
+  url: string
+  method: HttpMethod
+  data: any
+  header: Record<string, string>
+  timeout: number
+  showLoading: boolean
+  resolve: (value: any) => void
+  reject: (reason: any) => void
+}
+
+let _pendingQueue: PendingRequest[] = []
+let _waitingForLogin = false
+// flush 期间若重试请求再次 401，直接 reject 避免死循环
+let _isFlushing = false
+
 function withBaseURL(url: string): string {
   if (/^https?:\/\//i.test(url)) return url
   const { baseURL } = getHttpConfig()
   return `${baseURL.replace(/\/$/, '')}/${url.replace(/^\//, '')}`
+}
+
+/**
+ * 登录成功后调用：用新 token 重试所有挂起的请求
+ */
+export function flushPendingRequests(): void {
+  if (_isFlushing) return
+  _isFlushing = true
+  const queue = [..._pendingQueue]
+  _pendingQueue = []
+  _waitingForLogin = false
+
+  const token = getToken()
+
+  queue.forEach((p) => {
+    const retryHeader: Record<string, string> = { ...p.header }
+    if (token) {
+      retryHeader['Authorization'] = `Bearer ${token}`
+    }
+    uni.request({
+      url: p.url,
+      method: p.method as any,
+      data: p.data,
+      header: retryHeader,
+      timeout: p.timeout,
+      success: (res) => {
+        const status = res.statusCode || 0
+        if (status >= 200 && status < 300) {
+          p.resolve(res.data)
+        } else if (status === 401) {
+          // 重试仍然 401，说明登录态仍有问题
+          p.reject(new Error('未授权（重试失败）'))
+        } else {
+          p.reject(new Error(`请求失败: ${status}`))
+        }
+      },
+      fail: (err) => p.reject(err),
+      complete: () => { if (p.showLoading) uni.hideLoading() }
+    })
+  })
+  _isFlushing = false
+}
+
+/**
+ * 用户取消登录时调用：reject 所有挂起的请求
+ */
+export function rejectAllPending(): void {
+  const queue = [..._pendingQueue]
+  _pendingQueue = []
+  _waitingForLogin = false
+  queue.forEach((p) => {
+    p.reject(new Error('用户取消登录'))
+    if (p.showLoading) uni.hideLoading()
+  })
 }
 
 export function request<T = any>(opts: RequestOptions): Promise<T> {
@@ -47,16 +120,33 @@ export function request<T = any>(opts: RequestOptions): Promise<T> {
       success: (res) => {
         const status = res.statusCode || 0
         
-        // 处理 401 未授权错误
+        // 处理 401 未授权错误：清空登录态，挂起请求等待重新登录
         if (status === 401) {
+          // flush 期间的重试不再入队，直接 reject 避免死循环
+          if (_isFlushing) {
+            if (showLoading) uni.hideLoading()
+            reject(new Error('未授权（重试失败）'))
+            return
+          }
           clearToken()
           clearUserInfo()
-          uni.showToast({
-            title: '登录已过期，请重新登录',
-            icon: 'none',
-            duration: 2000
+          markLoginExpired()
+          // 将请求加入挂起队列，Promise 不 resolve/reject，等待登录后 flush
+          _pendingQueue.push({
+            url: fullUrl,
+            method: method as HttpMethod,
+            data,
+            header: finalHeader,
+            timeout,
+            showLoading,
+            resolve: resolve as (value: any) => void,
+            reject: reject as (reason: any) => void,
           })
-          reject(new Error('未授权'))
+          // 只在首次 401 时触发登录弹窗，避免多请求并发弹出多个弹窗
+          if (!_waitingForLogin) {
+            _waitingForLogin = true
+            uni.$emit('login-required')
+          }
           return
         }
         

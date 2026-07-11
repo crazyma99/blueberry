@@ -118,6 +118,28 @@ export const clearUserInfo = (): void => {
 
 // ============ 登录状态管理 ============
 
+// 401 登录过期标志：当接口返回 401 时置为 true，页面 onShow 时消费并拉起登录弹窗
+let _loginExpiredPending = false
+
+/**
+ * 标记登录已过期（由 http 层调用）
+ */
+export const markLoginExpired = (): void => {
+  _loginExpiredPending = true
+}
+
+/**
+ * 检查并消费登录过期标志（由页面 onShow 调用）
+ * @returns 是否有待处理的登录过期事件
+ */
+export const consumeLoginExpired = (): boolean => {
+  if (_loginExpiredPending) {
+    _loginExpiredPending = false
+    return true
+  }
+  return false
+}
+
 /**
  * 检查是否已登录
  * @returns 是否已登录

@@ -197,10 +197,11 @@
 </template>
 
 <script>
-	import { getCategories, getAlbumList, toggleLike, getLikeStatus, wxLogin, wxBindPhone, wxUpdateUserInfo } from '../../utils/api.uts'
-	import { isLoggedIn, loginSuccess, setUserInfo, mergeUserInfo, getUserInfo } from '../../utils/auth.uts'
+	import { getCategories, getAlbumList, toggleLike, getLikeStatus, wxLogin, wxBindPhone, wxUpdateUserInfo, rejectAllPendingUploads } from '../../utils/api.uts'
+	import { isLoggedIn, loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import { submitUserProfile } from '../../utils/profileSubmit.uts'
+	import { rejectAllPending } from '../../utils/http.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -268,10 +269,22 @@
 			this.initPage(query?.idx || '')
 		},
 		onShow() {
+			// 监听 401 登录过期事件，自动拉起登录弹窗
+			uni.$off('login-required')
+			uni.$on('login-required', () => {
+				this.showLoginPopup = true
+			})
+			// 兑底：其他页面触发 401 后导航回来时自动弹出
+			if (consumeLoginExpired()) {
+				this.showLoginPopup = true
+			}
 			const list = this.getCurPhotoList
 			if (Array.isArray(list) && list.length > 0) {
 				this.refreshLikeStatus(list)
 			}
+		},
+		onHide() {
+			uni.$off('login-required')
 		},
 		// 滚动触底加载更多
 		onReachBottom() {
@@ -594,6 +607,9 @@
 				this.showLoginPopup = false
 				this.loginAgreementChecked = false
 				this.pendingLikeItem = null
+				// 用户主动取消登录，reject 所有挂起的 401 请求
+				rejectAllPending()
+				rejectAllPendingUploads()
 			},
 			toggleLoginAgreement() {
 				this.loginAgreementChecked = !this.loginAgreementChecked

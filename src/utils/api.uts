@@ -1,6 +1,60 @@
 import { request } from './http.uts'
 import { getHttpConfig } from './config.uts'
-import { UserInfo, getToken } from './auth.uts'
+import { UserInfo, getToken, clearToken, clearUserInfo, markLoginExpired } from './auth.uts'
+
+// ============ 上传接口 401 挂起队列 ============
+interface PendingUpload {
+  filePath: string
+  resolve: (value: any) => void
+  reject: (reason: any) => void
+}
+
+let _pendingUploads: PendingUpload[] = []
+let _uploadWaitingForLogin = false
+let _uploadIsFlushing = false
+
+/**
+ * 登录成功后调用：用新 token 重试所有挂起的上传请求
+ */
+export function flushPendingUploads(): void {
+  if (_uploadIsFlushing) return
+  _uploadIsFlushing = true
+  const queue = [..._pendingUploads]
+  _pendingUploads = []
+  _uploadWaitingForLogin = false
+
+  const token = getToken()
+  const { baseURL } = getHttpConfig()
+
+  queue.forEach((p) => {
+    uni.uploadFile({
+      url: `${baseURL}/api/aiface/upload`,
+      filePath: p.filePath,
+      name: 'photo',
+      header: { 'Authorization': `Bearer ${token}` },
+      success: (res) => {
+        if (res.statusCode === 401) {
+          p.reject(new Error('未授权（重试失败）'))
+        } else {
+          const data = JSON.parse(res.data)
+          p.resolve(data)
+        }
+      },
+      fail: (err) => p.reject(err)
+    })
+  })
+  _uploadIsFlushing = false
+}
+
+/**
+ * 用户取消登录时调用：reject 所有挂起的上传请求
+ */
+export function rejectAllPendingUploads(): void {
+  const queue = [..._pendingUploads]
+  _pendingUploads = []
+  _uploadWaitingForLogin = false
+  queue.forEach((p) => p.reject(new Error('用户取消登录')))
+}
 
 // ============ 类型定义 ============
 
@@ -395,6 +449,26 @@ export const uploadPhoto = async (filePath: string) => {
         'Authorization': `Bearer ${getToken()}`
       },
       success: (res) => {
+        // 上传接口同样处理 401 登录过期：挂起等待登录后重试
+        if (res.statusCode === 401) {
+          if (_uploadIsFlushing) {
+            reject(new Error('未授权（重试失败）'))
+            return
+          }
+          clearToken()
+          clearUserInfo()
+          markLoginExpired()
+          _pendingUploads.push({
+            filePath,
+            resolve: resolve as (value: any) => void,
+            reject: reject as (reason: any) => void,
+          })
+          if (!_uploadWaitingForLogin) {
+            _uploadWaitingForLogin = true
+            uni.$emit('login-required')
+          }
+          return
+        }
         const data = JSON.parse(res.data)
         resolve(data)
       },

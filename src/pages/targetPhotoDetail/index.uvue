@@ -104,9 +104,10 @@
 </template>
 
 <script>
-	import { getalbumDetail, toggleLike, getLikeStatus, wxLogin, wxBindPhone } from '../../utils/api.uts'
-	import { isLoggedIn, loginSuccess, setUserInfo, mergeUserInfo, getUserInfo } from '../../utils/auth.uts'
+	import { getalbumDetail, toggleLike, getLikeStatus, wxLogin, wxBindPhone, rejectAllPendingUploads } from '../../utils/api.uts'
+	import { isLoggedIn, loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
+	import { rejectAllPending } from '../../utils/http.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -148,6 +149,20 @@
 			this.style = query?.style ? decodeURIComponent(query.style) : ''
 			this.liked = query?.liked === 'true'
 			this.getDetail(id, type)
+		},
+		onShow() {
+			// 监听 401 登录过期事件，自动拉起登录弹窗
+			uni.$off('login-required')
+			uni.$on('login-required', () => {
+				this.showLoginPopup = true
+			})
+			// 兑底：其他页面触发 401 后导航回来时自动弹出
+			if (consumeLoginExpired()) {
+				this.showLoginPopup = true
+			}
+		},
+		onHide() {
+			uni.$off('login-required')
 		},
 		methods: {
 			// ====== 图片预加载工具方法（转发至 utils/imageLoader） ======
@@ -220,6 +235,9 @@
 			closeLoginPopup() {
 				this.showLoginPopup = false
 				this.loginAgreementChecked = false
+				// 用户主动取消登录，reject 所有挂起的 401 请求
+				rejectAllPending()
+				rejectAllPendingUploads()
 			},
 			toggleLoginAgreement() {
 				this.loginAgreementChecked = !this.loginAgreementChecked
