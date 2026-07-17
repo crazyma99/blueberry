@@ -49,7 +49,7 @@
 		</view>
 
 		<!-- AI试衣悬浮按钮 -->
-		<view v-if="!loading" class="ai-tryon-float-btn" @click="goToAiTryOn">AI试衣</view>
+		<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-float-btn" @click="goToAiTryOn">AI试衣</view>
 
 		<!-- 登录弹窗 -->
 		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">

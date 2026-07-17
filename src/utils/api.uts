@@ -65,6 +65,7 @@ export interface AlbumBasic {
   shopId: number
   price?: number
   likeCount: number
+  tryonDisabled?: boolean
 }
 
 export interface ShopInfo {
@@ -157,6 +158,7 @@ export const getAlbumList = async (params: Record<string, any>) => {
         packageDesc: string
         likeCount: number
         liked: boolean
+        tryonDisabled?: boolean
       }>
       total: number
       page: number
@@ -559,12 +561,35 @@ export const deleteAiTask = async (id: number) => {
 }
 
 /**
- * AI推荐模板（需登录）
- * 注意：code === 0 表示成功；参数为 camelCase
+ * AI推荐结果类型定义
+ */
+export interface AiRecommendAnalysis {
+  estimatedAge: string
+  gender: string
+  faceShape: string
+  bodyType: string
+  styleKeywords: string[]
+}
+
+export interface AiRecommendation {
+  styleName: string
+  reason: string
+  score: number
+  templateIds: number[]
+  genderMatched: boolean
+  previewUrl: string
+}
+
+/**
+ * AI智能推荐 — 获取推荐结果（需登录）
+ * POST /api/aiface/recommend
+ * 注意：aiface 接口成功 code === 0 或 200
+ * @param userPhotoFilename  上传图片返回的 filename
+ * @param shopId             当前门店 ID
  */
 export const getAiRecommend = async (params: {
-  userPhotoFilename: string
-  shopId: number
+  user_photo_filename: string
+  shop_id: number
 }) => {
   const res = await request({
     url: '/api/aiface/recommend',
@@ -572,5 +597,12 @@ export const getAiRecommend = async (params: {
     data: params,
     showLoading: false,
   })
-  return res as { code: number; message: string; data: AiTemplate[] }
+  return res as {
+    code: number
+    message: string
+    data: {
+      analysis: AiRecommendAnalysis
+      recommendations: AiRecommendation[]
+    }
+  }
 }

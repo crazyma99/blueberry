@@ -8,15 +8,14 @@
 - [auth.uts](file://src/utils/auth.uts)
 - [loginFlow.uts](file://src/utils/loginFlow.uts)
 - [profileSubmit.uts](file://src/utils/profileSubmit.uts)
-- [format.uts](file://src/utils/format.uts)
 - [index.uvue](file://src/pages/index/index.uvue)
 - [mine.uvue](file://src/pages/mine/index.uvue)
 </cite>
 
 ## 更新摘要
 **所做更改**
-- 新增401认证错误处理机制和请求挂起队列系统
-- 实现登录后自动重试功能，支持普通请求和上传请求的队列管理
+- 新增完整的401认证错误处理机制和请求挂起队列系统
+- 实现登录后自动重试功能，支持普通请求和上传请求的独立队列管理
 - 增强认证状态管理和用户交互流程
 - 完善错误处理和用户体验优化
 
@@ -86,7 +85,7 @@ MINE --> HTTP
 - [http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 - [auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
-- [api.uts:1-577](file://src/utils/api.uts#L1-L577)
+- [api.uts:1-607](file://src/utils/api.uts#L1-L607)
 - [loginFlow.uts:1-75](file://src/utils/loginFlow.uts#L1-L75)
 - [profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 
@@ -172,7 +171,7 @@ Note over Queue,Auth : 登录后自动重试机制
 
 **图表来源**
 - [http.uts:93-163](file://src/utils/http.uts#L93-L163)
-- [api.uts:1-577](file://src/utils/api.uts#L1-L577)
+- [api.uts:1-607](file://src/utils/api.uts#L1-L607)
 - [config.uts:7-12](file://src/utils/config.uts#L7-L12)
 - [auth.uts:121-141](file://src/utils/auth.uts#L121-L141)
 - [loginFlow.uts:40-42](file://src/utils/loginFlow.uts#L40-L42)
@@ -430,7 +429,7 @@ API-->>Component : 返回业务数据
 - [http.uts:93-172](file://src/utils/http.uts#L93-L172)
 
 **章节来源**
-- [api.uts:1-577](file://src/utils/api.uts#L1-L577)
+- [api.uts:1-607](file://src/utils/api.uts#L1-L607)
 
 ### 登录流程管理
 

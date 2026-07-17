@@ -166,6 +166,7 @@ export default {
 			category: '',
 			subCategory: '',
 			style: '',
+			gender: '',
 			templates: [] as any[],
 			currentTemplateIndex: 0,
 			bodyType: 'slim',
@@ -203,6 +204,9 @@ export default {
 		if (options && options.style) {
 			this.style = decodeURIComponent(String(options.style))
 		}
+		if (options && options.gender) {
+			this.gender = String(options.gender)
+		}
 		this.loadTemplates()
 	},
 	onShow() {
@@ -224,6 +228,7 @@ export default {
 			try {
 				const params: Record<string, any> = { category: 'travel' }
 				if (this.style) params.style = this.style
+				if (this.gender) params.gender = this.gender
 				const res = await getAiTemplates(params)
 				if ((res.code === 0 || res.code === 200) && res.data) {
 					this.templates = res.data

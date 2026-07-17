@@ -60,7 +60,7 @@
 									</image>
 									<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 								</view>
-								<view class="ai-tryon-tag" @click.stop="goToAiTryOn(item)">AI试衣</view>
+								<view v-if="item.tryonDisabled !== true" class="ai-tryon-tag" @click.stop="goToAiTryOn(item)">AI试衣</view>
 							</view>
 						</view>
 					</view>
@@ -122,7 +122,7 @@
 										<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 									</view>
 								</view>
-								<view class="ai-tryon-tag" @click.stop="goToAiTryOn(item)">
+								<view v-if="item?.tryonDisabled !== true" class="ai-tryon-tag" @click.stop="goToAiTryOn(item)">
 									<image
 										class="aitry"
 										mode="aspectFit"
@@ -605,7 +605,7 @@
 			},
 			goToAiRecommend() {
 				uni.navigateTo({
-					url: '/pages/aiRecommend/index'
+					url: `/pages/aiRecommend/index?shopId=${this.idx}`
 				})
 			},
 			formatCount(count) {

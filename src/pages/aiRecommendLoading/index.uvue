@@ -9,6 +9,19 @@
 			</view>
 		</view>
 
+		<!-- 失败态 -->
+		<view v-if="status === 'failed'" class="center-content" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #000;">
+			<view class="fail-wrapper">
+				<text class="fail-text">AI分析失败，请重试</text>
+				<view class="retry-btn" @click="handleRetry">
+					<text class="retry-btn-text">重试</text>
+				</view>
+				<view class="back-btn-wrapper" @click="handleBack">
+					<text class="back-btn-text">返回</text>
+				</view>
+			</view>
+		</view>
+
 		<!-- 底部 Copyright -->
 		<view class="page-footer">
 			<view class="divide"></view>
@@ -19,33 +32,105 @@
 
 <script lang="uts">
 import AppFooter from '../../components/AppFooter/AppFooter.uvue'
+import { getAiRecommend } from '../../utils/api.uts'
 
 export default {
 	components: { AppFooter },
 	data() {
 		return {
+			filename: '',
+			shopId: '',
+			status: 'processing' as string,  // 'processing' | 'failed'
 			elapsedSeconds: 0,
-			countdownTimer: null as any
+			countdownTimer: null as any,
+			pollingTimer: null as any,
+			failCount: 0
 		}
 	},
-	onLoad() {
-		this.startCountdown()
+	onLoad(options : any) {
+		this.filename = options?.filename ?? ''
+		this.shopId = options?.shopId ?? ''
+		if (this.filename !== '') {
+			this.startAnalysis()
+		} else {
+			this.status = 'failed'
+		}
 	},
 	onUnload() {
-		this.stopCountdown()
+		this.stopAll()
 	},
 	methods: {
-		startCountdown() {
+		startAnalysis() {
+			this.status = 'processing'
 			this.elapsedSeconds = 0
+			this.failCount = 0
+
+			// 计时器：每秒更新已等待时间
 			this.countdownTimer = setInterval(() => {
-				this.elapsedSeconds++
+				this.elapsedSeconds += 1
+				// 超时 180 秒（3分钟），停止轮询，展示失败
+				if (this.elapsedSeconds >= 180) {
+					this.stopAll()
+					this.status = 'failed'
+				}
 			}, 1000)
+
+			// 立即调用一次
+			this.callRecommend()
+
+			// 每 30 秒轮询
+			this.pollingTimer = setInterval(() => {
+				this.callRecommend()
+			}, 30000)
 		},
-		stopCountdown() {
-			if (this.countdownTimer) {
+
+		async callRecommend() {
+			try {
+				const res = await getAiRecommend({
+					user_photo_filename: this.filename,
+					shop_id: parseInt(this.shopId) || 0
+				})
+				// aiface 接口 code === 0 或 200 表示成功
+				if ((res.code === 0 || res.code === 200) && res.data) {
+					this.stopAll()
+					// 跳转结果页，通过全局事件传递数据
+					const resultData = JSON.stringify(res.data)
+					uni.redirectTo({
+						url: `/pages/aiRecommendResult/index?data=${encodeURIComponent(resultData)}`
+					})
+				}
+				// code !== 0/200 → 等待下一轮轮询
+			} catch (err) {
+				console.error('AI推荐请求失败:', err)
+				this.failCount += 1
+				// 连续 3 次网络错误，展示失败
+				if (this.failCount >= 3) {
+					this.stopAll()
+					this.status = 'failed'
+				}
+				// 否则等待下一轮轮询
+			}
+		},
+
+		stopAll() {
+			if (this.pollingTimer != null) {
+				clearInterval(this.pollingTimer)
+				this.pollingTimer = null
+			}
+			if (this.countdownTimer != null) {
 				clearInterval(this.countdownTimer)
 				this.countdownTimer = null
 			}
+		},
+
+		handleRetry() {
+			this.failCount = 0
+			this.startAnalysis()
+		},
+
+		handleBack() {
+			this.stopAll()
+			uni.navigateBack()
 		}
 	}
 }
@@ -99,6 +184,37 @@ export default {
 	font-size: 24rpx;
 	color: rgba(255, 255, 255, 0.4);
 	margin-top: 24rpx;
+}
+
+/* 失败态 */
+.fail-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+.fail-text {
+	font-size: 30rpx;
+	color: rgba(255, 255, 255, 0.7);
+	margin-bottom: 48rpx;
+	text-align: center;
+}
+.retry-btn {
+	background: #fff;
+	border-radius: 48rpx;
+	padding: 24rpx 80rpx;
+	margin-bottom: 24rpx;
+}
+.retry-btn-text {
+	font-size: 32rpx;
+	color: #000;
+	font-weight: 500;
+}
+.back-btn-wrapper {
+	padding: 24rpx 80rpx;
+}
+.back-btn-text {
+	font-size: 28rpx;
+	color: rgba(255, 255, 255, 0.5);
 }
 
 /* 底部 */

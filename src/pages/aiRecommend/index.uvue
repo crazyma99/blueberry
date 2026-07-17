@@ -25,10 +25,60 @@
 				:class="photoPreviewUrl !== '' ? 'action-btn' : 'action-btn action-btn-disabled'"
 				@click="handleStartAnalysis"
 			>
-				<text class="action-btn-text">开始AI分析推荐</text>
+				<text class="action-btn-text">{{ uploading ? '上传中...' : '开始AI分析推荐' }}</text>
 			</view>
 			<view class="footer-copyright">
 				<AppFooter />
+			</view>
+		</view>
+
+		<!-- 登录弹窗 -->
+		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
+			<view class="login-popup login-auth-popup" @click.stop>
+				<view class="login-popup-title">微信授权登陆</view>
+				<view class="login-agreement-row">
+					<view
+						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
+						@click.stop="toggleLoginAgreement"
+					>
+						<view v-if="loginAgreementChecked" class="login-agreement-dot"></view>
+					</view>
+					<text class="login-agreement-text"><text>登录即代表同意 </text><text class="login-agreement-link" @click.stop="openUserAgreement">{{ userAgreementName }}</text><text>、</text><text class="login-agreement-link" @click.stop="openPrivacyPolicy">{{ privacyPolicyName }}</text></text>
+				</view>
+				<button
+					v-if="loginAgreementChecked"
+					class="login-phone-btn"
+					open-type="getPhoneNumber"
+					@getphonenumber="onGetPhoneNumber"
+				>一键登录</button>
+				<button
+					v-else
+					class="login-phone-btn"
+					@click="showLoginAgreementToast"
+				>一键登录</button>
+				<view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
+			</view>
+		</view>
+
+		<!-- 头像昵称授权弹窗 -->
+		<view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
+			<view class="login-popup" @click.stop>
+				<view class="login-popup-title">完善个人资料</view>
+				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
+				<button
+					class="profile-avatar-btn"
+					open-type="chooseAvatar"
+					@chooseavatar="onChooseAvatar"
+				>
+					<image class="profile-avatar-img" :src="profileAvatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
+					<text class="profile-avatar-tip">点击选择头像</text>
+				</button>
+				<view class="profile-nickname-row">
+					<text class="profile-nickname-label">昵称</text>
+					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
+				</view>
+				<button class="login-phone-btn" @click="submitProfile">确认</button>
+				<view class="login-cancel" @click="skipProfile">跳过</view>
 			</view>
 		</view>
 	</view>
@@ -36,17 +86,58 @@
 
 <script lang="uts">
 import AppFooter from '../../components/AppFooter/AppFooter.uvue'
+import { uploadPhoto, rejectAllPendingUploads } from '../../utils/api.uts'
+import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
+import { runPhoneLogin } from '../../utils/loginFlow.uts'
+import { submitUserProfile } from '../../utils/profileSubmit.uts'
+import { rejectAllPending } from '../../utils/http.uts'
+import {
+	USER_AGREEMENT_NAME,
+	PRIVACY_POLICY_NAME,
+	openUserAgreement,
+	openPrivacyPolicy
+} from '../../utils/legal.uts'
 
 export default {
 	components: { AppFooter },
 	data() {
 		return {
+			shopId: '',
 			photoPath: '',
-			photoPreviewUrl: ''
+			photoPreviewUrl: '',
+			uploadedFilename: '',
+			uploading: false,
+			// 登录弹窗
+			showLoginPopup: false,
+			loginAgreementChecked: false,
+			userAgreementName: USER_AGREEMENT_NAME,
+			privacyPolicyName: PRIVACY_POLICY_NAME,
+			// 头像昵称弹窗
+			showProfilePopup: false,
+			profileAvatarUrl: '',
+			profileNickname: ''
 		}
+	},
+	onLoad(options : any) {
+		this.shopId = options?.shopId ?? ''
+	},
+	onShow() {
+		// 监听 401 登录过期事件，自动拉起登录弹窗
+		uni.$off('login-required')
+		uni.$on('login-required', () => {
+			this.showLoginPopup = true
+		})
+		// 兑底：其他页面触发 401 后导航回来时自动弹出
+		if (consumeLoginExpired()) {
+			this.showLoginPopup = true
+		}
+	},
+	onHide() {
+		uni.$off('login-required')
 	},
 	methods: {
 		choosePhoto() {
+			if (this.uploading) return
 			uni.chooseImage({
 				count: 1,
 				sizeType: ['compressed'],
@@ -59,18 +150,196 @@ export default {
 					}
 					this.photoPath = res.tempFilePaths[0]
 					this.photoPreviewUrl = res.tempFilePaths[0]
+					this.uploadedFilename = ''
 				}
 			})
 		},
 
-		handleStartAnalysis() {
+		async handleStartAnalysis() {
 			if (this.photoPreviewUrl === '') {
 				uni.showToast({ title: '请先上传照片', icon: 'none' })
 				return
 			}
+			if (this.uploading) return
+
+			// 上传前检查登录态，未登录先拉起登录弹窗
+			if (!isLoggedIn()) {
+				this.showLoginPopup = true
+				return
+			}
+
+			// 如果已经上传过，直接跳转
+			if (this.uploadedFilename !== '') {
+				this.navigateToLoading()
+				return
+			}
+
+			this.uploading = true
+			try {
+				const res = await uploadPhoto(this.photoPath)
+				if ((res.code === 0 || res.code === 200) && res.data && res.data.filename) {
+					this.uploadedFilename = res.data.filename
+					this.uploading = false
+					this.navigateToLoading()
+				} else {
+					this.uploading = false
+					uni.showToast({ title: res.message || '上传失败，请重试', icon: 'none' })
+				}
+			} catch (err) {
+				this.uploading = false
+				// 401 已由全局机制处理，这里只捕获其他错误
+				const errMsg = (err as Error)?.message ?? ''
+				if (errMsg.indexOf('取消') === -1 && errMsg.indexOf('未授权') === -1) {
+					uni.showToast({ title: '上传失败，请重试', icon: 'none' })
+				}
+			}
+		},
+
+		navigateToLoading() {
 			uni.navigateTo({
-				url: '/pages/aiRecommendLoading/index'
+				url: `/pages/aiRecommendLoading/index?filename=${encodeURIComponent(this.uploadedFilename)}&shopId=${this.shopId}`
 			})
+		},
+
+		// ========== 登录弹窗相关 ==========
+		closeLoginPopup() {
+			this.showLoginPopup = false
+			this.loginAgreementChecked = false
+			// 用户主动取消登录，reject 所有挂起的 401 请求
+			rejectAllPending()
+			rejectAllPendingUploads()
+		},
+
+		toggleLoginAgreement() {
+			this.loginAgreementChecked = !this.loginAgreementChecked
+		},
+
+		showLoginAgreementToast() {
+			uni.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' })
+		},
+
+		openUserAgreement() {
+			openUserAgreement()
+		},
+
+		openPrivacyPolicy() {
+			openPrivacyPolicy()
+		},
+
+		// 手机号授权回调
+		async onGetPhoneNumber(e: any) {
+			if (!this.loginAgreementChecked) {
+				this.showLoginAgreementToast()
+				return
+			}
+			const detail = e.detail || {}
+
+			// 用户拒绝授权
+			if (detail.errMsg && detail.errMsg !== 'getPhoneNumber:ok') {
+				if (detail.errMsg.indexOf('deny') !== -1 || detail.errMsg.indexOf('cancel') !== -1) {
+					uni.showToast({ title: '已取消授权', icon: 'none' })
+				} else {
+					console.error('[aiRecommend] 手机号授权失败:', detail.errMsg)
+					uni.showToast({ title: '授权失败，请重试', icon: 'none' })
+				}
+				this.closeLoginPopup()
+				return
+			}
+
+			const phoneCode = detail.code
+			if (!phoneCode) {
+				console.error('[aiRecommend] 未获取到 phoneCode，detail:', JSON.stringify(detail))
+				uni.showToast({ title: '获取手机号失败，请检查小程序认证状态', icon: 'none' })
+				this.closeLoginPopup()
+				return
+			}
+
+			try {
+				uni.showLoading({ title: '登录中...', mask: true })
+				const result = await runPhoneLogin(phoneCode)
+				uni.hideLoading()
+
+				if (!result.ok) {
+					if (result.errorKind === 'login') {
+						uni.showToast({ title: '获取登录凭证失败', icon: 'none' })
+					} else {
+						uni.showToast({ title: result.errorMsg || '登录失败', icon: 'none' })
+					}
+					this.closeLoginPopup()
+					return
+				}
+
+				// 关闭手机号登录弹窗
+				this.showLoginPopup = false
+				this.loginAgreementChecked = false
+				if (result.phoneHasFullProfile) {
+					uni.showToast({ title: '登录成功', icon: 'success' })
+				} else {
+					this.openProfilePopup()
+				}
+			} catch (err) {
+				uni.hideLoading()
+				console.error('[aiRecommend] 手机号登录失败:', err)
+				uni.showToast({ title: '登录失败，请重试', icon: 'none' })
+			}
+		},
+
+		// 打开头像昵称授权弹窗
+		openProfilePopup() {
+			const info = getUserInfo()
+			this.profileAvatarUrl = info?.avatarUrl || ''
+			this.profileNickname = info?.nickname || ''
+			this.showProfilePopup = true
+		},
+
+		onChooseAvatar(e: any) {
+			const url = e?.detail?.avatarUrl
+			if (url) this.profileAvatarUrl = String(url)
+		},
+
+		async submitProfile() {
+			const nickname = (this.profileNickname || '').trim()
+			const avatarUrl = this.profileAvatarUrl || ''
+			if (nickname === '' && avatarUrl === '') {
+				this.skipProfile()
+				return
+			}
+			const optimistic: UserInfo = {
+				id: 0,
+				openid: '',
+				phone: null,
+				nickname: nickname !== '' ? nickname : null,
+				avatarUrl: avatarUrl !== '' ? avatarUrl : null
+			}
+			mergeUserInfo(optimistic)
+			try {
+				uni.showLoading({ title: '更新中...', mask: true })
+				const result = await submitUserProfile({
+					nickname: nickname !== '' ? nickname : undefined,
+					avatarUrl: avatarUrl !== '' ? avatarUrl : undefined
+				})
+				uni.hideLoading()
+				if (!result.ok) {
+					uni.showToast({ title: result.errorMsg || '更新失败', icon: 'none' })
+				}
+			} catch (err) {
+				console.error('[aiRecommend] 更新头像昵称失败:', err)
+				uni.hideLoading()
+				uni.showToast({ title: '更新失败，请重试', icon: 'none' })
+			} finally {
+				this.finishProfile()
+			}
+		},
+
+		skipProfile() {
+			this.finishProfile()
+		},
+
+		finishProfile() {
+			this.showProfilePopup = false
+			this.profileAvatarUrl = ''
+			this.profileNickname = ''
+			uni.showToast({ title: '登录成功', icon: 'success' })
 		}
 	}
 }

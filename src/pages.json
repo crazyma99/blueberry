@@ -81,6 +81,12 @@
 			"style": {
 				"navigationBarTitleText": "AI分析中"
 			}
+		},
+		{
+			"path": "pages/aiRecommendResult/index",
+			"style": {
+				"navigationBarTitleText": "AI推荐结果"
+			}
 		}
 	],
 	"globalStyle": {
