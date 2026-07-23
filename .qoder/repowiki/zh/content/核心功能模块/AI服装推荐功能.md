@@ -9,10 +9,21 @@
 - [src/utils/http.uts](file://src/utils/http.uts)
 - [src/utils/auth.uts](file://src/utils/auth.uts)
 - [src/utils/config.uts](file://src/utils/config.uts)
+- [src/utils/loginFlow.uts](file://src/utils/loginFlow.uts)
+- [src/utils/profileSubmit.uts](file://src/utils/profileSubmit.uts)
+- [src/utils/legal.uts](file://src/utils/legal.uts)
 - [src/components/AppFooter/AppFooter.uvue](file://src/components/AppFooter/AppFooter.uvue)
 - [src/pages.json](file://src/pages.json)
-- [README.md](file://README.md)
 </cite>
+
+## 更新摘要
+**变更内容**
+- 新增完整的登录流程管理系统，包括微信授权登录和手机号绑定
+- 实现用户资料完善系统，支持头像选择和昵称编辑
+- 增强错误处理机制，包含401未授权处理和请求挂起队列
+- 优化结果展示页面，增加智能性别过滤功能
+- 实现180秒超时轮询机制，提升用户体验
+- 新增登录弹窗系统和用户协议同意机制
 
 ## 目录
 1. [简介](#简介)
@@ -26,17 +37,17 @@
 9. [结论](#结论)
 
 ## 简介
-本章节聚焦于“AI服装推荐”能力，该能力由三个页面组成：上传照片、等待分析、展示结果。用户通过上传个人照片触发后端AI分析，系统返回用户画像（性别、年龄、脸型、体型、风格关键词）以及若干推荐的服饰风格卡片，点击后可跳转到“AI试衣模板列表”进行进一步交互。整个流程涉及前端上传、轮询获取结果、结果渲染与跳转等关键步骤，并内置了登录态管理、请求挂起重试、错误提示等通用机制。
+本章节聚焦于"AI服装推荐"能力，该能力经过重大增强后，现在提供完整的用户认证、资料管理和智能推荐服务。系统由三个核心页面组成：上传照片、等待分析、展示结果。用户通过上传个人照片触发后端AI分析，系统返回用户画像（性别、年龄、脸型、体型、风格关键词）以及若干推荐的服饰风格卡片。整个流程现已集成完整的登录态管理、用户资料完善系统、增强的错误处理机制和智能性别过滤功能。
 
 ## 项目结构
-AI服装推荐相关代码位于 pages 与 utils 两个层次：
-- 页面层：负责用户交互、状态管理与路由跳转
-- 工具层：封装网络请求、认证、配置与业务接口
+AI服装推荐相关代码位于 pages 与 utils 两个层次，经过增强后新增了登录流程和用户资料管理模块：
+- 页面层：负责用户交互、状态管理与路由跳转，现包含登录弹窗和用户资料完善对话框
+- 工具层：封装网络请求、认证、配置、登录流程和用户资料提交等业务接口
 
 ```mermaid
 graph TB
 subgraph "页面层"
-A["aiRecommend/index.uvue<br/>上传与发起分析"]
+A["aiRecommend/index.uvue<br/>上传与发起分析+登录弹窗"]
 B["aiRecommendLoading/index.uvue<br/>轮询与分析中UI"]
 C["aiRecommendResult/index.uvue<br/>结果展示与跳转"]
 end
@@ -45,54 +56,66 @@ D["api.uts<br/>上传/推荐接口封装"]
 E["http.uts<br/>统一请求/401处理/重试"]
 F["auth.uts<br/>Token/用户信息/过期标志"]
 G["config.uts<br/>baseURL/超时"]
-H["AppFooter.uvue<br/>页脚版权文本"]
+H["loginFlow.uts<br/>登录流程管理"]
+I["profileSubmit.uts<br/>用户资料提交"]
+J["legal.uts<br/>法律协议管理"]
+K["AppFooter.uvue<br/>页脚版权文本"]
 end
 A --> D
+A --> H
+A --> I
+A --> J
 B --> D
-C --> H
+C --> K
 D --> E
 E --> F
 E --> G
+H --> D
+H --> F
+I --> D
+I --> F
 ```
 
-图表来源
-- [src/pages/aiRecommend/index.uvue:1-222](file://src/pages/aiRecommend/index.uvue#L1-L222)
+**图表来源**
+- [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
 - [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
-- [src/pages/aiRecommendResult/index.uvue:1-284](file://src/pages/aiRecommendResult/index.uvue#L1-L284)
-- [src/utils/api.uts:1-607](file://src/utils/api.uts#L1-L607)
+- [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
+- [src/utils/api.uts:1-609](file://src/utils/api.uts#L1-L609)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
-- [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
-- [src/components/AppFooter/AppFooter.uvue:1-25](file://src/components/AppFooter/AppFooter.uvue#L1-L25)
-
-章节来源
-- [src/pages.json:74-90](file://src/pages.json#L74-L90)
-- [README.md:136-166](file://README.md#L136-L166)
+- [src/utils/loginFlow.uts:1-75](file://src/utils/loginFlow.uts#L1-L75)
+- [src/utils/profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
+- [src/utils/legal.uts:1-16](file://src/utils/legal.uts#L1-L16)
 
 ## 核心组件
-- 上传与发起分析页面：提供图片选择、预览、大小校验、上传与跳转至分析中的页面
-- 分析中页面：维护轮询定时器与倒计时，失败态支持重试与返回
-- 结果展示页面：解析并展示分析结果与推荐列表，点击卡片跳转至AI试衣模板列表
-- 接口封装：上传与推荐接口，包含401挂起队列与登录后自动重试
-- 请求层：统一请求头注入、401处理、挂起队列与flush重试
-- 认证模块：token与用户信息管理、登录过期标志消费
-- 配置模块：API域名与超时时间
-- 公共组件：全局页脚版权文本
+- **上传与发起分析页面**：提供图片选择、预览、大小校验、上传与跳转至分析中的页面，现包含完整的登录检查和弹窗系统
+- **分析中页面**：维护轮询定时器与倒计时，超过180秒自动失败，失败态支持重试与返回
+- **结果展示页面**：解析并展示分析结果与推荐列表，根据分析结果中的性别字段设置筛选条件，点击卡片跳转至AI试衣模板列表
+- **登录流程管理**：实现微信授权登录、手机号绑定和用户资料完善的完整流程
+- **用户资料提交**：处理头像选择和昵称编辑的用户资料更新逻辑
+- **接口封装**：上传与推荐接口，包含401挂起队列与登录后自动重试
+- **请求层**：统一请求头注入、401处理、挂起队列与flush重试
+- **认证模块**：token与用户信息管理、登录过期标志消费
+- **配置模块**：API域名与超时时间
+- **公共组件**：全局页脚版权文本
 
-章节来源
-- [src/pages/aiRecommend/index.uvue:37-116](file://src/pages/aiRecommend/index.uvue#L37-L116)
-- [src/pages/aiRecommendLoading/index.uvue:33-137](file://src/pages/aiRecommendLoading/index.uvue#L33-L137)
-- [src/pages/aiRecommendResult/index.uvue:78-121](file://src/pages/aiRecommendResult/index.uvue#L78-L121)
-- [src/utils/api.uts:441-607](file://src/utils/api.uts#L441-L607)
+**章节来源**
+- [src/pages/aiRecommend/index.uvue:158-344](file://src/pages/aiRecommend/index.uvue#L158-L344)
+- [src/pages/aiRecommendLoading/index.uvue:63-134](file://src/pages/aiRecommendLoading/index.uvue#L63-L134)
+- [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
+- [src/utils/profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
+- [src/utils/api.uts:443-608](file://src/utils/api.uts#L443-L608)
 - [src/utils/http.uts:93-163](file://src/utils/http.uts#L93-L163)
-- [src/utils/auth.uts:157-171](file://src/utils/auth.uts#L157-L171)
+- [src/utils/auth.uts:127-171](file://src/utils/auth.uts#L127-L171)
 - [src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
 - [src/components/AppFooter/AppFooter.uvue:14-24](file://src/components/AppFooter/AppFooter.uvue#L14-L24)
 
 ## 架构总览
-AI服装推荐的整体调用链如下：
-- 用户在上传页面选择照片并触发上传
-- 上传成功后进入分析中页面，启动轮询请求推荐接口
+增强后的AI服装推荐整体调用链如下：
+- 用户在上传页面选择照片并检查登录态，未登录则弹出登录弹窗
+- 完成登录后进行用户资料完善（如果需要），然后上传照片
+- 上传成功后进入分析中页面，启动180秒超时的轮询请求推荐接口
 - 当接口返回成功数据时，跳转到结果页面展示分析与推荐列表
 - 点击推荐卡片后跳转到AI试衣模板列表，携带风格名与性别筛选参数
 
@@ -100,140 +123,220 @@ AI服装推荐的整体调用链如下：
 sequenceDiagram
 participant U as "用户"
 participant P1 as "上传页面(aiRecommend)"
+participant AUTH as "认证(auth.uts)"
+participant LOGIN as "登录流程(loginFlow)"
 participant API as "接口封装(api.uts)"
 participant HTTP as "请求层(http.uts)"
-participant AUTH as "认证(auth.uts)"
 participant CFG as "配置(config.uts)"
+participant PROFILE as "用户资料(profileSubmit)"
 participant P2 as "分析中页面(aiRecommendLoading)"
 participant P3 as "结果页面(aiRecommendResult)"
 U->>P1 : 选择照片并点击开始分析
+P1->>AUTH : 检查登录状态
+alt 未登录
+P1->>P1 : 显示登录弹窗
+U->>P1 : 同意协议并授权登录
+P1->>LOGIN : 执行登录流程
+LOGIN->>API : 微信登录获取token
+LOGIN->>PROFILE : 可选：完善用户资料
+end
 P1->>API : uploadPhoto(filePath)
 API->>HTTP : request(POST /upload, header=Authorization)
 HTTP->>CFG : getHttpConfig()
 HTTP-->>API : 响应数据(code/data)
 API-->>P1 : {code,data.filename}
 P1->>P2 : navigateTo(带filename, shopId)
+P2->>P2 : 启动180秒超时轮询
+loop 每30秒轮询
 P2->>API : getAiRecommend({user_photo_filename, shop_id})
 API->>HTTP : request(POST /recommend)
 HTTP-->>API : 响应数据(code/data)
 API-->>P2 : {analysis,recommendations}
+end
 P2->>P3 : redirectTo(带data)
 P3-->>U : 展示分析与推荐列表
 ```
 
-图表来源
-- [src/pages/aiRecommend/index.uvue:75-113](file://src/pages/aiRecommend/index.uvue#L75-L113)
-- [src/pages/aiRecommendLoading/index.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
-- [src/pages/aiRecommendResult/index.uvue:90-118](file://src/pages/aiRecommendResult/index.uvue#L90-L118)
-- [src/utils/api.uts:441-480](file://src/utils/api.uts#L441-L480)
-- [src/utils/api.uts:588-607](file://src/utils/api.uts#L588-L607)
+**图表来源**
+- [src/pages/aiRecommend/index.uvue:158-285](file://src/pages/aiRecommend/index.uvue#L158-L285)
+- [src/pages/aiRecommendLoading/index.uvue:63-113](file://src/pages/aiRecommendLoading/index.uvue#L63-L113)
+- [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
+- [src/utils/api.uts:443-608](file://src/utils/api.uts#L443-L608)
 - [src/utils/http.uts:93-163](file://src/utils/http.uts#L93-L163)
 - [src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
 
 ## 详细组件分析
 
 ### 上传与发起分析页面（aiRecommend）
-- 功能要点
+**更新** 新增完整的登录流程管理和用户资料完善系统
+
+- **功能要点**
   - 图片选择与预览，限制最大10MB
+  - 上传前检查登录态，未登录自动拉起登录弹窗
+  - 支持微信授权登录和用户协议同意机制
+  - 登录成功后可选择完善用户资料（头像和昵称）
   - 调用上传接口，成功后记录文件名并跳转分析中页面
   - 若已上传过则直接跳转，避免重复上传
   - 错误处理：未授权由全局机制处理，其他错误提示重试
-- 关键路径
-  - 选择照片与预览：[src/pages/aiRecommend/index.uvue:56-73](file://src/pages/aiRecommend/index.uvue#L56-L73)
-  - 开始分析流程：[src/pages/aiRecommend/index.uvue:75-113](file://src/pages/aiRecommend/index.uvue#L75-L113)
-  - 跳转分析中页面：[src/pages/aiRecommend/index.uvue:109-113](file://src/pages/aiRecommend/index.uvue#L109-L113)
+- **关键路径**
+  - 登录检查与弹窗控制：[src/pages/aiRecommend/index.uvue:165-175](file://src/pages/aiRecommend/index.uvue#L165-L175)
+  - 微信授权登录流程：[src/pages/aiRecommend/index.uvue:229-285](file://src/pages/aiRecommend/index.uvue#L229-L285)
+  - 用户资料完善对话框：[src/pages/aiRecommend/index.uvue:287-343](file://src/pages/aiRecommend/index.uvue#L287-L343)
+  - 上传与跳转逻辑：[src/pages/aiRecommend/index.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-L202)
 
-章节来源
-- [src/pages/aiRecommend/index.uvue:56-113](file://src/pages/aiRecommend/index.uvue#L56-L113)
+**章节来源**
+- [src/pages/aiRecommend/index.uvue:158-343](file://src/pages/aiRecommend/index.uvue#L158-L343)
 
 ### 分析中页面（aiRecommendLoading）
-- 功能要点
+**更新** 实现180秒超时轮询机制
+
+- **功能要点**
   - 启动计时器显示已等待秒数，超过180秒自动失败
   - 每30秒轮询一次推荐接口，首次立即调用
   - 连续3次网络错误即失败；成功则跳转结果页
   - 失败态支持重试与返回
-- 关键路径
+- **关键路径**
   - 启动轮询与计时：[src/pages/aiRecommendLoading/index.uvue:63-85](file://src/pages/aiRecommendLoading/index.uvue#L63-L85)
   - 轮询调用与错误计数：[src/pages/aiRecommendLoading/index.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
   - 停止定时器与失败处理：[src/pages/aiRecommendLoading/index.uvue:115-134](file://src/pages/aiRecommendLoading/index.uvue#L115-L134)
 
-章节来源
+**章节来源**
 - [src/pages/aiRecommendLoading/index.uvue:63-134](file://src/pages/aiRecommendLoading/index.uvue#L63-L134)
 
 ### 结果展示页面（aiRecommendResult）
-- 功能要点
-  - 解析URL参数中的JSON数据，展示分析结果与推荐列表
-  - 根据分析结果中的性别字段设置筛选条件
-  - 点击推荐卡片跳转到AI试衣模板列表，传递风格名与性别
-- 关键路径
-  - 解析参数与初始化：[src/pages/aiRecommendResult/index.uvue:90-109](file://src/pages/aiRecommendResult/index.uvue#L90-L109)
-  - 跳转逻辑：[src/pages/aiRecommendResult/index.uvue:111-118](file://src/pages/aiRecommendResult/index.uvue#L111-L118)
+**更新** 增强智能性别过滤功能
 
-章节来源
-- [src/pages/aiRecommendResult/index.uvue:90-118](file://src/pages/aiRecommendResult/index.uvue#L90-L118)
+- **功能要点**
+  - 解析URL参数中的JSON数据，展示分析结果与推荐列表
+  - 根据分析结果中的性别字段设置筛选条件（male/female）
+  - 点击推荐卡片跳转到AI试衣模板列表，传递风格名与性别
+  - 支持无同性样例的友好提示
+- **关键路径**
+  - 解析参数与初始化：[src/pages/aiRecommendResult/index.uvue:86-105](file://src/pages/aiRecommendResult/index.uvue#L86-L105)
+  - 跳转逻辑与性别参数传递：[src/pages/aiRecommendResult/index.uvue:107-115](file://src/pages/aiRecommendResult/index.uvue#L107-L115)
+
+**章节来源**
+- [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+
+### 登录流程管理（loginFlow.uts）
+**新增** 完整的登录三步骤纯逻辑封装
+
+- **功能要点**
+  - 静默登录获取微信code
+  - 使用code换取token和用户信息
+  - 绑定手机号并合并用户信息
+  - 登录成功后自动重试所有挂起的请求和上传
+  - 统一的错误处理和结果返回
+- **关键路径**
+  - 登录流程执行：[src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
+
+**章节来源**
+- [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
+
+### 用户资料提交（profileSubmit.uts）
+**新增** 头像昵称授权submit纯逻辑封装
+
+- **功能要点**
+  - 提交头像和昵称到后端并合并写入本地
+  - 支持至少一个字段非空的验证
+  - 统一的错误处理和结果返回
+- **关键路径**
+  - 用户资料提交：[src/utils/profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
+
+**章节来源**
+- [src/utils/profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
 
 ### 接口封装（api.uts）
-- 上传接口
+**更新** 增强401挂起队列和登录重试机制
+
+- **上传接口**
   - 使用uni.uploadFile，携带Authorization头
   - 401时清空登录态并加入上传挂起队列，触发登录事件
   - 登录成功后可批量重试上传
-- 推荐接口
+- **推荐接口**
   - POST /api/aiface/recommend，返回analysis与recommendations
   - code为0或200表示成功
-- 关键路径
-  - 上传接口实现与401挂起：[src/utils/api.uts:441-480](file://src/utils/api.uts#L441-L480)
-  - 推荐接口定义与类型：[src/utils/api.uts:564-607](file://src/utils/api.uts#L564-L607)
+- **关键路径**
+  - 上传接口实现与401挂起：[src/utils/api.uts:443-482](file://src/utils/api.uts#L443-L482)
+  - 推荐接口定义与类型：[src/utils/api.uts:590-608](file://src/utils/api.uts#L590-L608)
 
-章节来源
-- [src/utils/api.uts:441-480](file://src/utils/api.uts#L441-L480)
-- [src/utils/api.uts:564-607](file://src/utils/api.uts#L564-L607)
+**章节来源**
+- [src/utils/api.uts:443-482](file://src/utils/api.uts#L443-L482)
+- [src/utils/api.uts:590-608](file://src/utils/api.uts#L590-L608)
 
 ### 请求层（http.uts）
-- 功能要点
+**更新** 增强的401处理和请求挂起机制
+
+- **功能要点**
   - 统一request/get/post，自动拼接baseURL与超时
   - 自动附加Content-Type、X-App-Code与Authorization头
   - 401时清空登录态、标记过期、挂起请求并在登录后flush重试
-- 关键路径
+  - 防止死循环的重试保护机制
+- **关键路径**
   - 请求封装与401处理：[src/utils/http.uts:93-163](file://src/utils/http.uts#L93-L163)
   - flushPendingRequests与rejectAllPending：[src/utils/http.uts:42-91](file://src/utils/http.uts#L42-L91)
 
-章节来源
+**章节来源**
 - [src/utils/http.uts:42-91](file://src/utils/http.uts#L42-L91)
 - [src/utils/http.uts:93-163](file://src/utils/http.uts#L93-L163)
 
 ### 认证模块（auth.uts）
-- 功能要点
+**更新** 增强登录过期标志管理
+
+- **功能要点**
   - token与用户信息的存取、合并写入、登出
   - 登录过期标志的置位与消费，供页面onShow检查拉起登录弹窗
-- 关键路径
+  - 增强的用户信息合并逻辑，防止空值覆盖
+- **关键路径**
   - 登录成功与登出：[src/utils/auth.uts:157-171](file://src/utils/auth.uts#L157-L171)
   - 过期标志与消费：[src/utils/auth.uts:127-141](file://src/utils/auth.uts#L127-L141)
+  - 用户信息合并：[src/utils/auth.uts:92-106](file://src/utils/auth.uts#L92-L106)
 
-章节来源
-- [src/utils/auth.uts:127-171](file://src/utils/auth.uts#L127-L171)
+**章节来源**
+- [src/utils/auth.uts:92-171](file://src/utils/auth.uts#L92-L171)
 
 ### 配置模块（config.uts）
-- 功能要点
+- **功能要点**
   - 集中管理API base URL与超时时间
-- 关键路径
+- **关键路径**
   - baseURL与timeout：[src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
 
-章节来源
+**章节来源**
 - [src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
 
+### 法律协议管理（legal.uts）
+**新增** 用户协议和隐私政策管理
+
+- **功能要点**
+  - 动态应用名称和协议标题
+  - 打开用户协议和隐私政策的导航方法
+- **关键路径**
+  - 协议名称定义：[src/utils/legal.uts:1-3](file://src/utils/legal.uts#L1-L3)
+  - 协议页面导航：[src/utils/legal.uts:5-15](file://src/utils/legal.uts#L5-L15)
+
+**章节来源**
+- [src/utils/legal.uts:1-15](file://src/utils/legal.uts#L1-L15)
+
 ### 公共组件（AppFooter）
-- 功能要点
+- **功能要点**
   - 提供统一的版权文本，便于profile替换
-- 关键路径
+- **关键路径**
   - 组件结构与默认文案：[src/components/AppFooter/AppFooter.uvue:14-24](file://src/components/AppFooter/AppFooter.uvue#L14-L24)
 
-章节来源
+**章节来源**
 - [src/components/AppFooter/AppFooter.uvue:14-24](file://src/components/AppFooter/AppFooter.uvue#L14-L24)
 
 ## 依赖关系分析
+**更新** 新增登录流程和用户资料管理的依赖关系
+
 - 页面到接口：上传与推荐页面均依赖api.uts暴露的方法
+- 页面到登录流程：上传页面依赖loginFlow.uts进行登录管理
+- 页面到用户资料：上传页面依赖profileSubmit.uts进行资料提交
 - 接口到请求层：api.uts内部使用http.uts的request与uploadFile
 - 请求层到认证与配置：http.uts依赖auth.uts的token读取与过期标志，依赖config.uts的baseURL与超时
+- 登录流程到接口：loginFlow.uts依赖api.uts的登录相关接口
+- 用户资料到接口：profileSubmit.uts依赖api.uts的用户信息更新接口
 - 结果页到公共组件：结果页引入AppFooter用于底部版权
 
 ```mermaid
@@ -242,6 +345,8 @@ class AiRecommendPage {
 +choosePhoto()
 +handleStartAnalysis()
 +navigateToLoading()
++onGetPhoneNumber()
++submitProfile()
 }
 class AiRecommendLoadingPage {
 +startAnalysis()
@@ -251,9 +356,18 @@ class AiRecommendLoadingPage {
 class AiRecommendResultPage {
 +onRecClick(rec)
 }
+class LoginFlow {
++runPhoneLogin(phoneCode)
+}
+class ProfileSubmit {
++submitUserProfile(payload)
+}
 class ApiModule {
 +uploadPhoto(filePath)
 +getAiRecommend(params)
++wxLogin(params)
++wxBindPhone(code)
++wxUpdateUserInfo(params)
 }
 class HttpModule {
 +request(opts)
@@ -265,70 +379,102 @@ class AuthModule {
 +clearToken()
 +markLoginExpired()
 +consumeLoginExpired()
++mergeUserInfo(partial)
 }
 class ConfigModule {
 +getHttpConfig()
+}
+class LegalModule {
++openUserAgreement()
++openPrivacyPolicy()
 }
 class AppFooter {
 +copyrightText
 }
 AiRecommendPage --> ApiModule : "调用上传/推荐"
+AiRecommendPage --> LoginFlow : "执行登录流程"
+AiRecommendPage --> ProfileSubmit : "提交用户资料"
+AiRecommendPage --> LegalModule : "打开法律协议"
 AiRecommendLoadingPage --> ApiModule : "轮询推荐"
 AiRecommendResultPage --> AppFooter : "引用页脚"
+LoginFlow --> ApiModule : "调用登录接口"
+LoginFlow --> AuthModule : "管理登录状态"
+ProfileSubmit --> ApiModule : "更新用户信息"
 ApiModule --> HttpModule : "基于request/uploadFile"
 HttpModule --> AuthModule : "读取/清理token"
 HttpModule --> ConfigModule : "读取baseURL/超时"
 ```
 
-图表来源
-- [src/pages/aiRecommend/index.uvue:56-113](file://src/pages/aiRecommend/index.uvue#L56-L113)
-- [src/pages/aiRecommendLoading/index.uvue:63-113](file://src/pages/aiRecommendLoading/index.uvue#L63-L113)
-- [src/pages/aiRecommendResult/index.uvue:90-118](file://src/pages/aiRecommendResult/index.uvue#L90-L118)
-- [src/utils/api.uts:441-607](file://src/utils/api.uts#L441-L607)
+**图表来源**
+- [src/pages/aiRecommend/index.uvue:158-343](file://src/pages/aiRecommend/index.uvue#L158-L343)
+- [src/pages/aiRecommendLoading/index.uvue:63-134](file://src/pages/aiRecommendLoading/index.uvue#L63-L134)
+- [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
+- [src/utils/profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
+- [src/utils/api.uts:443-608](file://src/utils/api.uts#L443-L608)
 - [src/utils/http.uts:93-163](file://src/utils/http.uts#L93-L163)
-- [src/utils/auth.uts:127-171](file://src/utils/auth.uts#L127-L171)
+- [src/utils/auth.uts:92-171](file://src/utils/auth.uts#L92-L171)
 - [src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
-- [src/components/AppFooter/AppFooter.uvue:14-24](file://src/components/AppFooter/AppFooter.uvue#L14-L24)
+- [src/utils/legal.uts:5-15](file://src/utils/legal.uts#L5-L15)
 
-章节来源
+**章节来源**
 - [src/pages.json:74-90](file://src/pages.json#L74-L90)
 
 ## 性能与体验优化建议
-- 轮询频率与超时
-  - 当前轮询间隔为30秒，超时为180秒。可根据后端实际处理时长调整间隔与上限，减少无效请求与等待焦虑
-- 图片上传体积控制
-  - 前端已限制10MB，建议在上传前进行压缩或转码，降低带宽占用与上传耗时
-- 结果缓存与去抖
-  - 对于相同filename的请求，可在本地做短时缓存，避免短时间内重复轮询
-- 错误提示优化
-  - 对网络异常与服务器错误进行分类提示，提升用户感知与操作指引
-- 资源加载
-  - 结果页的图片建议使用懒加载与占位图，提升首屏渲染速度
+**更新** 基于新功能特性的优化建议
 
-[本节为通用建议，不直接分析具体文件]
+- **轮询频率与超时**
+  - 当前轮询间隔为30秒，超时为180秒。可根据后端实际处理时长调整间隔与上限，减少无效请求与等待焦虑
+- **图片上传体积控制**
+  - 前端已限制10MB，建议在上传前进行压缩或转码，降低带宽占用与上传耗时
+- **结果缓存与去抖**
+  - 对于相同filename的请求，可在本地做短时缓存，避免短时间内重复轮询
+- **错误提示优化**
+  - 对网络异常与服务器错误进行分类提示，提升用户感知与操作指引
+  - 登录失败的错误分类处理，提供更明确的错误信息
+- **资源加载**
+  - 结果页的图片建议使用懒加载与占位图，提升首屏渲染速度
+- **登录流程优化**
+  - 考虑实现登录状态的本地缓存，减少重复登录
+  - 优化用户资料提交的乐观更新策略
 
 ## 故障排查指南
-- 上传失败
+**更新** 新增登录流程和用户资料相关的故障排查
+
+- **上传失败**
   - 检查文件大小是否超过10MB
   - 确认Authorization头是否正确注入
   - 查看401是否触发登录流程，必要时重新登录
-- 分析中长时间无结果
+- **登录问题**
+  - 检查微信授权是否成功获取code
+  - 确认用户协议是否已同意
+  - 验证手机号绑定是否成功
+  - 检查登录成功后是否有正确的token和用户信息
+- **用户资料完善问题**
+  - 确认头像选择是否成功
+  - 检查昵称输入是否符合要求
+  - 验证用户资料提交是否成功
+- **分析中长时间无结果**
   - 检查轮询是否被正确启动与清理
   - 观察网络错误计数是否达到阈值导致失败
   - 确认后端接口是否返回期望的code与data
-- 结果页无法解析
+  - 检查180秒超时是否合理
+- **结果页无法解析**
   - 检查URL参数data是否为合法JSON字符串
   - 确认analysis与recommendations字段是否存在
-- 跳转AI试衣模板列表失败
+  - 验证性别字段格式是否正确
+- **跳转AI试衣模板列表失败**
   - 核对style与gender参数是否正确编码与传递
   - 确认目标页面路由存在且接收参数
 
-章节来源
-- [src/pages/aiRecommend/index.uvue:75-107](file://src/pages/aiRecommend/index.uvue#L75-L107)
-- [src/pages/aiRecommendLoading/index.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
-- [src/pages/aiRecommendResult/index.uvue:90-118](file://src/pages/aiRecommendResult/index.uvue#L90-L118)
-- [src/utils/api.uts:441-480](file://src/utils/api.uts#L441-L480)
-- [src/utils/http.uts:124-150](file://src/utils/http.uts#L124-L150)
+**章节来源**
+- [src/pages/aiRecommend/index.uvue:158-343](file://src/pages/aiRecommend/index.uvue#L158-L343)
+- [src/pages/aiRecommendLoading/index.uvue:63-134](file://src/pages/aiRecommendLoading/index.uvue#L63-L134)
+- [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
+- [src/utils/profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
+- [src/utils/api.uts:443-608](file://src/utils/api.uts#L443-L608)
+- [src/utils/http.uts:93-163](file://src/utils/http.uts#L93-L163)
 
 ## 结论
-AI服装推荐功能以清晰的三段式页面流程完成从上传到结果展示的闭环，并通过统一的请求层与认证模块保障登录态与401处理的健壮性。轮询策略与错误计数提升了长任务场景下的用户体验。后续可在轮询频率、图片压缩、结果缓存与错误分类方面进一步优化，以获得更流畅与稳定的使用体验。
+AI服装推荐功能经过重大增强后，现已形成完整的用户认证、资料管理和智能推荐服务体系。新的架构以清晰的三段式页面流程完成从上传到结果展示的闭环，并通过统一的请求层与认证模块保障登录态与401处理的健壮性。新增的登录流程管理、用户资料完善系统和180秒超时轮询机制显著提升了用户体验。智能性别过滤功能和增强的错误处理机制进一步增强了系统的稳定性和易用性。后续可在轮询频率、图片压缩、结果缓存、登录状态缓存和错误分类方面进一步优化，以获得更流畅与稳定的使用体验。

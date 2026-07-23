@@ -5,6 +5,11 @@
 - [src/pages/aiTryOn/index.uvue](file://src/pages/aiTryOn/index.uvue)
 - [src/pages/aiTryOnHistory/index.uvue](file://src/pages/aiTryOnHistory/index.uvue)
 - [src/pages/aiTryOnResult/index.uvue](file://src/pages/aiTryOnResult/index.uvue)
+- [src/pages/demoDetail/index.uvue](file://src/pages/demoDetail/index.uvue)
+- [src/pages/targetPhotoDetail/index.uvue](file://src/pages/targetPhotoDetail/index.uvue)
+- [src/pages/aiRecommend/index.uvue](file://src/pages/aiRecommend/index.uvue)
+- [src/pages/aiRecommendLoading/index.uvue](file://src/pages/aiRecommendLoading/index.uvue)
+- [src/pages/aiRecommendResult/index.uvue](file://src/pages/aiRecommendResult/index.uvue)
 - [src/utils/api.uts](file://src/utils/api.uts)
 - [src/utils/auth.uts](file://src/utils/auth.uts)
 - [src/utils/http.uts](file://src/utils/http.uts)
@@ -21,18 +26,11 @@
 
 ## 更新摘要
 **所做更改**
-- 新增AI试衣历史记录页面，提供用户试衣历史查询和管理功能
-- 增强模板过滤能力，新增category和subCategory参数支持
-- 优化参数处理机制，改进shopId参数处理逻辑
-- 新增微信认证系统集成，实现完整的三步登录流程
-- 完善导航系统集成，更新页面标题管理
-- 增强用户认证系统，支持头像昵称完善和手机号绑定
-- **新增**：照片上传状态指示器，提供实时上传进度反馈
-- **新增**：自动上传机制，优化用户上传体验
-- **新增**：样式参数支持，增强模板自定义能力
-- **更新**：AI试衣页面集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗
-- **更新**：AI试衣历史和结果页面改进API响应处理，支持多种成功码格式（0和200）
-- **更新**：结果页面进行UI样式优化和加载提示调整
+- **新增**：AI试衣功能与AI推荐系统实现无缝集成，支持性别参数传递和条件渲染逻辑
+- **新增**：demoDetail和targetPhotoDetail页面根据tryonDisabled标志动态显示AI试衣按钮
+- **新增**：AI推荐结果页面支持性别筛选，自动跳转到对应的AI试衣模板列表
+- **增强**：AI试衣主页面支持gender参数接收和模板过滤
+- **优化**：实现了从AI推荐到AI试衣的完整用户流程闭环
 
 ## 目录
 1. [简介](#简介)
@@ -42,16 +40,17 @@
 5. [详细组件分析](#详细组件分析)
 6. [AI试衣历史记录页面](#ai试衣历史记录页面)
 7. [微信认证系统](#微信认证系统)
-8. [依赖关系分析](#依赖关系分析)
-9. [性能考虑](#性能考虑)
-10. [故障排除指南](#故障排除指南)
-11. [结论](#结论)
+8. **新增**：[AI推荐系统集成](#ai推荐系统集成)
+9. [依赖关系分析](#依赖关系分析)
+10. [性能考虑](#性能考虑)
+11. [故障排除指南](#故障排除指南)
+12. [结论](#结论)
 
 ## 简介
 
-AI试衣功能是基于uni-app x框架开发的微信小程序特色功能，允许用户上传自己的照片，选择不同的服饰模板进行虚拟试穿，生成AI生成的试穿效果图片。该功能集成了完整的用户认证系统、图片上传处理、AI任务调度和结果轮询机制。
+AI试衣功能是基于uni-app x框架开发的微信小程序特色功能，允许用户上传自己的照片，选择不同的服饰模板进行虚拟试穿，生成AI生成的试穿效果图片。该功能集成了完整的用户认证系统、图片上传处理、AI任务调度和结果轮询机制。**最新更新**：AI试衣功能已与AI推荐系统实现无缝集成，支持性别参数传递和条件渲染逻辑，demoDetail和targetPhotoDetail页面根据tryonDisabled标志动态显示AI试衣按钮。
 
-**更新** 新增了AI试衣历史记录页面，提供用户试衣历史查询和管理功能。增强了模板过滤能力，支持category和subCategory参数。优化了参数处理机制，改进了shopId参数处理逻辑。新增了微信认证系统集成，实现了完整的三步登录流程（微信登录、手机号授权、头像昵称完善）。**新增**：照片上传状态指示器提供实时上传进度反馈，自动上传机制优化用户上传体验，样式参数支持增强模板自定义能力。**更新**：AI试衣页面集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗；AI试衣历史和结果页面改进API响应处理，支持多种成功码格式（0和200）；结果页面进行UI样式优化和加载提示调整。
+**更新** 新增了AI试衣历史记录页面，提供用户试衣历史查询和管理功能。增强了模板过滤能力，支持category和subCategory参数。优化了参数处理机制，改进了shopId参数处理逻辑。新增了微信认证系统集成，实现了完整的三步登录流程（微信登录、手机号授权、头像昵称完善）。**新增**：照片上传状态指示器提供实时上传进度反馈，自动上传机制优化用户上传体验，样式参数支持增强模板自定义能力。**更新**：AI试衣页面集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗；AI试衣历史和结果页面改进API响应处理，支持多种成功码格式（0和200）；结果页面进行UI样式优化和加载提示调整。**新增**：AI试衣功能与AI推荐系统实现无缝集成，支持性别参数传递和条件渲染逻辑。
 
 ## 项目结构
 
@@ -68,13 +67,20 @@ E[src/utils/auth.uts<br/>认证工具]
 F[src/utils/loginFlow.uts<br/>登录流程管理]
 G[src/utils/profileSubmit.uts<br/>资料提交工具]
 end
+subgraph "AI推荐系统集成"
+H[src/pages/aiRecommend/index.uvue<br/>AI推荐入口页面]
+I[src/pages/aiRecommendLoading/index.uvue<br/>AI推荐加载页面]
+J[src/pages/aiRecommendResult/index.uvue<br/>AI推荐结果页面]
+K[src/pages/demoDetail/index.uvue<br/>演示详情页面]
+L[src/pages/targetPhotoDetail/index.uvue<br/>目标照片详情页面]
+end
 subgraph "基础设施"
-H[src/utils/http.uts<br/>HTTP请求封装]
-I[src/utils/config.uts<br/>配置管理]
-J[src/pages.json<br/>页面路由配置]
-K[src/manifest.json<br/>应用清单]
-L[src/components/LoginDialog/LoginDialog.uvue<br/>登录弹窗组件]
-M[src/components/AppFooter/AppFooter.uvue<br/>应用页脚组件]
+M[src/utils/http.uts<br/>HTTP请求封装]
+N[src/utils/config.uts<br/>配置管理]
+O[src/pages.json<br/>页面路由配置]
+P[src/manifest.json<br/>应用清单]
+Q[src/components/LoginDialog/LoginDialog.uvue<br/>登录弹窗组件]
+R[src/components/AppFooter/AppFooter.uvue<br/>应用页脚组件]
 end
 A --> C
 B --> C
@@ -83,29 +89,56 @@ D --> E
 E --> F
 F --> G
 H --> I
-A --> J
-B --> J
-C --> J
-A --> L
-B --> L
-C --> L
-A --> M
-B --> M
-C --> M
+I --> J
+J --> A
+K --> A
+L --> A
+M --> N
+A --> O
+B --> O
+C --> O
+H --> O
+I --> O
+J --> O
+K --> O
+L --> O
+A --> Q
+B --> Q
+C --> Q
+H --> Q
+I --> Q
+J --> Q
+K --> Q
+L --> Q
+A --> R
+B --> R
+C --> R
+H --> R
+I --> R
+J --> R
+K --> R
+L --> R
 ```
 
 **图表来源**
-- [src/pages/aiTryOn/index.uvue:1-726](file://src/pages/aiTryOn/index.uvue#L1-L726)
+- [src/pages/aiTryOn/index.uvue:1-749](file://src/pages/aiTryOn/index.uvue#L1-L749)
 - [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
 - [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
-- [src/utils/api.uts:1-503](file://src/utils/api.uts#L1-L503)
-- [src/utils/loginFlow.uts:1-100](file://src/utils/loginFlow.uts#L1-L100)
+- [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
+- [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
+- [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
+- [src/pages/demoDetail/index.uvue:1-983](file://src/pages/demoDetail/index.uvue#L1-L983)
+- [src/pages/targetPhotoDetail/index.uvue:1-469](file://src/pages/targetPhotoDetail/index.uvue#L1-L469)
 
 **章节来源**
-- [src/pages/aiTryOn/index.uvue:1-726](file://src/pages/aiTryOn/index.uvue#L1-L726)
+- [src/pages/aiTryOn/index.uvue:1-749](file://src/pages/aiTryOn/index.uvue#L1-L749)
 - [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
 - [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
-- [src/utils/api.uts:1-503](file://src/utils/api.uts#L1-L503)
+- [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
+- [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
+- [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
+- [src/pages/demoDetail/index.uvue:1-983](file://src/pages/demoDetail/index.uvue#L1-L983)
+- [src/pages/targetPhotoDetail/index.uvue:1-469](file://src/pages/targetPhotoDetail/index.uvue#L1-L469)
 
 ## 核心组件
 
@@ -118,9 +151,10 @@ AI试衣功能由三个主要页面和一系列工具模块组成：
    - 用户参数选择（体型、年龄）
    - 照片上传功能
    - 生成按钮控制
+   - **新增**：性别参数接收和模板过滤支持
    - **新增**：微信登录弹窗和手机号授权
    - **新增**：头像昵称完善流程
-   - **增强**：增强的模板过滤参数（shopId、category、subCategory）
+   - **增强**：增强的模板过滤参数（shopId、category、subCategory、gender）
    - **新增**：照片上传状态指示器，提供实时上传进度反馈
    - **新增**：自动上传机制，优化用户上传体验
    - **更新**：集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗
@@ -141,16 +175,43 @@ AI试衣功能由三个主要页面和一系列工具模块组成：
    - **优化**：与主页面的导航集成
    - **更新**：改进API响应处理，支持多种成功码格式（0和200）
 
+4. **AI推荐入口页面** (`src/pages/aiRecommend/index.uvue`)
+   - **新增**：AI智能推荐功能入口
+   - **新增**：照片上传和分析启动
+   - **新增**：登录状态检查和用户认证
+
+5. **AI推荐加载页面** (`src/pages/aiRecommendLoading/index.uvue`)
+   - **新增**：AI分析任务轮询
+   - **新增**：加载状态和超时处理
+   - **新增**：失败重试机制
+
+6. **AI推荐结果页面** (`src/pages/aiRecommendResult/index.uvue`)
+   - **新增**：AI分析结果展示
+   - **新增**：推荐风格列表
+   - **新增**：性别筛选和模板跳转
+   - **新增**：与AI试衣功能的无缝集成
+
+7. **演示详情页面** (`src/pages/demoDetail/index.uvue`)
+   - **新增**：tryonDisabled标志支持
+   - **新增**：条件渲染AI试衣按钮
+   - **新增**：智能显示/隐藏AI试衣功能
+
+8. **目标照片详情页面** (`src/pages/targetPhotoDetail/index.uvue`)
+   - **新增**：tryonDisabled标志支持
+   - **新增**：条件渲染AI试衣悬浮按钮
+   - **新增**：智能显示/隐藏AI试衣功能
+
 ### 工具模块
 
 1. **API封装** (`src/utils/api.uts`)
-   - AI模板获取（**增强**：支持category、sub_category参数）
+   - AI模板获取（**增强**：支持category、sub_category、gender参数）
    - 照片上传处理
    - 任务提交和查询
    - **新增**：历史记录管理接口
    - **新增**：微信登录接口
    - **新增**：手机号绑定接口
    - **新增**：样式参数支持接口
+   - **新增**：AI推荐接口
    - **更新**：改进API响应处理，支持多种成功码格式（0和200）
 
 2. **认证管理** (`src/utils/auth.uts`)
@@ -193,6 +254,11 @@ AI试衣功能由三个主要页面和一系列工具模块组成：
 - [src/pages/aiTryOn/index.uvue:155-452](file://src/pages/aiTryOn/index.uvue#L155-L452)
 - [src/pages/aiTryOnResult/index.uvue:60-230](file://src/pages/aiTryOnResult/index.uvue#L60-L230)
 - [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
+- [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
+- [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
+- [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
+- [src/pages/demoDetail/index.uvue:1-983](file://src/pages/demoDetail/index.uvue#L1-L983)
+- [src/pages/targetPhotoDetail/index.uvue:1-469](file://src/pages/targetPhotoDetail/index.uvue#L1-L469)
 - [src/utils/api.uts:332-503](file://src/utils/api.uts#L332-L503)
 - [src/utils/loginFlow.uts:1-100](file://src/utils/loginFlow.uts#L1-L100)
 
@@ -206,60 +272,88 @@ subgraph "用户界面层"
 A[AI试衣主页面]
 B[试衣结果页面]
 C[AI试衣历史记录页面]
-D[AppFooter组件]
-E[LoginDialog组件]
+D[AI推荐入口页面]
+E[AI推荐加载页面]
+F[AI推荐结果页面]
+G[演示详情页面]
+H[目标照片详情页面]
+I[AppFooter组件]
+J[LoginDialog组件]
 end
 subgraph "业务逻辑层"
-F[API接口封装]
-G[认证工具]
-H[HTTP请求处理]
-I[登录流程管理]
-J[资料提交工具]
+K[API接口封装]
+L[认证工具]
+M[HTTP请求处理]
+N[登录流程管理]
+O[资料提交工具]
 end
 subgraph "数据访问层"
-K[后端AI服务]
-L[文件存储服务]
-M[微信认证服务]
-N[历史记录数据库]
+P[后端AI服务]
+Q[文件存储服务]
+R[微信认证服务]
+S[历史记录数据库]
+T[AI推荐服务]
 end
 subgraph "配置管理层"
-O[HTTP配置]
-P[应用配置]
-Q[登录配置]
+U[HTTP配置]
+V[应用配置]
+W[登录配置]
 end
-A --> F
-B --> F
-C --> F
-A --> G
-B --> G
-C --> G
-F --> H
-H --> O
-H --> P
-F --> I
-I --> J
-I --> M
+A --> K
+B --> K
+C --> K
+D --> K
+E --> K
 F --> K
+G --> K
+H --> K
+A --> L
+B --> L
+C --> L
+D --> L
+E --> L
 F --> L
-F --> N
-G --> Q
+G --> L
+H --> L
+K --> M
+M --> U
+M --> V
+K --> N
+N --> O
+N --> R
+K --> P
+K --> Q
+K --> S
+K --> T
+L --> W
 style A fill:#e1f5fe
 style B fill:#e1f5fe
 style C fill:#e1f5fe
-style E fill:#fff3e0
-style F fill:#f3e5f5
-style H fill:#f3e5f5
-style I fill:#e8f5e8
-style K fill:#fff3e0
-style L fill:#fff3e0
-style M fill:#fce4ec
-style N fill:#f3e5f5
+style D fill:#e8f5e8
+style E fill:#e8f5e8
+style F fill:#e8f5e8
+style G fill:#fff3e0
+style H fill:#fff3e0
+style J fill:#fff3e0
+style K fill:#f3e5f5
+style M fill:#f3e5f5
+style N fill:#e8f5e8
+style P fill:#fff3e0
+style Q fill:#fff3e0
+style R fill:#fce4ec
+style S fill:#f3e5f5
+style T fill:#e8f5e8
 ```
 
 **图表来源**
 - [src/pages/aiTryOn/index.uvue:144-147](file://src/pages/aiTryOn/index.uvue#L144-L147)
 - [src/pages/aiTryOnResult/index.uvue:58](file://src/pages/aiTryOnResult/index.uvue#L58)
 - [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
+- [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
+- [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
+- [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
+- [src/pages/demoDetail/index.uvue:1-983](file://src/pages/demoDetail/index.uvue#L1-L983)
+- [src/pages/targetPhotoDetail/index.uvue:1-469](file://src/pages/targetPhotoDetail/index.uvue#L1-L469)
 - [src/utils/api.uts:1-5](file://src/utils/api.uts#L1-L5)
 
 ## 详细组件分析
@@ -274,6 +368,8 @@ class AiTryOnPage {
 +String shopId
 +String category
 +String subCategory
++String style
++String gender
 +Array templates
 +Number currentTemplateIndex
 +String bodyType
@@ -336,9 +432,9 @@ participant Page as AI试衣页面
 participant API as API封装
 participant Server as 后端服务器
 User->>Page : 打开页面
-Page->>Page : 解析URL参数shopId/category/subCategory
+Page->>Page : 解析URL参数shopId/category/subCategory/gender/style
 Page->>API : getAiTemplates(params)
-API->>Server : GET /api/aiface/templates
+API->>Server : GET /api/aiface/templates?gender={gender}&style={style}
 Server-->>API : 模板列表数据
 API-->>Page : 返回模板数组
 Page->>Page : 渲染模板轮播
@@ -398,7 +494,7 @@ Task-->>Page : 任务ID
 Page->>Result : 跳转到结果页面
 ```
 
-**更新** 新增了完整的微信认证系统，实现了三步登录流程和头像昵称完善功能。**新增**：照片上传状态指示器提供实时上传进度反馈，自动上传机制优化用户上传体验。**更新**：AI试衣页面集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗。
+**更新** 新增了完整的微信认证系统，实现了三步登录流程和头像昵称完善功能。**新增**：照片上传状态指示器提供实时上传进度反馈，自动上传机制优化用户上传体验。**更新**：AI试衣页面集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗。**新增**：性别参数支持和模板过滤功能。
 
 **章节来源**
 - [src/pages/aiTryOn/index.uvue:181-306](file://src/pages/aiTryOn/index.uvue#L181-L306)
@@ -612,8 +708,8 @@ ApiUtils --> AiTask : returns
 ```
 
 **图表来源**
-- [src/utils/api.uts:316-326](file://src/utils/api.uts#L316-L326)
-- [src/utils/api.uts:332-458](file://src/utils/api.uts#L332-L458)
+- [src/utils/api.uts:316-326](file://src/utils/api.uts#L316-326)
+- [src/utils/api.uts:332-458](file://src/utils/api.uts#L332-458)
 
 #### 接口类型定义
 
@@ -641,7 +737,7 @@ AI试衣功能使用了专门的数据模型定义：
 **更新** 接口参数和返回值增加了对category和sub_category的支持，提升了模板筛选的精确度。新增了微信认证相关接口和历史记录管理接口。**新增**：样式参数支持接口，增强模板自定义能力。**更新**：改进API响应处理，支持多种成功码格式（0和200）。
 
 **章节来源**
-- [src/utils/api.uts:316-458](file://src/utils/api.uts#L316-L458)
+- [src/utils/api.uts:316-458](file://src/utils/api.uts#L316-458)
 
 ## AI试衣历史记录页面
 
@@ -817,6 +913,129 @@ LoginDialog --> ProfilePopup : triggers
 - [src/utils/loginFlow.uts:1-100](file://src/utils/loginFlow.uts#L1-L100)
 - [src/components/LoginDialog/LoginDialog.uvue:1-200](file://src/components/LoginDialog/LoginDialog.uvue#L1-L200)
 
+## **新增**：AI推荐系统集成
+
+AI推荐系统与AI试衣功能的无缝集成是该版本的重要更新，实现了从AI分析到AI试衣的完整用户流程闭环。
+
+### 集成架构
+
+```mermaid
+flowchart TD
+A[AI推荐入口页面] --> B[AI推荐加载页面]
+B --> C[AI推荐结果页面]
+C --> D[AI试衣主页面]
+D --> E[AI试衣结果页面]
+F[演示详情页面] --> D
+G[目标照片详情页面] --> D
+D --> H[AI试衣历史记录页面]
+```
+
+**图表来源**
+- [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
+- [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
+- [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
+- [src/pages/aiTryOn/index.uvue:1-749](file://src/pages/aiTryOn/index.uvue#L1-L749)
+- [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
+- [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
+- [src/pages/demoDetail/index.uvue:1-983](file://src/pages/demoDetail/index.uvue#L1-L983)
+- [src/pages/targetPhotoDetail/index.uvue:1-469](file://src/pages/targetPhotoDetail/index.uvue#L1-L469)
+
+### 性别参数传递机制
+
+AI推荐系统与AI试衣功能通过性别参数实现无缝集成：
+
+1. **AI推荐结果页面** (`src/pages/aiRecommendResult/index.uvue`)
+   - 解析AI分析结果中的性别信息
+   - 将性别转换为英文格式（male/female）
+   - 跳转到AI试衣页面时携带gender参数
+
+2. **AI试衣主页面** (`src/pages/aiTryOn/index.uvue`)
+   - 接收gender参数并存储到本地状态
+   - 在加载模板时将gender参数传递给API
+   - 实现性别相关的模板过滤
+
+3. **API接口支持** (`src/utils/api.uts`)
+   - getAiTemplates接口支持gender参数
+   - 后端根据性别返回相应的模板列表
+
+### tryonDisabled标志支持
+
+demoDetail和targetPhotoDetail页面实现了智能的AI试衣按钮显示控制：
+
+1. **演示详情页面** (`src/pages/demoDetail/index.uvue`)
+   - 检查item.tryonDisabled !== true条件
+   - 条件渲染AI试衣标签按钮
+   - 支持搜索模式和分类模式的智能显示
+
+2. **目标照片详情页面** (`src/pages/targetPhotoDetail/index.uvue`)
+   - 检查detail?.tryonDisabled !== true条件
+   - 条件渲染AI试衣悬浮按钮
+   - 结合loading状态避免闪烁
+
+### 集成流程图
+
+```mermaid
+sequenceDiagram
+participant User as 用户
+participant DemoDetail as 演示详情页面
+participant TargetDetail as 目标照片详情页面
+participant AiRecommend as AI推荐入口
+participant AiLoading as AI推荐加载
+participant AiResult as AI推荐结果
+participant AiTryOn as AI试衣主页面
+participant AiTryOnResult as AI试衣结果页面
+Note over User,AiTryOnResult : 路径1：从详情页直接进入AI试衣
+User->>DemoDetail : 点击AI试衣按钮
+DemoDetail->>AiTryOn : 跳转(带albumId, shopId, category, subCategory, style)
+AiTryOn->>AiTryOnResult : 生成后跳转结果页面
+Note over User,AiTryOnResult : 路径2：通过AI推荐进入AI试衣
+User->>TargetDetail : 点击AI推荐
+TargetDetail->>AiRecommend : 跳转到AI推荐入口
+AiRecommend->>AiLoading : 上传照片并开始分析
+AiLoading->>AiResult : 分析完成后跳转结果页面
+AiResult->>AiTryOn : 点击推荐项跳转到AI试衣(带gender参数)
+AiTryOn->>AiTryOnResult : 生成后跳转结果页面
+```
+
+**图表来源**
+- [src/pages/demoDetail/index.uvue:595-605](file://src/pages/demoDetail/index.uvue#L595-L605)
+- [src/pages/targetPhotoDetail/index.uvue:367-373](file://src/pages/targetPhotoDetail/index.uvue#L367-L373)
+- [src/pages/aiRecommend/index.uvue:606-610](file://src/pages/aiRecommend/index.uvue#L606-L610)
+- [src/pages/aiRecommendLoading/index.uvue:98-100](file://src/pages/aiRecommendLoading/index.uvue#L98-L100)
+- [src/pages/aiRecommendResult/index.uvue:111-113](file://src/pages/aiRecommendResult/index.uvue#L111-L113)
+- [src/pages/aiTryOn/index.uvue:192-210](file://src/pages/aiTryOn/index.uvue#L192-L210)
+
+### 条件渲染逻辑
+
+```mermaid
+flowchart TD
+Start([页面加载]) --> CheckTryonDisabled{检查tryonDisabled标志}
+CheckTryonDisabled --> |true| HideButton[隐藏AI试衣按钮]
+CheckTryonDisabled --> |false| ShowButton[显示AI试衣按钮]
+HideButton --> End([结束])
+ShowButton --> CheckLoading{检查loading状态}
+CheckLoading --> |true| WaitLoading[等待加载完成]
+CheckLoading --> |false| RenderButton[渲染按钮]
+WaitLoading --> RenderButton
+RenderButton --> End
+```
+
+**图表来源**
+- [src/pages/demoDetail/index.uvue:62-64](file://src/pages/demoDetail/index.uvue#L62-L64)
+- [src/pages/demoDetail/index.uvue:124-131](file://src/pages/demoDetail/index.uvue#L124-L131)
+- [src/pages/targetPhotoDetail/index.uvue:51-52](file://src/pages/targetPhotoDetail/index.uvue#L51-L52)
+
+**新增** AI推荐系统与AI试衣功能实现了无缝集成，支持性别参数传递和条件渲染逻辑。demoDetail和targetPhotoDetail页面根据tryonDisabled标志动态显示AI试衣按钮，提供了智能化的用户交互体验。
+
+**章节来源**
+- [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
+- [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
+- [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
+- [src/pages/aiTryOn/index.uvue:192-210](file://src/pages/aiTryOn/index.uvue#L192-L210)
+- [src/pages/demoDetail/index.uvue:62-64](file://src/pages/demoDetail/index.uvue#L62-L64)
+- [src/pages/demoDetail/index.uvue:124-131](file://src/pages/demoDetail/index.uvue#L124-L131)
+- [src/pages/targetPhotoDetail/index.uvue:51-52](file://src/pages/targetPhotoDetail/index.uvue#L51-L52)
+
 ## 依赖关系分析
 
 AI试衣功能的依赖关系体现了清晰的分层架构：
@@ -827,74 +1046,94 @@ subgraph "页面层"
 A[aiTryOn/index.uvue]
 B[aiTryOnResult/index.uvue]
 C[aiTryOnHistory/index.uvue]
-D[mine/index.uvue]
-E[demoDetail/index.uvue]
-F[targetPhotoDetail/index.uvue]
+D[aiRecommend/index.uvue]
+E[aiRecommendLoading/index.uvue]
+F[aiRecommendResult/index.uvue]
+G[demoDetail/index.uvue]
+H[targetPhotoDetail/index.uvue]
+I[mine/index.uvue]
 end
 subgraph "工具层"
-G[api.uts]
-H[auth.uts]
-I[http.uts]
-J[config.uts]
-K[loginFlow.uts]
-L[profileSubmit.uts]
-M[legal.uts]
+J[api.uts]
+K[auth.uts]
+L[http.uts]
+M[config.uts]
+N[loginFlow.uts]
+O[profileSubmit.uts]
+P[legal.uts]
 end
 subgraph "组件层"
-N[LoginDialog.uvue]
-O[AppFooter.uvue]
-P[PhotoGrid.uvue]
-Q[EmptyState/]
-R[LoadMoreIndicator/]
-S[SearchNavBar/]
+Q[LoginDialog.uvue]
+R[AppFooter.uvue]
+S[PhotoGrid.uvue]
+T[EmptyState/]
+U[LoadMoreIndicator/]
+V[SearchNavBar/]
 end
 subgraph "基础层"
-T[manifest.json]
-U[pages.json]
-V[App.uvue]
+W[manifest.json]
+X[pages.json]
+Y[App.uvue]
 end
-A --> G
-B --> G
-C --> G
-D --> G
-E --> G
-F --> G
-A --> H
-B --> H
-C --> H
-D --> H
-E --> H
-F --> H
-G --> K
-G --> L
-G --> M
-K --> H
-K --> G
-L --> H
-G --> I
+A --> J
+B --> J
+C --> J
+D --> J
+E --> J
+F --> J
+G --> J
+H --> J
 I --> J
-A --> N
-B --> N
-C --> N
-D --> N
-E --> N
-F --> N
-A --> O
-B --> O
-C --> O
-D --> O
-E --> O
-F --> O
-G --> T
-I --> T
-N --> V
-O --> V
+A --> K
+B --> K
+C --> K
+D --> K
+E --> K
+F --> K
+G --> K
+H --> K
+I --> K
+J --> N
+J --> O
+J --> P
+N --> K
+N --> J
+O --> K
+J --> L
+L --> M
+A --> Q
+B --> Q
+C --> Q
+D --> Q
+E --> Q
+F --> Q
+G --> Q
+H --> Q
+I --> Q
+A --> R
+B --> R
+C --> R
+D --> R
+E --> R
+F --> R
+G --> R
+H --> R
+I --> R
+J --> W
+L --> W
+Q --> Y
+R --> Y
 ```
 
 **图表来源**
 - [src/pages/aiTryOn/index.uvue:144-147](file://src/pages/aiTryOn/index.uvue#L144-L147)
 - [src/pages/aiTryOnResult/index.uvue:58](file://src/pages/aiTryOnResult/index.uvue#L58)
 - [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
+- [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
+- [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
+- [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
+- [src/pages/demoDetail/index.uvue:1-983](file://src/pages/demoDetail/index.uvue#L1-L983)
+- [src/pages/targetPhotoDetail/index.uvue:1-469](file://src/pages/targetPhotoDetail/index.uvue#L1-L469)
 - [src/utils/api.uts:1-5](file://src/utils/api.uts#L1-L5)
 
 ### 关键依赖关系
@@ -903,6 +1142,8 @@ O --> V
    - AI试衣页面依赖API封装进行数据操作
    - 结果页面依赖API封装进行状态查询
    - 历史记录页面依赖API封装进行历史记录管理
+   - **新增**：AI推荐相关页面依赖API封装进行AI分析操作
+   - **新增**：演示详情和目标照片详情页面支持AI试衣功能集成
    - 个人中心页面依赖认证工具进行用户状态检查
    - 所有页面都依赖登录流程管理进行微信认证
 
@@ -923,7 +1164,7 @@ O --> V
    - 应用清单配置应用基本信息
    - 登录配置管理认证相关设置
 
-**更新** 新增了AI试衣历史记录页面的依赖关系，优化了导航系统集成，新增了登录流程管理和资料提交工具的依赖关系。**更新**：改进API响应处理，支持多种成功码格式（0和200）。
+**更新** 新增了AI试衣历史记录页面的依赖关系，优化了导航系统集成，新增了登录流程管理和资料提交工具的依赖关系。**新增**：AI推荐系统集成相关的依赖关系，包括AI推荐入口、加载和结果页面的依赖。**更新**：改进API响应处理，支持多种成功码格式（0和200）。
 
 **章节来源**
 - [src/pages.json:56-66](file://src/pages.json#L56-L66)
@@ -985,7 +1226,18 @@ AI试衣功能在性能方面采用了多项优化策略：
 - **更新**：加载提示调整，提供更清晰的状态反馈
 - **更新**：状态遮罩和动画效果优化
 
-**更新** 新增了微信认证系统的性能优化策略，包括三步登录流程和状态检查机制。新增了历史记录页面的性能优化，包括分页加载和缓存机制。**新增**：照片上传状态指示器和自动上传机制的性能优化策略。**更新**：API响应处理优化，支持多种成功码格式（0和200）；结果页面进行UI样式优化和加载提示调整。
+### 10. **新增**：AI推荐系统集成优化
+- **新增**：AI分析结果缓存，避免重复分析
+- **新增**：性别参数智能传递，减少不必要的请求
+- **新增**：tryonDisabled标志预检查，优化页面渲染性能
+- **新增**：条件渲染优化，减少DOM操作开销
+
+### 11. **新增**：跨页面数据传递优化
+- **新增**：URL参数编码优化，提升数据传输效率
+- **新增**：页面间状态同步，避免数据不一致
+- **新增**：路由参数验证，减少错误处理开销
+
+**更新** 新增了微信认证系统的性能优化策略，包括三步登录流程和状态检查机制。新增了历史记录页面的性能优化，包括分页加载和缓存机制。**新增**：照片上传状态指示器和自动上传机制的性能优化策略。**更新**：API响应处理优化，支持多种成功码格式（0和200）；结果页面进行UI样式优化和加载提示调整。**新增**：AI推荐集成的性能优化策略，包括结果缓存和条件渲染优化。
 
 ## 故障排除指南
 
@@ -1117,12 +1369,53 @@ AI试衣功能在性能方面采用了多项优化策略：
 - 确认图片加载和显示逻辑
 - 重新加载页面或清理缓存
 
-**更新** 新增了微信认证系统相关的故障排除指导，包括登录失败、手机号授权失败和头像昵称完善失败等问题的解决方案。新增了历史记录页面相关的故障排除指导。**新增**：样式参数应用失败和自动上传功能异常的故障排除指导。**更新**：API响应处理异常和结果页面UI显示异常的故障排除指导。
+#### 15. **新增**：AI推荐集成问题
+**症状**: AI推荐结果无法正常跳转到AI试衣
+**原因**: 性别参数传递错误或页面跳转失败
+**解决方法**:
+- 检查AI推荐结果中的性别信息
+- 验证gender参数是否正确传递
+- 确认AI试衣页面是否正确接收参数
+- 检查页面路由配置
+
+#### 16. **新增**：性别参数过滤失效
+**症状**: AI试衣模板未按性别过滤
+**原因**: gender参数未正确传递或后端不支持
+**解决方法**:
+- 检查AI推荐结果页面的gender参数设置
+- 验证AI试衣主页面是否正确接收gender参数
+- 确认getAiTemplates接口是否支持gender参数
+- 检查后端模板数据是否包含性别信息
+
+#### 17. **新增**：tryonDisabled标志问题
+**症状**: AI试衣按钮显示或隐藏异常
+**原因**: tryonDisabled标志判断逻辑错误
+**解决方法**:
+- 检查demoDetail页面中item.tryonDisabled的值
+- 验证targetPhotoDetail页面中detail?.tryonDisabled的值
+- 确认条件渲染逻辑是否正确执行
+- 检查后端返回的数据结构
+
+#### 18. **新增**：跨页面数据丢失
+**症状**: 从AI推荐跳转到AI试衣时参数丢失
+**原因**: URL参数编码或解码错误
+**解决方法**:
+- 检查encodeURIComponent的使用
+- 验证decodeURIComponent的解码
+- 确认参数传递的完整性
+- 添加参数验证和错误处理
+
+**更新** 新增了微信认证系统相关的故障排除指导，包括登录失败、手机号授权失败和头像昵称完善失败等问题的解决方案。新增了历史记录页面相关的故障排除指导。**新增**：样式参数应用失败和自动上传功能异常的故障排除指导。**更新**：API响应处理异常和结果页面UI显示异常的故障排除指导。**新增**：AI推荐集成、性别参数过滤、tryonDisabled标志和跨页面数据传递的故障排除指导。
 
 **章节来源**
 - [src/pages/aiTryOn/index.uvue:243-306](file://src/pages/aiTryOn/index.uvue#L243-L306)
 - [src/pages/aiTryOnResult/index.uvue:159-223](file://src/pages/aiTryOnResult/index.uvue#L159-L223)
 - [src/pages/aiTryOnHistory/index.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
+- [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
+- [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
+- [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
+- [src/pages/demoDetail/index.uvue:1-983](file://src/pages/demoDetail/index.uvue#L1-L983)
+- [src/pages/targetPhotoDetail/index.uvue:1-469](file://src/pages/targetPhotoDetail/index.uvue#L1-L469)
 - [src/utils/loginFlow.uts:1-100](file://src/utils/loginFlow.uts#L1-L100)
 
 ## 结论
@@ -1145,6 +1438,7 @@ AI试衣功能展现了现代小程序开发的最佳实践，具有以下特点
 13. **API响应优化**: **更新**：改进API响应处理，支持多种成功码格式（0和200）
 14. **UI体验优化**: **更新**：结果页面进行UI样式优化和加载提示调整
 15. **登录状态检查**: **更新**：AI试衣页面集成统一登录状态检查，在照片选择前自动验证登录状态并显示登录弹窗
+16. **AI推荐集成**: **新增**：AI试衣功能与AI推荐系统实现无缝集成，支持性别参数传递和条件渲染逻辑
 
 ### 功能完整性
 - 支持多种服饰模板选择
@@ -1159,11 +1453,14 @@ AI试衣功能展现了现代小程序开发的最佳实践，具有以下特点
 - **新增**：照片上传状态指示器
 - **新增**：自动上传机制
 - **新增**：样式参数支持
+- **新增**：AI推荐系统集成
+- **新增**：性别参数传递和模板过滤
+- **新增**：tryonDisabled标志支持
 - **更新**：统一登录状态检查
 - **更新**：API响应处理优化
 - **更新**：UI样式优化
 
 ### 可扩展性
-该架构为未来的功能扩展提供了良好的基础，可以轻松添加新的AI服务、改进用户界面或增加更多个性化功能。微信认证系统的引入为后续的用户运营和数据分析奠定了坚实的基础。AI试衣历史记录页面的加入进一步增强了用户粘性和功能完整性。**新增**：上传体验优化和样式参数支持为后续的功能扩展提供了技术基础。**更新**：API响应处理优化和UI体验优化为后续的功能迭代提供了更好的技术基础。
+该架构为未来的功能扩展提供了良好的基础，可以轻松添加新的AI服务、改进用户界面或增加更多个性化功能。微信认证系统的引入为后续的用户运营和数据分析奠定了坚实的基础。AI试衣历史记录页面的加入进一步增强了用户粘性和功能完整性。**新增**：上传体验优化和样式参数支持为后续的功能扩展提供了技术基础。**更新**：API响应处理优化和UI体验优化为后续的功能迭代提供了更好的技术基础。**新增**：AI推荐系统集成和性别参数支持为后续的智能推荐功能扩展提供了技术基础。
 
-通过合理的组件划分和清晰的依赖关系，AI试衣功能不仅满足了当前的业务需求，也为后续的功能演进和合规要求提供了坚实的技术基础。**新增**：上传体验优化和样式参数支持的引入进一步提升了用户满意度和功能完整性。**更新**：API响应处理优化和UI体验优化的引入进一步提升了系统的稳定性和用户体验。
+通过合理的组件划分和清晰的依赖关系，AI试衣功能不仅满足了当前的业务需求，也为后续的功能演进和合规要求提供了坚实的技术基础。**新增**：上传体验优化和样式参数支持的引入进一步提升了用户满意度和功能完整性。**更新**：API响应处理优化和UI体验优化的引入进一步提升了系统的稳定性和用户体验。**新增**：AI推荐集成的引入进一步提升了系统的智能化水平和用户体验。

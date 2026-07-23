@@ -18,7 +18,17 @@
 - [aiTryOn.uvue](file://src/pages/aiTryOn/index.uvue)
 - [aiTryOnResult.uvue](file://src/pages/aiTryOnResult/index.uvue)
 - [aiTryOnHistory.uvue](file://src/pages/aiTryOnHistory/index.uvue)
+- [aiRecommend.uvue](file://src/pages/aiRecommend/index.uvue)
+- [aiRecommendLoading.uvue](file://src/pages/aiRecommendLoading/index.uvue)
+- [aiRecommendResult.uvue](file://src/pages/aiRecommendResult/index.uvue)
 </cite>
+
+## 更新摘要
+**变更内容**
+- 新增AI推荐相关数据模型定义：AiRecommendAnalysis和AiRecommendation类型
+- 增强getAiRecommend函数的响应格式处理，支持analysis和recommendations数据结构
+- 改进tryonDisabled字段支持，在AlbumBasic和相册列表接口中提供试衣功能禁用状态
+- 完善AI推荐功能的完整实现，包括上传、分析、结果展示等页面流程
 
 ## 目录
 1. [简介](#简介)
@@ -27,25 +37,26 @@
 4. [架构总览](#架构总览)
 5. [详细组件分析](#详细组件分析)
 6. [AI试衣功能模块](#ai试衣功能模块)
-7. [依赖关系分析](#依赖关系分析)
-8. [性能考虑](#性能考虑)
-9. [故障排除指南](#故障排除指南)
-10. [结论](#结论)
-11. [附录](#附录)
+7. [AI智能推荐功能](#ai智能推荐功能)
+8. [依赖关系分析](#依赖关系分析)
+9. [性能考虑](#性能考虑)
+10. [故障排除指南](#故障排除指南)
+11. [结论](#结论)
+12. [附录](#附录)
 
 ## 简介
 本文件系统性梳理了 API 接口封装层的设计与实现，重点围绕 src/utils/api.uts 模块展开，涵盖以下方面：
-- 接口分类体系：客片管理、用户认证、社交互动、搜索功能、店铺管理、页面配置、**AI试衣功能**
-- 数据模型定义：AlbumBasic、ShopInfo、**AiTemplate** 等接口类型及其字段语义
+- 接口分类体系：客片管理、用户认证、社交互动、搜索功能、店铺管理、页面配置、**AI试衣功能、AI智能推荐功能**
+- 数据模型定义：AlbumBasic、ShopInfo、**AiTemplate、AiRecommendAnalysis、AiRecommendation** 等接口类型及其字段语义
 - 接口函数的参数定义、返回值类型与错误处理机制
 - 最佳实践：参数校验、错误码处理、响应数据结构
 - 使用示例与常见问题解决方案
 
-该封装层通过统一的 HTTP 层（http.uts）进行网络请求，自动注入认证头与基础配置，并在需要时进行 401 未授权处理。**新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交、结果查询、历史记录管理等核心功能。**
+该封装层通过统一的 HTTP 层（http.uts）进行网络请求，自动注入认证头与基础配置，并在需要时进行 401 未授权处理。**新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交、结果查询、历史记录管理等核心功能。同时，AI智能推荐功能为用户提供了基于个人特征的个性化服饰风格推荐服务。**
 
 ## 项目结构
 API 封装层位于 src/utils 目录下，核心文件如下：
-- api.uts：对外暴露的业务接口集合，包含客片、认证、社交、搜索、店铺、页面配置、**AI试衣**等接口
+- api.uts：对外暴露的业务接口集合，包含客片、认证、社交、搜索、店铺、页面配置、**AI试衣、AI智能推荐**等接口
 - http.uts：统一的 HTTP 请求封装，负责 URL 拼接、头部注入、超时控制、401 处理
 - auth.uts：认证状态与用户信息管理，提供 token 与用户信息的存储、读取、合并写入
 - config.uts：HTTP 基础配置（baseURL、timeout）
@@ -73,6 +84,9 @@ PLIST["pages/priceList/index.uvue"]
 AITRYON["pages/aiTryOn/index.uvue"]
 AITRYONRESULT["pages/aiTryOnResult/index.uvue"]
 AITRYONHISTORY["pages/aiTryOnHistory/index.uvue"]
+AIRECOMMEND["pages/aiRecommend/index.uvue"]
+AIRECOMMENDLOAD["pages/aiRecommendLoading/index.uvue"]
+AIRECOMMENDRESULT["pages/aiRecommendResult/index.uvue"]
 end
 API --> HTTP
 API --> AUTH
@@ -91,10 +105,13 @@ PLIST --> API
 AITRYON --> API
 AITRYONRESULT --> API
 AITRYONHISTORY --> API
+AIRECOMMEND --> API
+AIRECOMMENDLOAD --> API
+AIRECOMMENDRESULT --> API
 ```
 
 **图表来源**
-- [api.uts:1-503](file://src/utils/api.uts#L1-L503)
+- [api.uts:1-609](file://src/utils/api.uts#L1-L609)
 - [http.uts:1-82](file://src/utils/http.uts#L1-L82)
 - [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
 - [config.uts:1-12](file://src/utils/config.uts#L1-L12)
@@ -102,7 +119,7 @@ AITRYONHISTORY --> API
 - [profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 
 **章节来源**
-- [api.uts:1-503](file://src/utils/api.uts#L1-L503)
+- [api.uts:1-609](file://src/utils/api.uts#L1-L609)
 - [http.uts:1-82](file://src/utils/http.uts#L1-L82)
 - [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
 - [config.uts:1-12](file://src/utils/config.uts#L1-L12)
@@ -111,10 +128,12 @@ AITRYONHISTORY --> API
 本节聚焦 api.uts 的核心接口与数据模型，说明其职责、参数、返回值与错误处理策略。
 
 - 数据模型
-  - AlbumBasic：客片基础信息，包含标识、标题、封面图、所属店铺、价格、点赞数等
+  - AlbumBasic：客片基础信息，包含标识、标题、封面图、所属店铺、价格、点赞数、**试衣功能禁用状态**等
   - ShopInfo：店铺信息，包含标识、名称、展示名、排序等
   - UserInfo：用户信息，包含标识、开放平台标识、手机号、昵称、头像等
   - **AiTemplate：AI试衣模板信息，包含模板ID、风格名称、类别、性别、图片URL等**
+  - **AiRecommendAnalysis：AI推荐分析结果，包含年龄估计、性别、脸型、体型、风格关键词等**
+  - **AiRecommendation：AI推荐结果，包含风格名称、推荐理由、评分、模板ID列表、性别匹配状态、预览图等**
 
 - 接口分类与职责
   - 客片管理：分类与列表获取、详情获取、点赞/取消点赞、批量查询点赞状态、收藏/取消收藏、批量查询收藏状态、我的收藏列表
@@ -123,16 +142,17 @@ AITRYONHISTORY --> API
   - 店铺管理：获取启用的店铺列表
   - 页面配置：获取中台页配置（金刚区+Banner）
   - **AI试衣功能：模板管理、照片上传、任务提交、结果查询、历史记录管理**
+  - **AI智能推荐：基于用户照片的智能分析、个性化风格推荐、推荐结果展示**
 
 - 错误处理机制
   - 统一返回结构：包含 code、message、data 字段
-  - 成功码：通常为 0 或 200（**新增：AI试衣接口现在支持多种成功码格式**）
-  - **AI试衣接口特殊处理：aiface 接口成功 code === 0 或 200，非 200**
+  - 成功码：通常为 0 或 200（**新增：AI推荐接口现在支持多种成功码格式**）
+  - **AI推荐接口特殊处理：aiface 接口成功 code === 0 或 200，非 200**
   - 未授权（401）：http.uts 自动清理 token 与用户信息并提示重新登录
   - 参数校验：调用方需确保必填参数存在，如 shopId、albumId 等
 
 **章节来源**
-- [api.uts:6-326](file://src/utils/api.uts#L6-L326)
+- [api.uts:6-609](file://src/utils/api.uts#L6-L609)
 - [http.uts:48-61](file://src/utils/http.uts#L48-L61)
 
 ## 架构总览
@@ -150,7 +170,7 @@ participant HTTP as "http.uts"
 participant AUTH as "auth.uts"
 participant Conf as "config.uts"
 participant Server as "后端服务"
-Page->>API : 调用业务接口(如 getAlbumList)
+Page->>API : 调用业务接口(如 getAiRecommend)
 API->>HTTP : request(opts)
 HTTP->>AUTH : 读取 token
 HTTP->>Conf : 读取 baseURL/timeout
@@ -162,7 +182,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 ```
 
 **图表来源**
-- [api.uts:86-111](file://src/utils/api.uts#L86-L111)
+- [api.uts:590-608](file://src/utils/api.uts#L590-L608)
 - [http.uts:20-73](file://src/utils/http.uts#L20-L73)
 - [auth.uts:21-52](file://src/utils/auth.uts#L21-L52)
 - [config.uts:7-11](file://src/utils/config.uts#L7-L11)
@@ -171,9 +191,9 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 
 ### 数据模型定义
 - AlbumBasic
-  - 字段含义：客片标识、标题、封面图地址、所属店铺标识、价格、点赞数
-  - 数据类型：id、shopId 为数字；title、coverImageUrl 为字符串；price 为数字；likeCount 为数字
-  - 可选属性：price
+  - 字段含义：客片标识、标题、封面图地址、所属店铺标识、价格、点赞数、**试衣功能禁用状态**
+  - 数据类型：id、shopId 为数字；title、coverImageUrl 为字符串；price 为数字；likeCount 为数字；**tryonDisabled 为可选布尔值**
+  - 可选属性：price、**tryonDisabled**
 - ShopInfo
   - 字段含义：店铺标识、店铺名称、展示名（中/英）、首页图、价格图、排序
   - 数据类型：id、sortOrder 为数字；shopName、displayName、displayNameEn、homeImage、priceImage 为字符串
@@ -183,10 +203,18 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **AiTemplate**
   - 字段含义：AI试衣模板标识、风格名称、类别、套餐类型、子类别、性别、图片URL、场景描述、激活状态
   - 数据类型：id、is_active 为数字；style_name、category、package_type、sub_category、gender、image_url、scene_prompt 为字符串
+- **AiRecommendAnalysis**
+  - 字段含义：**AI分析结果，包含估计年龄、性别、脸型、体型、风格关键词数组**
+  - 数据类型：estimatedAge、gender、faceShape、bodyType 为字符串；styleKeywords 为字符串数组
+- **AiRecommendation**
+  - 字段含义：**AI推荐结果，包含风格名称、推荐理由、评分、匹配的模板ID列表、性别匹配状态、预览图URL**
+  - 数据类型：styleName、reason 为字符串；score 为数字；templateIds 为数字数组；genderMatched 为布尔值；previewUrl 为字符串
 
 **章节来源**
-- [api.uts:6-326](file://src/utils/api.uts#L6-L326)
-- [auth.uts:7-13](file://src/utils/auth.uts#L7-L13)
+- [api.uts:61-69](file://src/utils/api.uts#L61-L69)
+- [api.uts:71-79](file://src/utils/api.uts#L71-L79)
+- [api.uts:372-382](file://src/utils/api.uts#L372-L382)
+- [api.uts:566-581](file://src/utils/api.uts#L566-L581)
 
 ### 客片管理接口
 - getCategories
@@ -195,7 +223,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 错误处理：非 200/0 视为失败，需在调用方判断并降级
 - getAlbumList
   - 参数：shopId（必填）、其余参数由子分类 query 对象透传（如 parentId/childId/subName 等）、keyword（可选）、page（可选）、size（可选）
-  - 返回：分页数据（albums、total、page、size）
+  - 返回：分页数据（albums、total、page、size），**每个专辑包含 tryonDisabled 字段表示试衣功能是否可用**
   - 错误处理：非 200/0 视为失败，调用方可清空列表并提示
 - getalbumDetail
   - 参数：method、params
@@ -206,9 +234,10 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - 在页面初始化时先获取分类，再根据选中的子分类查询列表
 - 搜索场景复用 getAlbumList，传入 keyword 参数
 - 分页加载时拼接 query 对象与分页参数
+- **检查 tryonDisabled 字段来控制试衣功能的可用性**
 
 **章节来源**
-- [api.uts:55-122](file://src/utils/api.uts#L55-L122)
+- [api.uts:111-168](file://src/utils/api.uts#L111-L168)
 - [demoDetail.uvue:304-477](file://src/pages/demoDetail/index.uvue#L304-L477)
 
 ### 用户认证接口
@@ -232,7 +261,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - submitUserProfile：封装头像/昵称提交并合并用户信息
 
 **章节来源**
-- [api.uts:129-190](file://src/utils/api.uts#L129-L190)
+- [api.uts:186-247](file://src/utils/api.uts#L186-L247)
 - [loginFlow.uts:27-70](file://src/utils/loginFlow.uts#L27-L70)
 - [profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
 
@@ -258,7 +287,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - 批量查询接口一次传入多个 ID，减少请求次数
 
 **章节来源**
-- [api.uts:197-259](file://src/utils/api.uts#L197-L259)
+- [api.uts:254-316](file://src/utils/api.uts#L254-L316)
 
 ### 搜索功能接口
 - searchAlbums
@@ -271,7 +300,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - 加载更多时递增 page 并拼接结果
 
 **章节来源**
-- [api.uts:275-283](file://src/utils/api.uts#L275-L283)
+- [api.uts:332-340](file://src/utils/api.uts#L332-L340)
 - [favorites.uvue:169-218](file://src/pages/favorites/index.uvue#L169-L218)
 
 ### 店铺管理接口
@@ -282,7 +311,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - 首页并行加载轮播图与店铺列表，提升首屏体验
 
 **章节来源**
-- [api.uts:290-297](file://src/utils/api.uts#L290-L297)
+- [api.uts:347-354](file://src/utils/api.uts#L347-L354)
 - [index.uvue:142-151](file://src/pages/index/index.uvue#L142-L151)
 
 ### 页面配置接口
@@ -293,7 +322,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - 作为首页或中台页的静态配置数据源
 
 **章节来源**
-- [api.uts:304-311](file://src/utils/api.uts#L304-L311)
+- [api.uts:361-368](file://src/utils/api.uts#L361-L368)
 - [mine.uvue:137-137](file://src/pages/mine/index.uvue#L137-L137)
 
 ## AI试衣功能模块
@@ -373,14 +402,6 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
   - 适用场景：删除AI试衣历史记录
 
-### AI推荐接口
-- **getAiRecommend**
-  - 参数：userPhotoFilename（必填）、**shopId（必填，类型：number）**
-  - 返回：{ code: number; message: string; data: AiTemplate[] }
-  - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
-  - 适用场景：基于用户照片的AI模板推荐
-  - **更新**：shopId 参数类型保持 number 类型
-
 ### AI试衣历史记录页面集成
 - **aiTryOnHistory 页面**：新增的AI试衣历史记录页面，集成了 getAiTasks 接口，提供历史记录的展示、状态管理和交互功能
 - **功能特性**：
@@ -409,10 +430,75 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了与不同API实现的兼容性
 
 **章节来源**
-- [api.uts:314-502](file://src/utils/api.uts#L314-L502)
+- [api.uts:372-561](file://src/utils/api.uts#L372-L561)
 - [aiTryOn.uvue:94-239](file://src/pages/aiTryOn/index.uvue#L94-L239)
 - [aiTryOnResult.uvue:57-229](file://src/pages/aiTryOnResult/index.uvue#L57-L229)
 - [aiTryOnHistory.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
+
+## AI智能推荐功能
+
+### 数据模型定义
+- **AiRecommendAnalysis**
+  - 字段含义：**AI分析结果，包含估计年龄、性别、脸型、体型、风格关键词**
+  - 数据类型：estimatedAge、gender、faceShape、bodyType 为字符串；styleKeywords 为字符串数组
+  - 字段说明：
+    - estimatedAge：估计年龄段（如"青年"、"中年"等）
+    - gender：识别出的性别（男/女）
+    - faceShape：脸型特征（如圆脸、方脸、瓜子脸等）
+    - bodyType：体型特征（如瘦削、匀称、丰满等）
+    - styleKeywords：风格关键词数组，用于描述适合的风格特征
+- **AiRecommendation**
+  - 字段含义：**AI推荐的服饰风格，包含风格名称、推荐理由、匹配评分、相关模板ID、性别匹配状态、预览图**
+  - 数据类型：styleName、reason 为字符串；score 为数字；templateIds 为数字数组；genderMatched 为布尔值；previewUrl 为字符串
+  - 字段说明：
+    - styleName：推荐的风格名称
+    - reason：推荐理由，解释为什么推荐这个风格
+    - score：匹配评分，数值越高表示越匹配
+    - templateIds：与该风格相关的模板ID列表
+    - genderMatched：是否有同性别样例
+    - previewUrl：风格预览图URL
+
+### AI智能推荐接口
+- **getAiRecommend**
+  - 参数：user_photo_filename（必填，用户上传照片的文件名）、shop_id（必填，当前门店ID）
+  - 返回：{ 
+    code: number
+    message: string
+    data: {
+      analysis: AiRecommendAnalysis
+      recommendations: AiRecommendation[]
+    }
+  }
+  - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
+  - 适用场景：基于用户上传照片的AI智能分析，返回个性化的服饰风格推荐
+  - **更新**：增强了响应格式处理，支持analysis和recommendations两个主要数据部分
+
+### AI智能推荐页面集成
+- **aiRecommend 页面**：AI智能推荐的主入口页面，提供照片上传和分析启动功能
+- **aiRecommendLoading 页面**：AI分析加载页面，提供轮询机制和超时控制
+- **aiRecommendResult 页面**：AI推荐结果展示页面，显示分析结果和推荐风格列表
+
+### AI智能推荐工作流程
+1. **照片上传**：用户在 aiRecommend 页面上传照片，调用 uploadPhoto 接口
+2. **进入分析**：上传成功后跳转到 aiRecommendLoading 页面开始分析
+3. **轮询分析**：aiRecommendLoading 页面每30秒轮询一次 getAiRecommend 接口
+4. **结果展示**：分析完成后跳转到 aiRecommendResult 页面展示结果
+5. **风格筛选**：用户点击推荐风格可以跳转到对应的AI试衣模板列表
+
+### AI智能推荐最佳实践
+- **文件大小限制**：前端严格限制照片大小不超过10MB
+- **登录态检查**：AI推荐功能需要用户登录状态
+- **轮询策略**：aiRecommendLoading 页面每30秒轮询一次，最长等待180秒
+- **错误处理**：连续3次网络错误后显示失败界面，支持重试
+- **超时控制**：180秒超时后自动转为失败状态
+- **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式
+- **性别匹配优化**：根据分析结果自动筛选同性别的推荐模板
+
+**章节来源**
+- [api.uts:566-608](file://src/utils/api.uts#L566-L608)
+- [aiRecommend.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-L202)
+- [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
+- [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
 
 ## 依赖关系分析
 - api.uts 依赖 http.uts 进行网络请求，依赖 auth.uts 获取/注入 token
@@ -420,6 +506,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - 页面组件通过 import api.uts 使用业务接口
 - 登录流程与头像/昵称提交分别封装在 loginFlow.uts 与 profileSubmit.uts 中，内部调用 api.uts 与 auth.uts
 - **AI试衣功能依赖：aiTryOn 页面使用 getAiTemplates、uploadPhoto、submitAiTryOn；aiTryOnResult 页面使用 getAiTryOnResult；aiTryOnHistory 页面使用 getAiTasks**
+- **AI智能推荐功能依赖：aiRecommend 页面使用 uploadPhoto；aiRecommendLoading 页面使用 getAiRecommend；aiRecommendResult 页面展示分析结果和推荐列表**
 
 ```mermaid
 classDiagram
@@ -475,7 +562,7 @@ HTTP --> CONFIG : "使用"
 ```
 
 **图表来源**
-- [api.uts:1-503](file://src/utils/api.uts#L1-L503)
+- [api.uts:1-609](file://src/utils/api.uts#L1-L609)
 - [http.uts:1-82](file://src/utils/http.uts#L1-L82)
 - [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
 - [config.uts:1-12](file://src/utils/config.uts#L1-L12)
@@ -494,6 +581,12 @@ HTTP --> CONFIG : "使用"
   - **参数类型优化**：统一 shop_id 参数类型，减少类型转换开销
   - **历史记录优化**：新增的历史记录页面支持智能封面图选择和状态管理
   - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了与不同API实现的兼容性
+- **AI智能推荐优化**：
+  - **分析轮询优化**：每30秒轮询一次，最长等待180秒，平衡用户体验和服务器负载
+  - **图片压缩**：上传前自动压缩照片，减少传输时间
+  - **结果缓存**：推荐结果在页面间传递时进行JSON序列化，避免重复计算
+  - **性别匹配优化**：根据分析结果自动筛选同性别模板，提高推荐精准度
+  - **错误重试机制**：连续3次失败后停止重试，避免无限循环
 
 **章节来源**
 - [index.uvue:142-151](file://src/pages/index/index.uvue#L142-L151)
@@ -502,6 +595,7 @@ HTTP --> CONFIG : "使用"
 - [aiTryOn.uvue:129-142](file://src/pages/aiTryOn/index.uvue#L129-L142)
 - [aiTryOnResult.uvue:85-106](file://src/pages/aiTryOnResult/index.uvue#L85-L106)
 - [aiTryOnHistory.uvue:166-176](file://src/pages/aiTryOnHistory/index.uvue#L166-L176)
+- [aiRecommendLoading.uvue:69-84](file://src/pages/aiRecommendLoading/index.uvue#L69-L84)
 
 ## 故障排除指南
 - 未授权（401）
@@ -528,6 +622,14 @@ HTTP --> CONFIG : "使用"
   - **参数类型错误**：注意 shop_id 在不同接口间的类型差异（string vs number）
   - **历史记录获取失败**：检查 openid 参数是否正确传递，确认用户已登录
   - **多成功码格式兼容性问题**：现在支持 code 0 和 200 两种成功码格式，如果遇到兼容性问题，检查后端API版本
+- **AI智能推荐功能异常**：
+  - **照片上传失败**：检查文件大小限制（10MB），确认网络连接正常
+  - **分析轮询失败**：检查网络状态，连续3次失败后显示失败界面
+  - **分析超时**：180秒超时后自动转为失败，支持用户重试
+  - **结果解析失败**：检查返回数据格式，确保analysis和recommendations字段存在
+  - **性别匹配问题**：检查分析结果中的gender字段，确保正确识别用户性别
+  - **推荐结果为空**：检查后端AI服务状态，确认推荐算法正常运行
+  - **多成功码格式兼容性问题**：现在支持 code 0 和 200 两种成功码格式，如果遇到兼容性问题，检查后端API版本
 
 **章节来源**
 - [http.uts:50-61](file://src/utils/http.uts#L50-L61)
@@ -538,17 +640,18 @@ HTTP --> CONFIG : "使用"
 - [aiTryOn.uvue:176-239](file://src/pages/aiTryOn/index.uvue#L176-L239)
 - [aiTryOnResult.uvue:108-130](file://src/pages/aiTryOnResult/index.uvue#L108-L130)
 - [aiTryOnHistory.uvue:132-147](file://src/pages/aiTryOnHistory/index.uvue#L132-L147)
+- [aiRecommendLoading.uvue:103-112](file://src/pages/aiRecommendLoading/index.uvue#L103-L112)
 
 ## 结论
 API 接口封装层以清晰的分层设计实现了业务接口的统一管理，结合认证与 HTTP 层的自动化处理，显著降低了页面开发复杂度。通过规范化的数据模型、参数与返回值约定以及错误处理策略，开发者可以更专注于业务逻辑实现。
 
 **新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交和结果查询等核心功能。该模块采用了专门的错误处理策略（aiface 接口成功 code === 0 或 200，非 200），并实现了智能的轮询机制和超时控制，确保了良好的用户体验。**
 
-**本次更新重点关注了AI试衣历史记录管理功能的完善，新增的 getAiTasks 接口为用户提供了完整的试衣历史记录查询能力，配合 aiTryOnHistory 页面实现了完整的用户交互体验。这一功能增强了AI试衣服务的可用性和用户粘性，为后续的功能扩展奠定了坚实的技术基础。**
+**本次更新重点关注了AI智能推荐功能的完善，新增了AiRecommendAnalysis和AiRecommendation数据模型定义，增强了getAiRecommend函数的响应格式处理，支持analysis和recommendations两个主要数据部分。这一功能为用户提供了基于个人特征的个性化服饰风格推荐服务，通过分析用户的年龄、性别、脸型、体型等特征，智能推荐最适合的服饰风格。**
 
-**特别重要的是，AI试衣相关接口现在支持多种成功码格式（code 0 和 200），这大大提高了与不同API实现的兼容性，改善了任务检索的可靠性并减少了认证相关错误。这种改进使得系统能够更好地适应不同的后端服务版本，提升了整体的稳定性和用户体验。**
+**特别重要的是，AI推荐相关接口现在支持多种成功码格式（code 0 和 200），这大大提高了与不同API实现的兼容性，改善了任务检索的可靠性并减少了认证相关错误。同时，tryonDisabled字段的增强支持使得系统能够更好地控制试衣功能的可用性，提升了整体的稳定性和用户体验。**
 
-建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，AI试衣功能的成功实施为其他AI相关功能的扩展奠定了坚实的技术基础。
+建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，AI试衣和AI智能推荐功能的成功实施为其他AI相关功能的扩展奠定了坚实的技术基础。
 
 ## 附录
 
@@ -557,6 +660,7 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
   - 初始化：先调用 getCategories，再根据子分类调用 getAlbumList
   - 搜索：调用 getAlbumList 并传入 keyword
   - 点赞/收藏：在登录状态下调用对应 toggle 接口，随后刷新状态
+  - **试衣功能控制**：检查AlbumBasic中的tryonDisabled字段来控制试衣按钮的可用性
 - 用户认证
   - 登录：runPhoneLogin 完成三步流程，登录成功后调用 mergeUserInfo
   - 更新资料：wxUpdateUserInfo 仅传入非空字段，避免覆盖
@@ -572,11 +676,17 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
   - **任务提交**：使用 submitAiTryOn 创建AI试衣任务，检查必填参数
   - **结果查询**：使用 getAiTryOnResult 轮询查询任务状态，设置60秒超时
   - **历史记录**：使用 getAiTasks 获取历史记录，deleteAiTask 删除记录
-  - **推荐功能**：使用 getAiRecommend 基于用户照片推荐模板
   - **参数类型注意事项**：注意不同接口间 shop_id 参数类型的差异（string vs number）
-  - **历史记录管理**：新增的 getAiTasks 接口提供完整的AI试衣历史记录查询功能
   - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了兼容性
-  - **错误处理改进**：AI试衣相关接口现在支持多种成功码格式，减少了认证相关错误
+- **AI智能推荐功能**
+  - **照片上传**：使用 uploadPhoto 上传用户照片，准备进行分析
+  - **智能分析**：使用 getAiRecommend 获取AI分析结果和个性化推荐
+  - **结果展示**：在aiRecommendResult页面展示analysis和recommendations数据
+  - **风格跳转**：点击推荐风格跳转到对应的AI试衣模板列表
+  - **轮询策略**：aiRecommendLoading页面每30秒轮询一次，最长等待180秒
+  - **错误处理**：连续3次网络错误后显示失败界面，支持用户重试
+  - **性别匹配**：根据分析结果自动筛选同性别的推荐模板
+  - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了兼容性
 
 **章节来源**
 - [demoDetail.uvue:304-477](file://src/pages/demoDetail/index.uvue#L304-L477)
@@ -588,3 +698,6 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
 - [aiTryOn.uvue:94-239](file://src/pages/aiTryOn/index.uvue#L94-L239)
 - [aiTryOnResult.uvue:57-229](file://src/pages/aiTryOnResult/index.uvue#L57-L229)
 - [aiTryOnHistory.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
+- [aiRecommend.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-L202)
+- [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
+- [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)

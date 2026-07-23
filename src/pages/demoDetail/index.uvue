@@ -76,7 +76,7 @@
 			<!-- 正常分类模式 -->
 			<view v-if="!isSearching && alltabs.length > 0">
 				<!-- AI智能推荐入口 -->
-				<view class="ai-recommend-banner" @click="goToAiRecommend">
+				<view class="ai-recommend-banner" @click="goToAiRecommend" v-if="false">
 					<text class="ai-recommend-text">AI智能推荐-拍照选服饰</text>
 				</view>
 				<view class="title">套餐与子系分类：</view>
