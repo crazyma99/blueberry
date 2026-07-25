@@ -14,16 +14,15 @@
 - [src/utils/legal.uts](file://src/utils/legal.uts)
 - [src/components/AppFooter/AppFooter.uvue](file://src/components/AppFooter/AppFooter.uvue)
 - [src/pages.json](file://src/pages.json)
+- [src/pages/demoDetail/index.uvue](file://src/pages/demoDetail/index.uvue)
 </cite>
 
 ## 更新摘要
 **变更内容**
-- 新增完整的登录流程管理系统，包括微信授权登录和手机号绑定
-- 实现用户资料完善系统，支持头像选择和昵称编辑
-- 增强错误处理机制，包含401未授权处理和请求挂起队列
-- 优化结果展示页面，增加智能性别过滤功能
-- 实现180秒超时轮询机制，提升用户体验
-- 新增登录弹窗系统和用户协议同意机制
+- AI智能推荐功能入口已暂时隐藏（v-if="false"），当前处于开发/测试阶段
+- API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移
+- 保持了完整的登录流程管理系统和用户资料完善功能
+- 维持180秒超时轮询机制和智能性别过滤功能
 
 ## 目录
 1. [简介](#简介)
@@ -37,7 +36,7 @@
 9. [结论](#结论)
 
 ## 简介
-本章节聚焦于"AI服装推荐"能力，该能力经过重大增强后，现在提供完整的用户认证、资料管理和智能推荐服务。系统由三个核心页面组成：上传照片、等待分析、展示结果。用户通过上传个人照片触发后端AI分析，系统返回用户画像（性别、年龄、脸型、体型、风格关键词）以及若干推荐的服饰风格卡片。整个流程现已集成完整的登录态管理、用户资料完善系统、增强的错误处理机制和智能性别过滤功能。
+本章节聚焦于"AI服装推荐"能力，该能力经过重大增强后，现在提供完整的用户认证、资料管理和智能推荐服务。**重要更新**：AI智能推荐功能入口已暂时隐藏（v-if="false"），当前处于开发/测试阶段。系统由三个核心页面组成：上传照片、等待分析、展示结果。用户通过上传个人照片触发后端AI分析，系统返回用户画像（性别、年龄、脸型、体型、风格关键词）以及若干推荐的服饰风格卡片。整个流程现已集成完整的登录态管理、用户资料完善系统、增强的错误处理机制和智能性别过滤功能。API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移。
 
 ## 项目结构
 AI服装推荐相关代码位于 pages 与 utils 两个层次，经过增强后新增了登录流程和用户资料管理模块：
@@ -50,39 +49,43 @@ subgraph "页面层"
 A["aiRecommend/index.uvue<br/>上传与发起分析+登录弹窗"]
 B["aiRecommendLoading/index.uvue<br/>轮询与分析中UI"]
 C["aiRecommendResult/index.uvue<br/>结果展示与跳转"]
+D["demoDetail/index.uvue<br/>AI入口暂时隐藏(v-if=false)"]
 end
 subgraph "工具层"
-D["api.uts<br/>上传/推荐接口封装"]
-E["http.uts<br/>统一请求/401处理/重试"]
-F["auth.uts<br/>Token/用户信息/过期标志"]
-G["config.uts<br/>baseURL/超时"]
-H["loginFlow.uts<br/>登录流程管理"]
-I["profileSubmit.uts<br/>用户资料提交"]
-J["legal.uts<br/>法律协议管理"]
-K["AppFooter.uvue<br/>页脚版权文本"]
+E["api.uts<br/>上传/推荐接口封装"]
+F["http.uts<br/>统一请求/401处理/重试"]
+G["auth.uts<br/>Token/用户信息/过期标志"]
+H["config.uts<br/>baseURL=https://lanmei66.cloud/超时"]
+I["loginFlow.uts<br/>登录流程管理"]
+J["profileSubmit.uts<br/>用户资料提交"]
+K["legal.uts<br/>法律协议管理"]
+L["AppFooter.uvue<br/>页脚版权文本"]
 end
-A --> D
-A --> H
+A --> E
 A --> I
 A --> J
-B --> D
-C --> K
-D --> E
+A --> K
+B --> E
+C --> L
 E --> F
-E --> G
-H --> D
-H --> F
-I --> D
-I --> F
+F --> G
+F --> H
+I --> E
+I --> G
+J --> E
+J --> G
+D -.-> A
 ```
 
 **图表来源**
 - [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
 - [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
 - [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
+- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 - [src/utils/api.uts:1-609](file://src/utils/api.uts#L1-L609)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
+- [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
 - [src/utils/loginFlow.uts:1-75](file://src/utils/loginFlow.uts#L1-L75)
 - [src/utils/profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 - [src/utils/legal.uts:1-16](file://src/utils/legal.uts#L1-L16)
@@ -96,8 +99,9 @@ I --> F
 - **接口封装**：上传与推荐接口，包含401挂起队列与登录后自动重试
 - **请求层**：统一请求头注入、401处理、挂起队列与flush重试
 - **认证模块**：token与用户信息管理、登录过期标志消费
-- **配置模块**：API域名与超时时间
+- **配置模块**：API域名已更新为'https://lanmei66.cloud'与超时时间
 - **公共组件**：全局页脚版权文本
+- **入口控制**：AI智能推荐入口在demoDetail页面中暂时隐藏（v-if="false"）
 
 **章节来源**
 - [src/pages/aiRecommend/index.uvue:158-344](file://src/pages/aiRecommend/index.uvue#L158-L344)
@@ -110,6 +114,7 @@ I --> F
 - [src/utils/auth.uts:127-171](file://src/utils/auth.uts#L127-L171)
 - [src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
 - [src/components/AppFooter/AppFooter.uvue:14-24](file://src/components/AppFooter/AppFooter.uvue#L14-L24)
+- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 
 ## 架构总览
 增强后的AI服装推荐整体调用链如下：
@@ -119,9 +124,12 @@ I --> F
 - 当接口返回成功数据时，跳转到结果页面展示分析与推荐列表
 - 点击推荐卡片后跳转到AI试衣模板列表，携带风格名与性别筛选参数
 
+**重要更新**：AI智能推荐入口在demoDetail页面中通过`v-if="false"`暂时隐藏，当前处于开发/测试阶段，不向普通用户开放访问。
+
 ```mermaid
 sequenceDiagram
 participant U as "用户"
+participant D as "demoDetail页面(入口隐藏)"
 participant P1 as "上传页面(aiRecommend)"
 participant AUTH as "认证(auth.uts)"
 participant LOGIN as "登录流程(loginFlow)"
@@ -131,7 +139,9 @@ participant CFG as "配置(config.uts)"
 participant PROFILE as "用户资料(profileSubmit)"
 participant P2 as "分析中页面(aiRecommendLoading)"
 participant P3 as "结果页面(aiRecommendResult)"
-U->>P1 : 选择照片并点击开始分析
+U->>D : 访问demoDetail页面
+Note over D : v-if="false" 入口暂时隐藏
+D-->>U : 无法直接访问AI推荐入口
 P1->>AUTH : 检查登录状态
 alt 未登录
 P1->>P1 : 显示登录弹窗
@@ -142,7 +152,7 @@ LOGIN->>PROFILE : 可选：完善用户资料
 end
 P1->>API : uploadPhoto(filePath)
 API->>HTTP : request(POST /upload, header=Authorization)
-HTTP->>CFG : getHttpConfig()
+HTTP->>CFG : getHttpConfig() (baseURL=https : //lanmei66.cloud)
 HTTP-->>API : 响应数据(code/data)
 API-->>P1 : {code,data.filename}
 P1->>P2 : navigateTo(带filename, shopId)
@@ -161,6 +171,7 @@ P3-->>U : 展示分析与推荐列表
 - [src/pages/aiRecommend/index.uvue:158-285](file://src/pages/aiRecommend/index.uvue#L158-L285)
 - [src/pages/aiRecommendLoading/index.uvue:63-113](file://src/pages/aiRecommendLoading/index.uvue#L63-L113)
 - [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 - [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
 - [src/utils/api.uts:443-608](file://src/utils/api.uts#L443-L608)
 - [src/utils/http.uts:93-163](file://src/utils/http.uts#L93-L163)
@@ -218,6 +229,20 @@ P3-->>U : 展示分析与推荐列表
 
 **章节来源**
 - [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+
+### 入口控制（demoDetail）
+**新增** AI智能推荐入口暂时隐藏机制
+
+- **功能要点**
+  - 在demoDetail页面中通过`v-if="false"`暂时隐藏AI智能推荐入口
+  - 保持goToAiRecommend方法可用，便于开发测试
+  - 入口隐藏不影响核心功能的完整性
+- **关键路径**
+  - 入口隐藏控制：[src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
+  - 跳转方法保留：[src/pages/demoDetail/index.uvue:606-610](file://src/pages/demoDetail/index.uvue#L606-L610)
+
+**章节来源**
+- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 
 ### 登录流程管理（loginFlow.uts）
 **新增** 完整的登录三步骤纯逻辑封装
@@ -297,7 +322,10 @@ P3-->>U : 展示分析与推荐列表
 - [src/utils/auth.uts:92-171](file://src/utils/auth.uts#L92-L171)
 
 ### 配置模块（config.uts）
+**更新** API域名已迁移至新服务器
+
 - **功能要点**
+  - baseURL已更新为'https://lanmei66.cloud'，原'https://crazyma99.xyz'已废弃
   - 集中管理API base URL与超时时间
 - **关键路径**
   - baseURL与timeout：[src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
@@ -328,7 +356,7 @@ P3-->>U : 展示分析与推荐列表
 - [src/components/AppFooter/AppFooter.uvue:14-24](file://src/components/AppFooter/AppFooter.uvue#L14-L24)
 
 ## 依赖关系分析
-**更新** 新增登录流程和用户资料管理的依赖关系
+**更新** 新增登录流程和用户资料管理的依赖关系，以及入口控制机制
 
 - 页面到接口：上传与推荐页面均依赖api.uts暴露的方法
 - 页面到登录流程：上传页面依赖loginFlow.uts进行登录管理
@@ -338,9 +366,14 @@ P3-->>U : 展示分析与推荐列表
 - 登录流程到接口：loginFlow.uts依赖api.uts的登录相关接口
 - 用户资料到接口：profileSubmit.uts依赖api.uts的用户信息更新接口
 - 结果页到公共组件：结果页引入AppFooter用于底部版权
+- 入口控制：demoDetail页面通过v-if控制AI推荐入口的可见性
 
 ```mermaid
 classDiagram
+class DemoDetailPage {
++goToAiRecommend()
++v-if="false" 入口隐藏
+}
 class AiRecommendPage {
 +choosePhoto()
 +handleStartAnalysis()
@@ -382,7 +415,7 @@ class AuthModule {
 +mergeUserInfo(partial)
 }
 class ConfigModule {
-+getHttpConfig()
++getHttpConfig() // baseURL=https : //lanmei66.cloud
 }
 class LegalModule {
 +openUserAgreement()
@@ -391,6 +424,7 @@ class LegalModule {
 class AppFooter {
 +copyrightText
 }
+DemoDetailPage -.-> AiRecommendPage : "入口隐藏(v-if=false)"
 AiRecommendPage --> ApiModule : "调用上传/推荐"
 AiRecommendPage --> LoginFlow : "执行登录流程"
 AiRecommendPage --> ProfileSubmit : "提交用户资料"
@@ -406,6 +440,7 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 ```
 
 **图表来源**
+- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 - [src/pages/aiRecommend/index.uvue:158-343](file://src/pages/aiRecommend/index.uvue#L158-L343)
 - [src/pages/aiRecommendLoading/index.uvue:63-134](file://src/pages/aiRecommendLoading/index.uvue#L63-L134)
 - [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
@@ -421,7 +456,7 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 - [src/pages.json:74-90](file://src/pages.json#L74-L90)
 
 ## 性能与体验优化建议
-**更新** 基于新功能特性的优化建议
+**更新** 基于新功能特性和入口隐藏机制的优化建议
 
 - **轮询频率与超时**
   - 当前轮询间隔为30秒，超时为180秒。可根据后端实际处理时长调整间隔与上限，减少无效请求与等待焦虑
@@ -437,10 +472,17 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 - **登录流程优化**
   - 考虑实现登录状态的本地缓存，减少重复登录
   - 优化用户资料提交的乐观更新策略
+- **入口控制优化**
+  - 入口隐藏机制便于开发测试，待功能稳定后可移除v-if="false"
+  - 考虑添加环境变量控制入口可见性，便于不同环境部署
 
 ## 故障排查指南
-**更新** 新增登录流程和用户资料相关的故障排查
+**更新** 新增登录流程和用户资料相关的故障排查，以及入口隐藏相关问题
 
+- **入口访问问题**
+  - 检查demoDetail页面中的v-if="false"是否影响正常访问
+  - 确认AI智能推荐入口是否需要在特定环境下显示
+  - 验证入口隐藏是否为预期行为
 - **上传失败**
   - 检查文件大小是否超过10MB
   - 确认Authorization头是否正确注入
@@ -466,8 +508,13 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 - **跳转AI试衣模板列表失败**
   - 核对style与gender参数是否正确编码与传递
   - 确认目标页面路由存在且接收参数
+- **API连接问题**
+  - 检查baseURL是否已更新为'https://lanmei66.cloud'
+  - 确认新服务器地址是否正确配置
+  - 验证网络连接是否正常
 
 **章节来源**
+- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 - [src/pages/aiRecommend/index.uvue:158-343](file://src/pages/aiRecommend/index.uvue#L158-L343)
 - [src/pages/aiRecommendLoading/index.uvue:63-134](file://src/pages/aiRecommendLoading/index.uvue#L63-L134)
 - [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
@@ -475,6 +522,7 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 - [src/utils/profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
 - [src/utils/api.uts:443-608](file://src/utils/api.uts#L443-L608)
 - [src/utils/http.uts:93-163](file://src/utils/http.uts#L93-L163)
+- [src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
 
 ## 结论
-AI服装推荐功能经过重大增强后，现已形成完整的用户认证、资料管理和智能推荐服务体系。新的架构以清晰的三段式页面流程完成从上传到结果展示的闭环，并通过统一的请求层与认证模块保障登录态与401处理的健壮性。新增的登录流程管理、用户资料完善系统和180秒超时轮询机制显著提升了用户体验。智能性别过滤功能和增强的错误处理机制进一步增强了系统的稳定性和易用性。后续可在轮询频率、图片压缩、结果缓存、登录状态缓存和错误分类方面进一步优化，以获得更流畅与稳定的使用体验。
+AI服装推荐功能经过重大增强后，现已形成完整的用户认证、资料管理和智能推荐服务体系。**重要更新**：AI智能推荐功能入口已暂时隐藏（v-if="false"），当前处于开发/测试阶段，不向普通用户开放。同时，API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移。新的架构以清晰的三段式页面流程完成从上传到结果展示的闭环，并通过统一的请求层与认证模块保障登录态与401处理的健壮性。新增的登录流程管理、用户资料完善系统和180秒超时轮询机制显著提升了用户体验。智能性别过滤功能和增强的错误处理机制进一步增强了系统的稳定性和易用性。入口隐藏机制便于开发测试，待功能稳定后可移除v-if="false"。后续可在轮询频率、图片压缩、结果缓存、登录状态缓存和错误分类方面进一步优化，以获得更流畅与稳定的使用体验。
