@@ -93,10 +93,10 @@ export default {
 				// aiface 接口 code === 0 或 200 表示成功
 				if ((res.code === 0 || res.code === 200) && res.data) {
 					this.stopAll()
-					// 跳转结果页，通过全局事件传递数据
+					// 跳转结果页，通过全局事件传递数据（shopId 供详情页 type 参数使用）
 					const resultData = JSON.stringify(res.data)
 					uni.redirectTo({
-						url: `/pages/aiRecommendResult/index?data=${encodeURIComponent(resultData)}`
+						url: `/pages/aiRecommendResult/index?shopId=${this.shopId}&data=${encodeURIComponent(resultData)}`
 					})
 				}
 				// code !== 0/200 → 等待下一轮轮询

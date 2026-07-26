@@ -155,6 +155,19 @@
 		onHide() {
 			uni.$off('login-required')
 		},
+		// 右上角胶囊菜单「转发」：定义该生命周期后菜单自动亮起，无需接入额外 API
+		onShareAppMessage() {
+			return {
+				title: '蓝梅旗袍·汉服·民族服体验馆',
+				path: '/pages/index/index'
+			}
+		},
+		// 右上角胶囊菜单「分享到朋友圈」
+		onShareTimeline() {
+			return {
+				title: '蓝梅旗袍·汉服·民族服体验馆'
+			}
+		},
 		methods: {
 			// 关闭登录弹窗
 			closeLoginPopup() {

@@ -560,6 +560,95 @@ export const deleteAiTask = async (id: number) => {
   return res as { code: number; message: string }
 }
 
+// ============ AI试衣次数 / 支付模块（credit） ============
+// 注意：credit 接口成功 code === 200；4001 = 试衣次数不足（HTTP 200 返回）
+
+export interface CreditBalance {
+  balance: number            // 剩余试衣次数
+  inited: boolean            // 是否已初始化免费次数
+  priceFenPerCredit: number  // 单次价格（分），0 = 未开通付费购买（前端只给兑换码入口）
+}
+
+export interface CreditRechargeOrder {
+  outTradeNo: string
+  prepayId: string
+  appId: string
+  timeStamp: string
+  nonceStr: string
+  package: string
+  signType: string
+  paySign: string
+}
+
+export interface CreditRechargeStatus {
+  outTradeNo: string
+  status: number   // 0待付 1已付 2关闭 3退款
+  paid: boolean    // true = 已支付到账
+  credits: number  // 本单购买次数
+  balance: number  // 到账后的最新余额
+}
+
+/**
+ * 查询当前用户试衣次数余额与单次定价（需登录）
+ * 首次查询会按商户配置惰性初始化免费次数
+ * @param shopId 可选，传了才返回该店所属商户的单次价格
+ */
+export const getCreditBalance = async (shopId?: number) => {
+  const res = await request({
+    url: '/api/aiface/credit/balance',
+    method: 'GET',
+    data: shopId != null ? { shopId } : {},
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: CreditBalance }
+}
+
+/**
+ * 创建充值订单（微信小程序 JSAPI 支付），返回拉起支付所需参数（需登录）
+ * 「支付一次开通一次」，credits 通常传 1
+ */
+export const createCreditRecharge = async (params: {
+  shopId: number
+  credits: number
+}) => {
+  const res = await request({
+    url: '/api/aiface/credit/recharge',
+    method: 'POST',
+    data: params,
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: CreditRechargeOrder }
+}
+
+/**
+ * 查询充值订单状态（需登录）
+ * wx.requestPayment 成功后轮询到账（回调异步入账），直到 paid = true
+ * @param outTradeNo 下单接口返回的商户订单号
+ */
+export const getCreditRechargeStatus = async (outTradeNo: string) => {
+  const res = await request({
+    url: '/api/aiface/credit/recharge/status',
+    method: 'GET',
+    data: { outTradeNo },
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: CreditRechargeStatus }
+}
+
+/**
+ * 兑换码兑换，立即增加次数（需登录）
+ * @param code 12 位兑换码
+ */
+export const redeemCreditCode = async (code: string) => {
+  const res = await request({
+    url: '/api/aiface/credit/redeem',
+    method: 'POST',
+    data: { code },
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: { creditsAdded: number; balance: number } }
+}
+
 /**
  * AI推荐结果类型定义
  */
@@ -578,6 +667,8 @@ export interface AiRecommendation {
   templateIds: number[]
   genderMatched: boolean
   previewUrl: string
+  // 对应的客片 id，点击「查看模板」跳转客片详情页（/wechat/album/detail 的 albumId）
+  albumId?: number
 }
 
 /**

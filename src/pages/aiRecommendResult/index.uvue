@@ -80,10 +80,12 @@ export default {
 		return {
 			analysis: null as any,
 			recommendations: [] as any[],
-			gender: ''
+			gender: '',
+			shopId: ''
 		}
 	},
 	onLoad(options : any) {
+		this.shopId = options?.shopId ?? ''
 		const raw = options?.data ?? ''
 		if (raw !== '') {
 			try {
@@ -105,12 +107,20 @@ export default {
 	},
 	methods: {
 		onRecClick(rec : any) {
-			const styleName = rec.styleName ?? ''
-			const style = encodeURIComponent(styleName)
-			// 跳转到 AI 试衣模板列表，带上风格名 + 性别筛选
-			uni.navigateTo({
-				url: `/pages/aiTryOn/index?style=${style}&gender=${this.gender}`
-			})
+			const albumId = rec.albumId ?? 0
+			if (albumId > 0) {
+				// 跳转 albumId 对应的客片详情页（详情接口要求携带 type=shopId，style 供「我也要拍」带回试衣页）
+				const style = encodeURIComponent(rec.styleName ?? '')
+				uni.navigateTo({
+					url: `/pages/targetPhotoDetail/index?idx=${albumId}&type=${this.shopId}&liked=false&style=${style}`
+				})
+			} else {
+				// 推荐项无 albumId（旧数据）：保持原逻辑，跳 AI 试衣模板列表（shopId 供试衣提交与支付使用）
+				const style = encodeURIComponent(rec.styleName ?? '')
+				uni.navigateTo({
+					url: `/pages/aiTryOn/index?style=${style}&gender=${this.gender}&shopId=${this.shopId}`
+				})
+			}
 		}
 	}
 }

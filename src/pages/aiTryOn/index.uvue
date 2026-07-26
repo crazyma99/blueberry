@@ -81,13 +81,29 @@
 
 		<!-- 底部固定生成按钮 -->
 		<view class="fixed-bottom">
-			<view
-				:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
-				@click="handleGenerate"
-			>
-				<text class="generate-btn-text">生成 </text>
-				<text class="generate-btn-ai">AI试衣</text>
-				<text class="generate-btn-text"> 效果</text>
+			<!-- 付费模式且无限免次数：原按钮样式 + 价格文案，点击引导充值/兑换 -->
+			<view v-if="isPaidMode && creditBalance <= 0" class="gen-btn-wrap">
+				<view
+					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
+					@click="handleGenerate"
+				>
+					<text class="generate-btn-ai">¥{{ priceText }}</text>
+					<text class="generate-btn-text"> 马上生成AI试衣效果</text>
+				</view>
+			</view>
+			<!-- 非付费模式或有限免次数：原样式按钮，有限免时右上角展示角标 -->
+			<view v-else class="gen-btn-wrap">
+				<view
+					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
+					@click="handleGenerate"
+				>
+					<text class="generate-btn-text">生成 </text>
+					<text class="generate-btn-ai">AI试衣</text>
+					<text class="generate-btn-text"> 效果</text>
+				</view>
+				<view v-if="isPaidMode && creditBalance > 0" class="gen-btn-badge">
+					<text class="gen-btn-badge-text">限时免费 {{ creditBalance }} 次</text>
+				</view>
 			</view>
 			<view class="footer-copyright">
 				<AppFooter />
@@ -147,7 +163,7 @@
 </template>
 
 <script lang="uts">
-import { getAiTemplates, uploadPhoto, submitAiTryOn, rejectAllPendingUploads } from '../../utils/api.uts'
+import { getAiTemplates, uploadPhoto, submitAiTryOn, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
 import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
@@ -186,7 +202,27 @@ export default {
 			// 头像昵称授权弹窗
 			showProfilePopup: false,
 			profileAvatarUrl: '',
-			profileNickname: ''
+			profileNickname: '',
+			// 试衣次数 / 支付
+			creditBalance: -1,        // 剩余次数，-1 = 未查询到
+			priceFenPerCredit: 0,     // 单次价格（分），0 = 未开通付费购买（非付费模式）
+			creditLoaded: false,      // 是否已成功查询到余额
+			isPaying: false,
+			resumeGenerateAfterCredit: false, // 支付成功后自动继续生成
+			payPollToken: 0           // 到账轮询会话标记，自增即失效
+		}
+	},
+	computed: {
+		// 付费模式：已查询到余额且商户配置了单次价格
+		isPaidMode(): boolean {
+			return this.creditLoaded && this.priceFenPerCredit > 0
+		},
+		// 单次价格文案（分 → 元，整元去小数）
+		priceText(): string {
+			const fen = this.priceFenPerCredit
+			if (fen <= 0) return '0'
+			if (fen % 100 === 0) return `${fen / 100}`
+			return (fen / 100).toFixed(2)
 		}
 	},
 	onLoad(options) {
@@ -219,9 +255,15 @@ export default {
 		if (consumeLoginExpired()) {
 			this.showLoginPopup = true
 		}
+		// 查询试衣次数余额（需登录；未登录时保持原按钮，避免进页即拉起登录）
+		if (isLoggedIn()) {
+			this.loadCreditInfo()
+		}
 	},
 	onHide() {
 		uni.$off('login-required')
+		// 页面隐藏时终止可能进行中的到账轮询
+		this.payPollToken = this.payPollToken + 1
 	},
 	methods: {
 		async loadTemplates() {
@@ -344,6 +386,12 @@ export default {
 				return
 			}
 
+			// 付费模式且已知无剩余次数：直接拉起支付，省一次必败请求
+			if (this.isPaidMode && this.creditBalance <= 0) {
+				this.handleRecharge()
+				return
+			}
+
 			this.isSubmitting = true
 			uni.showLoading({ title: '提交中...', mask: true })
 
@@ -364,9 +412,17 @@ export default {
 				const submitRes = await submitAiTryOn(submitParams as any)
 
 				if ((submitRes.code === 0 || submitRes.code === 200) && submitRes.data) {
+					// 任务创建成功即扣 1 次，本地余额同步 -1（角标实时刷新）
+					if (this.isPaidMode && this.creditBalance > 0) {
+						this.creditBalance = this.creditBalance - 1
+					}
 					uni.navigateTo({
 						url: `/pages/aiTryOnResult/index?taskId=${submitRes.data.task_id}`
 					})
+				} else if (submitRes.code === 4001) {
+					// 试衣次数不足 → 直接拉起支付
+					this.creditBalance = 0
+					this.handleRecharge()
 				} else {
 					uni.showToast({ title: submitRes.message || '提交失败', icon: 'none' })
 				}
@@ -376,6 +432,113 @@ export default {
 			} finally {
 				this.isSubmitting = false
 				uni.hideLoading()
+			}
+		},
+
+		// ========== 试衣次数 / 支付 ==========
+
+		// 查询试衣次数余额与单次定价（失败时静默，保持原按钮）
+		async loadCreditInfo() {
+			try {
+				const shopIdNum = parseInt(this.shopId) || 0
+				const res = await getCreditBalance(shopIdNum > 0 ? shopIdNum : undefined)
+				if (res.code === 200 && res.data) {
+					this.creditBalance = res.data.balance
+					this.priceFenPerCredit = res.data.priceFenPerCredit
+					this.creditLoaded = true
+				}
+			} catch (err) {
+				console.error('[aiTryOn] 查询试衣次数失败:', err)
+			}
+		},
+
+		// 充值：创建订单 → 拉起微信支付 → 轮询到账
+		async handleRecharge() {
+			if (this.isPaying) return
+			this.isPaying = true
+			// 支付由生成流程触发，到账后自动继续生成
+			this.resumeGenerateAfterCredit = true
+			try {
+				const shopIdNum = parseInt(this.shopId) || 0
+				const res = await createCreditRecharge({ shopId: shopIdNum, credits: 1 })
+				if (res.code !== 200 || !res.data) {
+					this.isPaying = false
+					uni.showToast({ title: res.message || '下单失败，请重试', icon: 'none' })
+					return
+				}
+				const order = res.data
+				const outTradeNo = order.outTradeNo
+				uni.requestPayment({
+					provider: 'wxpay',
+					timeStamp: order.timeStamp,
+					nonceStr: order.nonceStr,
+					package: order.package,
+					signType: order.signType,
+					paySign: order.paySign,
+					success: () => {
+						// 支付成功：到账为微信异步回调入账，轮询订单状态确认
+						this.pollRechargeStatus(outTradeNo)
+					},
+					fail: (payErr: any) => {
+						this.isPaying = false
+						const errMsg: string = payErr?.errMsg ?? ''
+						if (errMsg.indexOf('cancel') !== -1) {
+							uni.showToast({ title: '已取消支付', icon: 'none' })
+						} else {
+							console.error('[aiTryOn] 拉起支付失败:', errMsg)
+							uni.showToast({ title: '支付未完成，请重试', icon: 'none' })
+						}
+					}
+				} as any)
+			} catch (err) {
+				this.isPaying = false
+				console.error('[aiTryOn] 创建充值订单失败:', err)
+				uni.showToast({ title: '下单失败，请重试', icon: 'none' })
+			}
+		},
+
+		// 轮询充值订单状态：每 2.5 秒一次，最多 48 次（约 2 分钟兜底），paid = true 即到账
+		pollRechargeStatus(outTradeNo: string) {
+			this.payPollToken = this.payPollToken + 1
+			const token = this.payPollToken
+			const maxTimes = 48
+			let count = 0
+			uni.showLoading({ title: '确认到账中...', mask: true })
+			const check = async () => {
+				if (token !== this.payPollToken) {
+					uni.hideLoading()
+					return
+				}
+				count = count + 1
+				try {
+					const res = await getCreditRechargeStatus(outTradeNo)
+					if (res.code === 200 && res.data && res.data.paid) {
+						uni.hideLoading()
+						this.isPaying = false
+						this.creditBalance = res.data.balance
+						uni.showToast({ title: `支付成功，${res.data.credits} 次到账`, icon: 'none' })
+						this.resumeGenerateIfNeeded()
+						return
+					}
+				} catch (err) {
+					console.error('[aiTryOn] 查询充值状态失败:', err)
+				}
+				if (count >= maxTimes) {
+					uni.hideLoading()
+					this.isPaying = false
+					uni.showToast({ title: '到账确认超时，请稍后查看余额', icon: 'none' })
+					return
+				}
+				setTimeout(check, 2500)
+			}
+			check()
+		},
+
+		// 支付到账后，自动继续之前被打断的生成
+		resumeGenerateIfNeeded() {
+			if (this.resumeGenerateAfterCredit) {
+				this.resumeGenerateAfterCredit = false
+				this.handleGenerate()
 			}
 		},
 
@@ -451,6 +614,8 @@ export default {
 				// 关闭手机号登录弹窗
 				this.showLoginPopup = false
 				this.loginAgreementChecked = false
+				// 登录成功后查询试衣次数余额（首次查询后端会惰性发放免费次数）
+				this.loadCreditInfo()
 				if (result.phoneHasFullProfile) {
 					// 后端已带头像昵称 → 直接登录完成
 					uni.showToast({ title: '登录成功', icon: 'success' })
@@ -737,6 +902,27 @@ export default {
 	font-size: 32rpx;
 	color: #fff;
 	font-weight: 700;
+}
+
+/* 生成按钮容器（预留 padding-top 承载角标，避免角标负偏移被裁剪） */
+.gen-btn-wrap {
+	position: relative;
+	width: 520rpx;
+	padding-top: 20rpx;
+}
+/* 限免角标（整体落在容器 padding 预留空间内，不用负偏移，避免被裁剪） */
+.gen-btn-badge {
+	position: absolute;
+	top: 0rpx;
+	right: 0rpx;
+	z-index: 1;
+	background: #ff3b30;
+	border-radius: 16rpx;
+	padding: 4rpx 12rpx;
+}
+.gen-btn-badge-text {
+	font-size: 20rpx;
+	color: #fff;
 }
 
 /* Copyright */
