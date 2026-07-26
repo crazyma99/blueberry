@@ -33,9 +33,8 @@
 				v-for="(rec, idx) in recommendations"
 				:key="idx"
 				class="rec-card"
-				@click="onRecClick(rec)"
 			>
-				<!-- 预览图 -->
+				<!-- 预览图：点击跳转 AI 试衣 -->
 				<image
 					v-if="rec.previewUrl"
 					class="rec-preview"
@@ -54,7 +53,7 @@
 					<text class="rec-reason">{{ rec.reason }}</text>
 					<view class="rec-footer">
 						<text class="rec-gender-tag" v-if="!rec.genderMatched">暂无同性样例</text>
-						<text class="rec-action">查看模板</text>
+						<text class="rec-action" @click="onViewTemplateClick(rec)">查看模板</text>
 					</view>
 				</view>
 			</view>
@@ -106,21 +105,26 @@ export default {
 		}
 	},
 	methods: {
-		onRecClick(rec : any) {
+		// 点击「查看模板」：有 albumId 跳客片详情页，否则 toast 提示
+		onViewTemplateClick(rec : any) {
 			const albumId = rec.albumId ?? 0
 			if (albumId > 0) {
-				// 跳转 albumId 对应的客片详情页（详情接口要求携带 type=shopId，style 供「我也要拍」带回试衣页）
+				// 详情接口要求携带 type=shopId，style 供「我也要拍」带回试衣页
 				const style = encodeURIComponent(rec.styleName ?? '')
 				uni.navigateTo({
 					url: `/pages/targetPhotoDetail/index?idx=${albumId}&type=${this.shopId}&liked=false&style=${style}`
 				})
 			} else {
-				// 推荐项无 albumId（旧数据）：保持原逻辑，跳 AI 试衣模板列表（shopId 供试衣提交与支付使用）
-				const style = encodeURIComponent(rec.styleName ?? '')
-				uni.navigateTo({
-					url: `/pages/aiTryOn/index?style=${style}&gender=${this.gender}&shopId=${this.shopId}`
-				})
+				uni.showToast({ title: '查询不到对应样片稍后再试', icon: 'none' })
 			}
+		},
+
+		// 点击封面图：跳转 AI 试衣模板列表（shopId 供试衣提交与支付使用）
+		onPreviewClick(rec : any) {
+			const style = encodeURIComponent(rec.styleName ?? '')
+			uni.navigateTo({
+				url: `/pages/aiTryOn/index?style=${style}&gender=${this.gender}&shopId=${this.shopId}`
+			})
 		}
 	}
 }
