@@ -268,9 +268,21 @@
 		onLoad(query) {
 			const systemInfo = uni.getSystemInfoSync()
 			this.statusBarHeight = systemInfo.statusBarHeight || 20
-			this.idx = query?.idx ?? ''
+			// 小程序码扫码进入时，参数在 scene 字段中（如 scene=idx%3D1）
+			let idx = query?.idx ?? ''
+			if (idx === '' && query?.scene != null && query!.scene !== '') {
+				const scene = decodeURIComponent(query!.scene as string)
+				const pairs = scene.split('&')
+				for (let i = 0; i < pairs.length; i++) {
+					const kv = pairs[i].split('=')
+					if (kv.length === 2 && kv[0] === 'idx') {
+						idx = kv[1]
+					}
+				}
+			}
+			this.idx = idx
 			this.from = query?.from ?? ''
-			this.initPage(query?.idx || '')
+			this.initPage(idx)
 		},
 		onShow() {
 			// 监听 401 登录过期事件，自动拉起登录弹窗
