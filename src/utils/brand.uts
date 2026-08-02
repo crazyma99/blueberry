@@ -1,0 +1,21 @@
+// 品牌上下文（运行时多品牌）
+// 扫品牌小程序码进入首页时写入，之后本次运行期间所有业务请求携带 X-Brand-Id。
+// 纯内存保存、不持久化：冷启动 JS 上下文重建即清空，
+// 直接打开小程序（无场景值）走默认旧逻辑（X-App-Code），与历史行为一致。
+
+let _brandId = ''
+
+/**
+ * 设置品牌上下文（扫码/带参进入时调用，重复进入覆盖）
+ * @param id 品牌编码（如 lanmei、huahua），不是数字 ID
+ */
+export function setBrandId(id: string): void {
+  _brandId = id
+}
+
+/**
+ * 当前品牌编码；空串 = 无品牌上下文（不携带 X-Brand-Id，走后端旧逻辑）
+ */
+export function getBrandId(): string {
+  return _brandId
+}

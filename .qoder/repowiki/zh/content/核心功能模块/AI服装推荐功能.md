@@ -5,6 +5,8 @@
 - [src/pages/aiRecommend/index.uvue](file://src/pages/aiRecommend/index.uvue)
 - [src/pages/aiRecommendLoading/index.uvue](file://src/pages/aiRecommendLoading/index.uvue)
 - [src/pages/aiRecommendResult/index.uvue](file://src/pages/aiRecommendResult/index.uvue)
+- [src/pages/targetPhotoDetail/index.uvue](file://src/pages/targetPhotoDetail/index.uvue)
+- [src/pages/demoDetail/index.uvue](file://src/pages/demoDetail/index.uvue)
 - [src/utils/api.uts](file://src/utils/api.uts)
 - [src/utils/http.uts](file://src/utils/http.uts)
 - [src/utils/auth.uts](file://src/utils/auth.uts)
@@ -14,15 +16,16 @@
 - [src/utils/legal.uts](file://src/utils/legal.uts)
 - [src/components/AppFooter/AppFooter.uvue](file://src/components/AppFooter/AppFooter.uvue)
 - [src/pages.json](file://src/pages.json)
-- [src/pages/demoDetail/index.uvue](file://src/pages/demoDetail/index.uvue)
 </cite>
 
 ## 更新摘要
 **变更内容**
-- AI智能推荐功能入口已暂时隐藏（v-if="false"），当前处于开发/测试阶段
+- AI推荐结果页面导航逻辑增强，改进了'查看模板'按钮的点击行为和相册ID验证逻辑
+- 封面图点击行为优化，直接跳转到AI试衣模板列表
+- 整体卡片点击事件移除以避免冲突
+- 数据模型增强了albumId字段支持直接导航到客片详情
 - API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移
 - 保持了完整的登录流程管理系统和用户资料完善功能
-- 维持180秒超时轮询机制和智能性别过滤功能
 
 ## 目录
 1. [简介](#简介)
@@ -38,6 +41,8 @@
 ## 简介
 本章节聚焦于"AI服装推荐"能力，该能力经过重大增强后，现在提供完整的用户认证、资料管理和智能推荐服务。**重要更新**：AI智能推荐功能入口已暂时隐藏（v-if="false"），当前处于开发/测试阶段。系统由三个核心页面组成：上传照片、等待分析、展示结果。用户通过上传个人照片触发后端AI分析，系统返回用户画像（性别、年龄、脸型、体型、风格关键词）以及若干推荐的服饰风格卡片。整个流程现已集成完整的登录态管理、用户资料完善系统、增强的错误处理机制和智能性别过滤功能。API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移。
 
+**最新增强**：AI推荐结果页面的导航逻辑得到显著改进，'查看模板'按钮现在支持albumId字段验证，封面图点击行为优化为直接跳转到AI试衣模板列表，整体卡片点击事件已移除以避免冲突。
+
 ## 项目结构
 AI服装推荐相关代码位于 pages 与 utils 两个层次，经过增强后新增了登录流程和用户资料管理模块：
 - 页面层：负责用户交互、状态管理与路由跳转，现包含登录弹窗和用户资料完善对话框
@@ -49,39 +54,43 @@ subgraph "页面层"
 A["aiRecommend/index.uvue<br/>上传与发起分析+登录弹窗"]
 B["aiRecommendLoading/index.uvue<br/>轮询与分析中UI"]
 C["aiRecommendResult/index.uvue<br/>结果展示与跳转"]
-D["demoDetail/index.uvue<br/>AI入口暂时隐藏(v-if=false)"]
+D["targetPhotoDetail/index.uvue<br/>客片详情页"]
+E["demoDetail/index.uvue<br/>AI入口暂时隐藏(v-if=false)"]
 end
 subgraph "工具层"
-E["api.uts<br/>上传/推荐接口封装"]
-F["http.uts<br/>统一请求/401处理/重试"]
-G["auth.uts<br/>Token/用户信息/过期标志"]
-H["config.uts<br/>baseURL=https://lanmei66.cloud/超时"]
-I["loginFlow.uts<br/>登录流程管理"]
-J["profileSubmit.uts<br/>用户资料提交"]
-K["legal.uts<br/>法律协议管理"]
-L["AppFooter.uvue<br/>页脚版权文本"]
+F["api.uts<br/>上传/推荐接口封装"]
+G["http.uts<br/>统一请求/401处理/重试"]
+H["auth.uts<br/>Token/用户信息/过期标志"]
+I["config.uts<br/>baseURL=https://lanmei66.cloud/超时"]
+J["loginFlow.uts<br/>登录流程管理"]
+K["profileSubmit.uts<br/>用户资料提交"]
+L["legal.uts<br/>法律协议管理"]
+M["AppFooter.uvue<br/>页脚版权文本"]
 end
-A --> E
-A --> I
+A --> F
 A --> J
 A --> K
-B --> E
-C --> L
-E --> F
+A --> L
+B --> F
+C --> M
+C --> D
+D --> F
+E -.-> A
 F --> G
-F --> H
-I --> E
-I --> G
-J --> E
-J --> G
-D -.-> A
+G --> H
+G --> I
+J --> F
+J --> H
+K --> F
+K --> H
 ```
 
 **图表来源**
 - [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
 - [src/pages/aiRecommendLoading/index.uvue:1-235](file://src/pages/aiRecommendLoading/index.uvue#L1-L235)
-- [src/pages/aiRecommendResult/index.uvue:1-275](file://src/pages/aiRecommendResult/index.uvue#L1-L275)
-- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
+- [src/pages/aiRecommendResult/index.uvue:1-290](file://src/pages/aiRecommendResult/index.uvue#L1-L290)
+- [src/pages/targetPhotoDetail/index.uvue:1-469](file://src/pages/targetPhotoDetail/index.uvue#L1-L469)
+- [src/pages/demoDetail/index.uvue:1-995](file://src/pages/demoDetail/index.uvue#L1-L995)
 - [src/utils/api.uts:1-609](file://src/utils/api.uts#L1-L609)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
@@ -94,6 +103,7 @@ D -.-> A
 - **上传与发起分析页面**：提供图片选择、预览、大小校验、上传与跳转至分析中的页面，现包含完整的登录检查和弹窗系统
 - **分析中页面**：维护轮询定时器与倒计时，超过180秒自动失败，失败态支持重试与返回
 - **结果展示页面**：解析并展示分析结果与推荐列表，根据分析结果中的性别字段设置筛选条件，点击卡片跳转至AI试衣模板列表
+- **客片详情页**：支持从AI推荐结果直接导航，携带albumId参数获取详细信息
 - **登录流程管理**：实现微信授权登录、手机号绑定和用户资料完善的完整流程
 - **用户资料提交**：处理头像选择和昵称编辑的用户资料更新逻辑
 - **接口封装**：上传与推荐接口，包含401挂起队列与登录后自动重试
@@ -106,7 +116,8 @@ D -.-> A
 **章节来源**
 - [src/pages/aiRecommend/index.uvue:158-344](file://src/pages/aiRecommend/index.uvue#L158-L344)
 - [src/pages/aiRecommendLoading/index.uvue:63-134](file://src/pages/aiRecommendLoading/index.uvue#L63-L134)
-- [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [src/pages/aiRecommendResult/index.uvue:86-130](file://src/pages/aiRecommendResult/index.uvue#L86-L130)
+- [src/pages/targetPhotoDetail/index.uvue:142-152](file://src/pages/targetPhotoDetail/index.uvue#L142-L152)
 - [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
 - [src/utils/profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
 - [src/utils/api.uts:443-608](file://src/utils/api.uts#L443-L608)
@@ -123,6 +134,7 @@ D -.-> A
 - 上传成功后进入分析中页面，启动180秒超时的轮询请求推荐接口
 - 当接口返回成功数据时，跳转到结果页面展示分析与推荐列表
 - 点击推荐卡片后跳转到AI试衣模板列表，携带风格名与性别筛选参数
+- '查看模板'按钮支持albumId字段验证，可直接导航到客片详情页
 
 **重要更新**：AI智能推荐入口在demoDetail页面中通过`v-if="false"`暂时隐藏，当前处于开发/测试阶段，不向普通用户开放访问。
 
@@ -139,6 +151,7 @@ participant CFG as "配置(config.uts)"
 participant PROFILE as "用户资料(profileSubmit)"
 participant P2 as "分析中页面(aiRecommendLoading)"
 participant P3 as "结果页面(aiRecommendResult)"
+participant P4 as "客片详情页(targetPhotoDetail)"
 U->>D : 访问demoDetail页面
 Note over D : v-if="false" 入口暂时隐藏
 D-->>U : 无法直接访问AI推荐入口
@@ -165,12 +178,22 @@ API-->>P2 : {analysis,recommendations}
 end
 P2->>P3 : redirectTo(带data)
 P3-->>U : 展示分析与推荐列表
+U->>P3 : 点击'查看模板'按钮
+P3->>P3 : 验证albumId字段
+alt albumId > 0
+P3->>P4 : navigateTo(带idx=albumId,type=shopId,style)
+else albumId <= 0
+P3->>P3 : showToast('查询不到对应样片稍后再试')
+end
+U->>P3 : 点击封面图
+P3->>P4 : navigateTo(带style,gender,shopId)
 ```
 
 **图表来源**
 - [src/pages/aiRecommend/index.uvue:158-285](file://src/pages/aiRecommend/index.uvue#L158-L285)
 - [src/pages/aiRecommendLoading/index.uvue:63-113](file://src/pages/aiRecommendLoading/index.uvue#L63-L113)
-- [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [src/pages/aiRecommendResult/index.uvue:109-129](file://src/pages/aiRecommendResult/index.uvue#L109-L129)
+- [src/pages/targetPhotoDetail/index.uvue:142-152](file://src/pages/targetPhotoDetail/index.uvue#L142-L152)
 - [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 - [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
 - [src/utils/api.uts:443-608](file://src/utils/api.uts#L443-L608)
@@ -208,7 +231,7 @@ P3-->>U : 展示分析与推荐列表
   - 连续3次网络错误即失败；成功则跳转结果页
   - 失败态支持重试与返回
 - **关键路径**
-  - 启动轮询与计时：[src/pages/aiRecommendLoading/index.uvue:63-85](file://src/pages/aiRecommendLoading/index.uvue#L63-L85)
+  - 启动轮询与计时：[src/pages/aiRecommendLoading/index.uvue:63-85](file://src/pages/aiRecommendLoading/index.uvue#L63-85)
   - 轮询调用与错误计数：[src/pages/aiRecommendLoading/index.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
   - 停止定时器与失败处理：[src/pages/aiRecommendLoading/index.uvue:115-134](file://src/pages/aiRecommendLoading/index.uvue#L115-L134)
 
@@ -216,19 +239,39 @@ P3-->>U : 展示分析与推荐列表
 - [src/pages/aiRecommendLoading/index.uvue:63-134](file://src/pages/aiRecommendLoading/index.uvue#L63-L134)
 
 ### 结果展示页面（aiRecommendResult）
-**更新** 增强智能性别过滤功能
+**更新** 增强导航逻辑和albumId字段支持
 
 - **功能要点**
   - 解析URL参数中的JSON数据，展示分析结果与推荐列表
   - 根据分析结果中的性别字段设置筛选条件（male/female）
   - 点击推荐卡片跳转到AI试衣模板列表，传递风格名与性别
+  - **'查看模板'按钮增强**：支持albumId字段验证，有值时直接导航到客片详情页，无值时显示友好提示
+  - **封面图点击优化**：直接跳转到AI试衣模板列表，携带style、gender和shopId参数
+  - **整体卡片点击移除**：避免与子元素点击事件冲突
   - 支持无同性样例的友好提示
 - **关键路径**
   - 解析参数与初始化：[src/pages/aiRecommendResult/index.uvue:86-105](file://src/pages/aiRecommendResult/index.uvue#L86-L105)
-  - 跳转逻辑与性别参数传递：[src/pages/aiRecommendResult/index.uvue:107-115](file://src/pages/aiRecommendResult/index.uvue#L107-L115)
+  - **'查看模板'按钮逻辑**：[src/pages/aiRecommendResult/index.uvue:109-121](file://src/pages/aiRecommendResult/index.uvue#L109-L121)
+  - **封面图点击逻辑**：[src/pages/aiRecommendResult/index.uvue:123-129](file://src/pages/aiRecommendResult/index.uvue#L123-L129)
 
 **章节来源**
-- [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [src/pages/aiRecommendResult/index.uvue:86-130](file://src/pages/aiRecommendResult/index.uvue#L86-L130)
+
+### 客片详情页（targetPhotoDetail）
+**更新** 支持从AI推荐结果直接导航
+
+- **功能要点**
+  - 接收来自AI推荐结果的albumId参数（通过idx字段）
+  - 支持type参数标识来源（shopId）
+  - 携带style参数用于'我也要拍'功能带回试衣页
+  - 完整的登录态管理和用户资料完善流程
+  - 点赞功能和状态同步
+- **关键路径**
+  - 参数接收与处理：[src/pages/targetPhotoDetail/index.uvue:142-152](file://src/pages/targetPhotoDetail/index.uvue#L142-L152)
+  - 详情获取与数据处理：[src/pages/targetPhotoDetail/index.uvue:175-200](file://src/pages/targetPhotoDetail/index.uvue#L175-L200)
+
+**章节来源**
+- [src/pages/targetPhotoDetail/index.uvue:142-200](file://src/pages/targetPhotoDetail/index.uvue#L142-L200)
 
 ### 入口控制（demoDetail）
 **新增** AI智能推荐入口暂时隐藏机制
@@ -239,7 +282,7 @@ P3-->>U : 展示分析与推荐列表
   - 入口隐藏不影响核心功能的完整性
 - **关键路径**
   - 入口隐藏控制：[src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
-  - 跳转方法保留：[src/pages/demoDetail/index.uvue:606-610](file://src/pages/demoDetail/index.uvue#L606-L610)
+  - 跳转方法保留：[src/pages/demoDetail/index.uvue:618-622](file://src/pages/demoDetail/index.uvue#L618-L622)
 
 **章节来源**
 - [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
@@ -366,6 +409,7 @@ P3-->>U : 展示分析与推荐列表
 - 登录流程到接口：loginFlow.uts依赖api.uts的登录相关接口
 - 用户资料到接口：profileSubmit.uts依赖api.uts的用户信息更新接口
 - 结果页到公共组件：结果页引入AppFooter用于底部版权
+- 结果页到客片详情页：通过albumId字段支持直接导航
 - 入口控制：demoDetail页面通过v-if控制AI推荐入口的可见性
 
 ```mermaid
@@ -387,7 +431,14 @@ class AiRecommendLoadingPage {
 +stopAll()
 }
 class AiRecommendResultPage {
-+onRecClick(rec)
++onViewTemplateClick(rec)
++onPreviewClick(rec)
++albumId字段验证
+}
+class TargetPhotoDetailPage {
++getDetail(id, type)
++refreshLikeStatus(albumId)
++handleLike()
 }
 class LoginFlow {
 +runPhoneLogin(phoneCode)
@@ -430,7 +481,9 @@ AiRecommendPage --> LoginFlow : "执行登录流程"
 AiRecommendPage --> ProfileSubmit : "提交用户资料"
 AiRecommendPage --> LegalModule : "打开法律协议"
 AiRecommendLoadingPage --> ApiModule : "轮询推荐"
+AiRecommendResultPage --> TargetPhotoDetailPage : "albumId导航"
 AiRecommendResultPage --> AppFooter : "引用页脚"
+TargetPhotoDetailPage --> ApiModule : "获取详情/点赞"
 LoginFlow --> ApiModule : "调用登录接口"
 LoginFlow --> AuthModule : "管理登录状态"
 ProfileSubmit --> ApiModule : "更新用户信息"
@@ -443,7 +496,8 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 - [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 - [src/pages/aiRecommend/index.uvue:158-343](file://src/pages/aiRecommend/index.uvue#L158-L343)
 - [src/pages/aiRecommendLoading/index.uvue:63-134](file://src/pages/aiRecommendLoading/index.uvue#L63-L134)
-- [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [src/pages/aiRecommendResult/index.uvue:109-129](file://src/pages/aiRecommendResult/index.uvue#L109-L129)
+- [src/pages/targetPhotoDetail/index.uvue:142-200](file://src/pages/targetPhotoDetail/index.uvue#L142-L200)
 - [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
 - [src/utils/profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
 - [src/utils/api.uts:443-608](file://src/utils/api.uts#L443-L608)
@@ -467,6 +521,7 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 - **错误提示优化**
   - 对网络异常与服务器错误进行分类提示，提升用户感知与操作指引
   - 登录失败的错误分类处理，提供更明确的错误信息
+  - albumId验证失败时的友好提示
 - **资源加载**
   - 结果页的图片建议使用懒加载与占位图，提升首屏渲染速度
 - **登录流程优化**
@@ -475,6 +530,10 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 - **入口控制优化**
   - 入口隐藏机制便于开发测试，待功能稳定后可移除v-if="false"
   - 考虑添加环境变量控制入口可见性，便于不同环境部署
+- **导航优化**
+  - albumId字段验证确保导航准确性
+  - 封面图点击直接跳转提升用户体验
+  - 移除整体卡片点击避免事件冲突
 
 ## 故障排查指南
 **更新** 新增登录流程和用户资料相关的故障排查，以及入口隐藏相关问题
@@ -505,9 +564,14 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
   - 检查URL参数data是否为合法JSON字符串
   - 确认analysis与recommendations字段是否存在
   - 验证性别字段格式是否正确
-- **跳转AI试衣模板列表失败**
-  - 核对style与gender参数是否正确编码与传递
+- **'查看模板'按钮导航失败**
+  - 检查rec.albumId字段是否存在且大于0
   - 确认目标页面路由存在且接收参数
+  - 验证style参数是否正确编码与传递
+  - 无albumId时显示友好提示信息
+- **封面图点击跳转问题**
+  - 确认style、gender、shopId参数是否正确传递
+  - 检查AI试衣模板列表页面是否正常接收参数
 - **API连接问题**
   - 检查baseURL是否已更新为'https://lanmei66.cloud'
   - 确认新服务器地址是否正确配置
@@ -517,7 +581,8 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 - [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 - [src/pages/aiRecommend/index.uvue:158-343](file://src/pages/aiRecommend/index.uvue#L158-L343)
 - [src/pages/aiRecommendLoading/index.uvue:63-134](file://src/pages/aiRecommendLoading/index.uvue#L63-L134)
-- [src/pages/aiRecommendResult/index.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [src/pages/aiRecommendResult/index.uvue:109-129](file://src/pages/aiRecommendResult/index.uvue#L109-L129)
+- [src/pages/targetPhotoDetail/index.uvue:142-200](file://src/pages/targetPhotoDetail/index.uvue#L142-L200)
 - [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
 - [src/utils/profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
 - [src/utils/api.uts:443-608](file://src/utils/api.uts#L443-L608)
@@ -525,4 +590,6 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 - [src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
 
 ## 结论
-AI服装推荐功能经过重大增强后，现已形成完整的用户认证、资料管理和智能推荐服务体系。**重要更新**：AI智能推荐功能入口已暂时隐藏（v-if="false"），当前处于开发/测试阶段，不向普通用户开放。同时，API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移。新的架构以清晰的三段式页面流程完成从上传到结果展示的闭环，并通过统一的请求层与认证模块保障登录态与401处理的健壮性。新增的登录流程管理、用户资料完善系统和180秒超时轮询机制显著提升了用户体验。智能性别过滤功能和增强的错误处理机制进一步增强了系统的稳定性和易用性。入口隐藏机制便于开发测试，待功能稳定后可移除v-if="false"。后续可在轮询频率、图片压缩、结果缓存、登录状态缓存和错误分类方面进一步优化，以获得更流畅与稳定的使用体验。
+AI服装推荐功能经过重大增强后，现已形成完整的用户认证、资料管理和智能推荐服务体系。**重要更新**：AI智能推荐功能入口已暂时隐藏（v-if="false"），当前处于开发/测试阶段，不向普通用户开放。同时，API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移。新的架构以清晰的三段式页面流程完成从上传到结果展示的闭环，并通过统一的请求层与认证模块保障登录态与401处理的健壮性。新增的登录流程管理、用户资料完善系统和180秒超时轮询机制显著提升了用户体验。智能性别过滤功能和增强的错误处理机制进一步增强了系统的稳定性和易用性。
+
+**最新增强亮点**：AI推荐结果页面的导航逻辑得到显著改进，'查看模板'按钮现在支持albumId字段验证，能够直接导航到客片详情页；封面图点击行为优化为直接跳转到AI试衣模板列表；整体卡片点击事件已移除以避免冲突。这些改进大大提升了用户体验和操作流畅度。入口隐藏机制便于开发测试，待功能稳定后可移除v-if="false"。后续可在轮询频率、图片压缩、结果缓存、登录状态缓存和错误分类方面进一步优化，以获得更流畅与稳定的使用体验。

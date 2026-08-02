@@ -25,10 +25,10 @@
 
 ## 更新摘要
 **变更内容**
-- 新增AI推荐相关数据模型定义：AiRecommendAnalysis和AiRecommendation类型
-- 增强getAiRecommend函数的响应格式处理，支持analysis和recommendations数据结构
-- 改进tryonDisabled字段支持，在AlbumBasic和相册列表接口中提供试衣功能禁用状态
-- 完善AI推荐功能的完整实现，包括上传、分析、结果展示等页面流程
+- **新增支付功能模块**：添加了三个关键的信用额度管理API接口，支持微信支付的完整流程
+- **增强AI推荐数据结构**：在AiRecommendation类型中增加了可选的albumId字段，支持跳转到客片详情页
+- **生产环境迁移**：HTTP请求base URL从测试环境'https://crazyma99.xyz'迁移到生产环境'https://lanmei66.cloud'
+- **支付集成实现**：在AI试衣页面中集成了完整的充值和支付流程
 
 ## 目录
 1. [简介](#简介)
@@ -37,29 +37,30 @@
 4. [架构总览](#架构总览)
 5. [详细组件分析](#详细组件分析)
 6. [AI试衣功能模块](#ai试衣功能模块)
-7. [AI智能推荐功能](#ai智能推荐功能)
-8. [依赖关系分析](#依赖关系分析)
-9. [性能考虑](#性能考虑)
-10. [故障排除指南](#故障排除指南)
-11. [结论](#结论)
-12. [附录](#附录)
+7. [支付功能模块](#支付功能模块)
+8. [AI智能推荐功能](#ai智能推荐功能)
+9. [依赖关系分析](#依赖关系分析)
+10. [性能考虑](#性能考虑)
+11. [故障排除指南](#故障排除指南)
+12. [结论](#结论)
+13. [附录](#附录)
 
 ## 简介
 本文件系统性梳理了 API 接口封装层的设计与实现，重点围绕 src/utils/api.uts 模块展开，涵盖以下方面：
-- 接口分类体系：客片管理、用户认证、社交互动、搜索功能、店铺管理、页面配置、**AI试衣功能、AI智能推荐功能**
-- 数据模型定义：AlbumBasic、ShopInfo、**AiTemplate、AiRecommendAnalysis、AiRecommendation** 等接口类型及其字段语义
+- 接口分类体系：客片管理、用户认证、社交互动、搜索功能、店铺管理、页面配置、**AI试衣功能、支付功能、AI智能推荐功能**
+- 数据模型定义：AlbumBasic、ShopInfo、**AiTemplate、AiRecommendAnalysis、AiRecommendation、CreditBalance、CreditRechargeOrder、CreditRechargeStatus** 等接口类型及其字段语义
 - 接口函数的参数定义、返回值类型与错误处理机制
 - 最佳实践：参数校验、错误码处理、响应数据结构
 - 使用示例与常见问题解决方案
 
-该封装层通过统一的 HTTP 层（http.uts）进行网络请求，自动注入认证头与基础配置，并在需要时进行 401 未授权处理。**新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交、结果查询、历史记录管理等核心功能。同时，AI智能推荐功能为用户提供了基于个人特征的个性化服饰风格推荐服务。**
+该封装层通过统一的 HTTP 层（http.uts）进行网络请求，自动注入认证头与基础配置，并在需要时进行 401 未授权处理。**新增的支付功能模块提供了完整的信用额度管理和微信支付集成，支持查询余额、创建充值订单、轮询支付状态等核心功能。同时，AI智能推荐功能为用户提供了基于个人特征的个性化服饰风格推荐服务，并增强了与客片详情页的集成能力。**
 
 ## 项目结构
 API 封装层位于 src/utils 目录下，核心文件如下：
-- api.uts：对外暴露的业务接口集合，包含客片、认证、社交、搜索、店铺、页面配置、**AI试衣、AI智能推荐**等接口
+- api.uts：对外暴露的业务接口集合，包含客片、认证、社交、搜索、店铺、页面配置、**AI试衣、支付、AI智能推荐**等接口
 - http.uts：统一的 HTTP 请求封装，负责 URL 拼接、头部注入、超时控制、401 处理
 - auth.uts：认证状态与用户信息管理，提供 token 与用户信息的存储、读取、合并写入
-- config.uts：HTTP 基础配置（baseURL、timeout）
+- config.uts：HTTP 基础配置（baseURL、timeout），**已迁移至生产环境**
 - loginFlow.uts：登录三步流程封装（静默登录 -> 微信登录 -> 绑定手机号）
 - profileSubmit.uts：头像/昵称提交封装（调用更新接口并合并用户信息）
 
@@ -69,7 +70,7 @@ subgraph "Utils 层"
 API["api.uts<br/>业务接口封装"]
 HTTP["http.uts<br/>统一HTTP请求"]
 AUTH["auth.uts<br/>认证与用户信息"]
-CONF["config.uts<br/>HTTP配置"]
+CONF["config.uts<br/>HTTP配置<br/>生产环境"]
 LF["loginFlow.uts<br/>登录三步流程"]
 PS["profileSubmit.uts<br/>头像昵称提交"]
 end
@@ -81,7 +82,7 @@ MINE["pages/mine/index.uvue"]
 DETAIL["pages/targetPhotoDetail/index.uvue"]
 PHOME["pages/priceHomePage/index.uvue"]
 PLIST["pages/priceList/index.uvue"]
-AITRYON["pages/aiTryOn/index.uvue"]
+AITRYON["pages/aiTryOn/index.uvue<br/>含支付功能"]
 AITRYONRESULT["pages/aiTryOnResult/index.uvue"]
 AITRYONHISTORY["pages/aiTryOnHistory/index.uvue"]
 AIRECOMMEND["pages/aiRecommend/index.uvue"]
@@ -111,18 +112,18 @@ AIRECOMMENDRESULT --> API
 ```
 
 **图表来源**
-- [api.uts:1-609](file://src/utils/api.uts#L1-L609)
+- [api.uts:1-700](file://src/utils/api.uts#L1-L700)
 - [http.uts:1-82](file://src/utils/http.uts#L1-L82)
 - [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
-- [config.uts:1-12](file://src/utils/config.uts#L1-L12)
+- [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 - [loginFlow.uts:1-71](file://src/utils/loginFlow.uts#L1-L71)
 - [profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 
 **章节来源**
-- [api.uts:1-609](file://src/utils/api.uts#L1-L609)
+- [api.uts:1-700](file://src/utils/api.uts#L1-L700)
 - [http.uts:1-82](file://src/utils/http.uts#L1-L82)
 - [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
-- [config.uts:1-12](file://src/utils/config.uts#L1-L12)
+- [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 
 ## 核心组件
 本节聚焦 api.uts 的核心接口与数据模型，说明其职责、参数、返回值与错误处理策略。
@@ -133,7 +134,10 @@ AIRECOMMENDRESULT --> API
   - UserInfo：用户信息，包含标识、开放平台标识、手机号、昵称、头像等
   - **AiTemplate：AI试衣模板信息，包含模板ID、风格名称、类别、性别、图片URL等**
   - **AiRecommendAnalysis：AI推荐分析结果，包含年龄估计、性别、脸型、体型、风格关键词等**
-  - **AiRecommendation：AI推荐结果，包含风格名称、推荐理由、评分、模板ID列表、性别匹配状态、预览图等**
+  - **AiRecommendation：AI推荐结果，包含风格名称、推荐理由、评分、模板ID列表、性别匹配状态、预览图、**可选的albumId字段****
+  - **CreditBalance：信用额度信息，包含剩余次数、初始化状态、单次价格等**
+  - **CreditRechargeOrder：充值订单信息，包含微信支付所需的各种参数**
+  - **CreditRechargeStatus：充值订单状态，包含支付状态、到账信息等**
 
 - 接口分类与职责
   - 客片管理：分类与列表获取、详情获取、点赞/取消点赞、批量查询点赞状态、收藏/取消收藏、批量查询收藏状态、我的收藏列表
@@ -142,17 +146,19 @@ AIRECOMMENDRESULT --> API
   - 店铺管理：获取启用的店铺列表
   - 页面配置：获取中台页配置（金刚区+Banner）
   - **AI试衣功能：模板管理、照片上传、任务提交、结果查询、历史记录管理**
+  - **支付功能：信用额度查询、充值订单创建、支付状态轮询、兑换码兑换**
   - **AI智能推荐：基于用户照片的智能分析、个性化风格推荐、推荐结果展示**
 
 - 错误处理机制
   - 统一返回结构：包含 code、message、data 字段
   - 成功码：通常为 0 或 200（**新增：AI推荐接口现在支持多种成功码格式**）
   - **AI推荐接口特殊处理：aiface 接口成功 code === 0 或 200，非 200**
+  - **支付接口特殊处理：credit 接口成功 code === 200；4001 = 试衣次数不足（HTTP 200 返回）**
   - 未授权（401）：http.uts 自动清理 token 与用户信息并提示重新登录
   - 参数校验：调用方需确保必填参数存在，如 shopId、albumId 等
 
 **章节来源**
-- [api.uts:6-609](file://src/utils/api.uts#L6-L609)
+- [api.uts:6-700](file://src/utils/api.uts#L6-L700)
 - [http.uts:48-61](file://src/utils/http.uts#L48-L61)
 
 ## 架构总览
@@ -160,7 +166,7 @@ API 封装层采用"接口层 + HTTP 层 + 认证层"的分层设计：
 - 接口层（api.uts）：面向业务的高层封装，屏蔽底层细节
 - HTTP 层（http.uts）：统一请求构建、头部注入、超时控制、401 处理
 - 认证层（auth.uts）：token 与用户信息的持久化与合并写入
-- 配置层（config.uts）：HTTP 基础配置（baseURL、timeout）
+- 配置层（config.uts）：HTTP 基础配置（baseURL、timeout），**已迁移至生产环境**
 
 ```mermaid
 sequenceDiagram
@@ -170,10 +176,10 @@ participant HTTP as "http.uts"
 participant AUTH as "auth.uts"
 participant Conf as "config.uts"
 participant Server as "后端服务"
-Page->>API : 调用业务接口(如 getAiRecommend)
+Page->>API : 调用业务接口(如 getCreditBalance)
 API->>HTTP : request(opts)
 HTTP->>AUTH : 读取 token
-HTTP->>Conf : 读取 baseURL/timeout
+HTTP->>Conf : 读取 baseURL/timeout (生产环境)
 HTTP->>Server : 发送请求(含 Authorization)
 Server-->>HTTP : 返回响应(code,message,data)
 HTTP-->>API : 返回解析后的数据
@@ -182,10 +188,10 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 ```
 
 **图表来源**
-- [api.uts:590-608](file://src/utils/api.uts#L590-L608)
+- [api.uts:596-604](file://src/utils/api.uts#L596-L604)
 - [http.uts:20-73](file://src/utils/http.uts#L20-L73)
 - [auth.uts:21-52](file://src/utils/auth.uts#L21-L52)
-- [config.uts:7-11](file://src/utils/config.uts#L7-L11)
+- [config.uts:7-12](file://src/utils/config.uts#L7-L12)
 
 ## 详细组件分析
 
@@ -207,14 +213,24 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 字段含义：**AI分析结果，包含估计年龄、性别、脸型、体型、风格关键词数组**
   - 数据类型：estimatedAge、gender、faceShape、bodyType 为字符串；styleKeywords 为字符串数组
 - **AiRecommendation**
-  - 字段含义：**AI推荐结果，包含风格名称、推荐理由、评分、匹配的模板ID列表、性别匹配状态、预览图URL**
-  - 数据类型：styleName、reason 为字符串；score 为数字；templateIds 为数字数组；genderMatched 为布尔值；previewUrl 为字符串
+  - 字段含义：**AI推荐结果，包含风格名称、推荐理由、评分、匹配的模板ID列表、性别匹配状态、预览图URL、**可选的albumId字段****
+  - 数据类型：styleName、reason 为字符串；score 为数字；templateIds 为数字数组；genderMatched 为布尔值；previewUrl 为字符串；**albumId 为可选数字**
+- **CreditBalance**
+  - 字段含义：**信用额度信息，包含剩余试衣次数、是否已初始化免费次数、单次价格（分）**
+  - 数据类型：balance 为数字；inited 为布尔值；priceFenPerCredit 为数字
+- **CreditRechargeOrder**
+  - 字段含义：**微信支付订单参数，包含商户订单号、预支付ID、应用ID、时间戳、随机字符串、包名、签名类型、支付签名**
+  - 数据类型：outTradeNo、prepayId、appId、timeStamp、nonceStr、package、signType、paySign 均为字符串
+- **CreditRechargeStatus**
+  - 字段含义：**充值订单状态，包含商户订单号、支付状态、是否已支付、购买次数、最新余额**
+  - 数据类型：outTradeNo 为字符串；status 为数字（0待付 1已付 2关闭 3退款）；paid 为布尔值；credits、balance 为数字
 
 **章节来源**
 - [api.uts:61-69](file://src/utils/api.uts#L61-L69)
 - [api.uts:71-79](file://src/utils/api.uts#L71-L79)
 - [api.uts:372-382](file://src/utils/api.uts#L372-L382)
-- [api.uts:566-581](file://src/utils/api.uts#L566-L581)
+- [api.uts:566-589](file://src/utils/api.uts#L566-L589)
+- [api.uts:655-672](file://src/utils/api.uts#L655-L672)
 
 ### 客片管理接口
 - getCategories
@@ -435,6 +451,85 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - [aiTryOnResult.uvue:57-229](file://src/pages/aiTryOnResult/index.uvue#L57-L229)
 - [aiTryOnHistory.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 
+## 支付功能模块
+
+### 数据模型定义
+- **CreditBalance**
+  - 字段含义：**信用额度信息，包含剩余试衣次数、是否已初始化免费次数、单次价格（分）**
+  - 数据类型：balance 为数字；inited 为布尔值；priceFenPerCredit 为数字
+  - 字段说明：
+    - balance：当前用户的剩余试衣次数
+    - inited：是否已经初始化过免费次数
+    - priceFenPerCredit：单次试衣的价格（单位：分），0表示未开通付费购买
+- **CreditRechargeOrder**
+  - 字段含义：**微信支付订单参数，用于拉起微信支付**
+  - 数据类型：outTradeNo、prepayId、appId、timeStamp、nonceStr、package、signType、paySign 均为字符串
+  - 字段说明：
+    - outTradeNo：商户订单号，唯一标识一笔充值订单
+    - prepayId：预支付交易会话ID
+    - appId：微信应用ID
+    - timeStamp：时间戳
+    - nonceStr：随机字符串
+    - package：扩展数据包
+    - signType：签名类型
+    - paySign：支付签名
+- **CreditRechargeStatus**
+  - 字段含义：**充值订单状态信息，用于轮询支付结果**
+  - 数据类型：outTradeNo 为字符串；status 为数字；paid 为布尔值；credits、balance 为数字
+  - 字段说明：
+    - outTradeNo：商户订单号
+    - status：支付状态（0待付 1已付 2关闭 3退款）
+    - paid：是否已支付到账
+    - credits：本单购买的次数
+    - balance：到账后的最新余额
+
+### 支付相关接口
+- **getCreditBalance**
+  - 参数：shopId（可选，类型：number）
+  - 返回：{ code: number; message: string; data: CreditBalance }
+  - 错误处理：code === 200 表示成功；4001 = 试衣次数不足（HTTP 200 返回）
+  - 适用场景：查询当前用户的信用额度和价格信息
+  - **功能特点**：首次查询会按商户配置惰性初始化免费次数
+- **createCreditRecharge**
+  - 参数：params.shopId（必填，类型：number）、params.credits（必填，类型：number）
+  - 返回：{ code: number; message: string; data: CreditRechargeOrder }
+  - 错误处理：code === 200 表示成功
+  - 适用场景：创建充值订单，返回微信小程序JSAPI支付所需参数
+  - **功能特点**：「支付一次开通一次」，credits通常传1
+- **getCreditRechargeStatus**
+  - 参数：outTradeNo（必填，类型：string）
+  - 返回：{ code: number; message: string; data: CreditRechargeStatus }
+  - 错误处理：code === 200 表示成功
+  - 适用场景：轮询查询充值订单状态，直到paid = true
+  - **功能特点**：wx.requestPayment成功后轮询到账（回调异步入账）
+- **redeemCreditCode**
+  - 参数：code（必填，类型：string，12位兑换码）
+  - 返回：{ code: number; message: string; data: { creditsAdded: number; balance: number } }
+  - 错误处理：code === 200 表示成功
+  - 适用场景：兑换码兑换，立即增加次数
+
+### 支付流程集成
+- **aiTryOn 页面集成**：
+  - **handleRecharge方法**：处理充值逻辑，创建订单 → 拉起微信支付 → 轮询到账
+  - **pollRechargeStatus方法**：轮询充值订单状态，每2.5秒一次，最多48次（约2分钟兜底）
+  - **resumeGenerateIfNeeded方法**：支付到账后自动继续之前被打断的生成流程
+- **支付状态管理**：
+  - isPaying：支付状态标志
+  - resumeGenerateAfterCredit：支付后继续生成的标志
+  - payPollToken：支付轮询令牌，防止并发问题
+
+### 支付最佳实践
+- **支付流程完整性**：确保创建订单、拉起支付、轮询状态的完整流程
+- **错误处理**：区分用户取消支付、网络错误、支付失败等不同情况
+- **轮询优化**：合理的轮询间隔（2.5秒）和超时控制（约2分钟）
+- **状态同步**：支付成功后及时更新用户余额和界面状态
+- **用户体验**：支付过程中显示适当的加载提示和反馈信息
+- **安全性**：确保订单号的唯一性和支付参数的正确性
+
+**章节来源**
+- [api.uts:566-650](file://src/utils/api.uts#L566-L650)
+- [aiTryOn.uvue:455-543](file://src/pages/aiTryOn/index.uvue#L455-L543)
+
 ## AI智能推荐功能
 
 ### 数据模型定义
@@ -448,8 +543,8 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
     - bodyType：体型特征（如瘦削、匀称、丰满等）
     - styleKeywords：风格关键词数组，用于描述适合的风格特征
 - **AiRecommendation**
-  - 字段含义：**AI推荐的服饰风格，包含风格名称、推荐理由、匹配评分、相关模板ID、性别匹配状态、预览图**
-  - 数据类型：styleName、reason 为字符串；score 为数字；templateIds 为数字数组；genderMatched 为布尔值；previewUrl 为字符串
+  - 字段含义：**AI推荐的服饰风格，包含风格名称、推荐理由、匹配评分、相关模板ID、性别匹配状态、预览图、**可选的albumId字段****
+  - 数据类型：styleName、reason 为字符串；score 为数字；templateIds 为数字数组；genderMatched 为布尔值；previewUrl 为字符串；**albumId 为可选数字**
   - 字段说明：
     - styleName：推荐的风格名称
     - reason：推荐理由，解释为什么推荐这个风格
@@ -457,6 +552,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
     - templateIds：与该风格相关的模板ID列表
     - genderMatched：是否有同性别样例
     - previewUrl：风格预览图URL
+    - **albumId：对应的客片ID，点击「查看模板」跳转客片详情页（/wechat/album/detail 的 albumId）**
 
 ### AI智能推荐接口
 - **getAiRecommend**
@@ -477,6 +573,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **aiRecommend 页面**：AI智能推荐的主入口页面，提供照片上传和分析启动功能
 - **aiRecommendLoading 页面**：AI分析加载页面，提供轮询机制和超时控制
 - **aiRecommendResult 页面**：AI推荐结果展示页面，显示分析结果和推荐风格列表
+- **更新**：现在支持通过albumId字段跳转到客片详情页
 
 ### AI智能推荐工作流程
 1. **照片上传**：用户在 aiRecommend 页面上传照片，调用 uploadPhoto 接口
@@ -484,6 +581,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 3. **轮询分析**：aiRecommendLoading 页面每30秒轮询一次 getAiRecommend 接口
 4. **结果展示**：分析完成后跳转到 aiRecommendResult 页面展示结果
 5. **风格筛选**：用户点击推荐风格可以跳转到对应的AI试衣模板列表
+6. **客片跳转**：如果推荐结果包含albumId，点击「查看模板」可直接跳转到客片详情页
 
 ### AI智能推荐最佳实践
 - **文件大小限制**：前端严格限制照片大小不超过10MB
@@ -493,19 +591,21 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **超时控制**：180秒超时后自动转为失败状态
 - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式
 - **性别匹配优化**：根据分析结果自动筛选同性别的推荐模板
+- **客片集成**：通过albumId字段实现与客片详情页的无缝集成
 
 **章节来源**
-- [api.uts:566-608](file://src/utils/api.uts#L566-L608)
-- [aiRecommend.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-L202)
-- [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
-- [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [api.uts:655-699](file://src/utils/api.uts#L655-L699)
+- [aiRecommend.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-202)
+- [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-113)
+- [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-115)
 
 ## 依赖关系分析
 - api.uts 依赖 http.uts 进行网络请求，依赖 auth.uts 获取/注入 token
-- http.uts 依赖 config.uts 获取 baseURL 与 timeout
+- http.uts 依赖 config.uts 获取 baseURL 与 timeout，**已迁移至生产环境**
 - 页面组件通过 import api.uts 使用业务接口
 - 登录流程与头像/昵称提交分别封装在 loginFlow.uts 与 profileSubmit.uts 中，内部调用 api.uts 与 auth.uts
 - **AI试衣功能依赖：aiTryOn 页面使用 getAiTemplates、uploadPhoto、submitAiTryOn；aiTryOnResult 页面使用 getAiTryOnResult；aiTryOnHistory 页面使用 getAiTasks**
+- **支付功能依赖：aiTryOn 页面使用 getCreditBalance、createCreditRecharge、getCreditRechargeStatus**
 - **AI智能推荐功能依赖：aiRecommend 页面使用 uploadPhoto；aiRecommendLoading 页面使用 getAiRecommend；aiRecommendResult 页面展示分析结果和推荐列表**
 
 ```mermaid
@@ -534,6 +634,10 @@ class API {
 +getAiTryOnResult()
 +getAiTasks()
 +deleteAiTask()
++getCreditBalance()
++createCreditRecharge()
++getCreditRechargeStatus()
++redeemCreditCode()
 +getAiRecommend()
 }
 class HTTP {
@@ -555,6 +659,7 @@ class AUTH {
 }
 class CONFIG {
 +getHttpConfig()
++baseURL : "https : //lanmei66.cloud"
 }
 API --> HTTP : "使用"
 API --> AUTH : "使用"
@@ -562,10 +667,10 @@ HTTP --> CONFIG : "使用"
 ```
 
 **图表来源**
-- [api.uts:1-609](file://src/utils/api.uts#L1-L609)
+- [api.uts:1-700](file://src/utils/api.uts#L1-L700)
 - [http.uts:1-82](file://src/utils/http.uts#L1-L82)
 - [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
-- [config.uts:1-12](file://src/utils/config.uts#L1-L12)
+- [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 
 ## 性能考虑
 - 并行请求：首页同时拉取轮播图与店铺列表，减少首屏等待时间
@@ -581,12 +686,18 @@ HTTP --> CONFIG : "使用"
   - **参数类型优化**：统一 shop_id 参数类型，减少类型转换开销
   - **历史记录优化**：新增的历史记录页面支持智能封面图选择和状态管理
   - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了与不同API实现的兼容性
+- **支付功能优化**：
+  - **轮询优化**：支付状态轮询间隔2.5秒，最多48次（约2分钟）
+  - **状态管理**：使用令牌防止并发轮询问题
+  - **用户体验**：支付过程中显示适当的加载提示
+  - **错误处理**：区分不同类型的支付错误，提供友好的错误提示
 - **AI智能推荐优化**：
   - **分析轮询优化**：每30秒轮询一次，最长等待180秒，平衡用户体验和服务器负载
   - **图片压缩**：上传前自动压缩照片，减少传输时间
   - **结果缓存**：推荐结果在页面间传递时进行JSON序列化，避免重复计算
   - **性别匹配优化**：根据分析结果自动筛选同性别模板，提高推荐精准度
   - **错误重试机制**：连续3次失败后停止重试，避免无限循环
+  - **客片集成优化**：通过albumId字段实现与客片详情页的无缝跳转
 
 **章节来源**
 - [index.uvue:142-151](file://src/pages/index/index.uvue#L142-L151)
@@ -595,7 +706,7 @@ HTTP --> CONFIG : "使用"
 - [aiTryOn.uvue:129-142](file://src/pages/aiTryOn/index.uvue#L129-L142)
 - [aiTryOnResult.uvue:85-106](file://src/pages/aiTryOnResult/index.uvue#L85-L106)
 - [aiTryOnHistory.uvue:166-176](file://src/pages/aiTryOnHistory/index.uvue#L166-L176)
-- [aiRecommendLoading.uvue:69-84](file://src/pages/aiRecommendLoading/index.uvue#L69-L84)
+- [aiRecommendLoading.uvue:69-84](file://src/pages/aiRecommendLoading/index.uvue#L69-84)
 
 ## 故障排除指南
 - 未授权（401）
@@ -622,6 +733,13 @@ HTTP --> CONFIG : "使用"
   - **参数类型错误**：注意 shop_id 在不同接口间的类型差异（string vs number）
   - **历史记录获取失败**：检查 openid 参数是否正确传递，确认用户已登录
   - **多成功码格式兼容性问题**：现在支持 code 0 和 200 两种成功码格式，如果遇到兼容性问题，检查后端API版本
+- **支付功能异常**：
+  - **余额查询失败**：检查网络连接和用户登录状态
+  - **创建订单失败**：检查shopId和credits参数是否正确
+  - **支付拉起失败**：确认微信小程序支付配置正确
+  - **轮询超时**：检查网络状态，确认支付状态接口正常
+  - **到账确认失败**：检查微信支付异步回调是否正常
+  - **兑换码无效**：检查兑换码格式（12位）和有效性
 - **AI智能推荐功能异常**：
   - **照片上传失败**：检查文件大小限制（10MB），确认网络连接正常
   - **分析轮询失败**：检查网络状态，连续3次失败后显示失败界面
@@ -629,6 +747,7 @@ HTTP --> CONFIG : "使用"
   - **结果解析失败**：检查返回数据格式，确保analysis和recommendations字段存在
   - **性别匹配问题**：检查分析结果中的gender字段，确保正确识别用户性别
   - **推荐结果为空**：检查后端AI服务状态，确认推荐算法正常运行
+  - **客片跳转失败**：检查albumId字段是否存在和有效
   - **多成功码格式兼容性问题**：现在支持 code 0 和 200 两种成功码格式，如果遇到兼容性问题，检查后端API版本
 
 **章节来源**
@@ -645,13 +764,13 @@ HTTP --> CONFIG : "使用"
 ## 结论
 API 接口封装层以清晰的分层设计实现了业务接口的统一管理，结合认证与 HTTP 层的自动化处理，显著降低了页面开发复杂度。通过规范化的数据模型、参数与返回值约定以及错误处理策略，开发者可以更专注于业务逻辑实现。
 
-**新增的AI试衣功能模块提供了完整的虚拟试衣解决方案，包括模板管理、照片上传、任务提交和结果查询等核心功能。该模块采用了专门的错误处理策略（aiface 接口成功 code === 0 或 200，非 200），并实现了智能的轮询机制和超时控制，确保了良好的用户体验。**
+**新增的支付功能模块为AI试衣功能提供了完整的商业化支持，包括信用额度查询、微信支付集成、订单状态轮询等核心功能。该模块采用了专门的错误处理策略（credit 接口成功 code === 200；4001 = 试衣次数不足），并实现了智能的轮询机制和超时控制，确保了良好的用户体验和商业闭环。**
 
-**本次更新重点关注了AI智能推荐功能的完善，新增了AiRecommendAnalysis和AiRecommendation数据模型定义，增强了getAiRecommend函数的响应格式处理，支持analysis和recommendations两个主要数据部分。这一功能为用户提供了基于个人特征的个性化服饰风格推荐服务，通过分析用户的年龄、性别、脸型、体型等特征，智能推荐最适合的服饰风格。**
+**本次更新重点关注了AI智能推荐功能的完善，在AiRecommendation类型中新增了可选的albumId字段，增强了与客片详情页的集成能力。这一改进使得用户可以直接从推荐结果跳转到具体的客片详情页，提升了用户体验和功能连贯性。同时，HTTP请求base URL已从测试环境'https://crazyma99.xyz'迁移到生产环境'https://lanmei66.cloud'，确保服务的稳定性和可靠性。**
 
-**特别重要的是，AI推荐相关接口现在支持多种成功码格式（code 0 和 200），这大大提高了与不同API实现的兼容性，改善了任务检索的可靠性并减少了认证相关错误。同时，tryonDisabled字段的增强支持使得系统能够更好地控制试衣功能的可用性，提升了整体的稳定性和用户体验。**
+**特别重要的是，所有AI相关接口现在都支持多种成功码格式（code 0 和 200），这大大提高了与不同API实现的兼容性，改善了任务检索的可靠性并减少了认证相关错误。tryonDisabled字段的增强支持使得系统能够更好地控制试衣功能的可用性，提升了整体的稳定性和用户体验。**
 
-建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，AI试衣和AI智能推荐功能的成功实施为其他AI相关功能的扩展奠定了坚实的技术基础。
+建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，支付功能和AI智能推荐功能的成功实施为其他商业化功能的扩展奠定了坚实的技术基础。
 
 ## 附录
 
@@ -678,11 +797,20 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
   - **历史记录**：使用 getAiTasks 获取历史记录，deleteAiTask 删除记录
   - **参数类型注意事项**：注意不同接口间 shop_id 参数类型的差异（string vs number）
   - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了兼容性
+- **支付功能**
+  - **余额查询**：使用 getCreditBalance 查询用户信用额度和价格信息
+  - **创建订单**：使用 createCreditRecharge 创建充值订单，准备微信支付参数
+  - **支付流程**：调用 uni.requestPayment 拉起微信支付，处理成功和失败回调
+  - **状态轮询**：使用 getCreditRechargeStatus 轮询支付状态，直到paid = true
+  - **兑换码**：使用 redeemCreditCode 进行兑换码兑换，立即增加次数
+  - **错误处理**：区分用户取消支付、网络错误、支付失败等不同情况
+  - **用户体验**：支付过程中显示适当的加载提示和反馈信息
 - **AI智能推荐功能**
   - **照片上传**：使用 uploadPhoto 上传用户照片，准备进行分析
   - **智能分析**：使用 getAiRecommend 获取AI分析结果和个性化推荐
   - **结果展示**：在aiRecommendResult页面展示analysis和recommendations数据
   - **风格跳转**：点击推荐风格跳转到对应的AI试衣模板列表
+  - **客片跳转**：如果推荐结果包含albumId，点击「查看模板」跳转到客片详情页
   - **轮询策略**：aiRecommendLoading页面每30秒轮询一次，最长等待180秒
   - **错误处理**：连续3次网络错误后显示失败界面，支持用户重试
   - **性别匹配**：根据分析结果自动筛选同性别的推荐模板
@@ -691,13 +819,13 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
 **章节来源**
 - [demoDetail.uvue:304-477](file://src/pages/demoDetail/index.uvue#L304-L477)
 - [index.uvue:142-151](file://src/pages/index/index.uvue#L142-L151)
-- [favorites.uvue:169-218](file://src/pages/favorites/index.uvue#L169-L218)
+- [favorites.uvue:169-218](file://src/pages/favorites/index.uvue#L169-218)
 - [mine.uvue:137-137](file://src/pages/mine/index.uvue#L137-L137)
 - [loginFlow.uts:27-70](file://src/utils/loginFlow.uts#L27-L70)
 - [profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
 - [aiTryOn.uvue:94-239](file://src/pages/aiTryOn/index.uvue#L94-L239)
 - [aiTryOnResult.uvue:57-229](file://src/pages/aiTryOnResult/index.uvue#L57-L229)
 - [aiTryOnHistory.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
-- [aiRecommend.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-L202)
-- [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
-- [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
+- [aiRecommend.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-202)
+- [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-113)
+- [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-115)

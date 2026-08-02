@@ -1,6 +1,19 @@
 import { request } from './http.uts'
 import { getHttpConfig } from './config.uts'
 import { UserInfo, getToken, clearToken, clearUserInfo, markLoginExpired } from './auth.uts'
+import { getBrandId } from './brand.uts'
+
+// 手工拼 uploadFile 请求头（uni.uploadFile 不走 http.uts，品牌头需单独注入）
+function buildUploadHeader(): Record<string, string> {
+  const header: Record<string, string> = {
+    'Authorization': `Bearer ${getToken()}`
+  }
+  const brandId = getBrandId()
+  if (brandId !== '') {
+    header['X-Brand-Id'] = brandId
+  }
+  return header
+}
 
 // ============ 上传接口 401 挂起队列 ============
 interface PendingUpload {
@@ -23,7 +36,6 @@ export function flushPendingUploads(): void {
   _pendingUploads = []
   _uploadWaitingForLogin = false
 
-  const token = getToken()
   const { baseURL } = getHttpConfig()
 
   queue.forEach((p) => {
@@ -31,7 +43,7 @@ export function flushPendingUploads(): void {
       url: `${baseURL}/api/aiface/upload`,
       filePath: p.filePath,
       name: 'photo',
-      header: { 'Authorization': `Bearer ${token}` },
+      header: buildUploadHeader(),
       success: (res) => {
         if (res.statusCode === 401) {
           p.reject(new Error('未授权（重试失败）'))
@@ -447,9 +459,7 @@ export const uploadPhoto = async (filePath: string) => {
       url: `${baseURL}/api/aiface/upload`,
       filePath: filePath,
       name: 'photo',
-      header: {
-        'Authorization': `Bearer ${getToken()}`
-      },
+      header: buildUploadHeader(),
       success: (res) => {
         // 上传接口同样处理 401 登录过期：挂起等待登录后重试
         if (res.statusCode === 401) {

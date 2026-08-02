@@ -99,6 +99,7 @@
 	import { loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import { submitUserProfile } from '../../utils/profileSubmit.uts'
+	import { setBrandId } from '../../utils/brand.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -122,7 +123,13 @@
 				profileNickname: ''
 			}
 		},
-		async onLoad() {
+		async onLoad(options : any) {
+			// 扫品牌小程序码进入：场景值写入品牌上下文（纯内存，冷启动即恢复默认逻辑）
+			const scene = decodeURIComponent(options?.scene || '')
+			const brandId = scene !== '' ? scene : (options?.brandId ?? '')
+			if (brandId !== '') {
+				setBrandId(brandId)
+			}
 			try {
 				// 并行加载轮播图和店铺列表
 				const [bannerRes, shopRes] = await Promise.all([

@@ -1,5 +1,6 @@
 import { getHttpConfig } from './config.uts'
 import { getToken, clearToken, clearUserInfo, markLoginExpired } from './auth.uts'
+import { getBrandId } from './brand.uts'
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
@@ -52,6 +53,11 @@ export function flushPendingRequests(): void {
     const retryHeader: Record<string, string> = { ...p.header }
     if (token) {
       retryHeader['Authorization'] = `Bearer ${token}`
+    }
+    // 重试用最新品牌上下文（扫码多品牌）
+    const brandId = getBrandId()
+    if (brandId !== '') {
+      retryHeader['X-Brand-Id'] = brandId
     }
     uni.request({
       url: p.url,
@@ -106,6 +112,12 @@ export function request<T = any>(opts: RequestOptions): Promise<T> {
   // 只有当 token 存在时才添加 Authorization header
   if (token) {
     finalHeader['Authorization'] = `Bearer ${token}`
+  }
+
+  // 品牌上下文存在时注入品牌头（扫码多品牌）；无则后端走 X-App-Code 旧逻辑
+  const brandId = getBrandId()
+  if (brandId !== '') {
+    finalHeader['X-Brand-Id'] = brandId
   }
   
   if (showLoading) uni.showLoading({ title: '加载中', mask: true })
