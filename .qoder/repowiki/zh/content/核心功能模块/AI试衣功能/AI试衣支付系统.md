@@ -17,8 +17,17 @@
 - [src/pages/aiTryOn/index.uvue](file://src/pages/aiTryOn/index.uvue)
 - [src/pages/aiTryOnResult/index.uvue](file://src/pages/aiTryOnResult/index.uvue)
 - [src/pages/aiRecommend/index.uvue](file://src/pages/aiRecommend/index.uvue)
+- [src/pages/aiRecommendLoading/index.uvue](file://src/pages/aiRecommendLoading/index.uvue)
+- [src/pages/aiRecommendResult/index.uvue](file://src/pages/aiRecommendResult/index.uvue)
 - [profiles/blueberry/project.env](file://profiles/blueberry/project.env)
 </cite>
+
+## 更新摘要
+**已进行的更改**
+- 增强了AI推荐系统的albumId字段支持，实现无缝导航功能
+- 支持多种成功响应格式（code 0和200），提升接口兼容性
+- 完善了支付系统集成，包括信用额度管理和微信支付处理
+- 优化了AI试衣流程中的支付状态轮询机制
 
 ## 目录
 1. [简介](#简介)
@@ -33,11 +42,13 @@
 10. [附录](#附录)
 
 ## 简介
-本系统为基于 uni-app x（Vue 3 + UTS/TypeScript）的微信小程序模板，聚焦“AI试衣”与“AI智能推荐”，并内置完整的微信登录、授权、合规页面以及多项目 Profile 机制。核心能力包括：
+本系统为基于 uni-app x（Vue 3 + UTS/TypeScript）的微信小程序模板，聚焦"AI试衣"与"AI智能推荐"，并内置完整的微信登录、授权、合规页面以及多项目 Profile 机制。核心能力包括：
 - AI试衣：上传照片 → 选择模板/体型/年龄 → 创建任务 → 轮询结果 → 保存相册
-- AI推荐：上传照片 → 提交分析 → 返回风格建议与模板
+- AI推荐：上传照片 → 提交分析 → 返回风格建议与模板，支持albumId无缝跳转
 - 支付充值：查询余额 → 下单拉起微信支付 → 轮询到账 → 自动继续生成
 - 统一鉴权：401 挂起请求队列、登录后重试、弹窗引导登录与完善资料
+
+**更新** 新增albumId字段支持，实现从AI推荐结果到客片详情页的无缝导航体验。
 
 ## 项目结构
 - 源码位于 src/，包含应用入口、页面、组件与工具模块
@@ -54,6 +65,8 @@ subgraph "业务页面"
 P1["pages/aiTryOn/index.uvue"]
 P2["pages/aiTryOnResult/index.uvue"]
 P3["pages/aiRecommend/index.uvue"]
+P4["pages/aiRecommendLoading/index.uvue"]
+P5["pages/aiRecommendResult/index.uvue"]
 end
 subgraph "工具层"
 U1["utils/api.uts<br/>接口封装/AI/支付"]
@@ -66,6 +79,8 @@ end
 P1 --> U1
 P2 --> U1
 P3 --> U1
+P4 --> U1
+P5 --> U1
 U1 --> U2
 U2 --> U3
 U2 --> U4
@@ -78,7 +93,7 @@ P1 --> U6
 - [src/App.uvue:1-335](file://src/App.uvue#L1-L335)
 - [src/pages.json:1-126](file://src/pages.json#L1-L126)
 - [src/manifest.json:1-73](file://src/manifest.json#L1-L73)
-- [src/utils/api.uts:1-700](file://src/utils/api.uts#L1-L700)
+- [src/utils/api.uts:1-710](file://src/utils/api.uts#L1-L710)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -104,12 +119,14 @@ P1 --> U6
   - loginFlow.uts：手机号登录三步骤封装
   - profileSubmit.uts：头像昵称更新封装
 
+**更新** API接口现在支持多种成功响应格式（code 0和200），提升了系统的兼容性和稳定性。
+
 **章节来源**
 - [src/main.uts:1-9](file://src/main.uts#L1-L9)
 - [src/App.uvue:1-335](file://src/App.uvue#L1-L335)
 - [src/pages.json:1-126](file://src/pages.json#L1-L126)
 - [src/manifest.json:1-73](file://src/manifest.json#L1-L73)
-- [src/utils/api.uts:1-700](file://src/utils/api.uts#L1-L700)
+- [src/utils/api.uts:1-710](file://src/utils/api.uts#L1-L710)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -117,7 +134,7 @@ P1 --> U6
 - [src/utils/profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 
 ## 架构总览
-系统采用“页面层 + 工具层 + 网络层 + 后端服务”的分层架构。页面负责交互与状态；工具层封装业务接口；网络层处理鉴权、错误与重试；后端提供 AI 试衣、推荐与支付能力。
+系统采用"页面层 + 工具层 + 网络层 + 后端服务"的分层架构。页面负责交互与状态；工具层封装业务接口；网络层处理鉴权、错误与重试；后端提供 AI 试衣、推荐与支付能力。
 
 ```mermaid
 graph TB
@@ -125,6 +142,8 @@ subgraph "页面层"
 V1["aiTryOn/index.uvue"]
 V2["aiTryOnResult/index.uvue"]
 V3["aiRecommend/index.uvue"]
+V4["aiRecommendLoading/index.uvue"]
+V5["aiRecommendResult/index.uvue"]
 end
 subgraph "工具层"
 API["api.uts"]
@@ -145,6 +164,8 @@ end
 V1 --> API
 V2 --> API
 V3 --> API
+V4 --> API
+V5 --> API
 API --> HTTP
 HTTP --> AUTH
 HTTP --> CFG
@@ -160,7 +181,9 @@ API --> S4
 - [src/pages/aiTryOn/index.uvue:1-935](file://src/pages/aiTryOn/index.uvue#L1-L935)
 - [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
 - [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
-- [src/utils/api.uts:1-700](file://src/utils/api.uts#L1-L700)
+- [src/pages/aiRecommendLoading/index.uvue:1-137](file://src/pages/aiRecommendLoading/index.uvue#L1-L137)
+- [src/pages/aiRecommendResult/index.uvue:1-290](file://src/pages/aiRecommendResult/index.uvue#L1-L290)
+- [src/utils/api.uts:1-710](file://src/utils/api.uts#L1-L710)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -213,20 +236,23 @@ H-->>A : status=completed/failed
 P-->>U : 展示结果/支持保存到相册
 ```
 
+**更新** 支付流程现在支持更完善的错误处理和状态轮询机制，确保用户体验的流畅性。
+
 **图表来源** 
 - [src/pages/aiTryOn/index.uvue:1-935](file://src/pages/aiTryOn/index.uvue#L1-L935)
 - [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
-- [src/utils/api.uts:370-700](file://src/utils/api.uts#L370-L700)
+- [src/utils/api.uts:370-710](file://src/utils/api.uts#L370-L710)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 
 **章节来源**
 - [src/pages/aiTryOn/index.uvue:1-935](file://src/pages/aiTryOn/index.uvue#L1-L935)
 - [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
-- [src/utils/api.uts:370-700](file://src/utils/api.uts#L370-L700)
+- [src/utils/api.uts:370-710](file://src/utils/api.uts#L370-L710)
 
 ### 组件B：AI智能推荐（上传→分析→结果）
 - 上传照片后进入加载页，后台进行AI分析
 - 完成后返回推荐风格、理由、评分与模板列表
+- **新增** albumId字段支持，实现从推荐结果到客片详情页的无缝导航
 
 ```mermaid
 flowchart TD
@@ -237,16 +263,24 @@ Upload --> |是| Next["跳转加载页"]
 DoUpload --> Next
 Next --> Analyze["后台AI分析"]
 Analyze --> Result["返回推荐结果"]
-Result --> End(["结束"])
+Result --> CheckAlbum{"是否包含albumId?"}
+CheckAlbum --> |是| Navigate["跳转到客片详情页"]
+CheckAlbum --> |否| ShowToast["显示提示信息"]
+Navigate --> End(["结束"])
+ShowToast --> End
 ```
+
+**更新** AI推荐系统现在支持可选的albumId字段，当存在有效的albumId时，用户可以无缝跳转到对应的客片详情页，提供更好的用户体验。
 
 **图表来源** 
 - [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
-- [src/utils/api.uts:653-700](file://src/utils/api.uts#L653-L700)
+- [src/pages/aiRecommendResult/index.uvue:1-290](file://src/pages/aiRecommendResult/index.uvue#L1-L290)
+- [src/utils/api.uts:680-710](file://src/utils/api.uts#L680-L710)
 
 **章节来源**
 - [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
-- [src/utils/api.uts:653-700](file://src/utils/api.uts#L653-L700)
+- [src/pages/aiRecommendResult/index.uvue:1-290](file://src/pages/aiRecommendResult/index.uvue#L1-L290)
+- [src/utils/api.uts:680-710](file://src/utils/api.uts#L680-L710)
 
 ### 组件C：鉴权与401处理（登录弹窗+挂起队列）
 - http.uts 在 401 时清空本地态、标记过期、将请求入队，触发登录弹窗
@@ -302,6 +336,7 @@ LoginFlow --> Http : "登录后重试"
 - 查询余额 getCreditBalance，若 priceFenPerCredit > 0 则为付费模式
 - 创建订单 createCreditRecharge，拉起微信支付
 - 轮询 getCreditRechargeStatus，paid=true 即到账，自动恢复生成
+- **增强** 支持多种成功响应格式（code 0和200），提升兼容性
 
 ```mermaid
 sequenceDiagram
@@ -331,13 +366,15 @@ P-->>P : 直接生成
 end
 ```
 
+**更新** 支付系统现在支持更灵活的响应格式处理，能够兼容不同版本的API响应，同时保持了原有的轮询机制以确保支付的准确性。
+
 **图表来源** 
-- [src/pages/aiTryOn/index.uvue:438-543](file://src/pages/aiTryOn/index.uvue#L438-L543)
-- [src/utils/api.uts:563-651](file://src/utils/api.uts#L563-L651)
+- [src/pages/aiTryOn/index.uvue:455-543](file://src/pages/aiTryOn/index.uvue#L455-L543)
+- [src/utils/api.uts:606-646](file://src/utils/api.uts#L606-L646)
 
 **章节来源**
-- [src/pages/aiTryOn/index.uvue:438-543](file://src/pages/aiTryOn/index.uvue#L438-L543)
-- [src/utils/api.uts:563-651](file://src/utils/api.uts#L563-L651)
+- [src/pages/aiTryOn/index.uvue:455-543](file://src/pages/aiTryOn/index.uvue#L455-L543)
+- [src/utils/api.uts:606-646](file://src/utils/api.uts#L606-L646)
 
 ### 组件E：个人资料完善（头像/昵称）
 - 登录后若缺少头像或昵称，弹出授权弹窗
@@ -374,6 +411,8 @@ graph LR
 aiTryOn["aiTryOn/index.uvue"] --> api["api.uts"]
 aiTryOnResult["aiTryOnResult/index.uvue"] --> api
 aiRecommend["aiRecommend/index.uvue"] --> api
+aiRecommendLoading["aiRecommendLoading/index.uvue"] --> api
+aiRecommendResult["aiRecommendResult/index.uvue"] --> api
 api --> http["http.uts"]
 http --> auth["auth.uts"]
 http --> cfg["config.uts"]
@@ -381,11 +420,15 @@ aiTryOn --> login["loginFlow.uts"]
 aiTryOn --> profile["profileSubmit.uts"]
 ```
 
+**更新** 新增了AI推荐相关的页面依赖关系，包括加载页和结果页，形成了完整的AI推荐工作流。
+
 **图表来源** 
 - [src/pages/aiTryOn/index.uvue:1-935](file://src/pages/aiTryOn/index.uvue#L1-L935)
 - [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
 - [src/pages/aiRecommend/index.uvue:1-452](file://src/pages/aiRecommend/index.uvue#L1-L452)
-- [src/utils/api.uts:1-700](file://src/utils/api.uts#L1-L700)
+- [src/pages/aiRecommendLoading/index.uvue:1-137](file://src/pages/aiRecommendLoading/index.uvue#L1-L137)
+- [src/pages/aiRecommendResult/index.uvue:1-290](file://src/pages/aiRecommendResult/index.uvue#L1-L290)
+- [src/utils/api.uts:1-710](file://src/utils/api.uts#L1-L710)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -393,7 +436,7 @@ aiTryOn --> profile["profileSubmit.uts"]
 - [src/utils/profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 
 **章节来源**
-- [src/utils/api.uts:1-700](file://src/utils/api.uts#L1-L700)
+- [src/utils/api.uts:1-710](file://src/utils/api.uts#L1-L710)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -406,8 +449,9 @@ aiTryOn --> profile["profileSubmit.uts"]
 - 资源限制：图片上传限制10MB，减少大文件传输开销
 - 骨架屏与动画：统一骨架屏样式，提升首屏感知速度
 - 超时配置：默认15秒，可根据网络环境调整
+- **增强** 支持多种响应格式，提升系统兼容性和容错能力
 
-[本节为通用指导，不直接分析具体文件]
+**更新** 系统现在能够更好地处理不同的API响应格式，提高了整体的稳定性和可靠性。
 
 ## 故障排查指南
 - 401 未授权
@@ -422,6 +466,11 @@ aiTryOn --> profile["profileSubmit.uts"]
 - 登录弹窗重复出现
   - 现象：onShow 多次触发登录弹窗
   - 处理：确保 consumeLoginExpired 正确消费标志位
+- **新增** AI推荐导航问题
+  - 现象：点击"查看模板"无响应或跳转错误
+  - 处理：检查推荐结果中是否包含有效的albumId字段
+
+**更新** 新增了AI推荐导航相关的故障排查指导，帮助用户快速定位和解决相关问题。
 
 **章节来源**
 - [src/utils/http.uts:12-91](file://src/utils/http.uts#L12-L91)
@@ -430,9 +479,9 @@ aiTryOn --> profile["profileSubmit.uts"]
 - [src/pages/aiTryOnResult/index.uvue:104-136](file://src/pages/aiTryOnResult/index.uvue#L104-L136)
 
 ## 结论
-本系统以清晰的模块化设计实现了“AI试衣+AI推荐+支付充值”的完整闭环，结合统一的鉴权与错误处理机制，具备良好的可维护性与可扩展性。通过 Profile 机制，可在同一套源码下快速孵化多个小程序项目，满足产品矩阵化需求。
+本系统以清晰的模块化设计实现了"AI试衣+AI推荐+支付充值"的完整闭环，结合统一的鉴权与错误处理机制，具备良好的可维护性与可扩展性。通过 Profile 机制，可在同一套源码下快速孵化多个小程序项目，满足产品矩阵化需求。
 
-[本节为总结性内容，不直接分析具体文件]
+**更新** 最新的增强功能包括albumId无缝导航支持和多响应格式兼容性，进一步提升了用户体验和系统稳定性。
 
 ## 附录
 - 多项目配置示例

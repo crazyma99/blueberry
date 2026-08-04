@@ -25,10 +25,10 @@
 
 ## 更新摘要
 **变更内容**
-- **新增支付功能模块**：添加了三个关键的信用额度管理API接口，支持微信支付的完整流程
-- **增强AI推荐数据结构**：在AiRecommendation类型中增加了可选的albumId字段，支持跳转到客片详情页
-- **生产环境迁移**：HTTP请求base URL从测试环境'https://crazyma99.xyz'迁移到生产环境'https://lanmei66.cloud'
-- **支付集成实现**：在AI试衣页面中集成了完整的充值和支付流程
+- **新增buildUploadHeader函数**：实现了集中化的上传请求头构建功能，统一处理Authorization和X-Brand-Id头部注入
+- **增强上传功能**：添加了上传接口的401挂起队列机制，支持登录成功后自动重试失败的上传请求
+- **支付相关端点集成**：完整集成了信用额度管理相关的API接口，包括余额查询、充值订单创建、支付状态轮询等
+- **上传队列管理优化**：新增了flushPendingUploads和rejectAllPendingUploads函数，提供完善的上传请求生命周期管理
 
 ## 目录
 1. [简介](#简介)
@@ -53,7 +53,7 @@
 - 最佳实践：参数校验、错误码处理、响应数据结构
 - 使用示例与常见问题解决方案
 
-该封装层通过统一的 HTTP 层（http.uts）进行网络请求，自动注入认证头与基础配置，并在需要时进行 401 未授权处理。**新增的支付功能模块提供了完整的信用额度管理和微信支付集成，支持查询余额、创建充值订单、轮询支付状态等核心功能。同时，AI智能推荐功能为用户提供了基于个人特征的个性化服饰风格推荐服务，并增强了与客片详情页的集成能力。**
+该封装层通过统一的 HTTP 层（http.uts）进行网络请求，自动注入认证头与基础配置，并在需要时进行 401 未授权处理。**新增的buildUploadHeader函数提供了集中化的上传请求头构建能力，增强了上传功能的稳定性和可靠性。同时，完整的支付功能模块为AI试衣服务提供了商业化支持，包括信用额度管理和微信支付集成功能。**
 
 ## 项目结构
 API 封装层位于 src/utils 目录下，核心文件如下：
@@ -112,16 +112,16 @@ AIRECOMMENDRESULT --> API
 ```
 
 **图表来源**
-- [api.uts:1-700](file://src/utils/api.uts#L1-L700)
-- [http.uts:1-82](file://src/utils/http.uts#L1-L82)
+- [api.uts:1-710](file://src/utils/api.uts#L1-L710)
+- [http.uts:1-184](file://src/utils/http.uts#L1-L184)
 - [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 - [loginFlow.uts:1-71](file://src/utils/loginFlow.uts#L1-L71)
 - [profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 
 **章节来源**
-- [api.uts:1-700](file://src/utils/api.uts#L1-L700)
-- [http.uts:1-82](file://src/utils/http.uts#L1-L82)
+- [api.uts:1-710](file://src/utils/api.uts#L1-L710)
+- [http.uts:1-184](file://src/utils/http.uts#L1-L184)
 - [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 
@@ -158,7 +158,7 @@ AIRECOMMENDRESULT --> API
   - 参数校验：调用方需确保必填参数存在，如 shopId、albumId 等
 
 **章节来源**
-- [api.uts:6-700](file://src/utils/api.uts#L6-L700)
+- [api.uts:6-710](file://src/utils/api.uts#L6-L710)
 - [http.uts:48-61](file://src/utils/http.uts#L48-L61)
 
 ## 架构总览
@@ -190,7 +190,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 **图表来源**
 - [api.uts:596-604](file://src/utils/api.uts#L596-L604)
 - [http.uts:20-73](file://src/utils/http.uts#L20-L73)
-- [auth.uts:21-52](file://src/utils/auth.uts#L21-L52)
+- [auth.uts:21-52](file://src/utils/auth.uts#L21-52)
 - [config.uts:7-12](file://src/utils/config.uts#L7-L12)
 
 ## 详细组件分析
@@ -226,11 +226,33 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 数据类型：outTradeNo 为字符串；status 为数字（0待付 1已付 2关闭 3退款）；paid 为布尔值；credits、balance 为数字
 
 **章节来源**
-- [api.uts:61-69](file://src/utils/api.uts#L61-L69)
-- [api.uts:71-79](file://src/utils/api.uts#L71-L79)
-- [api.uts:372-382](file://src/utils/api.uts#L372-L382)
-- [api.uts:566-589](file://src/utils/api.uts#L566-L589)
-- [api.uts:655-672](file://src/utils/api.uts#L655-L672)
+- [api.uts:73-91](file://src/utils/api.uts#L73-L91)
+- [api.uts:384-394](file://src/utils/api.uts#L384-L394)
+- [api.uts:665-682](file://src/utils/api.uts#L665-L682)
+- [api.uts:576-599](file://src/utils/api.uts#L576-L599)
+
+### 上传功能增强
+
+#### buildUploadHeader函数
+**新增** 集中化的上传请求头构建函数，专门处理uni.uploadFile的头部注入需求：
+
+- **功能特性**：
+  - 自动注入Authorization Bearer token
+  - 动态注入X-Brand-Id品牌标识
+  - 统一处理上传请求的认证信息
+- **使用场景**：所有需要上传文件的接口调用
+- **优势**：避免了重复的头部构建逻辑，提高了代码复用性和一致性
+
+#### 上传队列管理机制
+**新增** 完整的上传请求生命周期管理：
+
+- **PendingUpload接口**：定义了上传请求的等待队列结构
+- **flushPendingUploads函数**：登录成功后自动重试所有挂起的上传请求
+- **rejectAllPendingUploads函数**：用户取消登录时拒绝所有挂起的上传请求
+- **401处理机制**：上传失败时自动进入等待队列，等待重新登录后重试
+
+**章节来源**
+- [api.uts:6-69](file://src/utils/api.uts#L6-L69)
 
 ### 客片管理接口
 - getCategories
@@ -253,7 +275,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **检查 tryonDisabled 字段来控制试衣功能的可用性**
 
 **章节来源**
-- [api.uts:111-168](file://src/utils/api.uts#L111-L168)
+- [api.uts:123-180](file://src/utils/api.uts#L123-L180)
 - [demoDetail.uvue:304-477](file://src/pages/demoDetail/index.uvue#L304-L477)
 
 ### 用户认证接口
@@ -277,7 +299,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - submitUserProfile：封装头像/昵称提交并合并用户信息
 
 **章节来源**
-- [api.uts:186-247](file://src/utils/api.uts#L186-L247)
+- [api.uts:198-259](file://src/utils/api.uts#L198-L259)
 - [loginFlow.uts:27-70](file://src/utils/loginFlow.uts#L27-L70)
 - [profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
 
@@ -303,7 +325,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - 批量查询接口一次传入多个 ID，减少请求次数
 
 **章节来源**
-- [api.uts:254-316](file://src/utils/api.uts#L254-L316)
+- [api.uts:266-328](file://src/utils/api.uts#L266-L328)
 
 ### 搜索功能接口
 - searchAlbums
@@ -316,7 +338,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - 加载更多时递增 page 并拼接结果
 
 **章节来源**
-- [api.uts:332-340](file://src/utils/api.uts#L332-L340)
+- [api.uts:344-352](file://src/utils/api.uts#L344-L352)
 - [favorites.uvue:169-218](file://src/pages/favorites/index.uvue#L169-L218)
 
 ### 店铺管理接口
@@ -327,7 +349,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - 首页并行加载轮播图与店铺列表，提升首屏体验
 
 **章节来源**
-- [api.uts:347-354](file://src/utils/api.uts#L347-L354)
+- [api.uts:359-366](file://src/utils/api.uts#L359-L366)
 - [index.uvue:142-151](file://src/pages/index/index.uvue#L142-L151)
 
 ### 页面配置接口
@@ -338,7 +360,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - 作为首页或中台页的静态配置数据源
 
 **章节来源**
-- [api.uts:361-368](file://src/utils/api.uts#L361-L368)
+- [api.uts:373-380](file://src/utils/api.uts#L373-L380)
 - [mine.uvue:137-137](file://src/pages/mine/index.uvue#L137-L137)
 
 ## AI试衣功能模块
@@ -375,6 +397,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 认证要求：需登录状态（Authorization 头部包含 Bearer token）
   - 文件限制：大小不超过10MB
   - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
+  - **增强**：使用buildUploadHeader函数统一处理请求头，支持401挂起队列机制
 
 ### AI试衣任务接口
 - **submitAiTryOn**
@@ -446,7 +469,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了与不同API实现的兼容性
 
 **章节来源**
-- [api.uts:372-561](file://src/utils/api.uts#L372-L561)
+- [api.uts:384-571](file://src/utils/api.uts#L384-L571)
 - [aiTryOn.uvue:94-239](file://src/pages/aiTryOn/index.uvue#L94-L239)
 - [aiTryOnResult.uvue:57-229](file://src/pages/aiTryOnResult/index.uvue#L57-L229)
 - [aiTryOnHistory.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
@@ -527,7 +550,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **安全性**：确保订单号的唯一性和支付参数的正确性
 
 **章节来源**
-- [api.uts:566-650](file://src/utils/api.uts#L566-L650)
+- [api.uts:576-660](file://src/utils/api.uts#L576-L660)
 - [aiTryOn.uvue:455-543](file://src/pages/aiTryOn/index.uvue#L455-L543)
 
 ## AI智能推荐功能
@@ -594,10 +617,10 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **客片集成**：通过albumId字段实现与客片详情页的无缝集成
 
 **章节来源**
-- [api.uts:655-699](file://src/utils/api.uts#L655-L699)
+- [api.uts:665-709](file://src/utils/api.uts#L665-L709)
 - [aiRecommend.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-202)
-- [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-113)
-- [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-115)
+- [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
+- [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
 
 ## 依赖关系分析
 - api.uts 依赖 http.uts 进行网络请求，依赖 auth.uts 获取/注入 token
@@ -639,6 +662,9 @@ class API {
 +getCreditRechargeStatus()
 +redeemCreditCode()
 +getAiRecommend()
++buildUploadHeader()
++flushPendingUploads()
++rejectAllPendingUploads()
 }
 class HTTP {
 +request()
@@ -667,8 +693,8 @@ HTTP --> CONFIG : "使用"
 ```
 
 **图表来源**
-- [api.uts:1-700](file://src/utils/api.uts#L1-L700)
-- [http.uts:1-82](file://src/utils/http.uts#L1-L82)
+- [api.uts:1-710](file://src/utils/api.uts#L1-L710)
+- [http.uts:1-184](file://src/utils/http.uts#L1-L184)
 - [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 
@@ -678,6 +704,12 @@ HTTP --> CONFIG : "使用"
 - 批量查询：点赞/收藏状态尽量使用批量接口一次性获取
 - 分页策略：合理设置 page 与 size，避免过大请求体
 - 401 自动处理：统一在 HTTP 层处理 401，避免重复逻辑
+- **上传功能优化**：
+  - **集中化头部构建**：buildUploadHeader函数统一处理上传请求头，提高代码复用性
+  - **上传队列管理**：支持401挂起队列，登录成功后自动重试失败的上传请求
+  - **内存管理**：合理的队列清理机制，避免内存泄漏
+  - **并发控制**：flushPendingUploads函数防止重复处理
+  - **错误处理**：完善的上传失败处理和用户反馈机制
 - **AI试衣优化**：
   - **模板缓存**：AI试衣页面首次加载后缓存模板列表
   - **轮询优化**：合理的轮询间隔（3秒）和超时控制（60秒）
@@ -706,7 +738,7 @@ HTTP --> CONFIG : "使用"
 - [aiTryOn.uvue:129-142](file://src/pages/aiTryOn/index.uvue#L129-L142)
 - [aiTryOnResult.uvue:85-106](file://src/pages/aiTryOnResult/index.uvue#L85-L106)
 - [aiTryOnHistory.uvue:166-176](file://src/pages/aiTryOnHistory/index.uvue#L166-L176)
-- [aiRecommendLoading.uvue:69-84](file://src/pages/aiRecommendLoading/index.uvue#L69-84)
+- [aiRecommendLoading.uvue:69-84](file://src/pages/aiRecommendLoading/index.uvue#L69-L84)
 
 ## 故障排除指南
 - 未授权（401）
@@ -724,6 +756,13 @@ HTTP --> CONFIG : "使用"
 - 分类/列表为空
   - 现象：getCategories 返回空或 getAlbumList 返回空
   - 处理：降级显示空状态，提示用户稍后重试
+- **上传功能异常**：
+  - **上传失败**：检查网络连接和用户登录状态
+  - **401错误**：确认token有效性，检查是否需要重新登录
+  - **文件过大**：确认文件大小不超过10MB限制
+  - **队列堆积**：检查flushPendingUploads是否正确调用
+  - **头部构建错误**：验证buildUploadHeader函数的执行情况
+  - **权限问题**：确认相册保存权限和用户授权状态
 - **AI试衣功能异常**：
   - **模板加载失败**：检查网络连接和后端服务状态
   - **照片上传失败**：确认文件大小不超过10MB，检查网络连接
@@ -764,13 +803,11 @@ HTTP --> CONFIG : "使用"
 ## 结论
 API 接口封装层以清晰的分层设计实现了业务接口的统一管理，结合认证与 HTTP 层的自动化处理，显著降低了页面开发复杂度。通过规范化的数据模型、参数与返回值约定以及错误处理策略，开发者可以更专注于业务逻辑实现。
 
-**新增的支付功能模块为AI试衣功能提供了完整的商业化支持，包括信用额度查询、微信支付集成、订单状态轮询等核心功能。该模块采用了专门的错误处理策略（credit 接口成功 code === 200；4001 = 试衣次数不足），并实现了智能的轮询机制和超时控制，确保了良好的用户体验和商业闭环。**
-
-**本次更新重点关注了AI智能推荐功能的完善，在AiRecommendation类型中新增了可选的albumId字段，增强了与客片详情页的集成能力。这一改进使得用户可以直接从推荐结果跳转到具体的客片详情页，提升了用户体验和功能连贯性。同时，HTTP请求base URL已从测试环境'https://crazyma99.xyz'迁移到生产环境'https://lanmei66.cloud'，确保服务的稳定性和可靠性。**
+**本次更新重点关注了上传功能的增强和支付功能的完整集成。新增的buildUploadHeader函数提供了集中化的上传请求头构建能力，配合完善的上传队列管理机制，大幅提升了上传功能的稳定性和用户体验。同时，完整的支付功能模块为AI试衣服务提供了商业化支持，包括信用额度查询、微信支付集成、订单状态轮询等核心功能。**
 
 **特别重要的是，所有AI相关接口现在都支持多种成功码格式（code 0 和 200），这大大提高了与不同API实现的兼容性，改善了任务检索的可靠性并减少了认证相关错误。tryonDisabled字段的增强支持使得系统能够更好地控制试衣功能的可用性，提升了整体的稳定性和用户体验。**
 
-建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，支付功能和AI智能推荐功能的成功实施为其他商业化功能的扩展奠定了坚实的技术基础。
+建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，上传功能增强和支付功能的成功实施为其他需要文件上传和商业化的功能扩展奠定了坚实的技术基础。
 
 ## 附录
 
@@ -789,6 +826,11 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
 - 店铺与页面配置
   - 首页并行加载 getShops 与轮播图，提升首屏体验
   - getPageConfig 用于中台页展示
+- **上传功能增强**
+  - **集中化头部构建**：使用buildUploadHeader函数统一处理上传请求头
+  - **上传队列管理**：利用flushPendingUploads和rejectAllPendingUploads管理上传请求生命周期
+  - **401处理**：上传失败时自动进入等待队列，登录成功后自动重试
+  - **错误处理**：完善的上传失败处理和用户反馈机制
 - **AI试衣功能**
   - **模板管理**：使用 getAiTemplates 获取模板列表，getAiStyles 获取风格分组
   - **照片上传**：使用 uploadPhoto 上传用户照片，严格控制文件大小
@@ -819,7 +861,7 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
 **章节来源**
 - [demoDetail.uvue:304-477](file://src/pages/demoDetail/index.uvue#L304-L477)
 - [index.uvue:142-151](file://src/pages/index/index.uvue#L142-L151)
-- [favorites.uvue:169-218](file://src/pages/favorites/index.uvue#L169-218)
+- [favorites.uvue:169-218](file://src/pages/favorites/index.uvue#L169-L218)
 - [mine.uvue:137-137](file://src/pages/mine/index.uvue#L137-L137)
 - [loginFlow.uts:27-70](file://src/utils/loginFlow.uts#L27-L70)
 - [profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
@@ -827,5 +869,5 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
 - [aiTryOnResult.uvue:57-229](file://src/pages/aiTryOnResult/index.uvue#L57-L229)
 - [aiTryOnHistory.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
 - [aiRecommend.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-202)
-- [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-113)
-- [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-115)
+- [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
+- [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)

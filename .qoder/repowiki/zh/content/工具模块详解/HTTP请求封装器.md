@@ -6,6 +6,7 @@
 - [config.uts](file://src/utils/config.uts)
 - [api.uts](file://src/utils/api.uts)
 - [auth.uts](file://src/utils/auth.uts)
+- [brand.uts](file://src/utils/brand.uts)
 - [loginFlow.uts](file://src/utils/loginFlow.uts)
 - [profileSubmit.uts](file://src/utils/profileSubmit.uts)
 - [index.uvue](file://src/pages/index/index.uvue)
@@ -14,10 +15,10 @@
 
 ## 更新摘要
 **所做更改**
-- 新增完整的401认证错误处理机制和请求挂起队列系统
-- 实现登录后自动重试功能，支持普通请求和上传请求的独立队列管理
-- 增强认证状态管理和用户交互流程
-- 完善错误处理和用户体验优化
+- 新增X-Brand-Id头部自动注入机制，支持多品牌上下文
+- 增强请求重试机制，在重试时携带最新的品牌上下文信息
+- 完善上传接口的品牌头处理逻辑
+- 优化品牌上下文的内存管理和生命周期控制
 
 ## 目录
 1. [简介](#简介)
@@ -35,9 +36,9 @@
 
 本文档详细介绍了蓝莓摄影小程序项目的HTTP请求封装器技术实现。该封装器基于uni-app框架，提供了统一的HTTP请求处理机制，包括请求拦截器、响应拦截器、错误处理策略、认证token自动注入、请求头统一处理等功能。
 
-**更新** 系统新增了复杂的401认证错误处理机制，实现了请求挂起队列系统，支持登录后自动重试所有因认证过期而失败的请求，包括普通HTTP请求和文件上传请求。
+**更新** 系统新增了智能的品牌上下文管理机制，通过X-Brand-Id头部自动注入支持多品牌场景。当用户通过扫码或带参进入小程序时，系统会自动设置品牌上下文，并在所有后续请求中携带相应的品牌标识。同时增强了请求重试机制，确保在登录后重试时能够使用最新的品牌上下文信息。
 
-系统采用模块化设计，通过`http.uts`模块提供核心请求能力，`config.uts`模块管理配置，`auth.uts`模块处理认证状态，`api.uts`模块提供业务接口封装。整个架构遵循单一职责原则，确保了代码的可维护性和可扩展性。
+系统采用模块化设计，通过`http.uts`模块提供核心请求能力，`config.uts`模块管理配置，`auth.uts`模块处理认证状态，`brand.uts`模块管理品牌上下文，`api.uts`模块提供业务接口封装。整个架构遵循单一职责原则，确保了代码的可维护性和可扩展性。
 
 ## 项目结构
 
@@ -49,6 +50,7 @@ subgraph "工具模块"
 HTTP[http.uts<br/>HTTP请求封装]
 CONFIG[config.uts<br/>配置管理]
 AUTH[auth.uts<br/>认证管理]
+BRAND[brand.uts<br/>品牌上下文]
 API[api.uts<br/>业务接口封装]
 LOGIN[loginFlow.uts<br/>登录流程]
 PROFILE[profileSubmit.uts<br/>资料提交]
@@ -62,8 +64,10 @@ FORMAT[format.uts<br/>格式化工具]
 end
 HTTP --> CONFIG
 HTTP --> AUTH
+HTTP --> BRAND
 API --> HTTP
 API --> LOGIN
+API --> BRAND
 LOGIN --> API
 LOGIN --> AUTH
 LOGIN --> HTTP
@@ -74,18 +78,21 @@ INDEX --> AUTH
 INDEX --> LOGIN
 INDEX --> PROFILE
 INDEX --> HTTP
+INDEX --> BRAND
 MINE --> API
 MINE --> AUTH
 MINE --> LOGIN
 MINE --> PROFILE
 MINE --> HTTP
+MINE --> BRAND
 ```
 
 **图表来源**
-- [http.uts:1-172](file://src/utils/http.uts#L1-L172)
+- [http.uts:1-184](file://src/utils/http.uts#L1-L184)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 - [auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
-- [api.uts:1-607](file://src/utils/api.uts#L1-L607)
+- [brand.uts:1-22](file://src/utils/brand.uts#L1-L22)
+- [api.uts:1-710](file://src/utils/api.uts#L1-L710)
 - [loginFlow.uts:1-75](file://src/utils/loginFlow.uts#L1-L75)
 - [profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 
@@ -97,12 +104,22 @@ HTTP请求封装器是整个系统的核心组件，提供了统一的请求处�
 
 - **请求统一处理**：集中处理所有HTTP请求，确保一致的错误处理和状态管理
 - **认证集成**：自动注入Bearer token，支持无感认证
+- **品牌上下文**：自动注入X-Brand-Id头部，支持多品牌场景
 - **配置管理**：通过配置模块统一管理基础URL和超时参数
 - **加载状态**：支持可选的加载状态显示
 - **错误处理**：完善的错误处理策略，包括401未授权处理
 - **请求队列**：智能的请求挂起和自动重试机制
 
-**更新** 新增的智能请求队列系统能够自动处理401认证错误，将失败的请求挂起到队列中，在用户重新登录后自动重试，极大提升了用户体验。
+**更新** 新增的智能品牌上下文管理机制能够在请求时自动检测并注入X-Brand-Id头部，同时在请求重试时使用最新的品牌上下文信息，确保多品牌场景下的正确路由和处理。
+
+### 品牌上下文管理模块
+
+**新增** 品牌上下文管理模块负责处理多品牌场景的品牌标识管理：
+
+- **内存存储**：纯内存保存，不持久化到本地存储
+- **动态设置**：支持运行时动态设置品牌ID
+- **自动注入**：在HTTP请求时自动注入X-Brand-Id头部
+- **生命周期管理**：随JS上下文重建而清空，确保数据隔离
 
 ### 配置管理模块
 
@@ -131,6 +148,7 @@ HTTP请求封装器是整个系统的核心组件，提供了统一的请求处�
 
 **章节来源**
 - [http.uts:14-91](file://src/utils/http.uts#L14-L91)
+- [brand.uts:1-22](file://src/utils/brand.uts#L1-L22)
 - [config.uts:7-12](file://src/utils/config.uts#L7-L12)
 - [auth.uts:15-171](file://src/utils/auth.uts#L15-L171)
 - [loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
@@ -144,6 +162,7 @@ sequenceDiagram
 participant Page as 页面组件
 participant API as API封装层
 participant HTTP as HTTP封装器
+participant Brand as 品牌模块
 participant Queue as 请求队列
 participant Config as 配置模块
 participant Auth as 认证模块
@@ -152,6 +171,7 @@ Page->>API : 调用业务接口
 API->>HTTP : 发送HTTP请求
 HTTP->>Config : 获取基础配置
 HTTP->>Auth : 获取认证信息
+HTTP->>Brand : 获取品牌上下文
 HTTP->>HTTP : 统一请求处理
 HTTP->>Server : 发送网络请求
 Server-->>HTTP : 返回响应数据
@@ -164,14 +184,16 @@ HTTP->>HTTP : 错误处理和状态管理
 HTTP-->>API : 返回处理结果
 API-->>Page : 返回业务数据
 end
+Note over HTTP,Brand : 自动注入X-Brand-Id头部
 Note over HTTP,Auth : 自动注入Authorization头
 Note over HTTP,Config : 统一基础URL和超时配置
 Note over Queue,Auth : 登录后自动重试机制
 ```
 
 **图表来源**
-- [http.uts:93-163](file://src/utils/http.uts#L93-L163)
-- [api.uts:1-607](file://src/utils/api.uts#L1-L607)
+- [http.uts:99-175](file://src/utils/http.uts#L99-L175)
+- [api.uts:1-710](file://src/utils/api.uts#L1-L710)
+- [brand.uts:1-22](file://src/utils/brand.uts#L1-L22)
 - [config.uts:7-12](file://src/utils/config.uts#L7-L12)
 - [auth.uts:121-141](file://src/utils/auth.uts#L121-L141)
 - [loginFlow.uts:40-42](file://src/utils/loginFlow.uts#L40-L42)
@@ -198,8 +220,9 @@ HTTP封装器实现了以下请求拦截器：
 
 1. **URL处理拦截器**：自动处理相对路径和绝对路径
 2. **认证拦截器**：动态获取token并注入Authorization头
-3. **请求头拦截器**：统一设置Content-Type和应用标识
-4. **加载状态拦截器**：根据配置显示/隐藏加载状态
+3. **品牌上下文拦截器**：自动注入X-Brand-Id头部（如果存在）
+4. **请求头拦截器**：统一设置Content-Type和应用标识
+5. **加载状态拦截器**：根据配置显示/隐藏加载状态
 
 #### 响应拦截器机制
 
@@ -238,17 +261,91 @@ Reject --> End
 ```
 
 **图表来源**
-- [http.uts:120-151](file://src/utils/http.uts#L120-L151)
+- [http.uts:132-175](file://src/utils/http.uts#L132-L175)
 
-**更新** 新增了智能的401处理流程，包括防重复登录弹窗、请求队列管理和自动重试机制。
+**更新** 新增了智能的401处理流程，包括防重复登录弹窗、请求队列管理和自动重试机制，同时在重试时携带最新的品牌上下文信息。
 
 **章节来源**
 - [http.uts:6-12](file://src/utils/http.uts#L6-L12)
-- [http.uts:93-172](file://src/utils/http.uts#L93-L172)
+- [http.uts:99-184](file://src/utils/http.uts#L99-L184)
+
+### 品牌上下文管理机制
+
+**新增** 品牌上下文管理模块提供了完整的多品牌支持：
+
+#### 品牌上下文接口
+
+```typescript
+interface BrandContext {
+  setBrandId(id: string): void
+  getBrandId(): string
+}
+```
+
+#### 品牌上下文特点
+
+- **内存存储**：纯内存保存，不持久化到本地存储
+- **动态设置**：支持运行时动态设置品牌ID
+- **自动注入**：在HTTP请求时自动注入X-Brand-Id头部
+- **生命周期管理**：随JS上下文重建而清空，确保数据隔离
+
+#### 品牌头注入机制
+
+系统在请求时自动检测品牌上下文并注入相应的头部：
+
+```mermaid
+sequenceDiagram
+participant Request as 请求发起
+participant HTTP as HTTP封装器
+participant Brand as 品牌模块
+participant Header as 请求头构建
+participant Server as 服务器
+Request->>HTTP : 发起HTTP请求
+HTTP->>Brand : 获取品牌ID
+Brand-->>HTTP : 返回品牌ID
+alt 存在品牌ID
+HTTP->>Header : 注入X-Brand-Id头部
+Header-->>HTTP : 返回完整请求头
+else 无品牌ID
+HTTP->>Header : 仅注入默认头部
+Header-->>HTTP : 返回默认请求头
+end
+HTTP->>Server : 发送带品牌头的请求
+Server-->>HTTP : 返回响应
+HTTP-->>Request : 返回处理结果
+```
+
+**图表来源**
+- [http.uts:117-121](file://src/utils/http.uts#L117-L121)
+- [brand.uts:1-22](file://src/utils/brand.uts#L1-L22)
+
+**章节来源**
+- [brand.uts:1-22](file://src/utils/brand.uts#L1-L22)
+- [http.uts:117-121](file://src/utils/http.uts#L117-L121)
+
+### 增强的请求重试机制
+
+**更新** 系统增强了请求重试机制，确保在登录后重试时能够使用最新的品牌上下文信息：
+
+#### 重试流程优化
+
+1. **品牌上下文刷新**：在重试前获取最新的品牌ID
+2. **请求头重建**：使用新的token和品牌上下文重建请求头
+3. **批量重试**：按顺序重试队列中的所有请求
+4. **错误处理**：对重试失败的请求进行适当的错误处理
+
+#### 重试机制特点
+
+- **防死循环**：通过`_isFlushing`标志避免重试过程中的无限循环
+- **并发控制**：队列按顺序处理，确保请求的正确执行顺序
+- **品牌一致性**：确保重试请求携带最新的品牌上下文信息
+
+**章节来源**
+- [http.uts:43-84](file://src/utils/http.uts#L43-L84)
 
 ### 401认证错误处理与请求队列系统
 
-**新增** 系统实现了复杂的401认证错误处理机制，包含两个独立的队列系统：
+系统实现了复杂的401认证错误处理机制，包含两个独立的队列系统：
 
 #### 普通请求队列
 
@@ -290,13 +387,13 @@ interface PendingUpload {
 登录成功后，系统会自动重试所有挂起的请求：
 
 1. **刷新token**：获取最新的认证信息
-2. **重建请求头**：使用新的token重新构建请求头
+2. **重建请求头**：使用新的token和最新品牌上下文重新构建请求头
 3. **批量重试**：按顺序重试队列中的所有请求
 4. **错误处理**：对重试失败的请求进行适当的错误处理
 
 **章节来源**
 - [http.uts:14-91](file://src/utils/http.uts#L14-L91)
-- [api.uts:5-57](file://src/utils/api.uts#L5-L57)
+- [api.uts:18-69](file://src/utils/api.uts#L18-L69)
 
 ### 配置模块集成
 
@@ -346,10 +443,15 @@ class HTTPWrapper {
 +flushPendingRequests() void
 +rejectAllPending() void
 }
+class BrandModule {
++setBrandId(id : string) void
++getBrandId() string
+}
 class LoginFlow {
 +runPhoneLogin(phoneCode : string) Promise
 }
 HTTPWrapper --> AuthModule : 使用
+HTTPWrapper --> BrandModule : 使用
 LoginFlow --> AuthModule : 使用
 LoginFlow --> HTTPWrapper : 触发重试
 ```
@@ -357,6 +459,7 @@ LoginFlow --> HTTPWrapper : 触发重试
 **图表来源**
 - [auth.uts:21-171](file://src/utils/auth.uts#L21-L171)
 - [http.uts:42-91](file://src/utils/http.uts#L42-L91)
+- [brand.uts:1-22](file://src/utils/brand.uts#L1-L22)
 - [loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
 
 #### 自动认证注入
@@ -393,9 +496,10 @@ API模块提供了丰富的业务接口封装，每个接口都基于统一的HT
 
 #### 上传接口特殊处理
 
-**更新** 上传接口实现了独立的401处理机制：
+**更新** 上传接口实现了独立的401处理机制和品牌头注入：
 
 - **独立队列**：上传请求使用专门的队列管理
+- **品牌头注入**：通过`buildUploadHeader()`函数注入品牌上下文
 - **特殊处理**：上传接口的成功判断逻辑（code === 0）
 - **自动重试**：登录成功后自动重试上传请求
 
@@ -409,13 +513,16 @@ participant Component as 组件
 participant API as 业务接口
 participant HTTP as HTTP封装器
 participant UploadQueue as 上传队列
+participant Brand as 品牌模块
 participant Server as 服务器
 Component->>API : 调用业务接口
 alt 普通请求
 API->>HTTP : 发送HTTP请求
+HTTP->>Brand : 获取品牌上下文
 HTTP->>HTTP : 统一处理请求
 else 上传请求
 API->>UploadQueue : 处理上传请求
+UploadQueue->>Brand : 获取品牌上下文
 UploadQueue->>Server : 发送上传请求
 end
 HTTP->>Server : 发送网络请求
@@ -426,10 +533,11 @@ API-->>Component : 返回业务数据
 
 **图表来源**
 - [api.uts:441-480](file://src/utils/api.uts#L441-L480)
-- [http.uts:93-172](file://src/utils/http.uts#L93-L172)
+- [http.uts:99-184](file://src/utils/http.uts#L99-L184)
+- [api.uts:6-16](file://src/utils/api.uts#L6-L16)
 
 **章节来源**
-- [api.uts:1-607](file://src/utils/api.uts#L1-L607)
+- [api.uts:1-710](file://src/utils/api.uts#L1-L710)
 
 ### 登录流程管理
 
@@ -537,6 +645,7 @@ subgraph "核心依赖"
 HTTP[src/utils/http.uts]
 CONFIG[src/utils/config.uts]
 AUTH[src/utils/auth.uts]
+BRAND[src/utils/brand.uts]
 end
 subgraph "业务依赖"
 API[src/utils/api.uts]
@@ -549,8 +658,10 @@ MINE[src/pages/mine/index.uvue]
 end
 HTTP --> CONFIG
 HTTP --> AUTH
+HTTP --> BRAND
 API --> HTTP
 API --> LOGIN
+API --> BRAND
 LOGIN --> API
 LOGIN --> AUTH
 LOGIN --> HTTP
@@ -561,16 +672,18 @@ INDEX --> AUTH
 INDEX --> LOGIN
 INDEX --> PROFILE
 INDEX --> HTTP
+INDEX --> BRAND
 MINE --> API
 MINE --> AUTH
 MINE --> LOGIN
 MINE --> PROFILE
 MINE --> HTTP
+MINE --> BRAND
 ```
 
 **图表来源**
-- [http.uts:1-2](file://src/utils/http.uts#L1-L2)
-- [api.uts:1-3](file://src/utils/api.uts#L1-L3)
+- [http.uts:1-3](file://src/utils/http.uts#L1-L3)
+- [api.uts:1-4](file://src/utils/api.uts#L1-L4)
 - [loginFlow.uts:8-10](file://src/utils/loginFlow.uts#L8-L10)
 - [profileSubmit.uts:5-6](file://src/utils/profileSubmit.uts#L5-L6)
 
@@ -582,11 +695,11 @@ MINE --> HTTP
 4. **可测试性**：模块间依赖清晰，便于单元测试
 5. **队列解耦**：请求队列系统与核心请求逻辑解耦，便于扩展和维护
 
-**更新** 新增的队列系统保持了良好的解耦性，普通请求队列和上传请求队列相互独立，互不影响。
+**更新** 新增的品牌上下文模块保持了良好的解耦性，与普通请求队列和上传请求队列相互独立，互不影响。
 
 **章节来源**
-- [http.uts:1-2](file://src/utils/http.uts#L1-L2)
-- [api.uts:1-3](file://src/utils/api.uts#L1-L3)
+- [http.uts:1-3](file://src/utils/http.uts#L1-L3)
+- [api.uts:1-4](file://src/utils/api.uts#L1-L4)
 - [loginFlow.uts:8-10](file://src/utils/loginFlow.uts#L8-L10)
 
 ## 性能考虑
@@ -605,6 +718,7 @@ MINE --> HTTP
 2. **状态管理**：合理管理组件状态，避免内存泄漏
 3. **资源释放**：及时释放图片等大资源的引用
 4. **队列清理**：请求重试完成后及时清理队列中的Promise引用
+5. **品牌上下文清理**：JS上下文重建时自动清理品牌ID
 
 ### 网络优化
 
@@ -614,7 +728,7 @@ MINE --> HTTP
 4. **防重复登录**：通过标志位防止重复弹出登录框
 5. **防死循环**：通过flush标志防止重试过程中的无限循环
 
-**更新** 新增的性能优化包括队列批处理、防重复登录和防死循环机制，有效提升了系统的稳定性和用户体验。
+**更新** 新增的性能优化包括品牌上下文的内存管理、队列批处理、防重复登录和防死循环机制，有效提升了系统的稳定性和用户体验。
 
 ## 故障排除指南
 
@@ -636,7 +750,23 @@ MINE --> HTTP
 - 实现token自动刷新机制
 - 验证`flushPendingRequests()`是否正确调用
 
-#### 2. 登录弹窗重复问题
+#### 2. 品牌上下文问题
+
+**问题描述**：多品牌场景下请求没有携带正确的品牌标识
+
+**排查步骤**：
+1. 检查`setBrandId()`是否正确调用
+2. 验证`getBrandId()`返回的值是否正确
+3. 确认X-Brand-Id头部是否正确注入
+4. 检查品牌上下文的内存管理
+
+**解决方案**：
+- 确保在应用启动时正确设置品牌ID
+- 检查品牌上下文的设置时机
+- 验证请求头构建逻辑
+- 确认品牌ID的生命周期管理
+
+#### 3. 登录弹窗重复问题
 
 **问题描述**：多个请求同时触发导致重复弹出登录框
 
@@ -650,7 +780,7 @@ MINE --> HTTP
 - 检查事件监听的注册和注销时机
 - 验证用户取消登录时的状态清理逻辑
 
-#### 3. 请求重试失败问题
+#### 4. 请求重试失败问题
 
 **问题描述**：登录后挂起的请求没有正确重试
 
@@ -658,13 +788,15 @@ MINE --> HTTP
 1. 检查请求队列是否正确保存了resolve/reject函数
 2. 验证`flushPendingRequests()`的执行时机
 3. 确认重试请求的header是否正确重建
+4. 检查品牌上下文是否在重试时更新
 
 **解决方案**：
 - 检查队列数据结构完整性
 - 验证登录成功后的重试触发逻辑
-- 确保重试请求携带正确的认证信息
+- 确保重试请求携带正确的认证信息和品牌上下文
+- 检查`flushPendingRequests()`中的品牌头注入逻辑
 
-#### 4. 上传请求处理问题
+#### 5. 上传请求处理问题
 
 **问题描述**：上传请求的401处理与普通请求不一致
 
@@ -672,15 +804,18 @@ MINE --> HTTP
 1. 检查上传队列的独立管理机制
 2. 验证上传接口的成功判断逻辑
 3. 确认上传请求的重试机制
+4. 检查上传请求的品牌头注入
 
 **解决方案**：
 - 确保上传队列与普通队列独立管理
 - 检查上传接口的特殊成功判断逻辑
 - 验证上传请求的重试header设置
+- 确认`buildUploadHeader()`函数正确注入品牌上下文
 
 **章节来源**
-- [http.uts:120-151](file://src/utils/http.uts#L120-L151)
-- [api.uts:452-470](file://src/utils/api.uts#L452-L470)
+- [http.uts:132-175](file://src/utils/http.uts#L132-L175)
+- [api.uts:6-16](file://src/utils/api.uts#L6-L16)
+- [brand.uts:1-22](file://src/utils/brand.uts#L1-L22)
 - [loginFlow.uts:40-42](file://src/utils/loginFlow.uts#L40-L42)
 
 ### 调试技巧
@@ -690,8 +825,9 @@ MINE --> HTTP
 3. **网络监控**：监控网络请求的详细信息
 4. **状态检查**：定期检查应用状态和数据流
 5. **队列监控**：监控请求队列的状态和执行情况
+6. **品牌上下文监控**：监控品牌ID的设置和获取情况
 
-**更新** 建议增加队列状态的监控，包括队列长度、重试次数、失败原因等信息，便于问题定位和性能优化。
+**更新** 建议增加队列状态的监控，包括队列长度、重试次数、失败原因等信息，以及品牌上下文的监控，便于问题定位和性能优化。
 
 ## 结论
 
@@ -701,10 +837,11 @@ HTTP请求封装器为蓝莓摄影小程序提供了强大而灵活的网络通�
 2. **完善的错误处理**：多层次的错误处理和恢复机制
 3. **灵活的配置管理**：支持不同环境的配置切换
 4. **自动认证集成**：无缝的认证状态管理和token注入
-5. **智能的请求队列**：自动处理401错误，支持登录后自动重试
-6. **良好的扩展性**：清晰的模块边界，便于功能扩展
+5. **智能的品牌上下文**：自动注入X-Brand-Id头部，支持多品牌场景
+6. **智能的请求队列**：自动处理401错误，支持登录后自动重试
+7. **良好的扩展性**：清晰的模块边界，便于功能扩展
 
-**更新** 新增的401认证错误处理机制和请求队列系统显著提升了用户体验，避免了因认证过期导致的操作中断，实现了真正的无感认证体验。
+**更新** 新增的品牌上下文管理机制和增强的请求重试机制显著提升了用户体验，支持多品牌场景下的正确路由和处理，避免了因认证过期导致的操作中断，实现了真正的无感认证体验。
 
 该封装器不仅满足了当前业务需求，还为未来的功能扩展和技术演进奠定了坚实的基础。通过持续的优化和完善，相信能够为用户提供更好的使用体验。
 
@@ -743,9 +880,27 @@ const response = await http.request({
 })
 ```
 
+#### 品牌上下文设置示例
+
+**新增** 品牌上下文设置和使用示例：
+
+```typescript
+// 设置品牌上下文（通常在应用启动时）
+import { setBrandId } from './utils/brand.uts'
+
+// 扫码进入时设置品牌ID
+if (scene === 1047 || scene === 1048) {
+  const brandId = decodeURIComponent(query.brandId)
+  setBrandId(brandId)
+}
+
+// 所有后续请求会自动携带X-Brand-Id头部
+const data = await api.getAlbumList({ shopId: 1 })
+```
+
 #### 上传请求示例
 
-**更新** 上传请求现在支持自动的401处理和重试：
+**更新** 上传请求现在支持自动的401处理和品牌头注入：
 
 ```typescript
 // 上传照片到AI试衣服务
@@ -769,5 +924,6 @@ try {
 5. **关注性能优化**：合理安排请求顺序和数量
 6. **利用自动重试**：充分利用系统的自动重试机制，无需手动处理401错误
 7. **监控队列状态**：在生产环境中监控请求队列的状态和性能
+8. **品牌上下文管理**：在应用启动时正确设置品牌ID，确保多品牌场景下的正确行为
 
-**更新** 建议充分利用系统的自动重试机制，开发者无需手动处理401错误，系统会在用户重新登录后自动重试所有失败的请求。
+**更新** 建议充分利用系统的自动重试机制和品牌上下文管理，开发者无需手动处理401错误和品牌头注入，系统会在用户重新登录后自动重试所有失败的请求，并确保携带正确的品牌标识。
