@@ -570,11 +570,12 @@ export const deleteAiTask = async (id: number) => {
   return res as { code: number; message: string }
 }
 
-// ============ AI试衣次数 / 支付模块（credit） ============
-// 注意：credit 接口成功 code === 200；4001 = 试衣次数不足（HTTP 200 返回）
+// ============ AI次数 / 支付模块（credit） ============
+// 注意：credit 接口成功 code === 200；4001 = 次数不足（HTTP 200 返回）
+// 试衣/推荐/下载三池完全独立，通过 feature 参数区分：tryon(默认) / recommend / download
 
 export interface CreditBalance {
-  balance: number            // 剩余试衣次数
+  balance: number            // 剩余次数（对应 feature 池：试衣或推荐）
   inited: boolean            // 是否已初始化免费次数
   priceFenPerCredit: number  // 单次价格（分），0 = 未开通付费购买（前端只给兑换码入口）
 }
@@ -599,15 +600,19 @@ export interface CreditRechargeStatus {
 }
 
 /**
- * 查询当前用户试衣次数余额与单次定价（需登录）
+ * 查询当前用户次数余额与单次定价（需登录）
  * 首次查询会按商户配置惰性初始化免费次数
- * @param shopId 可选，传了才返回该店所属商户的单次价格
+ * @param shopId  可选，传了才返回该店所属商户的单次价格
+ * @param feature 可选，次数池标识：不传默认试衣池；查推荐次数传 'recommend'
  */
-export const getCreditBalance = async (shopId?: number) => {
+export const getCreditBalance = async (shopId?: number, feature?: string) => {
+  const data: Record<string, any> = {}
+  if (shopId != null) data.shopId = shopId
+  if (feature != null && feature !== '') data.feature = feature
   const res = await request({
     url: '/api/aiface/credit/balance',
     method: 'GET',
-    data: shopId != null ? { shopId } : {},
+    data: data,
     showLoading: false,
   })
   return res as { code: number; message: string; data: CreditBalance }
@@ -616,10 +621,12 @@ export const getCreditBalance = async (shopId?: number) => {
 /**
  * 创建充值订单（微信小程序 JSAPI 支付），返回拉起支付所需参数（需登录）
  * 「支付一次开通一次」，credits 通常传 1
+ * @param params.feature 可选，次数池标识：不传默认试衣池；推荐充值必须传 'recommend'
  */
 export const createCreditRecharge = async (params: {
   shopId: number
   credits: number
+  feature?: string
 }) => {
   const res = await request({
     url: '/api/aiface/credit/recharge',
@@ -682,9 +689,9 @@ export interface AiRecommendation {
 }
 
 /**
- * AI智能推荐 — 获取推荐结果（需登录）
+ * AI智能推荐 — 获取推荐结果（需登录，推荐池扣费入口）
  * POST /api/aiface/recommend
- * 注意：aiface 接口成功 code === 0 或 200
+ * 注意：aiface 接口成功 code === 0 或 200；4001 = 推荐次数不足（HTTP 200 返回，前端拉起充值）
  * @param userPhotoFilename  上传图片返回的 filename
  * @param shopId             当前门店 ID
  */
