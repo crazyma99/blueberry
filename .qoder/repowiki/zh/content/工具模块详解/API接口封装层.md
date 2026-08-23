@@ -25,10 +25,11 @@
 
 ## 更新摘要
 **变更内容**
-- **新增buildUploadHeader函数**：实现了集中化的上传请求头构建功能，统一处理Authorization和X-Brand-Id头部注入
-- **增强上传功能**：添加了上传接口的401挂起队列机制，支持登录成功后自动重试失败的上传请求
-- **支付相关端点集成**：完整集成了信用额度管理相关的API接口，包括余额查询、充值订单创建、支付状态轮询等
-- **上传队列管理优化**：新增了flushPendingUploads和rejectAllPendingUploads函数，提供完善的上传请求生命周期管理
+- **新增支付功能模块**：完整实现了信用额度管理相关的API接口，包括余额查询、充值订单创建、支付状态轮询、兑换码兑换等
+- **增强上传功能**：新增了buildUploadHeader函数和完整的上传队列管理机制，支持401挂起队列和自动重试
+- **新增AI试衣历史记录功能**：提供了getAiTasks和deleteAiTask接口，支持用户查看和管理AI试衣历史
+- **完善AI智能推荐功能**：集成了getAiRecommend接口和相关页面，提供基于用户照片的智能分析和个性化推荐
+- **增强错误处理机制**：所有AI相关接口现在都支持多种成功码格式（code 0 和 200），提高了与不同API实现的兼容性
 
 ## 目录
 1. [简介](#简介)
@@ -112,17 +113,17 @@ AIRECOMMENDRESULT --> API
 ```
 
 **图表来源**
-- [api.uts:1-710](file://src/utils/api.uts#L1-L710)
+- [api.uts:1-717](file://src/utils/api.uts#L1-L717)
 - [http.uts:1-184](file://src/utils/http.uts#L1-L184)
-- [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
+- [auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 - [loginFlow.uts:1-71](file://src/utils/loginFlow.uts#L1-L71)
 - [profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 
 **章节来源**
-- [api.uts:1-710](file://src/utils/api.uts#L1-L710)
+- [api.uts:1-717](file://src/utils/api.uts#L1-L717)
 - [http.uts:1-184](file://src/utils/http.uts#L1-L184)
-- [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
+- [auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 
 ## 核心组件
@@ -158,7 +159,7 @@ AIRECOMMENDRESULT --> API
   - 参数校验：调用方需确保必填参数存在，如 shopId、albumId 等
 
 **章节来源**
-- [api.uts:6-710](file://src/utils/api.uts#L6-L710)
+- [api.uts:6-717](file://src/utils/api.uts#L6-L717)
 - [http.uts:48-61](file://src/utils/http.uts#L48-L61)
 
 ## 架构总览
@@ -188,7 +189,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 ```
 
 **图表来源**
-- [api.uts:596-604](file://src/utils/api.uts#L596-L604)
+- [api.uts:608-619](file://src/utils/api.uts#L608-L619)
 - [http.uts:20-73](file://src/utils/http.uts#L20-L73)
 - [auth.uts:21-52](file://src/utils/auth.uts#L21-52)
 - [config.uts:7-12](file://src/utils/config.uts#L7-L12)
@@ -228,8 +229,8 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 **章节来源**
 - [api.uts:73-91](file://src/utils/api.uts#L73-L91)
 - [api.uts:384-394](file://src/utils/api.uts#L384-L394)
-- [api.uts:665-682](file://src/utils/api.uts#L665-L682)
-- [api.uts:576-599](file://src/utils/api.uts#L576-L599)
+- [api.uts:672-716](file://src/utils/api.uts#L672-L716)
+- [api.uts:577-600](file://src/utils/api.uts#L577-L600)
 
 ### 上传功能增强
 
@@ -550,7 +551,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **安全性**：确保订单号的唯一性和支付参数的正确性
 
 **章节来源**
-- [api.uts:576-660](file://src/utils/api.uts#L576-L660)
+- [api.uts:577-667](file://src/utils/api.uts#L577-L667)
 - [aiTryOn.uvue:455-543](file://src/pages/aiTryOn/index.uvue#L455-L543)
 
 ## AI智能推荐功能
@@ -617,7 +618,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **客片集成**：通过albumId字段实现与客片详情页的无缝集成
 
 **章节来源**
-- [api.uts:665-709](file://src/utils/api.uts#L665-L709)
+- [api.uts:672-716](file://src/utils/api.uts#L672-L716)
 - [aiRecommend.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-202)
 - [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
 - [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
@@ -693,9 +694,9 @@ HTTP --> CONFIG : "使用"
 ```
 
 **图表来源**
-- [api.uts:1-710](file://src/utils/api.uts#L1-L710)
+- [api.uts:1-717](file://src/utils/api.uts#L1-L717)
 - [http.uts:1-184](file://src/utils/http.uts#L1-L184)
-- [auth.uts:1-149](file://src/utils/auth.uts#L1-L149)
+- [auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
 
 ## 性能考虑
