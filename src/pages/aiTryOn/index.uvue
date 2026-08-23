@@ -417,7 +417,7 @@ export default {
 						this.creditBalance = this.creditBalance - 1
 					}
 					uni.navigateTo({
-						url: `/pages/aiTryOnResult/index?taskId=${submitRes.data.task_id}`
+						url: `/pages/aiTryOnResult/index?taskId=${submitRes.data.task_id}&shopId=${this.shopId}`
 					})
 				} else if (submitRes.code === 4001) {
 					// 试衣次数不足 → 直接拉起支付

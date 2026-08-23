@@ -544,6 +544,22 @@ export const getAiTryOnResult = async (taskId: string) => {
 }
 
 /**
+ * AI试衣结果下载 — 保存到相册前的扣费入口（需登录，下载池扣费）
+ * POST /api/aiface/download
+ * 扣下载次数池 1 次；4001 = 下载次数不足（HTTP 200 信封内返回，前端拉起充值，feature='download'）
+ * @param taskId 试衣任务 ID，后端据此反查所属商户
+ */
+export const downloadAiTryOnResult = async (taskId: string) => {
+  const res = await request({
+    url: '/api/aiface/download',
+    method: 'POST',
+    data: { task_id: parseInt(taskId) || 0 },
+    showLoading: false,
+  })
+  return res as { code: number; message: string; data: any }
+}
+
+/**
  * 获取AI试衣历史记录列表（需登录）
  * 注意：code === 0 表示成功
  */
