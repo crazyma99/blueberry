@@ -24,10 +24,10 @@
 
 ## 更新摘要
 **所做更改**
-- 新增ServiceContact组件配置注入功能的详细说明
-- 更新Profile映射表以包含CONTACT_COOP_TEXT字段
-- 添加ServiceContact组件的架构说明和使用示例
-- 更新故障排查指南以涵盖新的配置项
+- 新增CONTACT_COOP_TEXT可选环境变量支持，用于动态注入商务合作电话
+- 更新updateContactPage函数以支持可选的商务合作电话配置
+- 扩展Profile配置系统以支持更灵活的联系方式管理
+- 完善ServiceContact组件的配置注入机制
 
 ## 目录
 1. [简介](#简介)
@@ -46,7 +46,7 @@
 - 如何使用 create-profile.sh 创建新的项目配置
 - 如何使用 apply-profile.sh 将 Profile 的变量映射到目标仓库的配置文件
 - Profile 应用过程中的文件替换规则与映射关系
-- **新增** ServiceContact组件的配置注入机制，确保联系信息和二维码能够动态注入到集中式组件中
+- **新增** updateContactPage函数增强支持可选的CONTACT_COOP_TEXT环境变量，实现商务合作电话的动态注入
 - 如何验证 Profile 应用是否成功
 - Profile 切换与回滚的操作步骤
 - 常见问题与自动化脚本使用注意事项
@@ -120,7 +120,7 @@ S2 --> R10
 - create-profile.sh：基于模板生成新 Profile，填充基础字段并提示后续步骤
 - apply-profile.sh：解析参数定位 Profile 文件，加载环境变量，调用 Node 脚本进行精确替换，必要时复制静态资源
 - apply-profile.mjs：严格校验必需字段，按映射规则对目标文件进行文本替换，避免误伤
-- **ServiceContact组件**：集中式的服务保障和联系我们区块，支持动态配置注入
+- **ServiceContact组件**：集中式的服务保障和联系我们区块，支持动态配置注入，包括可选的商务合作电话
 - Profile 模板与示例：templates/profile.env.example 与 profiles/blueberry、profiles/huahua 提供字段与示例值
 
 章节来源
@@ -136,7 +136,7 @@ S2 --> R10
 Profile 应用流程分为"创建"和"应用"两大阶段：
 - 创建阶段：基于模板生成 project.env，填充基础字段
 - 应用阶段：apply-profile.sh 读取 project.env，将变量注入到目标仓库的多个配置文件与页面中，并可复制静态资源
-- **新增**：ServiceContact组件的统一配置注入，确保联系信息的一致性和可维护性
+- **新增**：updateContactPage函数增强支持可选的CONTACT_COOP_TEXT环境变量，实现商务合作电话的动态注入
 
 ```mermaid
 sequenceDiagram
@@ -155,6 +155,7 @@ AP->>MJS : "执行 Node 文本替换"
 MJS->>Repo : "按映射规则替换文件内容"
 MJS->>SC : "注入联系信息到ServiceContact组件"
 SC-->>MJS : "返回组件结构确认"
+MJS->>SC : "可选注入商务合作电话(CONTACT_COOP_TEXT)"
 AP->>Repo : "复制 profiles/<key>/static/* 到 src/static/"
 AP-->>Dev : "输出应用结果"
 ```
@@ -202,7 +203,7 @@ AP-->>Dev : "输出应用结果"
 ### apply-profile.mjs 映射规则与替换逻辑
 - 必需字段校验：在应用前强制校验以下字段均非空，否则抛错
   - PROJECT_KEY、PACKAGE_NAME、MANIFEST_NAME、DESCRIPTION、MP_WEIXIN_APPID、NAVIGATION_TITLE、COPYRIGHT_TEXT、CONTACT_PHONE_TEXT、CONTACT_QR_SRC、PRICE_FALLBACK_TITLE、API_BASE_URL、MINI_APP_NAME
-- **新增** CONTACT_COOP_TEXT 可选字段：用于设置商务合作电话
+- **新增** CONTACT_COOP_TEXT 可选字段：用于设置商务合作电话，留空则保持模板代码默认值
 - 替换策略
   - 仅在匹配到目标模式时才进行替换，否则抛错，避免误伤
   - 写入前对比文件内容，若无变化则不写入，减少不必要的磁盘写入
@@ -216,7 +217,7 @@ AP-->>Dev : "输出应用结果"
   - src/utils/http.uts：finalHeader 中的 X-App-Code（为空则移除）
   - src/utils/legal.uts：MINI_APP_NAME
   - src/components/AppFooter/AppFooter.uvue：copyrightText
-  - **src/components/ServiceContact/ServiceContact.uvue**：二维码 src、联系电话、商务合作电话
+  - **src/components/ServiceContact/ServiceContact.uvue**：二维码 src、联系电话、**可选的商务合作电话**
   - src/pages/priceList/index.uvue：价目表兜底标题
 
 ```mermaid
@@ -233,7 +234,11 @@ ReplaceConf --> ReplaceHttp["替换 src/utils/http.uts"]
 ReplaceHttp --> ReplaceLegal["替换 src/utils/legal.uts"]
 ReplaceLegal --> ReplaceFooter["替换 AppFooter.copyrightText"]
 ReplaceFooter --> ReplaceServiceContact["替换 ServiceContact组件配置"]
-ReplaceServiceContact --> ReplacePrice["替换价目表兜底标题"]
+ReplaceServiceContact --> CheckCoop{"检查CONTACT_COOP_TEXT?"}
+CheckCoop --> |有值| ReplaceCoop["替换商务合作电话"]
+CheckCoop --> |无值| SkipCoop["跳过商务合作电话替换"]
+ReplaceCoop --> ReplacePrice["替换价目表兜底标题"]
+SkipCoop --> ReplacePrice
 ReplacePrice --> WriteBack["写回文件仅在内容变化时"]
 WriteBack --> End(["结束"])
 ```
@@ -250,13 +255,13 @@ WriteBack --> End(["结束"])
 - **组件位置**：src/components/ServiceContact/ServiceContact.uvue
 - **设计目标**：
   - 收敛首页/价目表页底部的重复区块（服务保障列表 / 联系我们二维码与电话）
-  - 二维码 src、联系电话（及可选的商务合作电话）由 profile 注入脚本一处替换
+  - 二维码 src、联系电话（及**可选的商务合作电话**）由 profile 注入脚本一处替换
   - 组件内不得含硬编码品牌信息
 - **注入合同**：保持 `<image class="code">` 与 `<view class="label">联系电话</view>` + `<view class="val">…</view>` 的结构不变，脚本正则依赖此合同
 - **配置字段**：
   - CONTACT_QR_SRC：二维码图片地址
   - CONTACT_PHONE_TEXT：联系电话文案
-  - CONTACT_COOP_TEXT：商务合作电话（可选）
+  - **CONTACT_COOP_TEXT：商务合作电话（可选）**
 
 章节来源
 - [ServiceContact.uvue:1-213](file://src/components/ServiceContact/ServiceContact.uvue#L1-L213)
@@ -265,7 +270,7 @@ WriteBack --> End(["结束"])
 ### Profile 文件与示例
 - 模板：scripts/templates/profile.env.example，包含所有可用字段及注释
 - 示例：profiles/blueberry 与 profiles/huahua 提供了两个参考配置，便于理解字段含义与取值
-- **新增字段**：CONTACT_COOP_TEXT 用于设置商务合作电话
+- **新增字段**：CONTACT_COOP_TEXT 用于设置商务合作电话，留空则保持模板代码默认值
 
 章节来源
 - [profile.env.example:1-27](file://scripts/templates/profile.env.example#L1-L27)
@@ -279,7 +284,7 @@ WriteBack --> End(["结束"])
 - src/utils/http.uts：finalHeader 中的 X-App-Code 会被替换或移除
 - src/utils/legal.uts：MINI_APP_NAME 会被替换
 - src/components/AppFooter/AppFooter.uvue：copyrightText 会被替换
-- **src/components/ServiceContact/ServiceContact.uvue**：二维码 src、联系电话、商务合作电话会被替换
+- **src/components/ServiceContact/ServiceContact.uvue**：二维码 src、联系电话、**可选的商务合作电话**会被替换
 - **src/pages/index/index.uvue**：使用 ServiceContact 组件
 - **src/pages/priceHomePage/index.uvue**：使用 ServiceContact 组件
 - src/pages/priceList/index.uvue：价目表兜底标题会被替换
@@ -341,6 +346,7 @@ SC --> PH["src/pages/priceHomePage/index.uvue"]
 - 模式匹配：对每处替换进行模式存在性校验，避免无效写入
 - 静态资源复制：仅在 profiles/<key>/static 存在且包含文件时才复制，降低冗余操作
 - **组件复用**：ServiceContact组件的集中化管理减少了重复代码和维护成本
+- **条件替换**：CONTACT_COOP_TEXT为可选字段，仅在设置时进行替换，提升性能
 
 章节来源
 - [apply-profile.mjs:41-48](file://scripts/lib/apply-profile.mjs#L41-L48)
@@ -366,6 +372,9 @@ SC --> PH["src/pages/priceHomePage/index.uvue"]
 - **问题：ServiceContact组件样式异常**
   - 排查：确认组件结构未被破坏，特别是 `<image class="code">` 和相关 view 标签
   - 排查：检查静态资源路径是否正确
+- **问题：商务合作电话未显示**
+  - 排查：确认 CONTACT_COOP_TEXT 字段已设置且非空
+  - 排查：检查 ServiceContact 组件中是否存在对应的 HTML 结构
 
 章节来源
 - [apply-profile.mjs:12-31](file://scripts/lib/apply-profile.mjs#L12-L31)
@@ -375,7 +384,7 @@ SC --> PH["src/pages/priceHomePage/index.uvue"]
 - [apply-profile.sh:91-95](file://scripts/apply-profile.sh#L91-L95)
 
 ## 结论
-通过 create-profile.sh 与 apply-profile.sh 的配合，模板仓库实现了"一套源码、多份配置"的高效复用。**新增的ServiceContact组件配置注入功能**进一步提升了代码的可维护性和一致性，确保联系信息和二维码能够在所有相关页面中统一管理和更新。apply-profile.mjs 以严格的模式匹配与内容比较保障了替换的准确性与稳定性。结合 README 的批量构建脚本，团队可快速为多个项目生成与校验构建产物。
+通过 create-profile.sh 与 apply-profile.sh 的配合，模板仓库实现了"一套源码、多份配置"的高效复用。**新增的updateContactPage函数增强功能**进一步提升了联系方式管理的灵活性，通过支持可选的CONTACT_COOP_TEXT环境变量，实现了商务合作电话的动态注入。ServiceContact组件的统一配置注入机制确保了联系信息和二维码能够在所有相关页面中统一管理和更新。apply-profile.mjs 以严格的模式匹配与内容比较保障了替换的准确性与稳定性。结合 README 的批量构建脚本，团队可快速为多个项目生成与校验构建产物。
 
 ## 附录
 
@@ -389,7 +398,7 @@ SC --> PH["src/pages/priceHomePage/index.uvue"]
 - APP_CODE：写入 src/utils/http.uts 的 X-App-Code（为空则移除）
 - MINI_APP_NAME：写入 src/utils/legal.uts 的 MINI_APP_NAME
 - **CONTACT_QR_SRC/CONTACT_PHONE_TEXT/COPYRIGHT_TEXT**：写入 ServiceContact 组件的联系信息与 AppFooter 的版权文案
-- **CONTACT_COOP_TEXT**：写入 ServiceContact 组件的商务合作电话（可选）
+- **CONTACT_COOP_TEXT**：**写入 ServiceContact 组件的商务合作电话（可选）**
 - PRICE_FALLBACK_TITLE：写入 src/pages/priceList/index.uvue 的价目表兜底标题
 - profiles/<key>/static/*：复制到目标仓库 src/static/
 
@@ -400,7 +409,7 @@ SC --> PH["src/pages/priceHomePage/index.uvue"]
 - 创建 Profile
   - 执行 create-profile.sh <project-key>，编辑生成的 profiles/<project-key>/project.env
   - 如需替换素材，将文件放入 profiles/<project-key>/static/
-  - **配置ServiceContact组件**：设置 CONTACT_QR_SRC、CONTACT_PHONE_TEXT，可选设置 CONTACT_COOP_TEXT
+  - **配置ServiceContact组件**：设置 CONTACT_QR_SRC、CONTACT_PHONE_TEXT，**可选设置 CONTACT_COOP_TEXT**
 - 应用 Profile
   - 在模板仓库或目标仓库执行 apply-profile.sh <profile-key> --repo <target-repo>
   - 或使用 build-miniapp.sh <profile-key> --repo <target-repo> 一键完成模板同步、应用配置、编译与校验
@@ -408,7 +417,7 @@ SC --> PH["src/pages/priceHomePage/index.uvue"]
   - 校验项目清单与页面：AppID、导航栏标题、协议页面是否存在
   - 校验请求头：X-App-Code 是否正确
   - 校验文案：联系二维码、电话、版权、价目表兜底标题等
-  - **校验ServiceContact组件**：确认联系信息已正确注入到组件中
+  - **校验ServiceContact组件**：确认联系信息已正确注入到组件中，**包括可选的商务合作电话**
   - 可选：使用 RESIDUAL_SEARCH_REGEX 扫描残留字符串
 - 切换与回滚
   - 切换：再次执行 apply-profile.sh 指向新的 <profile-key> 或 --profile-file
@@ -435,11 +444,11 @@ SC --> PH["src/pages/priceHomePage/index.uvue"]
 - **配置字段**：
   - CONTACT_QR_SRC：二维码图片地址，支持本地静态资源或远程URL
   - CONTACT_PHONE_TEXT：联系电话文案，如"18068842642（微信同号）"
-  - CONTACT_COOP_TEXT：商务合作电话（可选），如"13269920775"
+  - **CONTACT_COOP_TEXT：商务合作电话（可选），如"13269920775"**
 - **HTML结构要求**：
   - 必须包含 `<image class="code">` 标签用于显示二维码
   - 必须包含 `<view class="label">联系电话</view>` 和对应的 `<view class="val">` 标签
-  - 可选包含 `<view class="label">商务合作</view>` 和对应的 `<view class="val">` 标签
+  - **可选包含 `<view class="label">商务合作</view>` 和对应的 `<view class="val">` 标签**
 
 章节来源
 - [ServiceContact.uvue:1-213](file://src/components/ServiceContact/ServiceContact.uvue#L1-L213)
