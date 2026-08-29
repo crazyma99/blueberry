@@ -2,7 +2,7 @@
 	<view class="container">
 		<!-- 骨架屏 -->
 		<view v-if="loading" class="sk-container">
-			<view class="sk-banner sk-animate"></view>
+			<view class="sk-banner sk-animate" style="height: 794rpx;"></view>
 			<view class="sk-title sk-animate"></view>
 			<view class="sk-subtitle sk-animate"></view>
 			<view class="sk-row">
@@ -13,16 +13,52 @@
 
 		<!-- 主内容 -->
 		<view v-else class="main-content">
-			<!-- 顶部轮播图 -->
-			<swiper class="banner" autoplay circular :interval="3000" :duration="500" indicator-dots
-				indicator-color="rgba(255, 255, 255, 0.35)" indicator-active-color="#fff">
+			<!-- 顶部通栏轮播：无指示点；文案已烘焙进 banner 图，高度随首图宽高比自适应避免裁切 -->
+			<swiper class="hero" autoplay circular :interval="3000" :duration="500" :style="{ height: heroHeight }">
 				<swiper-item v-for="(item, idx) in banners" :key="idx">
-					<image class="banner-image" :src="item.imageUrl" mode="aspectFill"></image>
+					<image class="hero-image" :src="item.imageUrl" mode="aspectFill" @load="onHeroImageLoad"></image>
 				</swiper-item>
 			</swiper>
-			<view class="divideTit">PHOTOGRAPHY</view>
-			<view class="demoPhotoTit">客片欣赏</view>
-			<PhotoGrid :shop-list="shopList" @shop-click="onShopClick" @demo-click="onDemoClick" />
+			
+			<!-- 客片欣赏：shop-container.png 以 border-image 点九图方式作背景，高度由内容撑开 -->
+			<view class="shop-section">
+				<view class="shop-content">
+					<view class="shop-header-wrap">
+						<image class="shop-top" src="/static/shop-container-top.png" mode="aspectFill" />
+					</view>
+					<view class="shop-container">
+						<view class="shop-inner-line"></view>
+						<view class="shop-header">
+							<view class="shop-title-wrap">
+								<text class="shop-title">客片欣赏</text>
+								<text class="shop-subtitle">COLLECTION</text>
+							</view>
+						</view>
+						<view class="photo-grid">
+							<view
+								v-for="(shop, index) in shopList"
+								:key="index"
+								:class="shopList.length === 1 ? 'photo-card photo-card-full' : 'photo-card'"
+								@click="onShopClick(shop)"
+							>
+								<image class="photo-card-img" :src="shop.homeImage" mode="aspectFill"></image>
+								<view class="photo-card-mask"></view>
+								<view class="photo-card-info">
+									<text class="photo-card-name">{{ shop.displayName }}</text>
+									<text class="photo-card-sub">{{ shop.displayNameEn }}</text>
+								</view>
+							</view>
+							<!-- 无店铺时 fallback：demo 图，同 2 列布局 -->
+							<view v-if="shopList.length === 0" class="photo-card" @click="onDemoClick(1)">
+								<image class="photo-card-img" src="/static/demo1.png" mode="aspectFill"></image>
+							</view>
+							<view v-if="shopList.length === 0" class="photo-card" @click="onDemoClick(2)">
+								<image class="photo-card-img" src="/static/demo2.png" mode="aspectFill"></image>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
 			<view class="divideTit">SERVICE INFORMATION</view>
 			<view class="demoPhotoTit">服务说明</view>
 			<image class="service" src="/static/service.png"></image>
@@ -113,6 +149,9 @@
 				loading: true,
 				banners: [],
 				shopList: [],
+				// 轮播高度：随首张 banner 图宽高比自适应（兜底 794rpx ≈ 设计稿比例）
+				heroHeight: '794rpx',
+				heroHeightReady: false,
 				showLoginPopup: false,
 				loginAgreementChecked: false,
 				userAgreementName: USER_AGREEMENT_NAME,
@@ -318,6 +357,17 @@
 				uni.showToast({ title: '登录成功', icon: 'success' })
 			},
 
+			// 首张 banner 加载完成后按图片真实宽高比设定轮播高度（只取第一次，避免后续图跳动）
+			onHeroImageLoad(e) {
+				if (this.heroHeightReady) return
+				const w = e.detail?.width ?? 0
+				const h = e.detail?.height ?? 0
+				if (w > 0 && h > 0) {
+					const rpx = Math.round(750 * h / w)
+					this.heroHeight = Math.min(Math.max(rpx, 400), 1200) + 'rpx'
+					this.heroHeightReady = true
+				}
+			},
 			onShopClick(shop) {
 				uni.navigateTo({
 					url: `/pages/demoDetail/index?from=banner&idx=${shop.id}`
@@ -334,7 +384,7 @@
 
 <style>
 	.container{
-		background: #000;
+		background: #141414;
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
@@ -348,16 +398,129 @@
 	.page-footer {
 		margin-top: auto;
 	}
-	.banner{
-		margin: 24rpx 0 32rpx;
+	/* 顶部通栏轮播：无指示点，高度由脚本按首图宽高比写入 */
+	.hero{
 		width: 100%;
-		height: 384rpx;
 		overflow: hidden;
 	}
-	.banner-image{
+	.hero-image{
 		width: 100%;
 		height: 100%;
 		display: block;
+	}
+	/* 客片欣赏：shop-container.png 以 border-image 点九图方式铺满，高度由内容撑开。
+	   切片（源图 1424×486）：顶 250px 含整条金色光线（最低点 y≈240）、底 46px 含底部边线与圆角、
+	   左右 42px 含圆角转角；中段透明，随内容纵向拉伸。
+	   注意：border-image 仅小程序/web 端可用，App 端 uvue 原生不支持该属性。 */
+	.shop-section{
+		margin: 0 20rpx;
+	}
+	.shop-header-wrap{
+		position: relative;
+		width: 710rpx;
+		height: 163rpx;
+		.shop-top{
+			width: 100%;
+			height: 100%;
+			position: absolute;
+		}
+	}
+	.shop-header{
+		position: absolute;
+		/* 上移 60rpx 进入切图区：只动标题自身，容器边框线位置不受影响 */
+		top: -60rpx;
+		left: 20rpx;
+		right: 20rpx;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+	.shop-title-wrap{
+		display: flex;
+		flex-direction: column;
+	}
+	.shop-title{
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #F1CD91;
+	}
+	.shop-subtitle{
+		font-size: 14rpx;
+		color: rgba(241, 205, 145, 0.7);
+		font-weight: 400;
+	}
+	.shop-container{
+		position: relative;
+		/* 覆盖 uni-app x view 默认 overflow: hidden，允许标题上移溢出显示 */
+		overflow: visible;
+		/* 顶部 padding 为标题行留位（标题 absolute 不占流，照片从 padding-top 处开始） */
+		padding: 20rpx;
+	}
+	/* 内边框线框：内层绝对定位 view 画左/右/下三边线，缩进与内容 padding 对齐（20rpx）
+	   改 left/right/bottom 为 0 即贴边（等同原 border 效果）；顶部开口与切图拼接 */
+	.shop-inner-line{
+		position: absolute;
+		top: 0;
+		left: 0rpx;
+		right: 1rpx;
+		bottom: 0rpx;
+		border-left: 2rpx solid rgba(255, 255, 219, 0.3);
+		border-right: 2rpx solid rgba(255, 255, 219, 0.3);
+		border-bottom: 2rpx solid rgba(255, 255, 219, 0.3);
+		/* 只保留下方两角圆角（border-radius 简写会四角同时生效） */
+		border-bottom-left-radius: 24rpx;
+		border-bottom-right-radius: 24rpx;
+		pointer-events: none;
+	}
+	.photo-grid{
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 20rpx;
+	}
+	.photo-card{
+		position: relative;
+		width: calc((100% - 20rpx) / 2);
+		height: 183rpx;
+		border-radius: 12rpx;
+		overflow: hidden;
+		border: 1rpx solid rgba(243, 217, 172, 0.35);
+	}
+	.photo-card-full{
+		width: 100%;
+	}
+	.photo-card-img{
+		width: 100%;
+		height: 100%;
+		display: block;
+	}
+	.photo-card-mask{
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 70%;
+		background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75));
+	}
+	.photo-card-info{
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 10rpx;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	.photo-card-name{
+		font-size: 28rpx;
+		font-weight: 600;
+		color: #fff;
+	}
+	.photo-card-sub{
+		margin-top: 2rpx;
+		font-size: 18rpx;
+		color: rgba(255, 255, 255, 0.65);
 	}
 	.divideTit {
 		text-align: center;
@@ -370,7 +533,7 @@
 		color: rgba(255, 255, 255, 0.9);
 		text-align: center;
 	}
-	/* demoPhotoContaner / demoPhoto / shopCard / shopName 等样式已收敛至 PhotoGrid 组件 */
+	/* 店铺卡片网格样式见 .photo-grid / .photo-card（首页已不再使用 PhotoGrid 组件） */
 	.service{
 		margin: 40rpx 8rpx 40rpx;
 		width: 736rpx;
