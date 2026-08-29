@@ -184,6 +184,7 @@ updateConfig()
 updateHttp()
 updateLegal()
 updateAppFooter()
-updateContactPage('src/pages/index/index.uvue')
+// 首页的服务保障/联系我们区块已抽为 ServiceContact 组件，注入合同随组件迁移
+updateContactPage('src/components/ServiceContact/ServiceContact.uvue')
 updateContactPage('src/pages/priceHomePage/index.uvue')
 updatePriceList()

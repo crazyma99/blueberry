@@ -20,6 +20,7 @@
 
 ## 更新摘要
 **变更内容**
+- demoDetail页面中的AI智能推荐入口得到了显著增强，从简单的文本按钮升级为包含背景图片和改进排版的横幅组件，提升了用户引导效果
 - AI服装推荐功能已增强为支持付费模式和积分余额管理，新增了微信支付集成、积分余额查询和充值功能
 - 实现了智能支付中断恢复机制，支付成功后自动继续之前被打断的分析流程
 - 新增积分余额查询接口，支持查询用户剩余推荐次数和单次定价
@@ -38,9 +39,9 @@
 9. [结论](#结论)
 
 ## 简介
-本章节聚焦于"AI服装推荐"能力，该能力经过重大增强后，现在提供完整的用户认证、资料管理和智能推荐服务。**重要更新**：AI智能推荐功能入口已暂时隐藏（v-if="false"），当前处于开发/测试阶段。系统现已全面支持付费模式和积分余额管理，用户可通过微信支付购买推荐次数，并在次数不足时自动引导充值。整个流程现已集成完整的登录态管理、用户资料完善系统、增强的错误处理机制和智能性别过滤功能。API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移。
+本章节聚焦于"AI服装推荐"能力，该能力经过重大增强后，现在提供完整的用户认证、资料管理和智能推荐服务。**重要更新**：AI智能推荐功能入口在demoDetail页面中已从简单的文本按钮升级为视觉丰富的横幅组件，通过背景图片和改进的排版设计显著提升了用户引导效果。系统现已全面支持付费模式和积分余额管理，用户可通过微信支付购买推荐次数，并在次数不足时自动引导充值。整个流程现已集成完整的登录态管理、用户资料完善系统、增强的错误处理机制和智能性别过滤功能。API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移。
 
-**最新增强**：AI推荐功能现已支持完整的付费模式，包括积分余额查询、微信支付集成、智能支付中断恢复等功能。当用户推荐次数不足时，系统会自动检测并引导用户进行充值，支付成功后自动继续之前的分析流程。
+**最新增强**：AI推荐功能现已支持完整的付费模式，包括积分余额查询、微信支付集成、智能支付中断恢复等功能。当用户推荐次数不足时，系统会自动检测并引导用户进行充值，支付成功后自动继续之前的分析流程。同时，demoDetail页面中的AI智能推荐入口采用了全新的横幅组件设计，包含背景图片、标题和副标题，提供了更好的视觉引导效果。
 
 ## 项目结构
 AI服装推荐相关代码位于 pages 与 utils 两个层次，经过增强后新增了付费模式和积分管理模块：
@@ -54,7 +55,7 @@ A["aiRecommend/index.uvue<br/>上传与分析+付费模式+登录弹窗"]
 B["aiRecommendLoading/index.uvue<br/>轮询与分析中UI+支付中断恢复"]
 C["aiRecommendResult/index.uvue<br/>结果展示与跳转"]
 D["targetPhotoDetail/index.uvue<br/>客片详情页"]
-E["demoDetail/index.uvue<br/>AI入口暂时隐藏(v-if=false)"]
+E["demoDetail/index.uvue<br/>AI入口横幅组件(增强版)"]
 end
 subgraph "工具层"
 F["api.uts<br/>上传/推荐/积分管理接口封装"]
@@ -89,7 +90,7 @@ K --> H
 - [src/pages/aiRecommendLoading/index.uvue:1-332](file://src/pages/aiRecommendLoading/index.uvue#L1-L332)
 - [src/pages/aiRecommendResult/index.uvue:1-290](file://src/pages/aiRecommendResult/index.uvue#L1-L290)
 - [src/pages/targetPhotoDetail/index.uvue:1-469](file://src/pages/targetPhotoDetail/index.uvue#L1-L469)
-- [src/pages/demoDetail/index.uvue:1-995](file://src/pages/demoDetail/index.uvue#L1-L995)
+- [src/pages/demoDetail/index.uvue:1-1042](file://src/pages/demoDetail/index.uvue#L1-L1042)
 - [src/utils/api.uts:1-717](file://src/utils/api.uts#L1-L717)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
@@ -103,6 +104,7 @@ K --> H
 - **分析中页面**：维护轮询定时器与倒计时，超过180秒自动失败，失败态支持重试与返回，现支持4001错误码的自动充值流程
 - **结果展示页面**：解析并展示分析结果与推荐列表，根据分析结果中的性别字段设置筛选条件，点击卡片跳转至AI试衣模板列表
 - **客片详情页**：支持从AI推荐结果直接导航，携带albumId参数获取详细信息
+- **demoDetail页面入口**：**全新增强** - AI智能推荐入口已升级为视觉横幅组件，包含背景图片、主标题和副标题，提供更好的用户引导效果
 - **登录流程管理**：实现微信授权登录、手机号绑定和用户资料完善的完整流程
 - **用户资料提交**：处理头像选择和昵称编辑的用户资料更新逻辑
 - **积分管理接口**：查询余额、创建充值订单、查询订单状态、兑换码兑换等完整功能
@@ -111,13 +113,13 @@ K --> H
 - **认证模块**：token与用户信息管理、登录过期标志消费
 - **配置模块**：API域名已更新为'https://lanmei66.cloud'与超时时间
 - **公共组件**：全局页脚版权文本
-- **入口控制**：AI智能推荐入口在demoDetail页面中暂时隐藏（v-if="false"）
 
 **章节来源**
 - [src/pages/aiRecommend/index.uvue:158-357](file://src/pages/aiRecommend/index.uvue#L158-L357)
 - [src/pages/aiRecommendLoading/index.uvue:63-234](file://src/pages/aiRecommendLoading/index.uvue#L63-L234)
 - [src/pages/aiRecommendResult/index.uvue:86-130](file://src/pages/aiRecommendResult/index.uvue#L86-L130)
 - [src/pages/targetPhotoDetail/index.uvue:142-152](file://src/pages/targetPhotoDetail/index.uvue#L142-L152)
+- [src/pages/demoDetail/index.uvue:79-87](file://src/pages/demoDetail/index.uvue#L79-L87)
 - [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
 - [src/utils/profileSubmit.uts:18-36](file://src/utils/profileSubmit.uts#L18-L36)
 - [src/utils/api.uts:577-717](file://src/utils/api.uts#L577-L717)
@@ -125,11 +127,11 @@ K --> H
 - [src/utils/auth.uts:127-171](file://src/utils/auth.uts#L127-L171)
 - [src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
 - [src/components/AppFooter/AppFooter.uvue:14-24](file://src/components/AppFooter/AppFooter.uvue#L14-L24)
-- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 
 ## 架构总览
 增强后的AI服装推荐整体调用链如下：
-- 用户在上传页面选择照片并检查登录态，未登录则弹出登录弹窗
+- 用户在demoDetail页面的AI智能推荐横幅组件中点击入口，跳转到上传页面
+- 在上传页面选择照片并检查登录态，未登录则弹出登录弹窗
 - 完成登录后进行用户资料完善（如果需要），然后上传照片
 - 上传成功后进入分析中页面，启动180秒超时的轮询请求推荐接口
 - 当接口返回成功数据时，跳转到结果页面展示分析与推荐列表
@@ -138,12 +140,12 @@ K --> H
 - **新增付费模式**：当推荐次数不足时，系统自动检测并引导用户进行微信支付充值
 - **智能支付恢复**：支付成功后自动继续之前被打断的分析流程
 
-**重要更新**：AI智能推荐入口在demoDetail页面中通过`v-if="false"`暂时隐藏，当前处于开发/测试阶段，不向普通用户开放访问。同时新增了完整的付费模式支持，包括积分余额查询、微信支付集成和智能支付中断恢复机制。
+**重要更新**：demoDetail页面中的AI智能推荐入口已从简单的文本按钮升级为视觉横幅组件，包含背景图片、主标题"AI智能推荐·拍照选服饰"和副标题"上传照片，AI为您推荐最合适的服饰风格"，通过改进的排版设计和视觉效果显著提升了用户引导效果。同时新增了完整的付费模式支持，包括积分余额查询、微信支付集成和智能支付中断恢复机制。
 
 ```mermaid
 sequenceDiagram
 participant U as "用户"
-participant D as "demoDetail页面(入口隐藏)"
+participant D as "demoDetail页面(横幅入口)"
 participant P1 as "上传页面(aiRecommend)"
 participant AUTH as "认证(auth.uts)"
 participant LOGIN as "登录流程(loginFlow)"
@@ -156,8 +158,9 @@ participant P2 as "分析中页面(aiRecommendLoading)"
 participant P3 as "结果页面(aiRecommendResult)"
 participant P4 as "客片详情页(targetPhotoDetail)"
 U->>D : 访问demoDetail页面
-Note over D : v-if="false" 入口暂时隐藏
-D-->>U : 无法直接访问AI推荐入口
+Note over D : 点击AI智能推荐横幅组件
+D-->>U : 显示横幅入口(背景图+标题+副标题)
+U->>P1 : 点击横幅跳转到上传页面
 P1->>AUTH : 检查登录状态
 alt 未登录
 P1->>P1 : 显示登录弹窗
@@ -204,17 +207,37 @@ P3->>P4 : navigateTo(带style,gender,shopId)
 ```
 
 **图表来源**
+- [src/pages/demoDetail/index.uvue:79-87](file://src/pages/demoDetail/index.uvue#L79-L87)
 - [src/pages/aiRecommend/index.uvue:158-357](file://src/pages/aiRecommend/index.uvue#L158-L357)
 - [src/pages/aiRecommendLoading/index.uvue:63-234](file://src/pages/aiRecommendLoading/index.uvue#L63-L234)
 - [src/pages/aiRecommendResult/index.uvue:109-129](file://src/pages/aiRecommendResult/index.uvue#L109-L129)
 - [src/pages/targetPhotoDetail/index.uvue:142-152](file://src/pages/targetPhotoDetail/index.uvue#L142-L152)
-- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 - [src/utils/loginFlow.uts:28-74](file://src/utils/loginFlow.uts#L28-L74)
 - [src/utils/api.uts:577-717](file://src/utils/api.uts#L577-L717)
 - [src/utils/http.uts:93-163](file://src/utils/http.uts#L93-L163)
 - [src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
 
 ## 详细组件分析
+
+### demoDetail页面入口（demoDetail）
+**全新增强** - AI智能推荐入口已升级为视觉横幅组件
+
+- **功能要点**
+  - **横幅组件设计**：采用背景图片+文字内容的横幅布局，高度178rpx，圆角16rpx，边框颜色#FFF3C6
+  - **视觉元素**：包含背景图片`/static/ai-recommend-banner.png`、主标题"AI智能推荐·拍照选服饰"、副标题"上传照片，AI为您推荐最合适的服饰风格"
+  - **样式优化**：标题字体大小34rpx，字重700，颜色#4E2E12；副标题字体大小22rpx，颜色#6B4520
+  - **交互设计**：整个横幅区域可点击，点击后调用goToAiRecommend方法跳转到AI推荐页面
+  - **定位布局**：相对定位，上下边距16rpx和24rpx，左右边距24rpx，确保良好的视觉间距
+  - **保持原有功能**：goToAiRecommend方法保持不变，确保向后兼容性
+- **关键路径**
+  - 横幅组件模板：[src/pages/demoDetail/index.uvue:79-87](file://src/pages/demoDetail/index.uvue#L79-L87)
+  - 横幅样式定义：[src/pages/demoDetail/index.uvue:1004-1039](file://src/pages/demoDetail/index.uvue#L1004-L1039)
+  - 跳转方法：[src/pages/demoDetail/index.uvue:623-627](file://src/pages/demoDetail/index.uvue#L623-L627)
+
+**章节来源**
+- [src/pages/demoDetail/index.uvue:79-87](file://src/pages/demoDetail/index.uvue#L79-L87)
+- [src/pages/demoDetail/index.uvue:1004-1039](file://src/pages/demoDetail/index.uvue#L1004-L1039)
+- [src/pages/demoDetail/index.uvue:623-627](file://src/pages/demoDetail/index.uvue#L623-L627)
 
 ### 上传与发起分析页面（aiRecommend）
 **更新** 新增完整的付费模式支持和积分余额管理
@@ -293,20 +316,6 @@ P3->>P4 : navigateTo(带style,gender,shopId)
 
 **章节来源**
 - [src/pages/targetPhotoDetail/index.uvue:142-200](file://src/pages/targetPhotoDetail/index.uvue#L142-L200)
-
-### 入口控制（demoDetail）
-**新增** AI智能推荐入口暂时隐藏机制
-
-- **功能要点**
-  - 在demoDetail页面中通过`v-if="false"`暂时隐藏AI智能推荐入口
-  - 保持goToAiRecommend方法可用，便于开发测试
-  - 入口隐藏不影响核心功能的完整性
-- **关键路径**
-  - 入口隐藏控制：[src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
-  - 跳转方法保留：[src/pages/demoDetail/index.uvue:618-622](file://src/pages/demoDetail/index.uvue#L618-L622)
-
-**章节来源**
-- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
 
 ### 登录流程管理（loginFlow.uts）
 **新增** 完整的登录三步骤纯逻辑封装
@@ -438,12 +447,13 @@ P3->>P4 : navigateTo(带style,gender,shopId)
 - 用户资料到接口：profileSubmit.uts依赖api.uts的用户信息更新接口
 - 结果页到公共组件：结果页引入AppFooter用于底部版权
 - 结果页到客片详情页：通过albumId字段支持直接导航
-- 入口控制：demoDetail页面通过v-if控制AI推荐入口的可见性
+- **入口控制**：demoDetail页面通过横幅组件控制AI推荐入口的可见性和交互
 
 ```mermaid
 classDiagram
 class DemoDetailPage {
 +goToAiRecommend()
++ai-recommend-banner 横幅组件
 +v-if="false" 入口隐藏
 }
 class AiRecommendPage {
@@ -513,7 +523,7 @@ class LegalModule {
 class AppFooter {
 +copyrightText
 }
-DemoDetailPage -.-> AiRecommendPage : "入口隐藏(v-if=false)"
+DemoDetailPage -.-> AiRecommendPage : "横幅组件入口"
 AiRecommendPage --> ApiModule : "调用上传/推荐/积分管理"
 AiRecommendPage --> LoginFlow : "执行登录流程"
 AiRecommendPage --> ProfileSubmit : "提交用户资料"
@@ -531,7 +541,7 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 ```
 
 **图表来源**
-- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
+- [src/pages/demoDetail/index.uvue:79-87](file://src/pages/demoDetail/index.uvue#L79-L87)
 - [src/pages/aiRecommend/index.uvue:145-357](file://src/pages/aiRecommend/index.uvue#L145-L357)
 - [src/pages/aiRecommendLoading/index.uvue:63-221](file://src/pages/aiRecommendLoading/index.uvue#L63-L221)
 - [src/pages/aiRecommendResult/index.uvue:109-129](file://src/pages/aiRecommendResult/index.uvue#L109-L129)
@@ -563,6 +573,7 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
   - **新增4001错误处理**：次数不足时提供清晰的充值引导
 - **资源加载**
   - 结果页的图片建议使用懒加载与占位图，提升首屏渲染速度
+  - **横幅组件优化**：确保背景图片`/static/ai-recommend-banner.png`的加载性能和显示效果
 - **登录流程优化**
   - 考虑实现登录状态的本地缓存，减少重复登录
   - 优化用户资料提交的乐观更新策略
@@ -577,14 +588,19 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
   - 支付中断恢复机制确保用户体验连续性
   - 余额查询结果缓存，减少不必要的网络请求
   - 支付状态轮询优化，避免过度频繁的网络请求
+- **横幅组件优化**
+  - 背景图片尺寸优化，确保在不同设备上的显示效果
+  - 文字对比度优化，确保可读性
+  - 点击区域优化，提升触摸体验
 
 ## 故障排查指南
 **更新** 新增付费模式和支付相关的故障排查
 
 - **入口访问问题**
-  - 检查demoDetail页面中的v-if="false"是否影响正常访问
-  - 确认AI智能推荐入口是否需要在特定环境下显示
-  - 验证入口隐藏是否为预期行为
+  - 检查demoDetail页面中的横幅组件是否正确显示
+  - 确认背景图片`/static/ai-recommend-banner.png`是否存在且可正常加载
+  - 验证横幅组件的点击事件是否正常触发
+  - 检查AI智能推荐入口是否需要在特定环境下显示
 - **上传失败**
   - 检查文件大小是否超过10MB
   - 确认Authorization头是否正确注入
@@ -625,9 +641,15 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
   - **支付中断恢复失败**：检查支付状态轮询逻辑和token管理
   - **4001错误处理**：确认推荐次数不足时的充值流程是否正常
   - **支付到账确认超时**：检查轮询次数限制和网络状态
+- **横幅组件问题**
+  - **背景图片加载失败**：检查静态资源路径和服务器配置
+  - **文字显示异常**：检查CSS样式和字体设置
+  - **点击无响应**：检查事件绑定和方法实现
+  - **布局错乱**：检查响应式适配和容器尺寸
 
 **章节来源**
-- [src/pages/demoDetail/index.uvue:78-81](file://src/pages/demoDetail/index.uvue#L78-L81)
+- [src/pages/demoDetail/index.uvue:79-87](file://src/pages/demoDetail/index.uvue#L79-L87)
+- [src/pages/demoDetail/index.uvue:1004-1039](file://src/pages/demoDetail/index.uvue#L1004-L1039)
 - [src/pages/aiRecommend/index.uvue:145-357](file://src/pages/aiRecommend/index.uvue#L145-L357)
 - [src/pages/aiRecommendLoading/index.uvue:63-221](file://src/pages/aiRecommendLoading/index.uvue#L63-L221)
 - [src/pages/aiRecommendResult/index.uvue:109-129](file://src/pages/aiRecommendResult/index.uvue#L109-L129)
@@ -639,6 +661,6 @@ HttpModule --> ConfigModule : "读取baseURL/超时"
 - [src/utils/config.uts:7-12](file://src/utils/config.uts#L7-L12)
 
 ## 结论
-AI服装推荐功能经过重大增强后，现已形成完整的用户认证、资料管理和智能推荐服务体系。**重要更新**：AI智能推荐功能入口已暂时隐藏（v-if="false"），当前处于开发/测试阶段，不向普通用户开放。同时，API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移。新的架构以清晰的三段式页面流程完成从上传到结果展示的闭环，并通过统一的请求层与认证模块保障登录态与401处理的健壮性。新增的登录流程管理、用户资料完善系统和180秒超时轮询机制显著提升了用户体验。智能性别过滤功能和增强的错误处理机制进一步增强了系统的稳定性和易用性。
+AI服装推荐功能经过重大增强后，现已形成完整的用户认证、资料管理和智能推荐服务体系。**重要更新**：demoDetail页面中的AI智能推荐入口已从简单的文本按钮升级为视觉横幅组件，通过背景图片、主标题和副标题的设计显著提升了用户引导效果。同时，API端点配置已从'https://crazyma99.xyz'迁移至'https://lanmei66.cloud'，反映了生产环境切换或服务器迁移。新的架构以清晰的三段式页面流程完成从上传到结果展示的闭环，并通过统一的请求层与认证模块保障登录态与401处理的健壮性。新增的登录流程管理、用户资料完善系统和180秒超时轮询机制显著提升了用户体验。智能性别过滤功能和增强的错误处理机制进一步增强了系统的稳定性和易用性。
 
-**最新增强亮点**：AI推荐功能现已全面支持付费模式，包括完整的积分余额管理、微信支付集成和智能支付中断恢复机制。当用户推荐次数不足时，系统会自动检测并引导用户进行充值，支付成功后自动继续之前的分析流程，大大提升了用户体验的连续性和流畅度。AI推荐结果页面的导航逻辑得到显著改进，'查看模板'按钮现在支持albumId字段验证，能够直接导航到客片详情页；封面图点击行为优化为直接跳转到AI试衣模板列表；整体卡片点击事件已移除以避免冲突。这些改进大大提升了用户体验和操作流畅度。入口隐藏机制便于开发测试，待功能稳定后可移除v-if="false"。后续可在轮询频率、图片压缩、结果缓存、登录状态缓存、错误分类和支付体验方面进一步优化，以获得更流畅与稳定的使用体验。
+**最新增强亮点**：AI推荐功能现已全面支持付费模式，包括完整的积分余额管理、微信支付集成和智能支付中断恢复机制。当用户推荐次数不足时，系统会自动检测并引导用户进行充值，支付成功后自动继续之前的分析流程，大大提升了用户体验的连续性和流畅度。demoDetail页面中的AI智能推荐入口采用了全新的横幅组件设计，包含背景图片`/static/ai-recommend-banner.png`、主标题"AI智能推荐·拍照选服饰"和副标题"上传照片，AI为您推荐最合适的服饰风格"，通过改进的排版设计和视觉效果显著提升了用户引导效果。AI推荐结果页面的导航逻辑得到显著改进，'查看模板'按钮现在支持albumId字段验证，能够直接导航到客片详情页；封面图点击行为优化为直接跳转到AI试衣模板列表；整体卡片点击事件已移除以避免冲突。这些改进大大提升了用户体验和操作流畅度。后续可在轮询频率、图片压缩、结果缓存、登录状态缓存、错误分类、支付体验和横幅组件优化方面进一步优化，以获得更流畅与稳定的使用体验。
