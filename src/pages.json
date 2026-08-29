@@ -16,7 +16,7 @@
 		{
 			"path": "pages/targetPhotoDetail/index",
 			"style": {
-				"navigationBarTitleText": "客片欣赏"
+				"navigationStyle": "custom"
 			}
 		},
 		{
@@ -91,7 +91,7 @@
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "white",
-		"navigationBarBackgroundColor": "#000",
+		"navigationBarBackgroundColor": "#160F04",
 		"navigationBarTitleText": "蓝梅旗袍·汉服·民...",
 		"backgroundColor": "#160F04"
 	},

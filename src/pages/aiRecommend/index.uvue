@@ -504,7 +504,7 @@ export default {
 
 <style>
 .page {
-	background: #000;
+	background: #160F04;
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -576,7 +576,7 @@ export default {
 	align-items: center;
 	padding: 24rpx 32rpx;
 	padding-bottom: 40rpx;
-	background-color: #000;
+	background-color: #160F04;
 }
 
 /* 分析按钮 — 与AI试衣生成按钮一致的渐变背景 */
@@ -628,7 +628,8 @@ export default {
 /* Copyright */
 .footer-copyright {
 	margin-top: 20rpx;
-	font-size: 20rpx;
-	color: rgba(255, 255, 255, 0.5);
+	font-size: 18rpx;
+	color: rgba(241, 205, 145, 0.5);
+	font-weight: 400;
 }
 </style>

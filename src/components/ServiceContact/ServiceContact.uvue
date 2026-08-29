@@ -21,17 +21,19 @@
     <view class="service-contain">
       <image src="/static/service-flower.png" class="flower" mode="aspectFill"/>
       <view class="tit">蓝梅，让世界看见东方美</view>
-      <view class="main">
-        <view v-for="(item, index) in list" :key="index" class="item">
-          <view class="content">
-            <view class="item-mark">
-              <image src="/static/service-li.png" class="li" mode="aspectFill"/>
-              <view class="number">0{{index}}</view>
+      <view class="main-wrap">
+        <view class="main">
+          <view v-for="(item, index) in list" :key="index" class="item">
+            <view class="content">
+              <view class="item-mark">
+                <image src="/static/service-li.png" class="li" mode="aspectFill"/>
+                <view class="number">0{{index}}</view>
+              </view>
+              <text class="item-text">{{ item }}</text>
             </view>
-            <text class="item-text">{{ item }}</text>
+            <!-- 最后一项不渲染分隔线 -->
+            <view v-if="index !== list.length - 1" class="line"></view>
           </view>
-          <!-- 最后一项不渲染分隔线 -->
-          <view v-if="index !== list.length - 1" class="line"></view>
         </view>
       </view>
     </view>
@@ -118,6 +120,7 @@
       top: 40rpx;
       width: 167rpx;
       height: 222rpx;
+      z-index: 9;
     }
     .tit{
       margin-bottom: 40rpx;
@@ -126,16 +129,20 @@
       font-size: 34rpx;
       color: rgba(241, 205, 145, 1);
     }
+    .main-wrap {
+      padding: 1rpx;
+      border-radius: 15rpx;
+      /* 外层渐变：只露出 1rpx 边框线 */
+      background: linear-gradient(252.59deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0) 62.4%, rgba(241, 205, 145, 0.7) 100%);
+    }
     .main {
-      border: 1rpx solid;
-      border-image-source: linear-gradient(252.59deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0) 62.4%, rgba(241, 205, 145, 0.7) 100%);
       border-radius: 14rpx;
-      background: linear-gradient(138.87deg, rgba(241, 205, 145, 0.06) 0%, rgba(241, 205, 145, 0) 100%);
+      /* 内层必须不透明：半透明会透出外层边框渐变。已把原 rgba(241,205,145,0.06)→transparent 合成到 #160F04 底 */
+      background: linear-gradient(138.87deg, #231A0C 0%, #160F04 100%);
       padding: 20rpx;
       .item{
         display: flex;
         flex-direction: column;
-        align-items: center;
       }
       .content{
         display: flex;

@@ -10,7 +10,7 @@
 		</view>
 
 		<!-- 失败态 -->
-		<view v-if="status === 'failed'" class="center-content" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #000;">
+		<view v-if="status === 'failed'" class="center-content" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #160F04;">
 			<view class="fail-wrapper">
 				<text class="fail-text">AI分析失败，请重试</text>
 				<view class="retry-btn" @click="handleRetry">
@@ -235,7 +235,7 @@ export default {
 
 <style>
 .page {
-	background: #000;
+	background: #160F04;
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -311,7 +311,7 @@ export default {
 }
 .back-btn-text {
 	font-size: 28rpx;
-	color: rgba(255, 255, 255, 0.5);
+	color: rgba(241, 205, 145, 0.9);
 }
 
 /* 底部 */
@@ -325,7 +325,8 @@ export default {
 }
 .bottomdesc {
 	margin: 32rpx auto;
-	font-size: 20rpx;
-	color: rgba(255, 255, 255, 0.5);
+	font-size: 18rpx;
+	color: rgba(241, 205, 145, 0.5);
+	font-weight: 400;
 }
 </style>

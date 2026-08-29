@@ -59,7 +59,7 @@
 
 <style>
 	.container{
-		background: #000;
+		background: #160F04;
 		height: 100%;
 		overflow: scroll;
 	}
@@ -80,6 +80,7 @@
 		margin: 40rpx auto 32rpx;
 		font-size: 18rpx;
 		color: rgba(241, 205, 145, 0.5);
+		font-weight: 400;
 		text-align: center;
 	}
 	/* 骨架屏已移至全局样式 */

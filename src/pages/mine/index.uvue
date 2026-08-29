@@ -505,7 +505,7 @@ export default {
 
 <style>
 .container {
-  background: #000;
+  background: #160F04;
   min-height: 100vh;
   color: #fff;
 }
