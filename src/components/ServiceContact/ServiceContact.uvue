@@ -2,10 +2,11 @@
   ServiceContact — 「服务保障 / 联系我们」区块
 
   设计目标：
-  - 收敛首页底部的重复区块（SERVICE INFORMATION 服务说明图 / CONTACT US 二维码与联系电话）。
-  - 二维码 src 与联系电话由 profile 注入脚本（scripts/lib/apply-profile.mjs 的 updateContactPage）
-    一处替换，组件内不得含硬编码品牌信息（保持 <image class="code"> 与两个相邻
-    <view class="contact"> 结构不变，脚本正则依赖此合同）。
+  - 收敛首页/价目表页底部的重复区块（服务保障列表 / 联系我们二维码与电话）。
+  - 二维码 src、联系电话（及可选的商务合作电话）由 profile 注入脚本
+    （scripts/lib/apply-profile.mjs 的 updateContactPage）一处替换，组件内不得含硬编码品牌信息。
+  - 注入合同：保持 <image class="code"> 与 <view class="label">联系电话</view>
+    + <view class="val">…</view> 的结构不变，脚本正则依赖此合同。
 -->
 <template>
 	<view>
@@ -53,7 +54,7 @@
           show-menu-by-longpress="{{true}}"
         ></image>
         <view class="label">联系电话</view>
-        <view class="val">18068842642</view>
+        <view class="val">18068842642（微信同号）</view>
         <view class="label">商务合作</view>
         <view class="val">13269920775</view>
       </view>

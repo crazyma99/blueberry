@@ -93,12 +93,12 @@
 		"navigationBarTextStyle": "white",
 		"navigationBarBackgroundColor": "#000",
 		"navigationBarTitleText": "蓝梅旗袍·汉服·民...",
-		"backgroundColor": "#000"
+		"backgroundColor": "#160F04"
 	},
 	"tabBar": {
 		"color": "#fff",
 		"selectedColor": "#F3D9AC",
-		"backgroundColor": "#000",
+		"backgroundColor": "#160F04",
 		"borderStyle": "black",
 		"list": [
 			{

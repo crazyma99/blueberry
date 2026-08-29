@@ -16,8 +16,18 @@
 - [pages.json](file://src/pages.json)
 - [legal.uts](file://src/utils/legal.uts)
 - [AppFooter.uvue](file://src/components/AppFooter/AppFooter.uvue)
+- [ServiceContact.uvue](file://src/components/ServiceContact/ServiceContact.uvue)
+- [index/index.uvue](file://src/pages/index/index.uvue)
+- [priceHomePage/index.uvue](file://src/pages/priceHomePage/index.uvue)
 - [priceList/index.uvue](file://src/pages/priceList/index.uvue)
 </cite>
+
+## 更新摘要
+**所做更改**
+- 新增ServiceContact组件配置注入功能的详细说明
+- 更新Profile映射表以包含CONTACT_COOP_TEXT字段
+- 添加ServiceContact组件的架构说明和使用示例
+- 更新故障排查指南以涵盖新的配置项
 
 ## 目录
 1. [简介](#简介)
@@ -32,16 +42,17 @@
 10. [附录](#附录)
 
 ## 简介
-本指南面向需要基于模板仓库为不同小程序项目应用“Profile”的工程师与运营人员。内容涵盖从创建 Profile、应用 Profile、到校验与发布的完整工作流，重点说明以下要点：
+本指南面向需要基于模板仓库为不同小程序项目应用"Profile"的工程师与运营人员。内容涵盖从创建 Profile、应用 Profile、到校验与发布的完整工作流，重点说明以下要点：
 - 如何使用 create-profile.sh 创建新的项目配置
 - 如何使用 apply-profile.sh 将 Profile 的变量映射到目标仓库的配置文件
 - Profile 应用过程中的文件替换规则与映射关系
+- **新增** ServiceContact组件的配置注入机制，确保联系信息和二维码能够动态注入到集中式组件中
 - 如何验证 Profile 应用是否成功
 - Profile 切换与回滚的操作步骤
 - 常见问题与自动化脚本使用注意事项
 
 ## 项目结构
-该仓库采用“模板 + Profile + 自动化脚本”的组织方式：
+该仓库采用"模板 + Profile + 自动化脚本"的组织方式：
 - scripts/：自动化脚本与核心逻辑
   - create-profile.sh：创建新 Profile
   - apply-profile.sh：应用 Profile 到目标仓库
@@ -51,6 +62,7 @@
   - profiles/<project-key>/project.env：项目私有变量
   - profiles/<project-key>/static/：可选静态资源（会被复制到目标仓库 src/static/）
 - src/：源码目录，包含清单、页面、工具模块等
+  - components/ServiceContact/：集中式服务联系方式组件
 - README.md：项目说明与工作流指引
 
 ```mermaid
@@ -70,7 +82,10 @@ R3["src/utils/config.uts"]
 R4["src/utils/http.uts"]
 R5["src/utils/legal.uts"]
 R6["src/components/AppFooter/AppFooter.uvue"]
-R7["src/pages/priceList/index.uvue"]
+R7["src/components/ServiceContact/ServiceContact.uvue"]
+R8["src/pages/index/index.uvue"]
+R9["src/pages/priceHomePage/index.uvue"]
+R10["src/pages/priceList/index.uvue"]
 end
 S1 --> T1
 S1 --> P1
@@ -85,13 +100,16 @@ S2 --> R4
 S2 --> R5
 S2 --> R6
 S2 --> R7
+S2 --> R8
+S2 --> R9
+S2 --> R10
 ```
 
-图表来源
+**图表来源**
 - [create-profile.sh:1-77](file://scripts/create-profile.sh#L1-L77)
 - [apply-profile.sh:1-98](file://scripts/apply-profile.sh#L1-L98)
-- [apply-profile.mjs:1-190](file://scripts/lib/apply-profile.mjs#L1-L190)
-- [profile.env.example:1-25](file://scripts/templates/profile.env.example#L1-L25)
+- [apply-profile.mjs:1-201](file://scripts/lib/apply-profile.mjs#L1-L201)
+- [profile.env.example:1-27](file://scripts/templates/profile.env.example#L1-L27)
 - [blueberry/project.env:1-23](file://profiles/blueberry/project.env#L1-L23)
 - [huahua/project.env:1-24](file://profiles/huahua/project.env#L1-L24)
 
@@ -102,20 +120,23 @@ S2 --> R7
 - create-profile.sh：基于模板生成新 Profile，填充基础字段并提示后续步骤
 - apply-profile.sh：解析参数定位 Profile 文件，加载环境变量，调用 Node 脚本进行精确替换，必要时复制静态资源
 - apply-profile.mjs：严格校验必需字段，按映射规则对目标文件进行文本替换，避免误伤
+- **ServiceContact组件**：集中式的服务保障和联系我们区块，支持动态配置注入
 - Profile 模板与示例：templates/profile.env.example 与 profiles/blueberry、profiles/huahua 提供字段与示例值
 
 章节来源
 - [create-profile.sh:1-77](file://scripts/create-profile.sh#L1-L77)
 - [apply-profile.sh:1-98](file://scripts/apply-profile.sh#L1-L98)
-- [apply-profile.mjs:1-190](file://scripts/lib/apply-profile.mjs#L1-L190)
-- [profile.env.example:1-25](file://scripts/templates/profile.env.example#L1-L25)
+- [apply-profile.mjs:1-201](file://scripts/lib/apply-profile.mjs#L1-L201)
+- [ServiceContact.uvue:1-213](file://src/components/ServiceContact/ServiceContact.uvue#L1-L213)
+- [profile.env.example:1-27](file://scripts/templates/profile.env.example#L1-L27)
 - [blueberry/project.env:1-23](file://profiles/blueberry/project.env#L1-L23)
 - [huahua/project.env:1-24](file://profiles/huahua/project.env#L1-L24)
 
 ## 架构总览
-Profile 应用流程分为“创建”和“应用”两大阶段：
+Profile 应用流程分为"创建"和"应用"两大阶段：
 - 创建阶段：基于模板生成 project.env，填充基础字段
 - 应用阶段：apply-profile.sh 读取 project.env，将变量注入到目标仓库的多个配置文件与页面中，并可复制静态资源
+- **新增**：ServiceContact组件的统一配置注入，确保联系信息的一致性和可维护性
 
 ```mermaid
 sequenceDiagram
@@ -123,6 +144,7 @@ participant Dev as "开发者"
 participant CP as "create-profile.sh"
 participant AP as "apply-profile.sh"
 participant MJS as "apply-profile.mjs"
+participant SC as "ServiceContact组件"
 participant Repo as "目标仓库文件"
 Dev->>CP : "创建新 Profile"
 CP-->>Dev : "生成 profiles/<key>/project.env"
@@ -131,14 +153,16 @@ AP->>AP : "解析参数/定位 project.env"
 AP->>AP : "加载环境变量(set -a)"
 AP->>MJS : "执行 Node 文本替换"
 MJS->>Repo : "按映射规则替换文件内容"
+MJS->>SC : "注入联系信息到ServiceContact组件"
+SC-->>MJS : "返回组件结构确认"
 AP->>Repo : "复制 profiles/<key>/static/* 到 src/static/"
 AP-->>Dev : "输出应用结果"
 ```
 
-图表来源
+**图表来源**
 - [create-profile.sh:1-77](file://scripts/create-profile.sh#L1-L77)
 - [apply-profile.sh:1-98](file://scripts/apply-profile.sh#L1-L98)
-- [apply-profile.mjs:1-190](file://scripts/lib/apply-profile.mjs#L1-L190)
+- [apply-profile.mjs:1-201](file://scripts/lib/apply-profile.mjs#L1-L201)
 
 ## 详细组件分析
 
@@ -157,7 +181,7 @@ AP-->>Dev : "输出应用结果"
 
 章节来源
 - [create-profile.sh:1-77](file://scripts/create-profile.sh#L1-L77)
-- [profile.env.example:1-25](file://scripts/templates/profile.env.example#L1-L25)
+- [profile.env.example:1-27](file://scripts/templates/profile.env.example#L1-L27)
 
 ### apply-profile.sh 工作原理
 - 作用：将 Profile 的变量应用到目标仓库的多个配置文件与页面
@@ -178,6 +202,7 @@ AP-->>Dev : "输出应用结果"
 ### apply-profile.mjs 映射规则与替换逻辑
 - 必需字段校验：在应用前强制校验以下字段均非空，否则抛错
   - PROJECT_KEY、PACKAGE_NAME、MANIFEST_NAME、DESCRIPTION、MP_WEIXIN_APPID、NAVIGATION_TITLE、COPYRIGHT_TEXT、CONTACT_PHONE_TEXT、CONTACT_QR_SRC、PRICE_FALLBACK_TITLE、API_BASE_URL、MINI_APP_NAME
+- **新增** CONTACT_COOP_TEXT 可选字段：用于设置商务合作电话
 - 替换策略
   - 仅在匹配到目标模式时才进行替换，否则抛错，避免误伤
   - 写入前对比文件内容，若无变化则不写入，减少不必要的磁盘写入
@@ -191,7 +216,7 @@ AP-->>Dev : "输出应用结果"
   - src/utils/http.uts：finalHeader 中的 X-App-Code（为空则移除）
   - src/utils/legal.uts：MINI_APP_NAME
   - src/components/AppFooter/AppFooter.uvue：copyrightText
-  - src/pages/index/index.uvue 与 src/pages/priceHomePage/index.uvue：联系二维码与电话文案
+  - **src/components/ServiceContact/ServiceContact.uvue**：二维码 src、联系电话、商务合作电话
   - src/pages/priceList/index.uvue：价目表兜底标题
 
 ```mermaid
@@ -207,25 +232,43 @@ ReplacePages --> ReplaceConf["替换 src/utils/config.uts"]
 ReplaceConf --> ReplaceHttp["替换 src/utils/http.uts"]
 ReplaceHttp --> ReplaceLegal["替换 src/utils/legal.uts"]
 ReplaceLegal --> ReplaceFooter["替换 AppFooter.copyrightText"]
-ReplaceFooter --> ReplaceContact["替换首页/价目表联系信息"]
-ReplaceContact --> ReplacePrice["替换价目表兜底标题"]
+ReplaceFooter --> ReplaceServiceContact["替换 ServiceContact组件配置"]
+ReplaceServiceContact --> ReplacePrice["替换价目表兜底标题"]
 ReplacePrice --> WriteBack["写回文件仅在内容变化时"]
 WriteBack --> End(["结束"])
 ```
 
-图表来源
-- [apply-profile.mjs:1-190](file://scripts/lib/apply-profile.mjs#L1-L190)
+**图表来源**
+- [apply-profile.mjs:1-201](file://scripts/lib/apply-profile.mjs#L1-L201)
 
 章节来源
 - [apply-profile.mjs:12-31](file://scripts/lib/apply-profile.mjs#L12-L31)
-- [apply-profile.mjs:73-190](file://scripts/lib/apply-profile.mjs#L73-L190)
+- [apply-profile.mjs:158-173](file://scripts/lib/apply-profile.mjs#L158-L173)
+- [apply-profile.mjs:189-201](file://scripts/lib/apply-profile.mjs#L189-L201)
+
+### ServiceContact组件详解
+- **组件位置**：src/components/ServiceContact/ServiceContact.uvue
+- **设计目标**：
+  - 收敛首页/价目表页底部的重复区块（服务保障列表 / 联系我们二维码与电话）
+  - 二维码 src、联系电话（及可选的商务合作电话）由 profile 注入脚本一处替换
+  - 组件内不得含硬编码品牌信息
+- **注入合同**：保持 `<image class="code">` 与 `<view class="label">联系电话</view>` + `<view class="val">…</view>` 的结构不变，脚本正则依赖此合同
+- **配置字段**：
+  - CONTACT_QR_SRC：二维码图片地址
+  - CONTACT_PHONE_TEXT：联系电话文案
+  - CONTACT_COOP_TEXT：商务合作电话（可选）
+
+章节来源
+- [ServiceContact.uvue:1-213](file://src/components/ServiceContact/ServiceContact.uvue#L1-L213)
+- [apply-profile.mjs:158-173](file://scripts/lib/apply-profile.mjs#L158-L173)
 
 ### Profile 文件与示例
 - 模板：scripts/templates/profile.env.example，包含所有可用字段及注释
 - 示例：profiles/blueberry 与 profiles/huahua 提供了两个参考配置，便于理解字段含义与取值
+- **新增字段**：CONTACT_COOP_TEXT 用于设置商务合作电话
 
 章节来源
-- [profile.env.example:1-25](file://scripts/templates/profile.env.example#L1-L25)
+- [profile.env.example:1-27](file://scripts/templates/profile.env.example#L1-L27)
 - [blueberry/project.env:1-23](file://profiles/blueberry/project.env#L1-L23)
 - [huahua/project.env:1-24](file://profiles/huahua/project.env#L1-L24)
 
@@ -236,6 +279,9 @@ WriteBack --> End(["结束"])
 - src/utils/http.uts：finalHeader 中的 X-App-Code 会被替换或移除
 - src/utils/legal.uts：MINI_APP_NAME 会被替换
 - src/components/AppFooter/AppFooter.uvue：copyrightText 会被替换
+- **src/components/ServiceContact/ServiceContact.uvue**：二维码 src、联系电话、商务合作电话会被替换
+- **src/pages/index/index.uvue**：使用 ServiceContact 组件
+- **src/pages/priceHomePage/index.uvue**：使用 ServiceContact 组件
 - src/pages/priceList/index.uvue：价目表兜底标题会被替换
 
 章节来源
@@ -245,6 +291,9 @@ WriteBack --> End(["结束"])
 - [http.uts:1-82](file://src/utils/http.uts#L1-L82)
 - [legal.uts:1-16](file://src/utils/legal.uts#L1-L16)
 - [AppFooter.uvue:1-25](file://src/components/AppFooter/AppFooter.uvue#L1-L25)
+- [ServiceContact.uvue:1-213](file://src/components/ServiceContact/ServiceContact.uvue#L1-L213)
+- [index/index.uvue:62-63](file://src/pages/index/index.uvue#L62-L63)
+- [priceHomePage/index.uvue:17-18](file://src/pages/priceHomePage/index.uvue#L17-L18)
 - [priceList/index.uvue:1-113](file://src/pages/priceList/index.uvue#L1-L113)
 
 ## 依赖分析
@@ -253,6 +302,7 @@ WriteBack --> End(["结束"])
   - create-profile.sh 依赖 templates/profile.env.example 生成初始配置
 - 目标文件依赖
   - apply-profile.mjs 依赖目标仓库的若干配置文件与页面，替换前会先读取原始内容并进行模式匹配
+  - **ServiceContact组件**被首页和价目表页共同引用，实现配置统一
 - 外部依赖
   - Node.js ESM 模块（apply-profile.mjs）
   - Bash 环境（apply-profile.sh、create-profile.sh）
@@ -271,22 +321,26 @@ MJS --> CF["src/utils/config.uts"]
 MJS --> HT["src/utils/http.uts"]
 MJS --> LG["src/utils/legal.uts"]
 MJS --> AF["src/components/AppFooter/AppFooter.uvue"]
+MJS --> SC["src/components/ServiceContact/ServiceContact.uvue"]
 MJS --> PL["src/pages/priceList/index.uvue"]
+SC --> IDX["src/pages/index/index.uvue"]
+SC --> PH["src/pages/priceHomePage/index.uvue"]
 ```
 
-图表来源
+**图表来源**
 - [apply-profile.sh:1-98](file://scripts/apply-profile.sh#L1-L98)
-- [apply-profile.mjs:1-190](file://scripts/lib/apply-profile.mjs#L1-L190)
-- [profile.env.example:1-25](file://scripts/templates/profile.env.example#L1-L25)
+- [apply-profile.mjs:1-201](file://scripts/lib/apply-profile.mjs#L1-L201)
+- [profile.env.example:1-27](file://scripts/templates/profile.env.example#L1-L27)
 
 章节来源
 - [apply-profile.sh:1-98](file://scripts/apply-profile.sh#L1-L98)
-- [apply-profile.mjs:1-190](file://scripts/lib/apply-profile.mjs#L1-L190)
+- [apply-profile.mjs:1-201](file://scripts/lib/apply-profile.mjs#L1-L201)
 
 ## 性能考虑
 - 写入优化：仅在内容发生变化时才写回文件，减少磁盘 IO
 - 模式匹配：对每处替换进行模式存在性校验，避免无效写入
 - 静态资源复制：仅在 profiles/<key>/static 存在且包含文件时才复制，降低冗余操作
+- **组件复用**：ServiceContact组件的集中化管理减少了重复代码和维护成本
 
 章节来源
 - [apply-profile.mjs:41-48](file://scripts/lib/apply-profile.mjs#L41-L48)
@@ -305,15 +359,23 @@ MJS --> PL["src/pages/priceList/index.uvue"]
   - 排查：确认 project.config.json 与 src/manifest.json 的 mp-weixin.appid 已被替换为 Profile 中的值
 - 问题：X-App-Code 未更新
   - 排查：确认 APP_CODE 已设置；若为空，脚本会移除该请求头
+- **问题：ServiceContact组件联系信息未更新**
+  - 排查：确认 CONTACT_QR_SRC、CONTACT_PHONE_TEXT 字段已正确设置
+  - 排查：检查 ServiceContact 组件中的 HTML 结构是否与脚本正则匹配
+  - 排查：确认 CONTACT_COOP_TEXT 字段格式正确（如需设置商务合作电话）
+- **问题：ServiceContact组件样式异常**
+  - 排查：确认组件结构未被破坏，特别是 `<image class="code">` 和相关 view 标签
+  - 排查：检查静态资源路径是否正确
 
 章节来源
 - [apply-profile.mjs:12-31](file://scripts/lib/apply-profile.mjs#L12-L31)
 - [apply-profile.mjs:100-135](file://scripts/lib/apply-profile.mjs#L100-L135)
 - [apply-profile.mjs:143-150](file://scripts/lib/apply-profile.mjs#L143-L150)
+- [apply-profile.mjs:158-173](file://scripts/lib/apply-profile.mjs#L158-L173)
 - [apply-profile.sh:91-95](file://scripts/apply-profile.sh#L91-L95)
 
 ## 结论
-通过 create-profile.sh 与 apply-profile.sh 的配合，模板仓库实现了“一套源码、多份配置”的高效复用。apply-profile.mjs 以严格的模式匹配与内容比较保障了替换的准确性与稳定性。结合 README 的批量构建脚本，团队可快速为多个项目生成与校验构建产物。
+通过 create-profile.sh 与 apply-profile.sh 的配合，模板仓库实现了"一套源码、多份配置"的高效复用。**新增的ServiceContact组件配置注入功能**进一步提升了代码的可维护性和一致性，确保联系信息和二维码能够在所有相关页面中统一管理和更新。apply-profile.mjs 以严格的模式匹配与内容比较保障了替换的准确性与稳定性。结合 README 的批量构建脚本，团队可快速为多个项目生成与校验构建产物。
 
 ## 附录
 
@@ -326,7 +388,8 @@ MJS --> PL["src/pages/priceList/index.uvue"]
 - API_BASE_URL：写入 src/utils/config.uts 的 baseURL
 - APP_CODE：写入 src/utils/http.uts 的 X-App-Code（为空则移除）
 - MINI_APP_NAME：写入 src/utils/legal.uts 的 MINI_APP_NAME
-- CONTACT_QR_SRC/CONTACT_PHONE_TEXT/COPYRIGHT_TEXT：写入 pages/index 与 pages/priceHomePage 的联系信息与 AppFooter 的版权文案
+- **CONTACT_QR_SRC/CONTACT_PHONE_TEXT/COPYRIGHT_TEXT**：写入 ServiceContact 组件的联系信息与 AppFooter 的版权文案
+- **CONTACT_COOP_TEXT**：写入 ServiceContact 组件的商务合作电话（可选）
 - PRICE_FALLBACK_TITLE：写入 src/pages/priceList/index.uvue 的价目表兜底标题
 - profiles/<key>/static/*：复制到目标仓库 src/static/
 
@@ -337,6 +400,7 @@ MJS --> PL["src/pages/priceList/index.uvue"]
 - 创建 Profile
   - 执行 create-profile.sh <project-key>，编辑生成的 profiles/<project-key>/project.env
   - 如需替换素材，将文件放入 profiles/<project-key>/static/
+  - **配置ServiceContact组件**：设置 CONTACT_QR_SRC、CONTACT_PHONE_TEXT，可选设置 CONTACT_COOP_TEXT
 - 应用 Profile
   - 在模板仓库或目标仓库执行 apply-profile.sh <profile-key> --repo <target-repo>
   - 或使用 build-miniapp.sh <profile-key> --repo <target-repo> 一键完成模板同步、应用配置、编译与校验
@@ -344,6 +408,7 @@ MJS --> PL["src/pages/priceList/index.uvue"]
   - 校验项目清单与页面：AppID、导航栏标题、协议页面是否存在
   - 校验请求头：X-App-Code 是否正确
   - 校验文案：联系二维码、电话、版权、价目表兜底标题等
+  - **校验ServiceContact组件**：确认联系信息已正确注入到组件中
   - 可选：使用 RESIDUAL_SEARCH_REGEX 扫描残留字符串
 - 切换与回滚
   - 切换：再次执行 apply-profile.sh 指向新的 <profile-key> 或 --profile-file
@@ -361,3 +426,23 @@ MJS --> PL["src/pages/priceList/index.uvue"]
 章节来源
 - [build-all-profiles.sh:1-178](file://scripts/build-all-profiles.sh#L1-L178)
 - [README.md:277-285](file://README.md#L277-L285)
+
+### ServiceContact组件使用示例
+- **组件位置**：src/components/ServiceContact/ServiceContact.uvue
+- **使用页面**：
+  - src/pages/index/index.uvue：首页底部服务联系方式
+  - src/pages/priceHomePage/index.uvue：价目表页底部服务联系方式
+- **配置字段**：
+  - CONTACT_QR_SRC：二维码图片地址，支持本地静态资源或远程URL
+  - CONTACT_PHONE_TEXT：联系电话文案，如"18068842642（微信同号）"
+  - CONTACT_COOP_TEXT：商务合作电话（可选），如"13269920775"
+- **HTML结构要求**：
+  - 必须包含 `<image class="code">` 标签用于显示二维码
+  - 必须包含 `<view class="label">联系电话</view>` 和对应的 `<view class="val">` 标签
+  - 可选包含 `<view class="label">商务合作</view>` 和对应的 `<view class="val">` 标签
+
+章节来源
+- [ServiceContact.uvue:1-213](file://src/components/ServiceContact/ServiceContact.uvue#L1-L213)
+- [index/index.uvue:62-63](file://src/pages/index/index.uvue#L62-L63)
+- [priceHomePage/index.uvue:17-18](file://src/pages/priceHomePage/index.uvue#L17-L18)
+- [profile.env.example:14-17](file://scripts/templates/profile.env.example#L14-L17)
