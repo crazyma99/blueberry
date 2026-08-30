@@ -16,7 +16,7 @@
       bindtap="onTap"
     >
       <image class="tabbar-icon" src="{{item.icon}}" mode="aspectFit"></image>
-      <text class="tabbar-text">{{item.text}}</text>
+      <text class="tabbar-text font-noto-serif">{{item.text}}</text>
     </view>
   </view>
 </view>

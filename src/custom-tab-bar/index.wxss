@@ -28,15 +28,15 @@
 }
 
 .tabbar-icon {
-  width: 48rpx;
-  height: 48rpx;
+  width: 38rpx;
+  height: 38rpx;
 }
 
 .tabbar-text {
   margin-top: 6rpx;
-  font-size: 20rpx;
-  line-height: 28rpx;
-  font-family: 'HarmonyOS-Sans-SC';
+  font-size: 24rpx;
+  font-weight: 700;
+  /* 字体由全局类控制（如 font-noto-serif），此处不再写死 font-family */
   color: #f1cd91;
 }
 

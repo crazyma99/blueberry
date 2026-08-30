@@ -32,8 +32,8 @@ Component({
       // 组件内再注册一次（字体加载有缓存），确保底栏文字也能应用自定义字体
       wx.loadFontFace({
         global: true,
-        family: 'HarmonyOS-Sans-SC',
-        source: 'url("https://www.lanmei66.cloud/font/HarmonyOS_Sans_SC-subset.woff")',
+        family: 'NotoSerifSC-Bold',
+        source: 'url("https://www.lanmei66.cloud/font/NotoSerifSC-Bold-subset.woff")',
       });
     },
   },
