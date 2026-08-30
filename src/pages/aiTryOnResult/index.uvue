@@ -209,10 +209,14 @@ export default {
 				return
 			}
 
-			// 保存前扣下载次数池 1 次；4001 = 下载次数不足 → 拉起充值支付，到账后自动重试保存
+			// 先请求相册授权再扣费，避免扣费后因未授权保存失败浪费次数
+			const authed = await this.ensureAlbumAuth()
+			if (!authed) return
+
+			// 授权通过后扣下载次数池 1 次并取签名下载 URL；4001 = 下载次数不足 → 拉起充值支付，到账后自动重试保存
 			this.isSaving = true
-			const charged = await this.chargeDownloadCredit()
-			if (!charged) {
+			const downloadUrl = await this.chargeDownloadCredit()
+			if (downloadUrl === '') {
 				this.isSaving = false
 				return
 			}
@@ -220,31 +224,27 @@ export default {
 			try {
 				uni.showLoading({ title: '保存中...', mask: true })
 
-				// 网络图片需要先下载
-				let savedPath = this.resultImageUrl
-				if (this.resultImageUrl.startsWith('http')) {
-					const downloadRes = await new Promise<any>((resolve, reject) => {
-						uni.downloadFile({
-							url: this.resultImageUrl,
-							success: (res : any) => {
-								if (res.statusCode === 200) {
-									resolve(res)
-								} else {
-									reject(new Error('下载失败'))
-								}
-							},
-							fail: (err : any) => {
-								reject(err)
+				// 用扣费接口返回的 5 分钟签名 URL 下载（超时需重新走扣费接口获取）
+				const downloadRes = await new Promise<any>((resolve, reject) => {
+					uni.downloadFile({
+						url: downloadUrl,
+						success: (res : any) => {
+							if (res.statusCode === 200) {
+								resolve(res)
+							} else {
+								reject(new Error('下载失败'))
 							}
-						})
+						},
+						fail: (err : any) => {
+							reject(err)
+						}
 					})
-					savedPath = downloadRes.tempFilePath
-				}
+				})
 
 				// 保存到相册
 				await new Promise<void>((resolve, reject) => {
 					uni.saveImageToPhotosAlbum({
-						filePath: savedPath,
+						filePath: downloadRes.tempFilePath,
 						success: () => {
 							resolve()
 						},
@@ -260,23 +260,40 @@ export default {
 			} catch (err : any) {
 				uni.hideLoading()
 				this.isSaving = false
-				// 处理权限拒绝
-				const errMsg = (err && err.errMsg) ? String(err.errMsg) : ''
-				if (errMsg.indexOf('auth deny') !== -1 || errMsg.indexOf('authorize') !== -1) {
-					uni.showModal({
-						title: '提示',
-						content: '需要您授权保存图片到相册',
-						confirmText: '去设置',
-						success: (modalRes : any) => {
-							if (modalRes.confirm) {
-								uni.openSetting({})
-							}
-						}
-					})
-				} else {
-					uni.showToast({ title: '保存失败，请重试', icon: 'none' })
-				}
+				uni.showToast({ title: '保存失败，请重试', icon: 'none' })
 			}
+		},
+
+		// 保存前申请相册写入授权：已授权直接通过；拒绝过则引导去设置页开启；最终未授权返回 false（不扣费）
+		async ensureAlbumAuth(): Promise<boolean> {
+			const granted = await new Promise<boolean>((resolve) => {
+				uni.authorize({
+					scope: 'scope.writePhotosAlbum',
+					success: () => resolve(true),
+					fail: () => resolve(false)
+				})
+			})
+			if (granted) return true
+			return await new Promise<boolean>((resolve) => {
+				uni.showModal({
+					title: '提示',
+					content: '需要您授权保存图片到相册',
+					confirmText: '去设置',
+					success: (modalRes : any) => {
+						if (!modalRes.confirm) {
+							resolve(false)
+							return
+						}
+						uni.openSetting({
+							success: (settingRes : any) => {
+								const authSetting = settingRes?.authSetting ?? {}
+								resolve(authSetting['scope.writePhotosAlbum'] === true)
+							},
+							fail: () => resolve(false)
+						})
+					}
+				})
+			})
 		},
 
 		// 获取店铺 ID：页面参数缺失时（历史记录入口）取首个启用店铺兜底，返回 0 表示无可用店铺
@@ -311,30 +328,30 @@ export default {
 			}
 		},
 
-		// 下载池扣费：成功返回 true 继续保存；4001 拉起充值支付；其他错误提示后中断
-		async chargeDownloadCredit(): Promise<boolean> {
+		// 下载池扣费：成功返回 5 分钟签名下载 URL 继续保存；4001 拉起充值支付；其他错误提示后中断（返回空串）
+		async chargeDownloadCredit(): Promise<string> {
 			try {
 				const res = await downloadAiTryOnResult(this.taskId)
 				// aiface 接口 code === 0 或 200 表示成功
-				if (res.code === 0 || res.code === 200) {
+				if ((res.code === 0 || res.code === 200) && res.data) {
 					// 扣费成功，本地余额同步 -1（角标实时刷新）
 					if (this.isPaidMode && this.creditBalance > 0) {
 						this.creditBalance = this.creditBalance - 1
 					}
-					return true
+					return res.data.url
 				}
 				if (res.code === 4001) {
 					// 下载次数不足：刷新本地余额为 0（按钮切换为价格态）并拉起支付
 					this.creditBalance = 0
 					this.handleRecharge()
-					return false
+					return ''
 				}
 				uni.showToast({ title: res.message || '扣费失败，请重试', icon: 'none' })
-				return false
+				return ''
 			} catch (err) {
 				console.error('[aiTryOnResult] 下载扣费请求失败:', err)
 				uni.showToast({ title: '网络异常，请重试', icon: 'none' })
-				return false
+				return ''
 			}
 		},
 

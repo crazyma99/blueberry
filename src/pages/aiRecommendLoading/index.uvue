@@ -43,8 +43,6 @@ export default {
 			status: 'processing' as string,  // 'processing' | 'failed'
 			elapsedSeconds: 0,
 			countdownTimer: null as any,
-			pollingTimer: null as any,
-			failCount: 0,
 			// 推荐次数不足（4001）时的充值支付
 			isPaying: false,
 			payPollToken: 0    // 到账轮询会话标记，自增即失效
@@ -66,25 +64,19 @@ export default {
 		startAnalysis() {
 			this.status = 'processing'
 			this.elapsedSeconds = 0
-			this.failCount = 0
 
 			// 计时器：每秒更新已等待时间
 			this.countdownTimer = setInterval(() => {
 				this.elapsedSeconds += 1
-				// 超时 180 秒（3分钟），停止轮询，展示失败
+				// 超时 180 秒（3分钟），展示失败
 				if (this.elapsedSeconds >= 180) {
 					this.stopAll()
 					this.status = 'failed'
 				}
 			}, 1000)
 
-			// 立即调用一次
+			// 推荐接口为同步扣费接口（每次调用扣 1 次推荐余额），只调用一次，不可轮询重发
 			this.callRecommend()
-
-			// 每 30 秒轮询
-			this.pollingTimer = setInterval(() => {
-				this.callRecommend()
-			}, 30000)
 		},
 
 		async callRecommend() {
@@ -103,30 +95,27 @@ export default {
 					})
 					return
 				}
-				// 4001 = 推荐次数不足：停止轮询，拉起充值支付，到账后自动重新分析
+				// 4001 = 推荐次数不足：拉起充值支付，到账后自动重新分析
 				if (res.code === 4001) {
 					this.stopAll()
 					this.handleRecharge()
 					return
 				}
-				// 其他业务码 → 等待下一轮轮询
-			} catch (err) {
-				console.error('AI推荐请求失败:', err)
-				this.failCount += 1
-				// 连续 3 次网络错误，展示失败
-				if (this.failCount >= 3) {
-					this.stopAll()
-					this.status = 'failed'
+				// 其他业务错误（AI 调用失败时后端已自动退还次数）：展示失败，由用户手动重试
+				this.stopAll()
+				this.status = 'failed'
+				if (res.message && res.message !== '') {
+					uni.showToast({ title: res.message, icon: 'none' })
 				}
-				// 否则等待下一轮轮询
+			} catch (err) {
+				// 网络异常/超时：不自动重发（重发会再次扣费），展示失败由用户手动重试
+				console.error('AI推荐请求失败:', err)
+				this.stopAll()
+				this.status = 'failed'
 			}
 		},
 
 		stopAll() {
-			if (this.pollingTimer != null) {
-				clearInterval(this.pollingTimer)
-				this.pollingTimer = null
-			}
 			if (this.countdownTimer != null) {
 				clearInterval(this.countdownTimer)
 				this.countdownTimer = null
@@ -221,7 +210,6 @@ export default {
 		},
 
 		handleRetry() {
-			this.failCount = 0
 			this.startAnalysis()
 		},
 

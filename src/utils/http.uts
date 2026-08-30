@@ -9,6 +9,7 @@ interface RequestOptions {
   method?: HttpMethod
   data?: any
   header?: Record<string, string>
+  timeout?: number
   showLoading?: boolean
 }
 
@@ -99,7 +100,6 @@ export function rejectAllPending(): void {
 export function request<T = any>(opts: RequestOptions): Promise<T> {
   const { url, method = 'GET', data, header = {}, showLoading = false } = opts
   const fullUrl = withBaseURL(url)
-  
   // 动态获取 token（从 storage 读取）
   const token = getToken()
   
@@ -121,7 +121,8 @@ export function request<T = any>(opts: RequestOptions): Promise<T> {
   }
   
   if (showLoading) uni.showLoading({ title: '加载中', mask: true })
-  const { timeout } = getHttpConfig()
+  // 单次请求可用 opts.timeout 覆盖全局超时（如 AI 推荐等同步长耗时接口）
+  const timeout = opts.timeout ?? getHttpConfig().timeout
   return new Promise<T>((resolve, reject) => {
     uni.request({
       url: fullUrl,
