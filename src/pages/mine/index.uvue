@@ -134,8 +134,6 @@
 
     <!-- 自定义底部 tabbar 占位（116rpx + 安全区） -->
     <view class="tabbar-safe-spacer"></view>
-    <!-- 底部导航栏（普通组件嵌入，页面保活切换零重绘） -->
-    <CustomTabBar :active="2" />
   </view>
 </template>
 
@@ -145,6 +143,8 @@ import { wxLogin, wxBindPhone, wxGetUserInfo, wxUpdateUserInfo, getPageConfig, r
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
 import { rejectAllPending } from '../../utils/http.uts'
+import { syncTabBarSelected } from '../../utils/tabbar.uts'
+import { cosThumb } from '../../utils/imageLoader.uts'
 import {
   USER_AGREEMENT_NAME,
   PRIVACY_POLICY_NAME,
@@ -196,8 +196,8 @@ export default {
   },
 
   async onShow() {
-    // 隐藏原生 tabbar（底栏由 CustomTabBar 组件渲染，避免 custom-tab-bar 切换闪烁）
-    uni.hideTabBar({ animation: false })
+    // 同步自定义底部 tabbar 选中态（本页下标 2）
+    syncTabBarSelected(2)
     // 监听 401 登录过期事件，自动拉起登录弹窗
     uni.$off('login-required')
     uni.$on('login-required', () => {
@@ -242,7 +242,11 @@ export default {
         if (configRes.code === 200 && configRes.data) {
           const configMenus = configRes.data.filter(item => item.type === 'icon_grid')[0].items || []
           this.menuItems = [...this.getDefaultMenuItems(), ...configMenus]
-          this.banners = configRes.data.filter(item => item.type === 'banner')[0].items || []
+          // banner 出 750px WebP 缩略图，降低内存占用
+          this.banners = (configRes.data.filter(item => item.type === 'banner')[0].items || []).map(item => {
+            item.imageUrl = cosThumb(item.imageUrl, 750)
+            return item
+          })
         }
         // 金刚区为空时，设置默认入口
         if (this.menuItems.length === 0) {

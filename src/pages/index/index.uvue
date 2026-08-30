@@ -120,8 +120,6 @@
 
 		<!-- 自定义底部 tabbar 占位（116rpx + 安全区） -->
 		<view class="tabbar-safe-spacer"></view>
-		<!-- 底部导航栏（普通组件嵌入，页面保活切换零重绘） -->
-		<CustomTabBar :active="0" />
 	</view>
 </template>
 
@@ -132,6 +130,8 @@
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import { submitUserProfile } from '../../utils/profileSubmit.uts'
 	import { setBrandId } from '../../utils/brand.uts'
+	import { syncTabBarSelected } from '../../utils/tabbar.uts'
+	import { cosThumb } from '../../utils/imageLoader.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -172,10 +172,18 @@
 					getShops().catch(() => null)
 				])
 				if (bannerRes && bannerRes.code === 200) {
-					this.banners = bannerRes.data || []
+					// banner 出 750px WebP 缩略图，降低内存占用
+					this.banners = (bannerRes.data || []).map(item => {
+						item.imageUrl = cosThumb(item.imageUrl, 750)
+						return item
+					})
 				}
 				if (shopRes && shopRes.code === 200 && shopRes.data) {
-					this.shopList = shopRes.data
+					// 网格封面图出 600px WebP 缩略图
+					this.shopList = shopRes.data.map(item => {
+						item.homeImage = cosThumb(item.homeImage, 600)
+						return item
+					})
 				}
 			} catch (err) {
 				console.warn('加载首页数据失败', err)
@@ -184,8 +192,8 @@
 			}
 		},
 		onShow() {
-			// 隐藏原生 tabbar（底栏由 CustomTabBar 组件渲染，避免 custom-tab-bar 切换闪烁）
-			uni.hideTabBar({ animation: false })
+			// 同步自定义底部 tabbar 选中态（本页下标 0）
+			syncTabBarSelected(0)
 			// 监听 401 登录过期事件，自动拉起登录弹窗
 			uni.$off('login-required')
 			uni.$on('login-required', () => {

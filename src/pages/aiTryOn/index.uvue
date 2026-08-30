@@ -84,24 +84,31 @@
 		<view class="fixed-bottom">
 			<!-- 付费模式且无限免次数：原按钮样式 + 价格文案，点击引导充值/兑换 -->
 			<view v-if="isPaidMode && creditBalance <= 0" class="gen-btn-wrap">
+				<image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"/>
 				<view
 					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
 					@click="handleGenerate"
 				>
 					<text class="generate-btn-ai">¥{{ priceText }}</text>
-					<text class="generate-btn-text"> 马上生成AI试衣效果</text>
+					<text class="generate-btn-text"> 马上生成 </text>
+					<image src="/static/aitry-text.png" class="generate-btn-ai-img" mode="aspectFill"/>
+					<text class="generate-btn-text"> 效果</text>
 				</view>
+				<image src="/static/btn-right-icon.png" class="gen-btn-icon" mode="aspectFill"/>
 			</view>
 			<!-- 非付费模式或有限免次数：原样式按钮，有限免时右上角展示角标 -->
 			<view v-else class="gen-btn-wrap">
+				<image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"/>
 				<view
 					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
 					@click="handleGenerate"
 				>
 					<text class="generate-btn-text">生成 </text>
-					<text class="generate-btn-ai">AI试衣</text>
+					<image src="/static/aitry-text.png" class="generate-btn-ai-img" mode="aspectFill"/>
 					<text class="generate-btn-text"> 效果</text>
 				</view>
+				<image src="/static/btn-right-icon.png" class="gen-btn-icon" mode="aspectFill"/>
+				<!-- 角标放在最后渲染，避免被右侧 icon 盖住 -->
 				<view v-if="isPaidMode && creditBalance > 0" class="gen-btn-badge">
 					<text class="gen-btn-badge-text">限时免费 {{ creditBalance }} 次</text>
 				</view>
@@ -882,9 +889,10 @@ export default {
 
 /* 生成按钮 */
 .generate-btn {
-	width: 520rpx;
 	height: 88rpx;
 	border-radius: 44rpx;
+	padding: 0 40rpx;
+  gap: 12rpx;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -904,19 +912,32 @@ export default {
 	color: rgba(22, 15, 4, 1);
 	font-weight: 700;
 }
-
-/* 生成按钮容器（预留 padding-top 承载角标，避免角标负偏移被裁剪） */
+.generate-btn-ai-img {
+	width: 118rpx;
+	height: 34rpx;
+}
+/* 按钮左右装饰 icon（复用客片详情页 AI 试衣按钮样式） */
+.gen-btn-icon {
+	width: 104rpx;
+	height: 86rpx;
+}
+/* 生成按钮容器（预留 padding-top，避免角标上移后超出容器被裁剪） */
 .gen-btn-wrap {
 	position: relative;
-	width: 520rpx;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
 	padding-top: 20rpx;
 }
-/* 限免角标（整体落在容器 padding 预留空间内，不用负偏移，避免被裁剪） */
+/* 限免角标（相对容器定位：top 取 padding-top 即按钮顶边，right 取右侧 icon 宽度即按钮右边，
+   再 translate 自身一半，使角标一半高一半宽与按钮右上角重叠） */
 .gen-btn-badge {
 	position: absolute;
-	top: 0rpx;
-	right: 0rpx;
-	z-index: 1;
+	top: 20rpx;
+	right: 104rpx;
+	transform: translate(40%, -50%);
+	z-index: 10;
 	background: #ff3b30;
 	border-radius: 16rpx;
 	padding: 4rpx 12rpx;

@@ -1,0 +1,15 @@
+// 同步自定义底部 tabbar 的选中态
+// 微信官方模式：tab 页 onShow 中通过 getTabBar() 拿到本页的 tabBar 实例后 setData。
+// 背景：custom-tab-bar 组件实例按 tab 页各自独立，组件内部靠路由判断选中项时，
+// attached 触发瞬间新页面可能尚未进栈（取到旧页路由），导致选中态错乱、
+// 点击被"当前已选中"判断吞掉等问题，因此以页面侧同步为最终依据。
+export function syncTabBarSelected(index : number) : void {
+	const pages = getCurrentPages()
+	if (pages.length == 0) return
+	const currentPage = pages[pages.length - 1] as any
+	const tabBar = currentPage.getTabBar()
+	// 值相同则不 setData，避免每次切换都触发一次无谓的重绘（闪烁来源之一）
+	if (tabBar != null && tabBar.data.selected != index) {
+		tabBar.setData({ selected: index })
+	}
+}

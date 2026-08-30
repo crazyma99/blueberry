@@ -74,8 +74,10 @@
 }
 
 /* 全局默认字体：HarmonyOS Sans SC（个别标题可用 font-noto-serif 覆盖） */
+/* 页面底色：深色主题必须显式设置，否则 tab 切换重绘间隙会透出默认白底（闪白） */
 page {
   font-family: 'HarmonyOS-Sans-SC';
+  background-color: #160F04;
 }
 
 /* 自定义底部 tabbar 的页面占位（高度需与 src/custom-tab-bar 保持一致：116rpx + 底部安全区） */
