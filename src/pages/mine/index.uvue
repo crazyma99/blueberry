@@ -134,6 +134,8 @@
 
     <!-- 自定义底部 tabbar 占位（116rpx + 安全区） -->
     <view class="tabbar-safe-spacer"></view>
+    <!-- 底部导航栏（普通组件嵌入，页面保活切换零重绘） -->
+    <CustomTabBar :active="2" />
   </view>
 </template>
 
@@ -143,7 +145,6 @@ import { wxLogin, wxBindPhone, wxGetUserInfo, wxUpdateUserInfo, getPageConfig, r
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
 import { rejectAllPending } from '../../utils/http.uts'
-import { syncTabBarSelected } from '../../utils/tabbar.uts'
 import {
   USER_AGREEMENT_NAME,
   PRIVACY_POLICY_NAME,
@@ -195,8 +196,8 @@ export default {
   },
 
   async onShow() {
-    // 同步自定义底部 tabbar 选中态（本页下标 2）
-    syncTabBarSelected(2)
+    // 隐藏原生 tabbar（底栏由 CustomTabBar 组件渲染，避免 custom-tab-bar 切换闪烁）
+    uni.hideTabBar({ animation: false })
     // 监听 401 登录过期事件，自动拉起登录弹窗
     uni.$off('login-required')
     uni.$on('login-required', () => {

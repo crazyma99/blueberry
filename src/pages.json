@@ -58,7 +58,6 @@
     "backgroundColor": "#160F04"
   },
   "tabBar": {
-    "custom": true,
     "color": "#F1CD91",
     "selectedColor": "#F1CD91",
     "backgroundColor": "#160F04",
@@ -66,20 +65,20 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "iconPath": "static/homepage.png",
-        "selectedIconPath": "static/homepage-choosed.png",
+        "iconPath": "static/home-bar.png",
+        "selectedIconPath": "static/home-bar.png",
         "text": "首页"
       },
       {
         "pagePath": "pages/priceHomePage/index",
-        "iconPath": "static/pricelist.png",
-        "selectedIconPath": "static/pricelist-choosed.png",
+        "iconPath": "static/price-bar.png",
+        "selectedIconPath": "static/price-bar.png",
         "text": "价目表"
       },
       {
         "pagePath": "pages/mine/index",
-        "iconPath": "static/mine.png",
-        "selectedIconPath": "static/mine-choosed.png",
+        "iconPath": "static/my-bar.png",
+        "selectedIconPath": "static/my-bar.png",
         "text": "我的"
       }
     ]

@@ -21,12 +21,13 @@
 		</view>
 		<!-- 自定义底部 tabbar 占位（116rpx + 安全区） -->
 		<view class="tabbar-safe-spacer"></view>
+		<!-- 底部导航栏（普通组件嵌入，页面保活切换零重绘） -->
+		<CustomTabBar :active="1" />
 	</view>
 </template>
 
 <script>
 	import { getShops } from '../../utils/api.uts'
-	import { syncTabBarSelected } from '../../utils/tabbar.uts'
 	export default {
 		data() {
 			return {
@@ -47,8 +48,8 @@
 			}
 		},
 		onShow() {
-			// 同步自定义底部 tabbar 选中态（本页下标 1）
-			syncTabBarSelected(1)
+			// 隐藏原生 tabbar（底栏由 CustomTabBar 组件渲染）
+			uni.hideTabBar({ animation: false })
 		},
 		methods: {
 			onShopClick(shop) {
