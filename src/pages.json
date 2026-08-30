@@ -1,125 +1,89 @@
 {
-	"pages": [
-		{
-			"path": "pages/index/index"
-		},
-		{
-			"path": "pages/demoDetail/index",
-			"style": {
-				"navigationStyle": "custom",
-				"onReachBottomDistance": 80
-			}
-		},
-		{
-			"path": "pages/priceList/index"
-		},
-		{
-			"path": "pages/targetPhotoDetail/index",
-			"style": {
-				"navigationBarTitleText": "客片欣赏"
-			}
-		},
-		{
-			"path": "pages/priceHomePage/index"
-		},
-		{
-			"path": "pages/mine/index",
-			"style": {
-				"navigationBarTitleText": "我的"
-			}
-		},
-		{
-			"path": "pages/favorites/index",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/webview/index",
-			"style": {
-				"navigationBarTitleText": ""
-			}
-		},
-		{
-			"path": "pages/policies/user",
-			"style": {
-				"navigationBarTitleText": "用户协议"
-			}
-		},
-		{
-			"path": "pages/policies/privacy",
-			"style": {
-				"navigationBarTitleText": "隐私政策"
-			}
-		},
-		{
-			"path": "pages/aiTryOn/index",
-			"style": {
-				"navigationBarTitleText": "AI试衣"
-			}
-		},
-		{
-			"path": "pages/aiTryOnResult/index",
-			"style": {
-				"navigationBarTitleText": "正在生成"
-			}
-		},
-		{
-			"path": "pages/aiTryOnHistory/index",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/aiRecommend/index",
-			"style": {
-				"navigationBarTitleText": "AI智能推荐"
-			}
-		},
-		{
-			"path": "pages/aiRecommendLoading/index",
-			"style": {
-				"navigationBarTitleText": "AI分析中"
-			}
-		},
-		{
-			"path": "pages/aiRecommendResult/index",
-			"style": {
-				"navigationBarTitleText": "AI推荐结果"
-			}
-		}
-	],
-	"globalStyle": {
-		"navigationBarTextStyle": "white",
-		"navigationBarBackgroundColor": "#000",
-		"navigationBarTitleText": "蓝梅旗袍·汉服·民...",
-		"backgroundColor": "#000"
-	},
-	"tabBar": {
-		"color": "#fff",
-		"selectedColor": "#F3D9AC",
-		"backgroundColor": "#000",
-		"borderStyle": "black",
-		"list": [
-			{
-				"pagePath": "pages/index/index",
-				"iconPath": "static/homepage.png",
-				"selectedIconPath": "static/homepage-choosed.png",
-				"text": "首页"
-			},
-			{
-				"pagePath": "pages/priceHomePage/index",
-				"iconPath": "static/pricelist.png",
-				"selectedIconPath": "static/pricelist-choosed.png",
-				"text": "价目表"
-			},
-			{
-				"pagePath": "pages/mine/index",
-				"iconPath": "static/mine.png",
-				"selectedIconPath": "static/mine-choosed.png",
-				"text": "我的"
-			}
-		]
-	},
-	"uniIdRouter": {}
+  "pages": [
+    {
+      "path": "pages/index/index"
+    },
+    {
+      "path": "pages/demoDetail/index",
+      "style": {
+        "onReachBottomDistance": 80
+      }
+    },
+    {
+      "path": "pages/priceList/index"
+    },
+    {
+      "path": "pages/targetPhotoDetail/index"
+    },
+    {
+      "path": "pages/priceHomePage/index"
+    },
+    {
+      "path": "pages/mine/index"
+    },
+    {
+      "path": "pages/favorites/index"
+    },
+    {
+      "path": "pages/webview/index"
+    },
+    {
+      "path": "pages/policies/user"
+    },
+    {
+      "path": "pages/policies/privacy"
+    },
+    {
+      "path": "pages/aiTryOn/index"
+    },
+    {
+      "path": "pages/aiTryOnResult/index"
+    },
+    {
+      "path": "pages/aiTryOnHistory/index"
+    },
+    {
+      "path": "pages/aiRecommend/index"
+    },
+    {
+      "path": "pages/aiRecommendLoading/index"
+    },
+    {
+      "path": "pages/aiRecommendResult/index"
+    }
+  ],
+  "globalStyle": {
+    "navigationStyle": "custom",
+    "navigationBarBackgroundColor": "#160F04",
+    "backgroundColor": "#160F04",
+    "backgroundColorContent": "#160F04"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#F1CD91",
+    "selectedColor": "#F1CD91",
+    "backgroundColor": "#160F04",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "iconPath": "static/home-bar.png",
+        "selectedIconPath": "static/home-bar.png",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/priceHomePage/index",
+        "iconPath": "static/price-bar.png",
+        "selectedIconPath": "static/price-bar.png",
+        "text": "价目表"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "iconPath": "static/my-bar.png",
+        "selectedIconPath": "static/my-bar.png",
+        "text": "我的"
+      }
+    ]
+  },
+  "uniIdRouter": {}
 }

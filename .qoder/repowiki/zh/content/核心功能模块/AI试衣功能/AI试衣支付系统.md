@@ -95,7 +95,7 @@ P1 --> U6
 - [src/App.uvue:1-335](file://src/App.uvue#L1-L335)
 - [src/pages.json:1-126](file://src/pages.json#L1-L126)
 - [src/manifest.json:1-73](file://src/manifest.json#L1-L73)
-- [src/utils/api.uts:1-717](file://src/utils/api.uts#L1-L717)
+- [src/utils/api.uts:1-733](file://src/utils/api.uts#L1-L733)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -128,7 +128,7 @@ P1 --> U6
 - [src/App.uvue:1-335](file://src/App.uvue#L1-L335)
 - [src/pages.json:1-126](file://src/pages.json#L1-L126)
 - [src/manifest.json:1-73](file://src/manifest.json#L1-L73)
-- [src/utils/api.uts:1-717](file://src/utils/api.uts#L1-L717)
+- [src/utils/api.uts:1-733](file://src/utils/api.uts#L1-L733)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -181,11 +181,11 @@ API --> S4
 
 **图表来源** 
 - [src/pages/aiTryOn/index.uvue:1-935](file://src/pages/aiTryOn/index.uvue#L1-L935)
-- [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
+- [src/pages/aiTryOnResult/index.uvue:1-613](file://src/pages/aiTryOnResult/index.uvue#L1-L613)
 - [src/pages/aiRecommend/index.uvue:1-635](file://src/pages/aiRecommend/index.uvue#L1-L635)
-- [src/pages/aiRecommendLoading/index.uvue:1-234](file://src/pages/aiRecommendLoading/index.uvue#L1-L234)
+- [src/pages/aiRecommendLoading/index.uvue:1-332](file://src/pages/aiRecommendLoading/index.uvue#L1-L332)
 - [src/pages/aiRecommendResult/index.uvue:1-290](file://src/pages/aiRecommendResult/index.uvue#L1-L290)
-- [src/utils/api.uts:1-717](file://src/utils/api.uts#L1-L717)
+- [src/utils/api.uts:1-733](file://src/utils/api.uts#L1-L733)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -222,12 +222,12 @@ Success --> End
 **更新** 新增多积分池类型支持，实现了试衣、推荐、下载三种功能的完全独立次数管理，通过feature参数精确控制充值和使用。
 
 **图表来源** 
-- [src/utils/api.uts:608-619](file://src/utils/api.uts#L608-L619)
-- [src/utils/api.uts:626-638](file://src/utils/api.uts#L626-L638)
+- [src/utils/api.uts:624-635](file://src/utils/api.uts#L624-L635)
+- [src/utils/api.uts:642-654](file://src/utils/api.uts#L642-L654)
 - [src/pages/aiRecommend/index.uvue:255-267](file://src/pages/aiRecommend/index.uvue#L255-L267)
 
 **章节来源**
-- [src/utils/api.uts:573-653](file://src/utils/api.uts#L573-L653)
+- [src/utils/api.uts:589-683](file://src/utils/api.uts#L589-L683)
 - [src/pages/aiRecommend/index.uvue:255-267](file://src/pages/aiRecommend/index.uvue#L255-L267)
 
 ### 组件B：增强的支付状态轮询机制
@@ -319,14 +319,14 @@ P-->>U : 展示结果/支持保存到相册
 
 **图表来源** 
 - [src/pages/aiTryOn/index.uvue:1-935](file://src/pages/aiTryOn/index.uvue#L1-L935)
-- [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
-- [src/utils/api.uts:370-717](file://src/utils/api.uts#L370-L717)
+- [src/pages/aiTryOnResult/index.uvue:1-613](file://src/pages/aiTryOnResult/index.uvue#L1-L613)
+- [src/utils/api.uts:546-733](file://src/utils/api.uts#L546-L733)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 
 **章节来源**
 - [src/pages/aiTryOn/index.uvue:1-935](file://src/pages/aiTryOn/index.uvue#L1-L935)
-- [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
-- [src/utils/api.uts:370-717](file://src/utils/api.uts#L370-L717)
+- [src/pages/aiTryOnResult/index.uvue:1-613](file://src/pages/aiTryOnResult/index.uvue#L1-L613)
+- [src/utils/api.uts:546-733](file://src/utils/api.uts#L546-L733)
 
 ### 组件D：AI智能推荐（上传→分析→结果）
 - 上传照片后进入加载页，后台进行AI分析
@@ -354,12 +354,12 @@ ShowToast --> End
 **图表来源** 
 - [src/pages/aiRecommend/index.uvue:1-635](file://src/pages/aiRecommend/index.uvue#L1-L635)
 - [src/pages/aiRecommendResult/index.uvue:1-290](file://src/pages/aiRecommendResult/index.uvue#L1-L290)
-- [src/utils/api.uts:680-717](file://src/utils/api.uts#L680-L717)
+- [src/utils/api.uts:686-733](file://src/utils/api.uts#L686-L733)
 
 **章节来源**
 - [src/pages/aiRecommend/index.uvue:1-635](file://src/pages/aiRecommend/index.uvue#L1-L635)
 - [src/pages/aiRecommendResult/index.uvue:1-290](file://src/pages/aiRecommendResult/index.uvue#L1-L290)
-- [src/utils/api.uts:680-717](file://src/utils/api.uts#L680-L717)
+- [src/utils/api.uts:686-733](file://src/utils/api.uts#L686-L733)
 
 ### 组件E：鉴权与401处理（登录弹窗+挂起队列）
 - http.uts 在 401 时清空本地态、标记过期、将请求入队，触发登录弹窗
@@ -434,13 +434,86 @@ ShowContent --> Complete["完成"]
 
 **图表来源** 
 - [src/App.uvue:61-126](file://src/App.uvue#L61-L126)
-- [src/pages/aiTryOnResult/index.uvue:261-290](file://src/pages/aiTryOnResult/index.uvue#L261-L290)
+- [src/pages/aiTryOnResult/index.uvue:436-613](file://src/pages/aiTryOnResult/index.uvue#L436-L613)
 - [src/pages/mine/index.uvue:1-32](file://src/pages/mine/index.uvue#L1-L32)
 
 **章节来源**
 - [src/App.uvue:61-126](file://src/App.uvue#L61-L126)
-- [src/pages/aiTryOnResult/index.uvue:261-290](file://src/pages/aiTryOnResult/index.uvue#L261-L290)
+- [src/pages/aiTryOnResult/index.uvue:436-613](file://src/pages/aiTryOnResult/index.uvue#L436-L613)
 - [src/pages/mine/index.uvue:1-32](file://src/pages/mine/index.uvue#L1-L32)
+
+### 组件G：动态定价显示系统
+- **价格计算**：支持分→元的转换，整元自动去除小数位
+- **动态按钮**：根据余额状态显示不同的按钮样式（免费/付费）
+- **角标显示**：有限免次数时在按钮右上角显示剩余次数角标
+- **实时刷新**：支付成功后立即更新余额和按钮状态
+
+```mermaid
+flowchart TD
+PriceCalc["价格计算"] --> CheckFen{"价格是否为整元?"}
+CheckFen --> |是| RemoveDecimal["去除小数位"]
+CheckFen --> |否| KeepDecimal["保留两位小数"]
+RemoveDecimal --> Display["显示价格"]
+KeepDecimal --> Display
+Display --> ButtonUpdate["更新按钮状态"]
+ButtonUpdate --> BadgeCheck{"是否有剩余次数?"}
+BadgeCheck --> |是| ShowBadge["显示限时免费角标"]
+BadgeCheck --> |否| HideBadge["隐藏角标"]
+```
+
+**更新** 新增动态定价显示系统，提供了更直观的价格展示和用户友好的界面反馈。
+
+**图表来源** 
+- [src/pages/aiTryOn/index.uvue:215-227](file://src/pages/aiTryOn/index.uvue#L215-L227)
+- [src/pages/aiTryOnResult/index.uvue:91-102](file://src/pages/aiTryOnResult/index.uvue#L91-L102)
+
+**章节来源**
+- [src/pages/aiTryOn/index.uvue:215-227](file://src/pages/aiTryOn/index.uvue#L215-L227)
+- [src/pages/aiTryOnResult/index.uvue:91-102](file://src/pages/aiTryOnResult/index.uvue#L91-L102)
+
+### 组件H：下载扣费与保存流程
+- **下载扣费**：调用 downloadAiTryOnResult 接口进行下载次数池扣费
+- **权限处理**：处理相册权限拒绝情况，引导用户前往设置授权
+- **网络图片处理**：自动下载网络图片后再保存到相册
+- **错误恢复**：扣费失败时提供重试机制
+
+```mermaid
+sequenceDiagram
+participant U as "用户"
+participant P as "aiTryOnResult/index.uvue"
+participant A as "api.uts"
+participant H as "http.uts"
+U->>P : 点击保存到相册
+P->>A : downloadAiTryOnResult(taskId)
+A->>H : POST /api/aiface/download
+H-->>A : code=0/200 或 4001(次数不足)
+alt 次数不足
+P->>P : 拉起充值支付
+P->>A : createCreditRecharge(feature='download')
+A->>H : POST /api/aiface/credit/recharge
+H-->>A : 返回支付参数
+P->>U : 微信支付
+U-->>P : 支付成功
+P->>A : getCreditRechargeStatus(outTradeNo)
+A->>H : GET /api/aiface/credit/recharge/status
+H-->>A : paid=true
+P->>P : 自动重试保存
+else 扣费成功
+P->>P : 下载网络图片(如需要)
+P->>P : saveImageToPhotosAlbum
+P-->>U : 显示保存成功
+end
+```
+
+**更新** 新增下载扣费与保存流程，实现了完整的下载次数池管理和相册保存功能。
+
+**图表来源** 
+- [src/pages/aiTryOnResult/index.uvue:199-431](file://src/pages/aiTryOnResult/index.uvue#L199-L431)
+- [src/utils/api.uts:546-560](file://src/utils/api.uts#L546-L560)
+
+**章节来源**
+- [src/pages/aiTryOnResult/index.uvue:199-431](file://src/pages/aiTryOnResult/index.uvue#L199-L431)
+- [src/utils/api.uts:546-560](file://src/utils/api.uts#L546-L560)
 
 ## 依赖关系分析
 - 页面依赖工具层：aiTryOn/aiTryOnResult/aiRecommend 均依赖 api.uts
@@ -466,11 +539,11 @@ aiTryOn --> profile["profileSubmit.uts"]
 
 **图表来源** 
 - [src/pages/aiTryOn/index.uvue:1-935](file://src/pages/aiTryOn/index.uvue#L1-L935)
-- [src/pages/aiTryOnResult/index.uvue:1-383](file://src/pages/aiTryOnResult/index.uvue#L1-L383)
+- [src/pages/aiTryOnResult/index.uvue:1-613](file://src/pages/aiTryOnResult/index.uvue#L1-L613)
 - [src/pages/aiRecommend/index.uvue:1-635](file://src/pages/aiRecommend/index.uvue#L1-L635)
-- [src/pages/aiRecommendLoading/index.uvue:1-234](file://src/pages/aiRecommendLoading/index.uvue#L1-L234)
+- [src/pages/aiRecommendLoading/index.uvue:1-332](file://src/pages/aiRecommendLoading/index.uvue#L1-L332)
 - [src/pages/aiRecommendResult/index.uvue:1-290](file://src/pages/aiRecommendResult/index.uvue#L1-L290)
-- [src/utils/api.uts:1-717](file://src/utils/api.uts#L1-L717)
+- [src/utils/api.uts:1-733](file://src/utils/api.uts#L1-L733)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -478,7 +551,7 @@ aiTryOn --> profile["profileSubmit.uts"]
 - [src/utils/profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 
 **章节来源**
-- [src/utils/api.uts:1-717](file://src/utils/api.uts#L1-L717)
+- [src/utils/api.uts:1-733](file://src/utils/api.uts#L1-L733)
 - [src/utils/http.uts:1-172](file://src/utils/http.uts#L1-L172)
 - [src/utils/auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [src/utils/config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -515,14 +588,17 @@ aiTryOn --> profile["profileSubmit.uts"]
 - **新增** AI推荐导航问题
   - 现象：点击"查看模板"无响应或跳转错误
   - 处理：检查推荐结果中是否包含有效的albumId字段
+- **新增** 下载保存问题
+  - 现象：保存图片失败或权限拒绝
+  - 处理：检查相册权限设置，确认网络图片下载是否正常
 
-**更新** 新增了多积分池类型和AI推荐导航相关的故障排查指导，帮助用户快速定位和解决相关问题。
+**更新** 新增了多积分池类型、AI推荐导航和下载保存相关的故障排查指导，帮助用户快速定位和解决相关问题。
 
 **章节来源**
 - [src/utils/http.uts:12-91](file://src/utils/http.uts#L12-L91)
 - [src/utils/api.uts:12-57](file://src/utils/api.uts#L12-L57)
 - [src/pages/aiTryOn/index.uvue:248-267](file://src/pages/aiTryOn/index.uvue#L248-L267)
-- [src/pages/aiTryOnResult/index.uvue:104-136](file://src/pages/aiTryOnResult/index.uvue#L104-L136)
+- [src/pages/aiTryOnResult/index.uvue:261-279](file://src/pages/aiTryOnResult/index.uvue#L261-L279)
 
 ## 结论
 本系统以清晰的模块化设计实现了"AI试衣+AI推荐+支付充值"的完整闭环，结合统一的鉴权与错误处理机制，具备良好的可维护性与可扩展性。通过 Profile 机制，可在同一套源码下快速孵化多个小程序项目，满足产品矩阵化需求。

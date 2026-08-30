@@ -25,3 +25,16 @@ export async function preloadImages(urls: string[], timeout: number = 5000): Pro
   const timeoutPromise = new Promise<void>(resolve => setTimeout(resolve, timeout))
   await Promise.race([preloadPromise, timeoutPromise])
 }
+
+/**
+ * 腾讯云 COS 数据万象缩略图：按展示宽度出 WebP 缩略图。
+ * 大幅减小下载体积和解码后的纹理内存（真机多 tab 页保活后内存压力大，
+ * 后台页图片纹理被回收、切回时重解码会导致页面闪烁）。
+ * 仅处理本站 COS 域名，其他来源原样返回。
+ */
+export function cosThumb(url: string, width: number): string {
+  if (url === '') return url
+  if (!url.includes('lanmei66.cloud')) return url
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}imageMogr2/format/webp/thumbnail/${width}x`
+}

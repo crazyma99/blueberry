@@ -156,10 +156,20 @@ function updateLegal() {
 }
 
 function updateContactPage(relativePath) {
+  // 注入合同（ServiceContact 组件结构，勿改）：
+  //   <image class="code" ...> 二维码 src
+  //   <view class="label">联系电话</view> + <view class="val">...</view>
+  //   <view class="label">商务合作</view> + <view class="val">...</view>（可选 CONTACT_COOP_TEXT）
+  const coopText = env.CONTACT_COOP_TEXT || ''
   replaceText(relativePath, [
     [/(<image\s+class="code"[\s\S]*?\bsrc=)"[^"]*"/, `$1"${xmlAttr(env.CONTACT_QR_SRC)}"`],
-    [/(<view class="contact">联系电话 & 商务合作<\/view>\s*\n\s*)<view class="contact">[^<]*<\/view>/, `$1<view class="contact">${env.CONTACT_PHONE_TEXT}</view>`]
+    [/(<view class="label">联系电话<\/view>\s*\n\s*<view class="val">)[^<]*(<\/view>)/, `$1${env.CONTACT_PHONE_TEXT}$2`]
   ])
+  if (coopText !== '') {
+    replaceText(relativePath, [
+      [/(<view class="label">商务合作<\/view>\s*\n\s*<view class="val">)[^<]*(<\/view>)/, `$1${coopText}$2`]
+    ])
+  }
 }
 
 function updateAppFooter() {
@@ -184,6 +194,7 @@ updateConfig()
 updateHttp()
 updateLegal()
 updateAppFooter()
-updateContactPage('src/pages/index/index.uvue')
-updateContactPage('src/pages/priceHomePage/index.uvue')
+// 首页与价目表页（priceHomePage）的服务保障/联系我们区块均已抽为 ServiceContact 组件，
+// 注入合同统一落在组件上（二维码 src + 联系电话一处替换）
+updateContactPage('src/components/ServiceContact/ServiceContact.uvue')
 updatePriceList()

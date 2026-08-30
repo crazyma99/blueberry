@@ -25,11 +25,11 @@
 
 ## 更新摘要
 **变更内容**
-- **新增支付功能模块**：完整实现了信用额度管理相关的API接口，包括余额查询、充值订单创建、支付状态轮询、兑换码兑换等
-- **增强上传功能**：新增了buildUploadHeader函数和完整的上传队列管理机制，支持401挂起队列和自动重试
-- **新增AI试衣历史记录功能**：提供了getAiTasks和deleteAiTask接口，支持用户查看和管理AI试衣历史
-- **完善AI智能推荐功能**：集成了getAiRecommend接口和相关页面，提供基于用户照片的智能分析和个性化推荐
-- **增强错误处理机制**：所有AI相关接口现在都支持多种成功码格式（code 0 和 200），提高了与不同API实现的兼容性
+- **新增下载信用额度扣除功能**：实现了 `downloadAiTryOnResult` 接口，支持AI试衣结果保存到相册前的信用额度扣费
+- **完善支付功能模块**：新增了完整的信用额度管理相关API，包括余额查询、充值订单创建、支付状态轮询等
+- **增强店铺信息管理**：添加了 `getShops` 接口，支持获取启用的店铺列表
+- **优化错误处理机制**：所有AI相关接口现在都支持多种成功码格式（code 0 和 200），提高了与不同API实现的兼容性
+- **改进上传功能**：增强了 `buildUploadHeader` 函数和上传队列管理机制，支持401挂起队列和自动重试
 
 ## 目录
 1. [简介](#简介)
@@ -113,7 +113,7 @@ AIRECOMMENDRESULT --> API
 ```
 
 **图表来源**
-- [api.uts:1-717](file://src/utils/api.uts#L1-L717)
+- [api.uts:1-733](file://src/utils/api.uts#L1-L733)
 - [http.uts:1-184](file://src/utils/http.uts#L1-L184)
 - [auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -121,7 +121,7 @@ AIRECOMMENDRESULT --> API
 - [profileSubmit.uts:1-37](file://src/utils/profileSubmit.uts#L1-L37)
 
 **章节来源**
-- [api.uts:1-717](file://src/utils/api.uts#L1-L717)
+- [api.uts:1-733](file://src/utils/api.uts#L1-L733)
 - [http.uts:1-184](file://src/utils/http.uts#L1-L184)
 - [auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -146,7 +146,7 @@ AIRECOMMENDRESULT --> API
   - 搜索功能：相册模糊搜索（公开接口，支持分页）
   - 店铺管理：获取启用的店铺列表
   - 页面配置：获取中台页配置（金刚区+Banner）
-  - **AI试衣功能：模板管理、照片上传、任务提交、结果查询、历史记录管理**
+  - **AI试衣功能：模板管理、照片上传、任务提交、结果查询、历史记录管理、**下载信用额度扣除****
   - **支付功能：信用额度查询、充值订单创建、支付状态轮询、兑换码兑换**
   - **AI智能推荐：基于用户照片的智能分析、个性化风格推荐、推荐结果展示**
 
@@ -159,7 +159,7 @@ AIRECOMMENDRESULT --> API
   - 参数校验：调用方需确保必填参数存在，如 shopId、albumId 等
 
 **章节来源**
-- [api.uts:6-717](file://src/utils/api.uts#L6-L717)
+- [api.uts:6-733](file://src/utils/api.uts#L6-L733)
 - [http.uts:48-61](file://src/utils/http.uts#L48-L61)
 
 ## 架构总览
@@ -343,11 +343,14 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - [favorites.uvue:169-218](file://src/pages/favorites/index.uvue#L169-L218)
 
 ### 店铺管理接口
-- getShops
+- **getShops**
   - 返回：启用的店铺列表（ShopInfo[]）
+  - **新增**：这是本次更新新增的核心接口，用于获取系统中所有启用的店铺信息
+  - **应用场景**：当页面参数缺失时作为兜底，自动获取首个启用店铺ID
 
 最佳实践
 - 首页并行加载轮播图与店铺列表，提升首屏体验
+- 在缺少店铺上下文时使用此接口获取默认店铺
 
 **章节来源**
 - [api.uts:359-366](file://src/utils/api.uts#L359-L366)
@@ -429,6 +432,14 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 错误处理：code === 0 或 200 表示成功（**更新：现在支持多种成功码格式**）
   - 适用场景：轮询查询AI试衣任务状态
 
+### **新增：下载信用额度扣除接口**
+- **downloadAiTryOnResult**
+  - 参数：taskId（必填，字符串形式）
+  - 返回：{ code: number; message: string; data: any }
+  - 错误处理：code === 0 或 200 表示成功；4001 = 下载次数不足（HTTP 200 返回）
+  - 适用场景：AI试衣结果保存到相册前的扣费入口
+  - **功能特点**：扣取下载次数池1次；如果次数不足会返回4001错误码，前端需拉起充值流程
+
 ### 历史记录管理接口
 - **getAiTasks**
   - 参数：openid（必填）
@@ -458,6 +469,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - 支持多种成功码格式（code 0 和 200）
   - 支持连续失败3次后停止重试
   - 支持图片保存到相册功能
+  - **新增**：集成了下载信用额度扣除功能，保存前自动扣费
 
 最佳实践
 - **AI试衣接口特殊处理**：aiface 接口成功 code === 0 或 200，非 200
@@ -468,9 +480,10 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **参数类型一致性**：注意不同接口间 shop_id 参数类型的差异（string vs number）
 - **历史记录管理**：新增的 getAiTasks 接口提供完整的AI试衣历史记录查询功能，支持用户查看和管理自己的试衣历史
 - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了与不同API实现的兼容性
+- **下载信用额度管理**：新增的 downloadAiTryOnResult 接口实现了保存前的信用额度扣费，支持4001错误码处理
 
 **章节来源**
-- [api.uts:384-571](file://src/utils/api.uts#L384-L571)
+- [api.uts:384-587](file://src/utils/api.uts#L384-L587)
 - [aiTryOn.uvue:94-239](file://src/pages/aiTryOn/index.uvue#L94-L239)
 - [aiTryOnResult.uvue:57-229](file://src/pages/aiTryOnResult/index.uvue#L57-L229)
 - [aiTryOnHistory.uvue:1-382](file://src/pages/aiTryOnHistory/index.uvue#L1-L382)
@@ -507,19 +520,19 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
     - credits：本单购买的次数
     - balance：到账后的最新余额
 
-### 支付相关接口
+### **新增：支付相关接口**
 - **getCreditBalance**
-  - 参数：shopId（可选，类型：number）
+  - 参数：shopId（可选，类型：number）、feature（可选，类型：string）
   - 返回：{ code: number; message: string; data: CreditBalance }
   - 错误处理：code === 200 表示成功；4001 = 试衣次数不足（HTTP 200 返回）
   - 适用场景：查询当前用户的信用额度和价格信息
-  - **功能特点**：首次查询会按商户配置惰性初始化免费次数
+  - **功能特点**：首次查询会按商户配置惰性初始化免费次数；支持通过feature参数区分不同的次数池（tryon/recommend/download）
 - **createCreditRecharge**
-  - 参数：params.shopId（必填，类型：number）、params.credits（必填，类型：number）
+  - 参数：params.shopId（必填，类型：number）、params.credits（必填，类型：number）、params.feature（可选，类型：string）
   - 返回：{ code: number; message: string; data: CreditRechargeOrder }
   - 错误处理：code === 200 表示成功
   - 适用场景：创建充值订单，返回微信小程序JSAPI支付所需参数
-  - **功能特点**：「支付一次开通一次」，credits通常传1
+  - **功能特点**：「支付一次开通一次」，credits通常传1；支持通过feature参数指定次数池
 - **getCreditRechargeStatus**
   - 参数：outTradeNo（必填，类型：string）
   - 返回：{ code: number; message: string; data: CreditRechargeStatus }
@@ -537,6 +550,10 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
   - **handleRecharge方法**：处理充值逻辑，创建订单 → 拉起微信支付 → 轮询到账
   - **pollRechargeStatus方法**：轮询充值订单状态，每2.5秒一次，最多48次（约2分钟兜底）
   - **resumeGenerateIfNeeded方法**：支付到账后自动继续之前被打断的生成流程
+- **aiTryOnResult 页面集成**：
+  - **chargeDownloadCredit方法**：处理下载信用额度扣费，支持4001错误码处理
+  - **handleRecharge方法**：针对下载功能的充值流程，使用feature='download'参数
+  - **pollRechargeStatus方法**：轮询下载充值订单状态
 - **支付状态管理**：
   - isPaying：支付状态标志
   - resumeGenerateAfterCredit：支付后继续生成的标志
@@ -549,10 +566,12 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **状态同步**：支付成功后及时更新用户余额和界面状态
 - **用户体验**：支付过程中显示适当的加载提示和反馈信息
 - **安全性**：确保订单号的唯一性和支付参数的正确性
+- **次数池隔离**：通过feature参数实现试衣、推荐、下载三个独立次数池的管理
 
 **章节来源**
-- [api.uts:577-667](file://src/utils/api.uts#L577-L667)
+- [api.uts:589-683](file://src/utils/api.uts#L589-L683)
 - [aiTryOn.uvue:455-543](file://src/pages/aiTryOn/index.uvue#L455-L543)
+- [aiTryOnResult.uvue:314-426](file://src/pages/aiTryOnResult/index.uvue#L314-L426)
 
 ## AI智能推荐功能
 
@@ -618,7 +637,7 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - **客片集成**：通过albumId字段实现与客片详情页的无缝集成
 
 **章节来源**
-- [api.uts:672-716](file://src/utils/api.uts#L672-L716)
+- [api.uts:685-732](file://src/utils/api.uts#L685-L732)
 - [aiRecommend.uvue:158-202](file://src/pages/aiRecommend/index.uvue#L158-202)
 - [aiRecommendLoading.uvue:87-113](file://src/pages/aiRecommendLoading/index.uvue#L87-L113)
 - [aiRecommendResult.uvue:86-115](file://src/pages/aiRecommendResult/index.uvue#L86-L115)
@@ -628,8 +647,8 @@ Note over HTTP,Server : 若状态码为401，清理token与用户信息
 - http.uts 依赖 config.uts 获取 baseURL 与 timeout，**已迁移至生产环境**
 - 页面组件通过 import api.uts 使用业务接口
 - 登录流程与头像/昵称提交分别封装在 loginFlow.uts 与 profileSubmit.uts 中，内部调用 api.uts 与 auth.uts
-- **AI试衣功能依赖：aiTryOn 页面使用 getAiTemplates、uploadPhoto、submitAiTryOn；aiTryOnResult 页面使用 getAiTryOnResult；aiTryOnHistory 页面使用 getAiTasks**
-- **支付功能依赖：aiTryOn 页面使用 getCreditBalance、createCreditRecharge、getCreditRechargeStatus**
+- **AI试衣功能依赖：aiTryOn 页面使用 getAiTemplates、uploadPhoto、submitAiTryOn；aiTryOnResult 页面使用 getAiTryOnResult、downloadAiTryOnResult；aiTryOnHistory 页面使用 getAiTasks**
+- **支付功能依赖：aiTryOn 页面使用 getCreditBalance、createCreditRecharge、getCreditRechargeStatus；aiTryOnResult 页面使用相同的支付接口**
 - **AI智能推荐功能依赖：aiRecommend 页面使用 uploadPhoto；aiRecommendLoading 页面使用 getAiRecommend；aiRecommendResult 页面展示分析结果和推荐列表**
 
 ```mermaid
@@ -656,6 +675,7 @@ class API {
 +uploadPhoto()
 +submitAiTryOn()
 +getAiTryOnResult()
++downloadAiTryOnResult()
 +getAiTasks()
 +deleteAiTask()
 +getCreditBalance()
@@ -694,7 +714,7 @@ HTTP --> CONFIG : "使用"
 ```
 
 **图表来源**
-- [api.uts:1-717](file://src/utils/api.uts#L1-L717)
+- [api.uts:1-733](file://src/utils/api.uts#L1-L733)
 - [http.uts:1-184](file://src/utils/http.uts#L1-L184)
 - [auth.uts:1-171](file://src/utils/auth.uts#L1-L171)
 - [config.uts:1-13](file://src/utils/config.uts#L1-L13)
@@ -719,11 +739,13 @@ HTTP --> CONFIG : "使用"
   - **参数类型优化**：统一 shop_id 参数类型，减少类型转换开销
   - **历史记录优化**：新增的历史记录页面支持智能封面图选择和状态管理
   - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了与不同API实现的兼容性
+  - **下载信用额度优化**：新增的downloadAiTryOnResult接口支持智能扣费和错误处理
 - **支付功能优化**：
   - **轮询优化**：支付状态轮询间隔2.5秒，最多48次（约2分钟）
   - **状态管理**：使用令牌防止并发轮询问题
   - **用户体验**：支付过程中显示适当的加载提示
   - **错误处理**：区分不同类型的支付错误，提供友好的错误提示
+  - **次数池隔离**：通过feature参数实现不同功能次数池的独立管理
 - **AI智能推荐优化**：
   - **分析轮询优化**：每30秒轮询一次，最长等待180秒，平衡用户体验和服务器负载
   - **图片压缩**：上传前自动压缩照片，减少传输时间
@@ -739,7 +761,7 @@ HTTP --> CONFIG : "使用"
 - [aiTryOn.uvue:129-142](file://src/pages/aiTryOn/index.uvue#L129-L142)
 - [aiTryOnResult.uvue:85-106](file://src/pages/aiTryOnResult/index.uvue#L85-L106)
 - [aiTryOnHistory.uvue:166-176](file://src/pages/aiTryOnHistory/index.uvue#L166-L176)
-- [aiRecommendLoading.uvue:69-84](file://src/pages/aiRecommendLoading/index.uvue#L69-L84)
+- [aiRecommendLoading.uvue:69-84](file://src/pages/aiRecommendLoading/index.uvue#L69-84)
 
 ## 故障排除指南
 - 未授权（401）
@@ -773,6 +795,7 @@ HTTP --> CONFIG : "使用"
   - **参数类型错误**：注意 shop_id 在不同接口间的类型差异（string vs number）
   - **历史记录获取失败**：检查 openid 参数是否正确传递，确认用户已登录
   - **多成功码格式兼容性问题**：现在支持 code 0 和 200 两种成功码格式，如果遇到兼容性问题，检查后端API版本
+  - **下载信用额度不足**：downloadAiTryOnResult返回4001时，需要拉起充值流程
 - **支付功能异常**：
   - **余额查询失败**：检查网络连接和用户登录状态
   - **创建订单失败**：检查shopId和credits参数是否正确
@@ -780,6 +803,7 @@ HTTP --> CONFIG : "使用"
   - **轮询超时**：检查网络状态，确认支付状态接口正常
   - **到账确认失败**：检查微信支付异步回调是否正常
   - **兑换码无效**：检查兑换码格式（12位）和有效性
+  - **次数池混淆**：确认feature参数正确指定（tryon/recommend/download）
 - **AI智能推荐功能异常**：
   - **照片上传失败**：检查文件大小限制（10MB），确认网络连接正常
   - **分析轮询失败**：检查网络状态，连续3次失败后显示失败界面
@@ -804,11 +828,11 @@ HTTP --> CONFIG : "使用"
 ## 结论
 API 接口封装层以清晰的分层设计实现了业务接口的统一管理，结合认证与 HTTP 层的自动化处理，显著降低了页面开发复杂度。通过规范化的数据模型、参数与返回值约定以及错误处理策略，开发者可以更专注于业务逻辑实现。
 
-**本次更新重点关注了上传功能的增强和支付功能的完整集成。新增的buildUploadHeader函数提供了集中化的上传请求头构建能力，配合完善的上传队列管理机制，大幅提升了上传功能的稳定性和用户体验。同时，完整的支付功能模块为AI试衣服务提供了商业化支持，包括信用额度查询、微信支付集成、订单状态轮询等核心功能。**
+**本次更新重点关注了下载信用额度扣除功能和支付功能的完整集成。新增的downloadAiTryOnResult接口实现了AI试衣结果保存到相册前的信用额度扣费机制，配合完善的4001错误码处理，为用户提供了流畅的付费体验。同时，完整的支付功能模块包括getCreditBalance、createCreditRecharge、getCreditRechargeStatus等接口，为AI试衣服务提供了商业化的信用额度管理能力。**
 
-**特别重要的是，所有AI相关接口现在都支持多种成功码格式（code 0 和 200），这大大提高了与不同API实现的兼容性，改善了任务检索的可靠性并减少了认证相关错误。tryonDisabled字段的增强支持使得系统能够更好地控制试衣功能的可用性，提升了整体的稳定性和用户体验。**
+**特别重要的是，所有AI相关接口现在都支持多种成功码格式（code 0 和 200），这大大提高了与不同API实现的兼容性，改善了任务检索的可靠性并减少了认证相关错误。新增的getShops接口为页面提供了更好的店铺信息兜底能力，而enhanced的错误处理机制确保了系统的稳定性和用户体验。**
 
-建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，上传功能增强和支付功能的成功实施为其他需要文件上传和商业化的功能扩展奠定了坚实的技术基础。
+建议在后续迭代中持续完善错误码与日志上报，进一步提升可观测性与可维护性。同时，下载信用额度扣除功能和支付功能的成功实施为其他需要商业化支持的功能扩展奠定了坚实的技术基础。
 
 ## 附录
 
@@ -827,6 +851,7 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
 - 店铺与页面配置
   - 首页并行加载 getShops 与轮播图，提升首屏体验
   - getPageConfig 用于中台页展示
+  - **新增**：getShops接口可作为页面参数的兜底，自动获取首个启用店铺
 - **上传功能增强**
   - **集中化头部构建**：使用buildUploadHeader函数统一处理上传请求头
   - **上传队列管理**：利用flushPendingUploads和rejectAllPendingUploads管理上传请求生命周期
@@ -837,17 +862,19 @@ API 接口封装层以清晰的分层设计实现了业务接口的统一管理�
   - **照片上传**：使用 uploadPhoto 上传用户照片，严格控制文件大小
   - **任务提交**：使用 submitAiTryOn 创建AI试衣任务，检查必填参数
   - **结果查询**：使用 getAiTryOnResult 轮询查询任务状态，设置60秒超时
+  - **下载扣费**：使用 downloadAiTryOnResult 进行保存前的信用额度扣费，处理4001错误码
   - **历史记录**：使用 getAiTasks 获取历史记录，deleteAiTask 删除记录
   - **参数类型注意事项**：注意不同接口间 shop_id 参数类型的差异（string vs number）
   - **多成功码格式支持**：现在支持 code 0 和 200 两种成功码格式，提高了兼容性
 - **支付功能**
-  - **余额查询**：使用 getCreditBalance 查询用户信用额度和价格信息
+  - **余额查询**：使用 getCreditBalance 查询用户信用额度和价格信息，支持feature参数区分次数池
   - **创建订单**：使用 createCreditRecharge 创建充值订单，准备微信支付参数
   - **支付流程**：调用 uni.requestPayment 拉起微信支付，处理成功和失败回调
   - **状态轮询**：使用 getCreditRechargeStatus 轮询支付状态，直到paid = true
   - **兑换码**：使用 redeemCreditCode 进行兑换码兑换，立即增加次数
   - **错误处理**：区分用户取消支付、网络错误、支付失败等不同情况
   - **用户体验**：支付过程中显示适当的加载提示和反馈信息
+  - **次数池管理**：通过feature参数实现试衣、推荐、下载三个独立次数池的管理
 - **AI智能推荐功能**
   - **照片上传**：使用 uploadPhoto 上传用户照片，准备进行分析
   - **智能分析**：使用 getAiRecommend 获取AI分析结果和个性化推荐

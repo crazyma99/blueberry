@@ -1,0 +1,49 @@
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #160f04;
+  border-top: 1rpx solid #000;
+  z-index: 999;
+}
+
+.tabbar-inner {
+  display: flex;
+  flex-direction: row;
+  height: 116rpx;
+}
+
+.tabbar-item {
+  flex: 1;
+  height: 116rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabbar-item--active {
+  background: linear-gradient(180deg, rgba(241, 205, 145, 0.1) 0%, rgba(241, 205, 145, 0) 100%);
+}
+
+.tabbar-icon {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.tabbar-text {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  font-family: 'HarmonyOS-Sans-SC';
+  color: #f1cd91;
+}
+
+/* 底部安全区占位 */
+.tabbar::after {
+  content: '';
+  display: block;
+  height: constant(safe-area-inset-bottom);
+  height: env(safe-area-inset-bottom);
+}

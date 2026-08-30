@@ -1,5 +1,6 @@
 <template>
 	<view class="page">
+		<CustomNavBar :title="navTitle" />
 
 		<!-- 加载态 -->
 		<view v-if="status === 'processing'" class="center-content">
@@ -71,6 +72,8 @@ export default {
 	data() {
 		return {
 			taskId: '',
+			// 自定义导航栏标题：生成完成后由“正在生成”切换为“AI试衣结果”
+			navTitle: '正在生成',
 			status: 'processing' as string,  // 'pending' | 'processing' | 'completed' | 'failed'
 			resultImageUrl: '',
 			failCount: 0,
@@ -156,8 +159,8 @@ export default {
 						this.imageLoaded = false
 						this.resultImageUrl = res.data.result_image_url || ''
 						this.status = 'completed'
-						// 更新导航栏标题
-						uni.setNavigationBarTitle({ title: 'AI试衣结果' })
+						// 更新导航栏标题（自定义导航栏）
+						this.navTitle = 'AI试衣结果'
 					} else if (taskStatus === 'failed') {
 						this.stopPolling()
 						this.status = 'failed'
@@ -452,7 +455,7 @@ export default {
 
 <style>
 .page {
-	background: #000;
+	background: #160F04;
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -609,7 +612,7 @@ export default {
 }
 .back-btn-text {
 	font-size: 28rpx;
-	color: rgba(255, 255, 255, 0.5);
+	color: rgba(241, 205, 145, 0.9);
 }
 
 /* 底部 */
@@ -623,7 +626,8 @@ export default {
 }
 .bottomdesc {
 	margin: 32rpx auto;
-	font-size: 20rpx;
-	color: rgba(255, 255, 255, 0.5);
+	font-size: 18rpx;
+	color: rgba(241, 205, 145, 0.5);
+	font-weight: 400;
 }
 </style>
