@@ -301,8 +301,8 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	/* 内层必须不透明：半透明会透出外层边框渐变。已把原 rgba(241,205,145,0.12)→transparent 合成到黑底 */
-	background: linear-gradient(91.72deg, #1D1911 0%, #000000 100%);
+	/* 内层填充 = 半透明金渐变 + 页面底色 #160F04 合成（实色底层挡住外层 1rpx 描边透出） */
+	background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), #160F04;
 	border-radius: 31rpx;
 	padding: 0 20rpx;
 	height: 64rpx;
@@ -314,7 +314,7 @@ export default {
 .search-input-nav {
 	flex: 1;
 	font-size: 26rpx;
-	color: #fff;
+	color: #F1CD91;
 	margin-left: 12rpx;
 }
 
@@ -411,7 +411,7 @@ export default {
 }
 .load-more-text {
 	font-size: 24rpx;
-	color: rgba(255, 255, 255, 0.4);
+	color: rgba(241, 205, 145, 0.4);
 }
 
 /* Copyright */

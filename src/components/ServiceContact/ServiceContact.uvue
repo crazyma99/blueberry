@@ -13,14 +13,14 @@
 		<view class="divideTit">
       <image src="/static/left-divider.png" class="divider" mode="aspectFill"/>
       <view class="demoPhotoTit">
-        <view>服务保障</view>
+        <view class="font-noto-serif">服务保障</view>
         <image src="/static/service-icon.png" class="icon" mode="aspectFill"/>
       </view>
       <image src="/static/right-divider.png" class="divider" mode="aspectFill"/>
     </view>
     <view class="service-contain">
       <image src="/static/service-flower.png" class="flower" mode="aspectFill"/>
-      <view class="tit">蓝梅，让世界看见东方美</view>
+      <view class="tit font-noto-serif">蓝梅，让世界看见东方美</view>
       <view class="main-wrap">
         <view class="main">
           <view v-for="(item, index) in list" :key="index" class="item">
@@ -40,13 +40,13 @@
     <view class="divideTit">
       <image src="/static/left-divider.png" class="divider" mode="aspectFill"/>
       <view class="demoPhotoTit">
-        <view>联系我们</view>
+        <view class="font-noto-serif">联系我们</view>
         <image src="/static/contact-icon.png" class="icon" mode="aspectFill"/>
       </view>
       <image src="/static/right-divider.png" class="divider" mode="aspectFill"/>
     </view>
     <view class="service-contain">
-      <view class="tit">长按下面二维码添加客服</view>
+      <view class="tit font-noto-serif">长按下面二维码添加客服</view>
       <view class="contact-main">
         <image src="/static/contact-bg.png" class="contact-bg" mode="aspectFill"/>
         <image
@@ -56,7 +56,7 @@
           show-menu-by-longpress="{{true}}"
         ></image>
         <view class="label">联系电话</view>
-        <view class="val">18068842642（微信同号）</view>
+        <view class="val">18068842642</view>
         <view class="label">商务合作</view>
         <view class="val">13269920775</view>
       </view>

@@ -52,7 +52,7 @@
 							<image :src="item.coverImageUrl" class="photo" mode="aspectFill" />
 							<view class="mask" @click="gotoDetail(item)">
 								<view class="desc">
-									<view class="photoName">{{ item.title }}</view>
+									<view class="photoName font-noto-serif">{{ item.title }}</view>
 									<view class="desc-row">
 										<view class="collect">
 											<image
@@ -87,12 +87,12 @@
 				<view class="ai-recommend-banner" @click="goToAiRecommend">
 					<image class="ai-recommend-bg" src="/static/ai-recom-banner.png" mode="aspectFill"></image>
 					<view class="ai-recommend-content">
-						<text class="ai-recommend-title">AI智能推荐·拍照选服饰</text>
+						<text class="ai-recommend-title font-noto-serif">AI智能推荐·拍照选服饰</text>
 						<text class="ai-recommend-subtitle">上传照片，AI为您推荐最合适的服饰风格</text>
 					</view>
 				</view>
 				<view class="cat-title-row">
-					<text class="cat-title">套系与子系分类</text>
+					<text class="cat-title font-noto-serif">套系与子系分类</text>
 					<view class="cat-title-deco-wrap">
 						<image class="cat-title-deco" src="/static/category-title-line.png" mode="heightFix"></image>
 					</view>
@@ -104,7 +104,7 @@
 						:class="selectedTab.parentIndex === idx ? 'tab-wrap choosed-wrap' : 'tab-wrap'"
 						@click="changeTab(idx, 'parent')"
 					>
-						<view :class="selectedTab.parentIndex === idx ? 'tab choosed' : 'tab'">{{item.parentName}}</view>
+						<view :class="selectedTab.parentIndex === idx ? 'tab choosed font-noto-serif' : 'tab font-noto-serif'">{{item.parentName}}</view>
 					</view>
 				</view>
 				<view class="tabcontainer">
@@ -114,7 +114,7 @@
 						:class="selectedTab.childIndex === idx ? 'tab-wrap choosed-wrap' : 'tab-wrap'"
 						@click="changeTab(idx, 'child')"
 					>
-						<view :class="selectedTab.childIndex === idx ? 'tab choosed' : 'tab'">{{item.name}}</view>
+						<view :class="selectedTab.childIndex === idx ? 'tab choosed font-noto-serif' : 'tab font-noto-serif'">{{item.name}}</view>
 					</view>
 				</view>
 				<view class="photolistContainer">
@@ -127,7 +127,7 @@
 							<image :src="item?.coverImageUrl" class="photo" mode="aspectFill" />
 							<view class="mask" @click="gotoDetail(item)">
 								<view class="desc">
-									<view class="photoName">{{ item?.title }}</view>
+									<view class="photoName font-noto-serif">{{ item?.title }}</view>
 									<view class="desc-row">
 										<view class="collect">
 											<image
@@ -821,7 +821,9 @@
 		height: 48rpx;
 		padding: 10rpx;
 	}
-	/* 渐变边框（微信小程序不支持 border-image-source，改用外层渐变容器 + 内层内容容器模拟） */
+	/* 渐变描边：外层 1rpx 渐变圆环 + 内层填充。
+	   内层填充 = 半透明金渐变 + 页面底色 #160F04 合成（下层实色挡住描边透出），
+	   视觉效果等同于半透明渐变直接叠在页面上，边缘过渡自然 */
 	.search-bar-wrap {
 		width: 65%;
 		margin-left: 20rpx;
@@ -833,9 +835,8 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		/* 内层必须不透明：半透明会透出外层边框渐变，导致整块渐变。已把原 rgba(241,205,145,0.12)→transparent 合成到黑底 */
-		background: linear-gradient(91.72deg, #1D1911 0%, #000000 100%);
 		border-radius: 31rpx;
+		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), #160F04;
 		padding: 0 20rpx;
 		height: 64rpx;
 	}
@@ -846,7 +847,7 @@
 	.search-input-nav {
 		flex: 1;
 		font-size: 26rpx;
-		color: #fff;
+		color: #F1CD91;
 		margin-left: 12rpx;
 	}
 	/* 搜索结果 */
@@ -875,7 +876,7 @@
 	}
 	.load-more-text {
 		font-size: 24rpx;
-		color: rgba(255, 255, 255, 0.4);
+		color: rgba(241, 205, 145, 0.4);
 	}
 	/* 分类标题 */
 	.cat-title-row {
@@ -909,7 +910,8 @@
 		align-items: center;
 		padding: 0 24rpx;
 	}
-	/* 胶囊渐变边框：外层 tab-wrap 渐变 + 内层 tab 内容；选中态两层同色实金 */
+	/* 胶囊标签：外层 tab-wrap 为 1rpx 渐变描边圆环；内层 tab 填充 =
+	   半透明金渐变 + 页面底色 #160F04 合成（实色底层挡住描边透出）；选中态两层实金 */
 	.tab-wrap{
 		margin-right: 16rpx;
 		margin-bottom: 16rpx;
@@ -922,14 +924,15 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 0 32rpx;
+		/* 最小宽度 140rpx，左右 padding 24rpx，宽度由内容撑开 */
+		min-width: 140rpx;
+		padding: 0 24rpx;
 		height: 54rpx;
 		font-size: 24rpx;
 		color: #F1CD91;
 		font-weight: 700;
 		border-radius: 63rpx;
-		/* 内层必须不透明：半透明会透出外层边框渐变，导致整块渐变 */
-		background: linear-gradient(99.85deg, #1D1911 0%, #000000 100%);
+		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), #160F04;
 	}
 	.choosed-wrap{
 		background: #F1CD91;

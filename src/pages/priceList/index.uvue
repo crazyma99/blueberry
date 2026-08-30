@@ -1,5 +1,6 @@
 <template>
 	<view class="page">
+		<CustomNavBar :title="navTitle" />
 		<!-- 骨架屏 -->
 		<view v-if="loading" class="sk-container">
 			<view class="sk-banner sk-animate"></view>
@@ -31,6 +32,8 @@
 			return {
 				id: '',
 				loading: true,
+				// 自定义导航栏标题（onLoad 中按店铺名动态设置）
+				navTitle: '',
 				// 轮播图图片列表
 				banners: [],
 				priceImage: ''
@@ -41,7 +44,7 @@
 			const priceImage = this.decodeRouteValue(query.priceImage ?? '')
 			const shopName = this.decodeRouteValue(query.shopName ?? '')
 			this.id = id
-			uni.setNavigationBarTitle({ title: shopName ? `${shopName}价目表` : '蓝梅价目表' })
+			this.navTitle = shopName ? `${shopName}价目表` : '蓝梅价目表'
 			this.getBanner(id)
 			this.priceImage = priceImage || this.getFallbackPriceImage(id)
 		},

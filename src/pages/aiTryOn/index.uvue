@@ -1,5 +1,6 @@
 <template>
 	<view class="page">
+		<CustomNavBar title="AI试衣" />
 		<!-- 提示文案 -->
 		<view class="tip-bar">
 			<text class="tip-text">左右横向滑动支持切换模板</text>
@@ -888,19 +889,19 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
-	background: linear-gradient(109deg, #f2949f 12%, #d7a3bf 31%, #a0a6ec 51%, #9daeea 71%, #7bace3 91%);
+	background: #F1CD91;
 }
 .generate-btn-disabled {
 	opacity: 0.4;
 }
 .generate-btn-text {
 	font-size: 32rpx;
-	color: #fff;
+	color: rgba(22, 15, 4, 1);
 	font-weight: 500;
 }
 .generate-btn-ai {
 	font-size: 32rpx;
-	color: #fff;
+	color: rgba(22, 15, 4, 1);
 	font-weight: 700;
 }
 

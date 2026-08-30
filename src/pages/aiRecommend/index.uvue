@@ -1,5 +1,6 @@
 <template>
 	<view class="page">
+		<CustomNavBar title="AI智能推荐" />
 		<!-- 描述文案 -->
 		<view class="desc-bar">
 			<text class="desc-text">上传照片，AI为您推荐最合适的服饰风格</text>
@@ -519,7 +520,7 @@ export default {
 }
 .desc-text {
 	font-size: 28rpx;
-	color: rgba(255, 255, 255, 0.7);
+	color: rgba(241, 205, 145, 0.7);
 	text-align: center;
 }
 
@@ -554,7 +555,7 @@ export default {
 }
 .upload-hint {
 	font-size: 26rpx;
-	color: rgba(255, 255, 255, 0.4);
+	color: rgba(241, 205, 145, 0.4);
 }
 .upload-preview {
 	width: 100%;
@@ -588,14 +589,14 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
-	background: linear-gradient(109deg, #f2949f 12%, #d7a3bf 31%, #a0a6ec 51%, #9daeea 71%, #7bace3 91%);
+	background: rgba(241, 205, 145, 1);
 }
 .action-btn-disabled {
 	opacity: 0.4;
 }
 .action-btn-text {
 	font-size: 32rpx;
-	color: #fff;
+	color: rgba(22, 15, 4, 1);
 	font-weight: 500;
 }
 .action-btn-price {

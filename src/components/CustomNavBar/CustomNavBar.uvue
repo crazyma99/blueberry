@@ -1,0 +1,93 @@
+<!--
+  CustomNavBar — 全局自定义顶部导航栏
+
+  背景：微信小程序原生导航栏 navigationBarTextStyle 只支持 black/white，
+  无法实现 #F1CD91 金色标题与返回按钮，因此所有页面改用 navigationStyle: custom
+  并在页面顶部放置本组件。
+
+  使用：<CustomNavBar title="页面标题" />
+  - title 传空字符串则只显示返回按钮（如 webview 页）
+  - 页面栈深度 > 1 时自动显示返回按钮，tab 首页自动隐藏
+-->
+<template>
+	<view class="custom-navbar">
+		<view :style="{ height: statusBarHeight + 'px' }"></view>
+		<view class="custom-navbar-content">
+			<view v-if="showBack" class="custom-navbar-back" @click="goBack">
+				<image class="custom-navbar-back-icon" src="/static/back-arrow.svg" mode="aspectFit"></image>
+			</view>
+			<text class="custom-navbar-title">{{ title }}</text>
+		</view>
+	</view>
+	<!-- 占位：撑开被 fixed 导航栏遮住的高度 -->
+	<view :style="{ height: (statusBarHeight + 44) + 'px' }"></view>
+</template>
+
+<script lang="uts">
+export default {
+	name: 'CustomNavBar',
+	props: {
+		title: {
+			type: String,
+			default: ''
+		}
+	},
+	data() {
+		return {
+			statusBarHeight: 20,
+			showBack: false
+		}
+	},
+	created() {
+		const systemInfo = uni.getSystemInfoSync()
+		this.statusBarHeight = systemInfo.statusBarHeight != null ? systemInfo.statusBarHeight : 20
+		this.showBack = getCurrentPages().length > 1
+	},
+	methods: {
+		goBack() {
+			uni.navigateBack()
+		}
+	}
+}
+</script>
+
+<style>
+.custom-navbar {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	background: #160F04;
+	z-index: 998;
+}
+.custom-navbar-content {
+	position: relative;
+	height: 44px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+.custom-navbar-back {
+	width: 44px;
+	height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.custom-navbar-back-icon {
+	width: 24px;
+	height: 24px;
+}
+.custom-navbar-title {
+	position: absolute;
+	left: 88px;
+	right: 88px;
+	text-align: center;
+	font-size: 17px;
+	font-weight: 500;
+	color: #F1CD91;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+</style>

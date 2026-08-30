@@ -1,5 +1,6 @@
 <template>
 	<view class="page">
+		<CustomNavBar title="AI推荐结果" />
 		<!-- AI 分析结果卡片 -->
 		<view class="analysis-card" v-if="analysis">
 			<text class="card-title">AI 分析结果</text>

@@ -1,5 +1,7 @@
 <template>
 	<view class="container">
+		<!-- 自定义导航栏（全局 navigationStyle: custom，标题/返回键 #F1CD91） -->
+		<CustomNavBar title="蓝梅旗袍·汉服·民..." />
 		<!-- 骨架屏 -->
 		<view v-if="loading" class="sk-container">
 			<view class="sk-banner sk-animate" style="height: 794rpx;"></view>
@@ -19,7 +21,7 @@
 					<image class="hero-image" :src="item.imageUrl" mode="aspectFill" @load="onHeroImageLoad"></image>
 				</swiper-item>
 			</swiper>
-			
+
 			<!-- 客片欣赏：shop-container.png 以 border-image 点九图方式作背景，高度由内容撑开 -->
 			<view class="shop-section">
 				<view class="shop-content">
@@ -30,7 +32,7 @@
 						<view class="shop-inner-line"></view>
 						<view class="shop-header">
 							<view class="shop-title-wrap">
-								<text class="shop-title">客片欣赏</text>
+								<text class="shop-title font-noto-serif">客片欣赏</text>
 								<text class="shop-subtitle">COLLECTION</text>
 							</view>
 						</view>
@@ -44,7 +46,7 @@
 								<image class="photo-card-img" :src="shop.homeImage" mode="aspectFill"></image>
 								<view class="photo-card-mask"></view>
 								<view class="photo-card-info">
-									<text class="photo-card-name">{{ shop.displayName }}</text>
+									<text class="photo-card-name font-noto-serif">{{ shop.displayName }}</text>
 									<text class="photo-card-sub">{{ shop.displayNameEn }}</text>
 								</view>
 							</view>
@@ -115,6 +117,9 @@
 				<view class="login-cancel" @click="skipProfile">跳过</view>
 			</view>
 		</view>
+
+		<!-- 自定义底部 tabbar 占位（116rpx + 安全区） -->
+		<view class="tabbar-safe-spacer"></view>
 	</view>
 </template>
 
@@ -125,6 +130,7 @@
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import { submitUserProfile } from '../../utils/profileSubmit.uts'
 	import { setBrandId } from '../../utils/brand.uts'
+	import { syncTabBarSelected } from '../../utils/tabbar.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -177,6 +183,8 @@
 			}
 		},
 		onShow() {
+			// 同步自定义底部 tabbar 选中态（本页下标 0）
+			syncTabBarSelected(0)
 			// 监听 401 登录过期事件，自动拉起登录弹窗
 			uni.$off('login-required')
 			uni.$on('login-required', () => {
@@ -438,6 +446,7 @@
 		font-size: 14rpx;
 		color: rgba(241, 205, 145, 0.7);
 		font-weight: 400;
+    letter-spacing: 4rpx;
 	}
 	.shop-container{
 		position: relative;
@@ -452,7 +461,7 @@
 		position: absolute;
 		top: 0;
 		left: 0rpx;
-		right: 1rpx;
+		right: 5rpx;
 		bottom: 0rpx;
 		border-left: 2rpx solid rgba(255, 255, 219, 0.3);
 		border-right: 2rpx solid rgba(255, 255, 219, 0.3);

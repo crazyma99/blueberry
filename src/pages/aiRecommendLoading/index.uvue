@@ -1,5 +1,6 @@
 <template>
 	<view class="page">
+		<CustomNavBar title="AI分析中" />
 		<!-- 加载态 -->
 		<view class="center-content">
 			<view class="loading-wrapper">

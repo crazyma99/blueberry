@@ -1,5 +1,6 @@
 <template>
 	<view class="container">
+		<CustomNavBar title="蓝梅旗袍·汉服·民..." />
 		<!-- 骨架屏 -->
 		<view v-if="loading" class="sk-container">
 			<view class="sk-title sk-animate" style="margin-top: 40rpx;"></view>
@@ -12,17 +13,20 @@
 
 		<view v-else>
 			<view class="divideTit">PRICE LIST</view>
-			<view class="demoPhotoTit">价目表</view>
+			<view class="demoPhotoTit font-noto-serif">价目表</view>
 			<PhotoGrid :shop-list="shopList" @shop-click="onShopClick" @demo-click="onDemoClick" />
 			<!-- 服务保障 + 联系我们（已抽为 ServiceContact 组件，样式随组件迁移） -->
 			<ServiceContact />
 			<view class="beian"><AppFooter /></view>
 		</view>
+		<!-- 自定义底部 tabbar 占位（116rpx + 安全区） -->
+		<view class="tabbar-safe-spacer"></view>
 	</view>
 </template>
 
 <script>
 	import { getShops } from '../../utils/api.uts'
+	import { syncTabBarSelected } from '../../utils/tabbar.uts'
 	export default {
 		data() {
 			return {
@@ -41,6 +45,10 @@
 			} finally {
 				this.loading = false
 			}
+		},
+		onShow() {
+			// 同步自定义底部 tabbar 选中态（本页下标 1）
+			syncTabBarSelected(1)
 		},
 		methods: {
 			onShopClick(shop) {
@@ -67,12 +75,12 @@
 	.divideTit {
 		text-align: center;
 		font-size: 20rpx;
-		color: rgba(255, 255, 255, 0.3);
+		color: rgba(241, 205, 145, 0.3);
 	}
 	.demoPhotoTit{
 		margin-top: 16rpx;
 		font-size: 36rpx;
-		color: rgba(255, 255, 255, 0.9);
+		color: #F1CD91;
 		text-align: center;
 	}
 	/* demoPhotoContaner / demoPhoto / shopCard / shopName 等样式已收敛至 PhotoGrid 组件 */

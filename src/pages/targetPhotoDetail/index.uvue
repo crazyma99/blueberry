@@ -6,7 +6,7 @@
 			<view class="nav-content">
 				<view class="nav-center">
 					<view class="title-group">
-						<view class="cn">客片欣赏</view>
+						<view class="cn font-noto-serif">客片欣赏</view>
 						<view class="en">DETAILS</view>
 					</view>
 					<image src="/static/category-title-line.png" class="line" mode="aspectFill"/>
@@ -33,7 +33,7 @@
 		<view v-else class="main-content">
 			<view class="title">
 				<view class="title-first">
-					<view class="text">{{ detail?.title }}</view>
+					<view class="text font-noto-serif">{{ detail?.title }}</view>
 					<image src="/static/cloud.png" class="cloud" mode="aspectFill"/>
 				</view>
 				<view class="info-row">

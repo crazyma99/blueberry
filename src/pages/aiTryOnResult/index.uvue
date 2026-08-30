@@ -1,5 +1,6 @@
 <template>
 	<view class="page">
+		<CustomNavBar :title="navTitle" />
 
 		<!-- 加载态 -->
 		<view v-if="status === 'processing'" class="center-content">
@@ -71,6 +72,8 @@ export default {
 	data() {
 		return {
 			taskId: '',
+			// 自定义导航栏标题：生成完成后由“正在生成”切换为“AI试衣结果”
+			navTitle: '正在生成',
 			status: 'processing' as string,  // 'pending' | 'processing' | 'completed' | 'failed'
 			resultImageUrl: '',
 			failCount: 0,
@@ -156,8 +159,8 @@ export default {
 						this.imageLoaded = false
 						this.resultImageUrl = res.data.result_image_url || ''
 						this.status = 'completed'
-						// 更新导航栏标题
-						uni.setNavigationBarTitle({ title: 'AI试衣结果' })
+						// 更新导航栏标题（自定义导航栏）
+						this.navTitle = 'AI试衣结果'
 					} else if (taskStatus === 'failed') {
 						this.stopPolling()
 						this.status = 'failed'
