@@ -53,9 +53,6 @@
           circular
           :interval="5000"
           :duration="500"
-          indicator-dots
-          indicator-color="rgba(255, 255, 255, 0.35)"
-          indicator-active-color="#fff"
         >
           <swiper-item v-for="(banner, index) in banners" :key="index">
             <image

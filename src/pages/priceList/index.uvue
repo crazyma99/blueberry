@@ -11,8 +11,7 @@
 		<view v-else>
 			<!-- 顶部轮播图 -->
 			<view v-if="banners.length">
-				<swiper class="banner" autoplay circular :interval="3000" :duration="500" indicator-dots
-					indicator-color="rgba(255, 255, 255, 0.35)" indicator-active-color="#fff">
+				<swiper class="banner" autoplay circular :interval="3000" :duration="500">
 					<swiper-item v-for="(item, idx) in banners" :key="idx">
 						<image class="banner-image" :src="item.imageUrl" mode="aspectFill"></image>
 					</swiper-item>

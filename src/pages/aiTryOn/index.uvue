@@ -10,9 +10,6 @@
 		<view class="swiper-wrap">
 			<swiper
 				class="template-swiper"
-				:indicator-dots="true"
-				indicator-color="rgba(255,255,255,0.3)"
-				indicator-active-color="#fff"
 				:circular="true"
 				:current="currentTemplateIndex"
 				@change="onSwiperChange"
