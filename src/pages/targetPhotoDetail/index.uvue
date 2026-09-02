@@ -66,27 +66,26 @@
 					:key="index"
 				></image>
 			</view>
+			<!-- AI试衣按钮：文档流布局，图片下方 60rpx，距页脚 44rpx，水平居中 -->
+			<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-btn">
+				<image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill"/>
+				<view class="btn" @click="goToAiTryOn">
+					<view>生成</view>
+					<image src="/static/aitry-text.png" class="text" mode="aspectFill"/>
+					<view>效果</view>
+				</view>
+				<image src="/static/btn-right-icon.png" class="btn-icon" mode="aspectFill"/>
+			</view>
 			<view class="page-footer">
 				<view class="divide"></view>
 				<view class="bottomdesc"><AppFooter /></view>
 			</view>
 		</view>
 
-		<!-- AI试衣悬浮按钮 -->
-		<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-float-btn">
-			<image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill"/>
-			<view class="btn" @click="goToAiTryOn">
-				<view>生成</view>
-				<image src="/static/aitry-text.png" class="text" mode="aspectFill"/>
-				<view>效果</view>
-			</view>
-			<image src="/static/btn-right-icon.png" class="btn-icon" mode="aspectFill"/>
-		</view>
-
 		<!-- 登录弹窗 -->
 		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
 			<view class="login-popup login-auth-popup" @click.stop>
-				<view class="login-popup-title">微信授权登陆</view>
+				<view class="login-popup-title">手机号快捷登陆</view>
 				<view class="login-agreement-row">
 					<view
 						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
@@ -516,6 +515,7 @@
 	color: rgba(241, 205, 145, 0.7);
 	display: flex;
 	flex-direction: row;
+  line-height: 38rpx;
 }
 .icon{
 	width: 38rpx;
@@ -531,6 +531,7 @@
 	color: rgba(241, 205, 145, 0.7);
 	display: flex;
 	flex-direction: row;
+  line-height: 38rpx;
 }
 .collect {
 	display: flex;
@@ -565,16 +566,13 @@
 	color: rgba(241, 205, 145, 0.5);
 	font-weight: 400;
 }
-/* AI试衣悬浮按钮 */
-.ai-tryon-float-btn {
-	position: fixed;
-	bottom: 200rpx;
-	left: 50%;
-	transform: translateX(-50%);
+/* AI试衣按钮（文档流：图片下方 60rpx，距页脚 44rpx，水平居中） */
+.ai-tryon-btn {
+	margin: 60rpx 0 44rpx;
+	align-self: center;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	z-index: 999;
 	.btn-icon{
 		width: 104rpx;
 		height: 86rpx;

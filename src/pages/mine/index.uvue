@@ -71,9 +71,9 @@
     </view>
 
     <!-- 登录弹窗 -->
-    <view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
+    <view v-if="showLoginPopup" class="login-overlay login-overlay-above-tab" @click="closeLoginPopup">
       <view class="login-popup login-auth-popup" @click.stop>
-        <view class="login-popup-title">微信授权登陆</view>
+        <view class="login-popup-title">手机号快捷登陆</view>
         <view class="login-agreement-row">
           <view
             :class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
@@ -99,7 +99,7 @@
     </view>
 
     <!-- 头像昵称授权弹窗 -->
-    <view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
+    <view v-if="showProfilePopup" class="login-overlay login-overlay-above-tab" @click="skipProfile">
       <view class="login-popup" @click.stop>
         <view class="login-popup-title">完善个人资料</view>
         <view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
@@ -169,7 +169,9 @@ export default {
       // 头像昵称授权弹窗
       showProfilePopup: false,
       profileAvatarUrl: '',
-      profileNickname: ''
+      profileNickname: '',
+      // profile 弹窗是否由登录流程拉起（仅登录流程关闭弹窗时才弹"登录成功"toast）
+      profileFromLogin: false
     }
   },
 
@@ -368,6 +370,7 @@ export default {
         } else {
           // 缺头像或昵称 → 弹出授权弹窗补齐
           console.log('[login] step4 before openProfilePopup')
+          this.profileFromLogin = true
           this.openProfilePopup()
         }
       } catch (err) {
@@ -464,7 +467,12 @@ export default {
       this.profileAvatarUrl = ''
       this.profileNickname = ''
       this.updateLoginState()
-      uni.showToast({ title: '登录成功', icon: 'success' })
+      // 只有登录流程拉起的弹窗关闭时才提示登录成功；
+      // 已登录态点头像修改资料后关闭（跳过/点蒙层）不提示
+      if (this.profileFromLogin) {
+        uni.showToast({ title: '登录成功', icon: 'success' })
+      }
+      this.profileFromLogin = false
     },
 
     // 判断是否为外部链接

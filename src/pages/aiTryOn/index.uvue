@@ -118,7 +118,7 @@
 		<!-- 登录弹窗 -->
 		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
 			<view class="login-popup login-auth-popup" @click.stop>
-				<view class="login-popup-title">微信授权登陆</view>
+				<view class="login-popup-title">手机号快捷登陆</view>
 				<view class="login-agreement-row">
 					<view
 						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
