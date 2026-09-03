@@ -21,8 +21,8 @@
 		<!-- 底部占位 -->
 		<view class="bottom-spacer"></view>
 
-		<!-- 底部固定按钮 -->
-		<view class="fixed-bottom">
+		<!-- 底部固定按钮（组件化 BottomActionBar：按钮组 slot + 内置版权 footer） -->
+		<BottomActionBar>
 			<!-- 付费模式且无剩余次数：价格按钮，点击引导充值，到账后自动继续分析 -->
 			<view v-if="isPaidMode && creditBalance <= 0" class="action-btn-wrap">
 				<view
@@ -47,10 +47,7 @@
 					<text class="action-btn-badge-text">限时免费 {{ creditBalance }} 次</text>
 				</view>
 			</view>
-			<view class="footer-copyright">
-				<AppFooter />
-			</view>
-		</view>
+		</BottomActionBar>
 
 		<!-- 登录弹窗 -->
 		<view v-if="showLoginPopup" class="login-overlay" hover-class="press-dim"
@@ -112,7 +109,6 @@
 </template>
 
 <script lang="uts">
-import AppFooter from '../../components/AppFooter/AppFooter.uvue'
 import { uploadPhoto, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
 import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
@@ -126,7 +122,6 @@ import {
 } from '../../utils/legal.uts'
 
 export default {
-	components: { AppFooter },
 	data() {
 		return {
 			shopId: '',
@@ -576,20 +571,6 @@ export default {
 	height: 260rpx;
 }
 
-/* 底部固定 */
-.fixed-bottom {
-	position: fixed;
-	left: 0;
-	bottom: 0;
-	width: 100%;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	padding: 24rpx var(--spacing-lg);
-	padding-bottom: 40rpx;
-	background-color: var(--color-bg);
-}
-
 /* 分析按钮 — 与AI试衣生成按钮一致的渐变背景 */
 .action-btn {
 	width: 100%;
@@ -636,11 +617,4 @@ export default {
 	color: #fff;
 }
 
-/* Copyright */
-.footer-copyright {
-	margin-top: var(--spacing-sm);
-	font-size: var(--font-size-caption-md);
-	color: var(--color-primary-50);
-	font-weight: 400;
-}
 </style>
