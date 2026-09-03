@@ -19,6 +19,8 @@
         <list-item>
           <!-- 用户卡片 -->
           <view class="user-card" hover-class="press-dim" @click="handleUserClick">
+            <!-- 卡片右侧金色光斑（视觉换新：材质感） -->
+            <view class="user-card-glow"></view>
             <!-- 头像容器：始终展示 .avatar 灰色色值 DOM；image 仅在有可用头像 url 时渲染 -->
             <!-- 加载失败时 image 透明，仍露出 .avatar 灰色背景，避免任何兜底图 -->
             <view class="avatar">
@@ -30,7 +32,7 @@
               ></image>
             </view>
             <view class="user-info">
-              <view class="nickname font-harmony">
+              <view class="nickname font-noto-serif">
                 {{ displayNickname }}
               </view>
               <view class="user-sub font-harmony">
@@ -526,9 +528,9 @@ export default {
   top: 0;
   left: 0;
   right: 0;
-  height: 520rpx;
+  height: 640rpx;
   pointer-events: none;
-  background: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(241, 205, 145, 0.16), rgba(241, 205, 145, 0.05) 45%, rgba(22, 15, 4, 0) 75%);
+  background: radial-gradient(ellipse 92% 62% at 50% 0%, rgba(241, 205, 145, 0.2), rgba(241, 205, 145, 0.06) 46%, rgba(22, 15, 4, 0) 78%);
 }
 
 .content {
@@ -544,16 +546,30 @@ export default {
 
 /* 用户卡片（列表行样式，与功能菜单统一） */
 .user-card {
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: center;
-  min-height: 140rpx;
+  min-height: 150rpx;
   margin: var(--spacing-lg) var(--spacing-lg) 0;
   padding: 0 var(--spacing-md);
-  background: linear-gradient(135deg, rgba(241, 205, 145, 0.16), rgba(241, 205, 145, 0.05) 60%, rgba(241, 205, 145, 0.02));
+  background: linear-gradient(135deg, rgba(241, 205, 145, 0.18), rgba(241, 205, 145, 0.06) 55%, rgba(241, 205, 145, 0.02));
   border-radius: var(--radius-md);
-  border: 2rpx solid rgba(241, 205, 145, 0.28);
+  border: 2rpx solid rgba(241, 205, 145, 0.3);
+  overflow: hidden;
   transition: opacity 0.15s ease-out;
+}
+
+/* 用户卡片右侧金色光斑 */
+.user-card-glow {
+  position: absolute;
+  right: -60rpx;
+  top: -40rpx;
+  width: 260rpx;
+  height: 260rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(241, 205, 145, 0.18), rgba(241, 205, 145, 0) 70%);
+  pointer-events: none;
 }
 
 .avatar {
@@ -577,9 +593,10 @@ export default {
 }
 
 .nickname {
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: 36rpx;
+  font-weight: 700;
   color: var(--color-primary);
+  letter-spacing: 2rpx;
 }
 
 .user-sub {
