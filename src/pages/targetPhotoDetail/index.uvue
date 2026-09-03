@@ -603,8 +603,7 @@
 		color: var(--color-bg);
 		display: flex;
 		flex-direction: row;
-		align-items: center;
-		font-size: var(--font-size-body-lg);
+		font-size: 32rpx;
 		font-weight: 500;
 		gap: 12rpx;
 		background: var(--color-primary);
