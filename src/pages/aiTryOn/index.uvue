@@ -870,7 +870,7 @@ export default {
 	height: 260rpx;
 }
 
-/* 底部固定 */
+/* 底部固定（复用相册详情页 ai-tryon-bar 样式：渐变遮罩 + 64/24 节奏 + 安全区） */
 .fixed-bottom {
 	position: fixed;
 	left: 0;
@@ -879,9 +879,10 @@ export default {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding: 24rpx 40rpx;
-	padding-bottom: 40rpx;
-	background-color: var(--color-bg);
+	padding: 64rpx 0 24rpx 0;
+	padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+	background: linear-gradient(to top, var(--color-bg) 59.6%, rgba(22, 15, 4, 0));
+	z-index: 100;
 }
 
 /* 生成按钮 */
