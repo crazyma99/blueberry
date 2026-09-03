@@ -470,8 +470,9 @@
 	width: 300rpx;
 	height: 18rpx;
 }
-/* 版权 footer：并入底部固定栏（ai-tryon-bar）内 */
+/* 版权 footer：并入底部固定栏（ai-tryon-bar）内，撑满父容器 */
 .page-footer {
+	width: 100%;
 	margin-top: 8rpx;
 }
 .title{
@@ -566,7 +567,7 @@
 	background: rgba(255, 255, 255, 0.15);
 }
 .bottomdesc{
-	margin: var(--spacing-lg) auto;
+	margin: var(--spacing-md) auto;
 	font-size: var(--font-size-caption-md);
 	color: var(--color-primary-50);
 	font-weight: 400;
