@@ -131,7 +131,9 @@
     flex-direction: column;
     align-items: center;
     margin-bottom: 32rpx;
-    padding: 0;
+    padding: 0 20rpx;
+    width: 180rpx;
+    box-sizing: border-box;
     line-height: normal;
   }
   .avatar-btn::after {
