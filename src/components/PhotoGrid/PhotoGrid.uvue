@@ -107,12 +107,12 @@ export default {
 		justify-content: center;
 		font-size: var(--font-size-slogan);
 		color: var(--color-primary);
-		font-weight: 600;
+		font-weight: 400;
 		background: linear-gradient(0deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3));
 		.enName {
 			margin-top: 4rpx;
 			font-size: 16rpx;
-			font-weight: 300;
+			font-weight: 400;
       color: var(--color-primary-70);
       letter-spacing: 2rpx;
 		}

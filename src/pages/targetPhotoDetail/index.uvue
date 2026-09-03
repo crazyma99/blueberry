@@ -432,7 +432,7 @@
 }
 .cn{
 	font-size: var(--font-size-display);
-	font-weight: 700;
+	font-weight: 400;
 	color: var(--color-primary);
 }
 .en{
@@ -455,7 +455,7 @@
 	align-items: center;
 	.text{
 		font-size: var(--font-size-display-xl);
-		font-weight: 700;
+		font-weight: 400;
 		background: linear-gradient(180deg, var(--color-primary) 20%, var(--color-primary-deep) 79.81%);
 		/* 文字渐变：背景裁剪到文字区域 + 文字透明，露出渐变 */
 		-webkit-background-clip: text;

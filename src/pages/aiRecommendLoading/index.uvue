@@ -295,7 +295,7 @@ export default {
 .retry-btn-text {
 	font-size: 32rpx;
 	color: #000;
-	font-weight: 500;
+	font-weight: 400;
 }
 .back-btn-wrapper {
 	padding: 24rpx 80rpx;

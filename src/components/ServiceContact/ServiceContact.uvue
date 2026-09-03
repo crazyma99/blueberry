@@ -140,7 +140,7 @@ import { getPageConfig } from '../../utils/api.uts'
       display: flex;
       flex-direction: column;
       font-size: var(--font-size-display);
-      font-weight: 700;
+      font-weight: 400;
       color: var(--color-primary);
       .icon{
         width: 143rpx;
@@ -166,7 +166,7 @@ import { getPageConfig } from '../../utils/api.uts'
     .tit{
       margin-bottom: 40rpx;
       text-align: center;
-      font-weight: 700;
+      font-weight: 400;
       font-size: var(--font-size-slogan);
       color: var(--color-primary);
     }
@@ -198,7 +198,7 @@ import { getPageConfig } from '../../utils/api.uts'
           align-items: center;
           color: var(--color-primary);
           font-size: var(--font-size-body-xs);
-          font-weight: 700;
+          font-weight: 400;
           .li{
             width: 44rpx;
             height: 42rpx;
@@ -252,7 +252,7 @@ import { getPageConfig } from '../../utils/api.uts'
       }
       .val{
         font-size: var(--font-size-slogan);
-        font-weight: 700;
+        font-weight: 400;
         margin-bottom: var(--spacing-sm);
       }
     }

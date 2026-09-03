@@ -871,7 +871,7 @@
 	}
 	.cat-title {
 		font-size: var(--font-size-display);
-		font-weight: 700;
+		font-weight: 400;
 		color: var(--color-primary);
 		letter-spacing: 2rpx;
 		flex-shrink: 0;
@@ -914,7 +914,7 @@
 		height: 54rpx;
 		font-size: var(--font-size-body);
 		color: var(--color-primary);
-		font-weight: 700;
+		font-weight: 400;
 		border-radius: var(--radius-avatar);
 		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), var(--color-bg);
 	}
@@ -974,7 +974,7 @@
 	}
 	.photoName{
 		font-size: var(--font-size-body-lg);
-		font-weight: 700;
+		font-weight: 400;
 		color: var(--color-primary);
 	}
 	.collect{
@@ -1037,14 +1037,14 @@
 	}
 	.ai-recommend-title {
 		font-size: var(--font-size-display);
-		font-weight: 700;
+		font-weight: 400;
 		color: #FFF3C6;
 		letter-spacing: 4rpx;
 	}
 	.ai-recommend-subtitle {
 		margin-top: 16rpx;
 		font-size: var(--font-size-body-sm);
-		font-weight: 500;
+		font-weight: 400;
 		color: #FFF3C6;
 		letter-spacing: 1rpx;
 	}

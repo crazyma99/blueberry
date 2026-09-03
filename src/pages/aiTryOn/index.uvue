@@ -848,12 +848,12 @@ export default {
 .generate-btn-text {
 	font-size: 32rpx;
 	color: var(--color-bg);
-	font-weight: 500;
+	font-weight: 400;
 }
 .generate-btn-ai {
 	font-size: 32rpx;
 	color: var(--color-bg);
-	font-weight: 700;
+	font-weight: 400;
 }
 .generate-btn-ai-img {
 	width: 118rpx;

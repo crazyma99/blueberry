@@ -61,6 +61,6 @@
   }
   .app-segment-text.is-active {
     color: var(--color-bg);
-    font-weight: 700;
+    font-weight: 400;
   }
 </style>

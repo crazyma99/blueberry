@@ -91,7 +91,7 @@ export default {
 	right: 88px;
 	text-align: center;
 	font-size: 17px;
-	font-weight: 700;
+	font-weight: 400;
 	color: var(--color-primary);
 	font-family: 'NotoSerifSC-Bold', serif;
 	letter-spacing: 1px;

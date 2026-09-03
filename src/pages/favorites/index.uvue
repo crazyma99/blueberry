@@ -388,7 +388,7 @@ export default {
 }
 .photoName {
 	font-size: var(--font-size-body-plus);
-	font-weight: 500;
+	font-weight: 400;
 	color: var(--color-primary);
 }
 .collect {

@@ -567,7 +567,7 @@ export default {
 .save-btn-text {
 	font-size: var(--font-size-body-plus);
 	color: #fff;
-	font-weight: 500;
+	font-weight: 400;
 }
 .save-btn-wrap {
 	position: relative;
@@ -590,7 +590,7 @@ export default {
 .save-btn-price {
 	font-size: var(--font-size-body-plus);
 	color: #F3D9AC;
-	font-weight: 600;
+	font-weight: 400;
 }
 
 /* 失败态 */
@@ -614,7 +614,7 @@ export default {
 .retry-btn-text {
 	font-size: 32rpx;
 	color: #000;
-	font-weight: 500;
+	font-weight: 400;
 }
 .back-btn-wrapper {
 	padding: 24rpx 80rpx;

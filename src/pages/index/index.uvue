@@ -435,7 +435,7 @@
 	}
 	.shop-title{
 		font-size: var(--font-size-display);
-		font-weight: 700;
+		font-weight: 400;
 		color: var(--color-primary);
 	}
 	.shop-subtitle{
@@ -511,7 +511,7 @@
 	}
 	.photo-card-name{
 		font-size: var(--font-size-body-lg);
-		font-weight: 700;
+		font-weight: 400;
 		color: var(--color-primary);
 	}
 	.photo-card-sub{

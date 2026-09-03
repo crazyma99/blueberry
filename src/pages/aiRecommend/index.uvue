@@ -553,12 +553,12 @@ export default {
 .action-btn-text {
 	font-size: 32rpx;
 	color: var(--color-bg);
-	font-weight: 500;
+	font-weight: 400;
 }
 .action-btn-price {
 	font-size: 32rpx;
 	color: var(--color-bg);
-	font-weight: 700;
+	font-weight: 400;
 }
 
 /* 分析按钮容器（预留 padding-top 承载角标，避免角标负偏移被裁剪） */

@@ -149,7 +149,7 @@ export default {
 .card-title {
 	font-size: 32rpx;
 	color: #fff;
-	font-weight: 600;
+	font-weight: 400;
 	margin-bottom: 24rpx;
 }
 .analysis-grid {
@@ -192,7 +192,7 @@ export default {
 .section-title {
 	font-size: 32rpx;
 	color: #fff;
-	font-weight: 600;
+	font-weight: 400;
 	margin-bottom: 24rpx;
 }
 .rec-card {
@@ -209,7 +209,7 @@ export default {
 .rank-text {
 	font-size: var(--font-size-body);
 	color: rgba(255, 255, 255, 0.8);
-	font-weight: 600;
+	font-weight: 400;
 }
 .rec-preview {
 	width: 280rpx;
@@ -240,12 +240,12 @@ export default {
 .rec-name {
 	font-size: 30rpx;
 	color: #fff;
-	font-weight: 500;
+	font-weight: 400;
 }
 .rec-score {
 	font-size: var(--font-size-body-lg);
 	color: #f3d9ac;
-	font-weight: 600;
+	font-weight: 400;
 }
 .rec-reason {
 	font-size: var(--font-size-body);

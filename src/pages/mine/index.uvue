@@ -600,7 +600,7 @@ export default {
 
 .nickname {
   font-size: 36rpx;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--color-primary);
   letter-spacing: 2rpx;
 }
@@ -634,7 +634,7 @@ export default {
   flex: 1;
   font-size: var(--font-size-body-plus);
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: 1rpx;
 }
 
@@ -688,7 +688,7 @@ export default {
   background: rgba(255, 255, 255, 0.08);
   color: #ff6b6b;
   font-size: var(--font-size-body-plus);
-  font-weight: 500;
+  font-weight: 400;
   border: 2rpx solid rgba(255, 107, 107, 0.45);
   transition: opacity 0.15s ease-out;
 }
