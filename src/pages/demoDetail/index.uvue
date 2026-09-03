@@ -952,7 +952,7 @@
 	.photoItem-wrap{
 		width: calc((100% - 16rpx) / 2);
 		padding: 1rpx;
-		border-radius: 14rpx;
+		border-radius: var(--radius-card);
 		background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
 	}
 	.photoItem{
@@ -1033,7 +1033,7 @@
 		position: relative;
 		margin: 36rpx 20rpx 40rpx;
 		height: 178rpx;
-		border-radius: 24rpx;
+		border-radius: var(--radius-container);
 		overflow: hidden;
 	}
 	.ai-recommend-bg {

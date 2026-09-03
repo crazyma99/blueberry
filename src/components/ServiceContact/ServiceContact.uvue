@@ -153,7 +153,7 @@ import { getPageConfig } from '../../utils/api.uts'
     margin: 40rpx 20rpx;
     padding: 40rpx 20rpx 20rpx;
     border: 2rpx solid var(--color-border-soft);
-    border-radius: 24rpx;
+    border-radius: var(--radius-container);
     position: relative;
     .flower {
       position: absolute;
@@ -177,7 +177,7 @@ import { getPageConfig } from '../../utils/api.uts'
       background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
     }
     .main {
-      border-radius: 14rpx;
+      border-radius: var(--radius-card);
       /* 内层必须不透明：半透明会透出外层边框渐变。已把原 var(--color-primary-06)→transparent 合成到 var(--color-bg) 底 */
       background: linear-gradient(138.87deg, #231A0C 0%, var(--color-bg) 100%);
       padding: 20rpx;
@@ -225,7 +225,7 @@ import { getPageConfig } from '../../utils/api.uts'
       }
     }
     .contact-main {
-      border-radius: 14rpx;
+      border-radius: var(--radius-card);
       display: flex;
       flex-direction: column;
       align-items: center;

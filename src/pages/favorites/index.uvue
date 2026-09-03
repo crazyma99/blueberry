@@ -351,7 +351,7 @@ export default {
 	width: 362rpx;
 	margin: 0 8rpx 8rpx 0;
 	padding: 1rpx;
-	border-radius: 14rpx;
+	border-radius: var(--radius-card);
 	/* 外层渐变：只露出 1rpx 边框线（与客片列表页一致） */
 	background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, var(--color-primary-20) 62.4%, var(--color-primary-70) 100%);
 }
