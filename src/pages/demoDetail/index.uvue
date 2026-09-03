@@ -805,13 +805,13 @@
 		height: 48rpx;
 		padding: var(--spacing-xs);
 	}
-	/* 渐变描边：外层 1rpx 渐变圆环 + 内层填充。
-	   内层填充 = 半透明金渐变 + 页面底色 var(--color-bg) 合成（下层实色挡住描边透出），
-	   视觉效果等同于半透明渐变直接叠在页面上，边缘过渡自然 */
+	/* 纯色描边搜索框：外层 1rpx 描边圆环 + 内层填充。
+	   内层填充 = 半透明金渐变 + 页面底色 var(--color-bg) 合成（下层实色挡住描边透出） */
 	.search-bar-wrap {
 		width: 65%;
 		margin-left: var(--spacing-sm);
-		/* 纯色描边（标准 border，去 padding hack） */
+		box-sizing: border-box;
+		/* 纯色描边（标准 border） */
 		border: 1rpx solid var(--color-primary-30);
 		border-radius: var(--radius-lg);
 	}
@@ -819,7 +819,8 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		border-radius: var(--radius-lg);
+		/* 内圈圆角 = 外圈 32rpx − 1rpx 描边，圆角处贴合 */
+		border-radius: 31rpx;
 		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), var(--color-bg);
 		padding: 0 var(--spacing-sm);
 		height: 64rpx;
@@ -894,12 +895,12 @@
 		align-items: center;
 		padding: 0 24rpx;
 	}
-	/* 胶囊标签：外层 tab-wrap 为 1rpx 渐变描边圆环；内层 tab 填充 =
-	   半透明金渐变 + 页面底色 var(--color-bg) 合成（实色底层挡住描边透出）；选中态两层实金 */
+	/* 胶囊标签：外层 tab-wrap 纯色描边圆环；内层 tab 填充 =
+	   半透明金渐变 + 页面底色 var(--color-bg) 合成；选中态两层实金 */
 	.tab-wrap{
 		margin-right: 16rpx;
 		margin-bottom: 16rpx;
-		/* 纯色描边（标准 border，去 padding hack） */
+		/* 纯色描边（标准 border） */
 		border: 1rpx solid var(--color-primary-30);
 		border-radius: var(--radius-avatar);
 		flex-shrink: 0;
@@ -915,7 +916,8 @@
 		font-size: var(--font-size-body);
 		color: var(--color-primary);
 		font-weight: 400;
-		border-radius: var(--radius-avatar);
+		/* 内圈圆角 = 外圈 64rpx − 1rpx 描边，圆角处贴合 */
+		border-radius: 63rpx;
 		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), var(--color-bg);
 	}
 	.choosed-wrap{
@@ -935,6 +937,8 @@
 	/* 客片纯色描边（标准 border） */
 	.photoItem-wrap{
 		width: calc((100% - 16rpx) / 2);
+		/* border-box：避免 content-box 下 1rpx border 使每行实际占宽多出 4rpx 导致第二列溢出换行 */
+		box-sizing: border-box;
 		border: 1rpx solid var(--color-primary-30);
 		border-radius: var(--radius-card);
 	}
@@ -942,7 +946,8 @@
 		width: 100%;
 		height: 460rpx;
 		position: relative;
-		border-radius: var(--radius-card);
+		/* 内圈圆角 = 外圈 var(--radius-card) 14rpx − 1rpx 描边，两段圆弧同心，边框四角才贴合图片 */
+		border-radius: 13rpx;
 		overflow: hidden;
 	}
 	.photo{

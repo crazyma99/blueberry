@@ -3,10 +3,13 @@
 
   设计目标：
   - 收敛首页/价目表页底部的重复区块（服务保障列表 / 联系我们二维码与电话）。
-  - 二维码 src、联系电话（及可选的商务合作电话）由 profile 注入脚本
-    （scripts/lib/apply-profile.mjs 的 updateContactPage）一处替换，组件内不得含硬编码品牌信息。
-  - 注入合同：保持 <image class="code"> 与 <view class="label">联系电话</view>
-    + <view class="val">…</view> 的结构不变，脚本正则依赖此合同。
+  - 二维码 src、联系电话、商务合作电话等文案的兜底默认值由 profile 注入脚本
+    （scripts/lib/apply-profile.mjs 的 updateContactPage）按 data() 字段名一处替换，
+    组件内不得含硬编码品牌信息。
+  - 注入合同：保持 data() 中 qrSrc / phone / coopPhone 的
+    `字段名: '...' as string` 写法不变，脚本正则依赖此合同。
+  - 运行时优先使用 /api/page-config 下发的配置（service_guarantee / contact_info），
+    接口失败或未配置时回退到注入后的兜底默认值。
 -->
 <template>
 	<view>
@@ -86,6 +89,7 @@ import { getPageConfig } from '../../utils/api.uts'
         // 服务保障标语：优先 OPS 页面配置（service_guarantee 的 config.slogan），失败时用默认值兜底。
         slogan: '蓝梅，让世界看见东方美' as string,
         // 联系我们：优先 OPS 页面配置（contact_info 的 config JSON），失败时用默认值兜底。
+        // 兜底默认值同时是 profile 注入点（scripts/lib/apply-profile.mjs 按字段名替换），勿改字段名。
         qrSrc: 'https://www.lanmei66.cloud/admin/admin20250928234704_495_147.png' as string,
         phone: '18068842642' as string,
         coopPhone: '13269920775' as string,

@@ -66,10 +66,6 @@ function utsString(value) {
   return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
 }
 
-function xmlAttr(value) {
-  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-}
-
 function updatePackageJson() {
   replaceText('package.json', [
     [/("name"\s*:\s*)"[^"]*"/, `$1"${env.PACKAGE_NAME}"`]
@@ -135,8 +131,9 @@ function updatePagesJson() {
 }
 
 function updateConfig() {
+  // config.uts 支持 VITE_API_BASE 本地联调覆盖；这里只替换兜底默认域名
   replaceText('src/utils/config.uts', [
-    [/const baseURL = '[^']*'/, `const baseURL = ${utsString(env.API_BASE_URL)}`]
+    [/(\? envBase : )'[^']*'/, `$1${utsString(env.API_BASE_URL)}`]
   ])
 }
 
@@ -156,18 +153,19 @@ function updateLegal() {
 }
 
 function updateContactPage(relativePath) {
-  // 注入合同（ServiceContact 组件结构，勿改）：
-  //   <image class="code" ...> 二维码 src
-  //   <view class="label">联系电话</view> + <view class="val">...</view>
-  //   <view class="label">商务合作</view> + <view class="val">...</view>（可选 CONTACT_COOP_TEXT）
+  // 注入合同（ServiceContact 组件 data() 兜底默认值，勿改字段名与 `字段: '...' as string` 写法）：
+  //   qrSrc: '...'      客服二维码
+  //   phone: '...'      联系电话
+  //   coopPhone: '...'  商务合作电话（可选 CONTACT_COOP_TEXT，非空才替换）
+  // 运行时 /api/page-config 下发的 contact_info 配置会覆盖这些兜底默认值。
   const coopText = env.CONTACT_COOP_TEXT || ''
   replaceText(relativePath, [
-    [/(<image\s+class="code"[\s\S]*?\bsrc=)"[^"]*"/, `$1"${xmlAttr(env.CONTACT_QR_SRC)}"`],
-    [/(<view class="label">联系电话<\/view>\s*\n\s*<view class="val">)[^<]*(<\/view>)/, `$1${env.CONTACT_PHONE_TEXT}$2`]
+    [/qrSrc: '[^']*'/, `qrSrc: ${utsString(env.CONTACT_QR_SRC)}`],
+    [/phone: '[^']*'/, `phone: ${utsString(env.CONTACT_PHONE_TEXT)}`]
   ])
   if (coopText !== '') {
     replaceText(relativePath, [
-      [/(<view class="label">商务合作<\/view>\s*\n\s*<view class="val">)[^<]*(<\/view>)/, `$1${coopText}$2`]
+      [/coopPhone: '[^']*'/, `coopPhone: ${utsString(coopText)}`]
     ])
   }
 }
