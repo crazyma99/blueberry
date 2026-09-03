@@ -296,10 +296,9 @@ export default {
 .search-bar-wrap {
 	width: 65%;
 	margin-left: 12rpx;
-	padding: 1rpx;
+	/* 纯色描边（标准 border，去 padding hack） */
+	border: 1rpx solid var(--color-primary-30);
 	border-radius: var(--radius-lg);
-	/* 外层渐变：只露出 1rpx 边框线 */
-	background: linear-gradient(268.28deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, var(--color-primary-20) 62.4%, var(--color-primary-70) 100%);
 }
 .search-bar-nav {
 	display: flex;
