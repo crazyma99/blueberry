@@ -323,7 +323,7 @@ export default {
 }
 
 .content {
-	padding: 0 8rpx var(--spacing-lg);
+	padding: 0 0 var(--spacing-lg);
 }
 
 /* 空状态 */
@@ -346,10 +346,12 @@ export default {
 
 /* 客片卡片（与客片列表页保持一致）*/
 .photolistContainer {
-	margin: 16rpx 0;
+	/* 与相册 list 页一致：左右 24rpx 内边距 + 16rpx 卡片间距 */
+	padding: 8rpx 24rpx 0;
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
+	gap: 16rpx;
 }
 .photoItem-wrap {
 	width: calc((100% - 16rpx) / 2);
