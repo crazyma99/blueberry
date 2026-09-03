@@ -81,8 +81,8 @@
 		<!-- 底部占位（给固定按钮腾出空间） -->
 		<view class="bottom-spacer"></view>
 
-		<!-- 底部固定生成按钮（容器样式统一为 ai-tryon-bar） -->
-		<view class="ai-tryon-bar">
+		<!-- 底部固定生成按钮（组件化 BottomActionBar：按钮组 slot + 内置版权 footer） -->
+		<BottomActionBar>
 			<!-- 付费模式且无限免次数：原按钮样式 + 价格文案，点击引导充值/兑换 -->
 			<view v-if="isPaidMode && creditBalance <= 0" class="gen-btn-wrap">
 				<image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"/>
@@ -116,10 +116,7 @@
 					<text class="gen-btn-badge-text">限时免费 {{ creditBalance }} 次</text>
 				</view>
 			</view>
-			<view class="footer-copyright">
-				<AppFooter />
-			</view>
-		</view>
+		</BottomActionBar>
 
 		<!-- 登录弹窗 -->
 		<view v-if="showLoginPopup" class="login-overlay" hover-class="press-dim"
@@ -883,21 +880,6 @@ export default {
 	height: 260rpx;
 }
 
-/* 底部固定栏（与相册详情页 ai-tryon-bar 完全一致） */
-.ai-tryon-bar {
-	position: fixed;
-	left: 0;
-	bottom: 0;
-	width: 100%;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	padding: 64rpx 0 24rpx 0;
-	padding-bottom: 12rpx;
-	background: linear-gradient(to top, var(--color-bg) 59.6%, rgba(22, 15, 4, 0));
-	z-index: 100;
-}
-
 /* 生成按钮 */
 .generate-btn {
 	height: 88rpx;
@@ -958,14 +940,4 @@ export default {
 	color: #fff;
 }
 
-/* Copyright（复用相册详情页 footer 规格：撑满父容器 + 顶部 32rpx + 居中） */
-.footer-copyright {
-	width: 100%;
-	margin-top: 32rpx;
-	margin-bottom: var(--spacing-md);
-	font-size: var(--font-size-caption-md);
-	color: var(--color-primary-50);
-	font-weight: 400;
-	text-align: center;
-}
 </style>
