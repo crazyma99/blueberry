@@ -37,7 +37,7 @@
 				>
 					<image
 						:src="getCoverUrl(item)"
-						class="photo"
+						class="photo fade-in"
 						mode="aspectFill"
 					/>
 					<!-- 状态遮罩：生成中 -->

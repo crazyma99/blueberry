@@ -13,7 +13,7 @@
 			<view v-if="banners.length">
 				<swiper class="banner" autoplay circular :interval="3000" :duration="500">
 					<swiper-item v-for="(item, idx) in banners" :key="idx">
-						<image class="banner-image" :src="item.imageUrl" mode="aspectFill"></image>
+						<image class="banner-image fade-in" :src="item.imageUrl" mode="aspectFill"></image>
 					</swiper-item>
 				</swiper>
 			</view>

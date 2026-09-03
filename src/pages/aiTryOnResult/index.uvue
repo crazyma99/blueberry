@@ -15,7 +15,7 @@
 		<view v-if="status === 'completed'" class="result-content">
 			<view class="result-image-wrapper">
 				<image
-					class="result-image image-fade"
+					class="result-image image-fade fade-in"
 					:class="{ 'image-visible': imageLoaded }"
 					:src="resultImageUrl"
 					mode="widthFix"

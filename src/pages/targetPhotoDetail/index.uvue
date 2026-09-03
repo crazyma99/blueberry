@@ -61,7 +61,7 @@
 			<view class="photo-wrap">
 				<image
 					v-for="(item, index) in (detail?.images || [])"
-					class="photo"
+					class="photo fade-in"
 					:src="item.imageUrl"
 					mode="widthFix"
 					:key="index"

@@ -17,7 +17,7 @@
 			<!-- 顶部通栏轮播：无指示点；文案已烘焙进 banner 图，高度随首图宽高比自适应避免裁切 -->
 			<swiper class="hero" autoplay circular :interval="3000" :duration="500" :style="{ height: heroHeight }">
 				<swiper-item v-for="(item, idx) in banners" :key="idx">
-					<image class="hero-image" :src="item.imageUrl" mode="aspectFill" @load="onHeroImageLoad"></image>
+					<image class="hero-image fade-in" :src="item.imageUrl" mode="aspectFill" @load="onHeroImageLoad"></image>
 				</swiper-item>
 			</swiper>
 
@@ -43,7 +43,7 @@
 								hover-class="press-dim"
 								@click="onShopClick(shop)"
 							>
-								<image class="photo-card-img" :src="shop.homeImage" mode="aspectFill"></image>
+								<image class="photo-card-img fade-in" :src="shop.homeImage" mode="aspectFill"></image>
 								<view class="photo-card-mask"></view>
 								<view class="photo-card-info">
 									<text class="photo-card-name font-noto-serif">{{ shop.displayName }}</text>

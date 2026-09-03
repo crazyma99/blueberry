@@ -22,7 +22,7 @@
             <view class="avatar">
               <image
                 v-if="displayAvatar !== ''"
-                class="avatar-img"
+                class="avatar-img fade-in"
                 :src="displayAvatar"
                 mode="aspectFill"
               ></image>
@@ -63,7 +63,7 @@
             >
               <swiper-item v-for="(banner, index) in banners" :key="index">
                 <image
-                  class="banner-image"
+                  class="banner-image fade-in"
                   :src="banner.imageUrl"
                   mode="aspectFill"
                   @click="handleBannerClick(banner)"
@@ -131,7 +131,7 @@
           @chooseavatar="onChooseAvatar"
         >
           <image
-            class="profile-avatar-img"
+            class="profile-avatar-img fade-in"
             :src="profileAvatarUrl || defaultAvatar"
             mode="aspectFill"
           ></image>

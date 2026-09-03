@@ -15,7 +15,7 @@
 				@change="onSwiperChange"
 			>
 				<swiper-item v-for="(item, index) in templates" :key="index">
-					<image class="template-img" :src="item.imageUrl" mode="aspectFill"></image>
+					<image class="template-img fade-in" :src="item.imageUrl" mode="aspectFill"></image>
 				</swiper-item>
 			</swiper>
 		</view>
