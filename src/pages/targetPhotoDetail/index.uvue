@@ -436,7 +436,7 @@
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	padding: 0 16rpx;
+	padding: 0 18rpx;
 }
 .nav-center {
 	flex: 1;
@@ -470,7 +470,7 @@
 	margin-top: auto;
 }
 .title{
-	margin: 43rpx 32rpx 32rpx;
+	margin: 24rpx 18rpx 24rpx;
 }
 .title-first{
 	display: flex;
@@ -510,7 +510,7 @@
 	min-width: 0;
 }
 .price{
-	margin-top: 24rpx;
+	margin-top: 12rpx;
 	font-size: 26rpx;
 	color: rgba(241, 205, 145, 0.7);
 	display: flex;
@@ -526,7 +526,7 @@
 	color: rgba(241, 205, 145, 0.7);
 }
 .package{
-	margin-top: 24rpx;
+	margin-top: 12rpx;
 	font-size: 26rpx;
 	color: rgba(241, 205, 145, 0.7);
 	display: flex;

@@ -46,9 +46,6 @@
           @click="handleMenuClick(item)"
         >
           <view class="menu-row">
-            <view class="menu-icon">
-              <image class="menu-icon-img" :src="item.imageUrl" mode="aspectFill"></image>
-            </view>
             <view class="menu-title font-harmony">{{ item.title }}</view>
             <view class="menu-arrow">›</view>
           </view>
@@ -621,26 +618,8 @@ export default {
   border: 2rpx solid rgba(255, 255, 255, 0.1);
 }
 
-.menu-icon {
-  width: 76rpx;
-  height: 76rpx;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-}
-
-.menu-icon-img {
-  width: 44rpx;
-  height: 44rpx;
-}
-
 .menu-title {
   flex: 1;
-  margin-left: 24rpx;
   font-size: 28rpx;
   color: #fff;
   font-weight: 500;
