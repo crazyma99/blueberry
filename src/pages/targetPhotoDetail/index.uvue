@@ -617,7 +617,7 @@
 		font-size: 32rpx;
 		font-weight: 500;
 		gap: 12rpx;
-		background: var(--color-primary);
+		background: var(--gradient-btn-primary);
 		border: 1rpx solid var(--color-bg);
 		border-radius: var(--radius-full);
 		.text{
