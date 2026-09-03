@@ -596,7 +596,7 @@ export default {
 
 .user-sub {
   margin-top: 8rpx;
-  font-size: 22rpx;
+  font-size: var(--font-size-body-sm);
   color: rgba(241, 205, 145, 0.55);
 }
 

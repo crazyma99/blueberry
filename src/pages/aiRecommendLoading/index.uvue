@@ -267,7 +267,7 @@ export default {
 	line-height: 44rpx;
 }
 .elapsed-text {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: rgba(255, 255, 255, 0.4);
 	margin-top: 24rpx;
 }
@@ -314,7 +314,7 @@ export default {
 }
 .bottomdesc {
 	margin: 32rpx auto;
-	font-size: 18rpx;
+	font-size: var(--font-size-caption-md);
 	color: var(--color-primary-50);
 	font-weight: 400;
 }

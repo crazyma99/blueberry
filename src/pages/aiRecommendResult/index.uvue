@@ -161,7 +161,7 @@ export default {
 	margin-bottom: 20rpx;
 }
 .analysis-label {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: rgba(255, 255, 255, 0.4);
 	margin-bottom: 8rpx;
 }
@@ -176,7 +176,7 @@ export default {
 	flex-direction: row;
 }
 .keyword-tag {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: rgba(255, 255, 255, 0.8);
 	padding: 8rpx 24rpx;
 	border-radius: var(--radius-container);
@@ -207,7 +207,7 @@ export default {
 	gap: 16rpx;
 }
 .rank-text {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: rgba(255, 255, 255, 0.8);
 	font-weight: 600;
 }
@@ -222,7 +222,7 @@ export default {
 	background: rgba(255, 255, 255, 0.03);
 }
 .placeholder-text {
-	font-size: 22rpx;
+	font-size: var(--font-size-body-sm);
 	color: rgba(255, 255, 255, 0.3);
 }
 .rec-info {
@@ -243,12 +243,12 @@ export default {
 	font-weight: 500;
 }
 .rec-score {
-	font-size: 26rpx;
+	font-size: var(--font-size-body-lg);
 	color: #f3d9ac;
 	font-weight: 600;
 }
 .rec-reason {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: rgba(255, 255, 255, 0.5);
 	line-height: 36rpx;
 	margin-top: 8rpx;
@@ -261,11 +261,11 @@ export default {
 	margin-top: 12rpx;
 }
 .rec-gender-tag {
-	font-size: 22rpx;
+	font-size: var(--font-size-body-sm);
 	color: rgba(255, 200, 100, 0.7);
 }
 .rec-action {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: rgba(123, 172, 227, 0.9);
 }
 
@@ -283,7 +283,7 @@ export default {
 }
 .bottomdesc {
 	margin: 32rpx auto;
-	font-size: 18rpx;
+	font-size: var(--font-size-caption-md);
 	color: var(--color-primary-50);
 	font-weight: 400;
 }

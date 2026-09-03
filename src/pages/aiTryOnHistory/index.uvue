@@ -266,7 +266,7 @@ export default {
 	margin-bottom: 16rpx;
 }
 .empty-desc {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: rgba(255, 255, 255, 0.3);
 }
 
@@ -318,7 +318,7 @@ export default {
 	white-space: nowrap;
 }
 .time {
-	font-size: 22rpx;
+	font-size: var(--font-size-body-sm);
 	color: rgba(255, 255, 255, 0.6);
 	margin-left: 12rpx;
 }
@@ -353,7 +353,7 @@ export default {
 	border-color: rgba(221, 82, 77, 0.5);
 }
 .status-text {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: #fff;
 	font-weight: 500;
 }
@@ -374,7 +374,7 @@ export default {
 /* Copyright */
 .copyright {
 	margin: 32rpx auto;
-	font-size: 18rpx;
+	font-size: var(--font-size-caption-md);
 	color: var(--color-primary-50);
 	font-weight: 400;
 	text-align: center;

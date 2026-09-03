@@ -454,12 +454,12 @@
 		flex-direction: column;
 	}
 	.shop-title{
-		font-size: 38rpx;
+		font-size: var(--font-size-display);
 		font-weight: 700;
 		color: var(--color-primary);
 	}
 	.shop-subtitle{
-		font-size: 14rpx;
+		font-size: var(--font-size-caption);
 		color: var(--color-primary-70);
 		font-weight: 400;
     letter-spacing: 4rpx;
@@ -530,20 +530,20 @@
 		align-items: center;
 	}
 	.photo-card-name{
-		font-size: 26rpx;
+		font-size: var(--font-size-body-lg);
 		font-weight: 700;
 		color: var(--color-primary);
 	}
 	.photo-card-sub{
 		margin-top: 2rpx;
-		font-size: 14rpx;
+		font-size: var(--font-size-caption);
 		font-weight: 400;
 		color: var(--color-primary-70);
 	}
 	/* 店铺卡片网格样式见 .photo-grid / .photo-card（首页已不再使用 PhotoGrid 组件） */
 	.beian{
 		margin: 40rpx auto 32rpx;
-		font-size: 18rpx;
+		font-size: var(--font-size-caption-md);
 		color: var(--color-primary-50);
 		font-weight: 400;
 		text-align: center;

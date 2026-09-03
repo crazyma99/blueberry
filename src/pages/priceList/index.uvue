@@ -108,7 +108,7 @@
 }
 .bottomdesc{
 	margin: 32rpx auto;
-	font-size: 18rpx;
+	font-size: var(--font-size-caption-md);
 	color: var(--color-primary-50);
 	font-weight: 400;
 }

@@ -93,6 +93,16 @@ page {
 	/* 字体族（由 App onLaunch loadFontFace 全局加载） */
 	--font-display: 'NotoSerifSC-Bold', serif;
 	--font-body: 'HarmonyOS-Sans-SC', sans-serif;
+	/* 字号（design-token.md 字体阶梯） */
+	--font-size-display-xl: 46rpx;
+	--font-size-display: 38rpx;
+	--font-size-slogan: 34rpx;
+	--font-size-body-lg: 26rpx;
+	--font-size-body: 24rpx;
+	--font-size-body-sm: 22rpx;
+	--font-size-body-xs: 20rpx;
+	--font-size-caption-md: 18rpx;
+	--font-size-caption: 14rpx;
 }
 
 /* ========== 全局自定义字体（在 App onLaunch 中通过 uni.loadFontFace 全局加载） ========== */
@@ -264,7 +274,7 @@ page {
   margin-bottom: 16rpx;
 }
 .login-popup-desc {
-  font-size: 26rpx;
+  font-size: var(--font-size-body-lg);
   color: rgba(255, 255, 255, 0.5);
   margin-bottom: 56rpx;
 }
@@ -315,7 +325,7 @@ page {
 }
 .login-agreement-text {
   flex: 1;
-  font-size: 26rpx;
+  font-size: var(--font-size-body-lg);
   line-height: 42rpx;
   color: rgba(255, 255, 255, 0.28);
 }
@@ -363,7 +373,7 @@ page {
   border: none;
 }
 .login-cancel {
-  font-size: 26rpx;
+  font-size: var(--font-size-body-lg);
   color: rgba(255, 255, 255, 0.4);
   padding: 16rpx 32rpx;
 }
@@ -389,7 +399,7 @@ page {
 }
 .profile-avatar-tip {
   margin-top: 12rpx;
-  font-size: 22rpx;
+  font-size: var(--font-size-body-sm);
   color: rgba(255, 255, 255, 0.5);
 }
 .profile-nickname-row {

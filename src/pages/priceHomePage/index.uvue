@@ -79,7 +79,7 @@
 	/* 价目表标题「PRICE LIST / 价目表」仍在使用这两个类，勿删；服务保障/联系我们样式已随 ServiceContact 组件迁移 */
 	.divideTit {
 		text-align: center;
-		font-size: 20rpx;
+		font-size: var(--font-size-body-xs);
 		color: var(--color-primary-30);
 	}
 	.demoPhotoTit{
@@ -91,7 +91,7 @@
 	/* demoPhotoContaner / demoPhoto / shopCard / shopName 等样式已收敛至 PhotoGrid 组件 */
 	.beian{
 		margin: 40rpx auto 32rpx;
-		font-size: 18rpx;
+		font-size: var(--font-size-caption-md);
 		color: var(--color-primary-50);
 		font-weight: 400;
 		text-align: center;

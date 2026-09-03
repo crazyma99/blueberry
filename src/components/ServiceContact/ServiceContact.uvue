@@ -139,7 +139,7 @@ import { getPageConfig } from '../../utils/api.uts'
     .demoPhotoTit {
       display: flex;
       flex-direction: column;
-      font-size: 38rpx;
+      font-size: var(--font-size-display);
       font-weight: 700;
       color: var(--color-primary);
       .icon{
@@ -167,7 +167,7 @@ import { getPageConfig } from '../../utils/api.uts'
       margin-bottom: 40rpx;
       text-align: center;
       font-weight: 700;
-      font-size: 34rpx;
+      font-size: var(--font-size-slogan);
       color: var(--color-primary);
     }
     .main-wrap {
@@ -197,7 +197,7 @@ import { getPageConfig } from '../../utils/api.uts'
           flex-direction: column;
           align-items: center;
           color: var(--color-primary);
-          font-size: 20rpx;
+          font-size: var(--font-size-body-xs);
           font-weight: 700;
           .li{
             width: 44rpx;
@@ -213,7 +213,7 @@ import { getPageConfig } from '../../utils/api.uts'
         }
         .item-text{
           flex: 1;
-          font-size: 26rpx;
+          font-size: var(--font-size-body-lg);
           color: var(--color-primary);
         }
       }
@@ -246,12 +246,12 @@ import { getPageConfig } from '../../utils/api.uts'
         height: 248rpx;
       }
       .label{
-        font-size: 26rpx;
+        font-size: var(--font-size-body-lg);
         font-weight: 400;
         margin-bottom: 10rpx;
       }
       .val{
-        font-size: 34rpx;
+        font-size: var(--font-size-slogan);
         font-weight: 700;
         margin-bottom: 20rpx;
       }
