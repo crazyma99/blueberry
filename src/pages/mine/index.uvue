@@ -73,10 +73,9 @@
           </view>
         </list-item>
 
+        <!-- 退出登录占位（按钮已移入底部固定栏） -->
         <list-item v-if="isLoggedIn">
-          <view class="logout-section">
-            <button class="logout-button" @click.stop="confirmLogout">退出登录</button>
-          </view>
+          <view class="logout-spacer"></view>
         </list-item>
 
         <!-- 底部留白，保证最后一个 list-item 之后有呼吸空间 -->
@@ -151,6 +150,11 @@
 					@click="skipProfile">跳过</view>
       </view>
     </view>
+
+    <!-- 退出登录底部固定栏（secondary 款，上移避开 tabbar） -->
+    <BottomActionBarSecondary v-if="isLoggedIn" bottomOffset="calc(116rpx + env(safe-area-inset-bottom))">
+      <button class="logout-button" @click.stop="confirmLogout">退出登录</button>
+    </BottomActionBarSecondary>
 
     <!-- 自定义底部 tabbar 占位（116rpx + 安全区） -->
     <view class="tabbar-safe-spacer"></view>
@@ -671,12 +675,13 @@ export default {
   height: 100%;
 }
 
-.logout-section {
-  margin: 40rpx var(--spacing-lg) 0;
+.logout-spacer {
+  height: 200rpx;
 }
 
 .logout-button {
-  width: 100%;
+  width: calc(100% - 64rpx);
+  margin: 0 var(--spacing-lg);
   height: 88rpx;
   line-height: 88rpx;
   border-radius: var(--radius-container);

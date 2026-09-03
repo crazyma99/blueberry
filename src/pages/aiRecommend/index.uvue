@@ -600,7 +600,8 @@ export default {
 .action-btn-wrap {
 	position: relative;
 	width: 100%;
-	padding-top: var(--spacing-sm);
+	/* 左右边距：固定栏组件无横向 padding，此处补齐 */
+	padding: var(--spacing-sm) var(--spacing-lg) 0;
 }
 /* 限免角标（整体落在容器 padding 预留空间内，不用负偏移，避免被裁剪） */
 .action-btn-badge {
