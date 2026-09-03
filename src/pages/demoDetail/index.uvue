@@ -932,12 +932,11 @@
 		flex-wrap: wrap;
 		gap: 16rpx;
 	}
-	/* 客片渐变边框：外层 photoItem-wrap 渐变 + 内层 photoItem 图片 */
+	/* 客片纯色描边（标准 border） */
 	.photoItem-wrap{
 		width: calc((100% - 16rpx) / 2);
-		padding: 1rpx;
+		border: 1rpx solid var(--color-primary-30);
 		border-radius: var(--radius-card);
-		background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
 	}
 	.photoItem{
 		width: 100%;
