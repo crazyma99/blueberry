@@ -148,7 +148,7 @@
   }
   .avatar-badge {
     position: absolute;
-    right: -6rpx;
+    right: 24rpx;
     bottom: 30rpx;
     width: 36rpx;
     height: 36rpx;
