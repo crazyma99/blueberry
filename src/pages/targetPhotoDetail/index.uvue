@@ -66,7 +66,7 @@
 					:key="index"
 				></image>
 			</view>
-			<!-- AI试衣按钮：文档流布局，图片下方 60rpx，距页脚 44rpx，水平居中 -->
+			<!-- AI试衣按钮：底部固定悬浮（与 AI 试衣页 fixed-bottom 同模式，skyline 兼容） -->
 			<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-btn">
 				<image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill"/>
 				<view class="btn" @click="goToAiTryOn">
@@ -80,6 +80,8 @@
 				<view class="divide"></view>
 				<view class="bottomdesc"><AppFooter /></view>
 			</view>
+			<!-- 底部占位：避免固定按钮遮挡页脚 -->
+			<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-spacer"></view>
 		</view>
 
 		<!-- 登录弹窗 -->
@@ -566,17 +568,22 @@
 	color: var(--color-primary-50);
 	font-weight: 400;
 }
-/* AI试衣按钮：页面底部区块（对齐 Figma 2072:387 Footer Container，滚动到底部可见）
-   注：skyline 渲染器不支持 position: sticky，故用文档流底部 + 渐变遮罩实现 */
+/* AI试衣按钮：底部固定悬浮（fixed，skyline 兼容），样式对齐 Figma 2072:387 Footer Container
+   - 容器：items-end 底部对齐、水平居中、py24、自下而上渐变遮罩（底部 59.6% 实色）
+   - 按钮：金色药丸、深色描边、px40/py26、gap12 */
 .ai-tryon-btn {
+	position: fixed;
+	left: 0;
+	bottom: 0;
+	width: 100%;
 	display: flex;
 	flex-direction: row;
-	align-items: center;
+	align-items: flex-end;
 	justify-content: center;
-	/* 设计稿 Footer Container：自下而上渐变遮罩 */
 	padding: 24rpx 0;
-	margin: 60rpx 0 0;
+	padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
 	background: linear-gradient(to top, var(--color-bg) 59.6%, rgba(22, 15, 4, 0));
+	z-index: 100;
 	.btn-icon{
 		width: 104rpx;
 		height: 86rpx;
@@ -598,5 +605,10 @@
 			height: 34rpx;
 		}
 	}
+}
+
+/* 底部占位：防止固定按钮遮挡页脚内容（高度=按钮区+安全区余量） */
+.ai-tryon-spacer {
+	height: 220rpx;
 }
 </style>
