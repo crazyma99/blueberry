@@ -1,0 +1,28 @@
+// 触感反馈（haptic feedback）工具
+// 行业方案（Android Haptics UX / iOS 触感语义）：
+//   - 轻交互（按钮/TAB/选择）：瞬态轻振动（Light / Selection）
+//   - 重要操作成功/失败：medium / heavy（暂未使用）
+// 使用：import { hapticTap } from '@/utils/haptics.uts'，在点击处理开头调用。
+
+/**
+ * 轻触反馈（按钮、TAB、卡片等轻交互）
+ * 失败静默：不支持振动的环境不影响业务
+ */
+export function hapticTap(): void {
+  try {
+    uni.vibrateShort({ type: 'light' })
+  } catch (e) {
+    // 静默
+  }
+}
+
+/**
+ * 中等反馈（保存成功、确认等）
+ */
+export function hapticSuccess(): void {
+  try {
+    uni.vibrateShort({ type: 'medium' })
+  } catch (e) {
+    // 静默
+  }
+}

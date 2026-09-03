@@ -153,6 +153,7 @@
 <script lang="uts">
 import { isLoggedIn, getUserInfo, loginSuccess, logout, setUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { wxLogin, wxBindPhone, wxGetUserInfo, wxUpdateUserInfo, getPageConfig, rejectAllPendingUploads } from '../../utils/api.uts'
+import { hapticTap } from '../../utils/haptics.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
 import { rejectAllPending } from '../../utils/http.uts'
@@ -511,6 +512,8 @@ export default {
 
     // 处理金刚区点击
     handleMenuClick(item: any) {
+      // 触感反馈：菜单点击轻振动
+      hapticTap()
       if (item.linkUrl) {
         // 需要登录的页面，先判断登录态
         if (item.needLogin && !isLoggedIn()) {

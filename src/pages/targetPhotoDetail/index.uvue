@@ -140,6 +140,7 @@
 
 <script>
 	import { getalbumDetail, toggleLike, getLikeStatus, wxLogin, wxBindPhone, rejectAllPendingUploads } from '../../utils/api.uts'
+	import { hapticTap } from '../../utils/haptics.uts'
 	import { isLoggedIn, loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
@@ -403,6 +404,8 @@
 				return _formatCount(count)
 			},
 			goToAiTryOn() {
+				// 触感反馈：主操作按钮轻振动
+				hapticTap()
 				const albumId = this.albumId || ''
 				const style = encodeURIComponent(this.style || '')
 				uni.navigateTo({

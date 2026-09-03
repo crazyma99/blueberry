@@ -125,6 +125,7 @@
 
 <script>
 	import { getImage, getShops, wxLogin, wxBindPhone, wxUpdateUserInfo, rejectAllPendingUploads } from '../../utils/api.uts'
+	import { hapticTap } from '../../utils/haptics.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
 	import { loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
@@ -383,6 +384,8 @@
 				}
 			},
 			onShopClick(shop) {
+				// 触感反馈：客片卡片点击轻振动
+				hapticTap()
 				uni.navigateTo({
 					url: `/pages/demoDetail/index?from=banner&idx=${shop.id}`
 				})

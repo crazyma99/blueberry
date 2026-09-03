@@ -64,6 +64,12 @@ Component({
     },
     onTap(e) {
       const index = e.currentTarget.dataset.index;
+      // 触感反馈：tab 切换用轻振动（Selection 语义），失败静默
+      try {
+        wx.vibrateShort({ type: 'light' });
+      } catch (err) {
+        // 不支持振动时静默
+      }
       // 只写共享变量（供新实例 attached 时首帧取到正确选中态），不在此 setData：
       // 点击时旧实例重绘 + 新实例渲染 = 一次切换两次渲染，会加重切换闪烁。
       // 高亮随新页面的 tabbar 实例一次性出现，与页面切换同步。
