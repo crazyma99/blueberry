@@ -571,8 +571,9 @@ export default {
   display: flex;
   flex-direction: row;
   align-items: center;
+  min-height: 96rpx;
   margin: var(--spacing-lg) var(--spacing-lg) 0;
-  padding: 26rpx var(--spacing-md);
+  padding: 0 var(--spacing-md);
   background: linear-gradient(135deg, rgba(241, 205, 145, 0.12), rgba(241, 205, 145, 0.04));
   border-radius: var(--radius-md);
   border: 2rpx solid rgba(241, 205, 145, 0.22);
@@ -616,14 +617,15 @@ export default {
   padding: 0 4rpx;
 }
 
-/* 功能列表行 */
+/* 功能列表行（Phase2：88rpx 标准行高 + 顶部高光层级） */
 .menu-row {
   display: flex;
   flex-direction: row;
   align-items: center;
+  min-height: 88rpx;
   margin: 16rpx var(--spacing-lg) 0;
-  padding: 26rpx var(--spacing-md);
-  background: rgba(255, 255, 255, 0.06);
+  padding: 0 var(--spacing-md);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
   border-radius: var(--radius-md);
   border: 2rpx solid rgba(255, 255, 255, 0.1);
 }

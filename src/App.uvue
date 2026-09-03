@@ -95,6 +95,10 @@ page {
 	--radius-2xl: 48rpx;
 	--radius-avatar: 64rpx;
 	--radius-full: 999rpx;
+	/* 图标尺寸 */
+	--icon-xs: 32rpx;
+	--icon-sm: 40rpx;
+	--icon-md: 48rpx;
 	/* 间距 */
 	--spacing-2xs: 6rpx;
 	--spacing-xs: 10rpx;
