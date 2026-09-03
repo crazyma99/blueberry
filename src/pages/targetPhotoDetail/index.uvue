@@ -607,8 +607,8 @@
 	}
 }
 
-/* 底部占位：防止固定按钮遮挡页脚内容（高度=按钮区+安全区余量） */
+/* 底部占位：固定按钮区（icon86+py24*2+安全区约170rpx）+ 版权 footer（约100rpx）+ 余量 */
 .ai-tryon-spacer {
-	height: 220rpx;
+	height: 320rpx;
 }
 </style>
