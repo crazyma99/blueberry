@@ -473,7 +473,7 @@
 /* 版权 footer：并入底部固定栏（ai-tryon-bar）内，撑满父容器 */
 .page-footer {
 	width: 100%;
-	margin-top: 8rpx;
+	margin-top: 32rpx;
 }
 .title{
 	margin: 24rpx 18rpx 24rpx;
