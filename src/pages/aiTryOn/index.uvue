@@ -77,8 +77,8 @@
 		<!-- 底部占位（给固定按钮腾出空间） -->
 		<view class="bottom-spacer"></view>
 
-		<!-- 底部固定生成按钮 -->
-		<view class="fixed-bottom">
+		<!-- 底部固定生成按钮（容器样式统一为 ai-tryon-bar） -->
+		<view class="ai-tryon-bar">
 			<!-- 付费模式且无限免次数：原按钮样式 + 价格文案，点击引导充值/兑换 -->
 			<view v-if="isPaidMode && creditBalance <= 0" class="gen-btn-wrap">
 				<image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"/>
@@ -870,8 +870,8 @@ export default {
 	height: 260rpx;
 }
 
-/* 底部固定（复用相册详情页 ai-tryon-bar 样式：渐变遮罩 + 64/24 节奏 + 安全区） */
-.fixed-bottom {
+/* 底部固定栏（与相册详情页 ai-tryon-bar 完全一致） */
+.ai-tryon-bar {
 	position: fixed;
 	left: 0;
 	bottom: 0;
