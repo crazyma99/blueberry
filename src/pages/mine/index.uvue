@@ -11,63 +11,84 @@
       <view class="sk-banner sk-animate" style="border-radius: 16rpx;"></view>
     </view>
 
-    <!-- 主内容 -->
+    <!-- 主内容：list 布局（高性能列表） -->
     <view v-else class="content">
-      <!-- 用户区域 -->
-      <view class="user-section" @click="handleUserClick">
-        <!-- 头像容器：始终展示 .avatar 灰色色值 DOM；image 仅在有可用头像 url 时渲染 -->
-        <!-- 加载失败时 image 透明，仍露出 .avatar 灰色背景，避免任何兜底图 -->
-        <view class="avatar">
-          <image
-            v-if="displayAvatar !== ''"
-            class="avatar-img"
-            :src="displayAvatar"
-            mode="aspectFill"
-          ></image>
-        </view>
-        <view class="user-info">
-          <view class="nickname font-harmony">
-            {{ displayNickname }}
+      <list-view class="content-list" :show-scrollbar="false">
+        <list-item>
+          <!-- 用户卡片 -->
+          <view class="user-card" @click="handleUserClick">
+            <!-- 头像容器：始终展示 .avatar 灰色色值 DOM；image 仅在有可用头像 url 时渲染 -->
+            <!-- 加载失败时 image 透明，仍露出 .avatar 灰色背景，避免任何兜底图 -->
+            <view class="avatar">
+              <image
+                v-if="displayAvatar !== ''"
+                class="avatar-img"
+                :src="displayAvatar"
+                mode="aspectFill"
+              ></image>
+            </view>
+            <view class="user-info">
+              <view class="nickname font-harmony">
+                {{ displayNickname }}
+              </view>
+              <view class="user-sub font-harmony">
+                {{ isLoggedIn ? (userNickname === '' ? '完善头像昵称，获得完整体验' : '欢迎回来，蓝梅旅拍') : '登录后可收藏与体验AI试衣' }}
+              </view>
+            </view>
+            <view class="user-arrow">›</view>
           </view>
-        </view>
-      </view>
+        </list-item>
 
-      <!-- 金刚区 -->
-      <view class="menu-section">
-        <view
-          v-for="(item, index) in menuItems"
-          :key="index"
-          class="menu-item"
-          @click="handleMenuClick(item)"
-        >
-          <image class="menu-icon" :src="item.imageUrl" mode="aspectFill"></image>
-          <view :class="['menu-text', { 'special-font': item.specialFont }]">{{ item.title }}</view>
-        </view>
-      </view>
+        <list-item>
+          <!-- 金刚区 -->
+          <view class="menu-section">
+            <view
+              v-for="(item, index) in menuItems"
+              :key="index"
+              class="menu-item"
+              @click="handleMenuClick(item)"
+            >
+              <view class="menu-icon-wrap">
+                <image class="menu-icon" :src="item.imageUrl" mode="aspectFill"></image>
+              </view>
+              <view :class="['menu-text', { 'special-font': item.specialFont }]">{{ item.title }}</view>
+            </view>
+          </view>
+        </list-item>
 
-      <!-- 轮播图 Banner -->
-      <view class="banner-section">
-        <swiper
-          class="banner-swiper"
-          autoplay
-          circular
-          :interval="5000"
-          :duration="500"
-        >
-          <swiper-item v-for="(banner, index) in banners" :key="index">
-            <image
-              class="banner-image"
-              :src="banner.imageUrl"
-              mode="aspectFill"
-              @click="handleBannerClick(banner)"
-            ></image>
-          </swiper-item>
-        </swiper>
-      </view>
+        <list-item>
+          <!-- 轮播图 Banner -->
+          <view class="banner-section">
+            <swiper
+              class="banner-swiper"
+              autoplay
+              circular
+              :interval="5000"
+              :duration="500"
+            >
+              <swiper-item v-for="(banner, index) in banners" :key="index">
+                <image
+                  class="banner-image"
+                  :src="banner.imageUrl"
+                  mode="aspectFill"
+                  @click="handleBannerClick(banner)"
+                ></image>
+              </swiper-item>
+            </swiper>
+          </view>
+        </list-item>
 
-      <view v-if="isLoggedIn" class="logout-section">
-        <button class="logout-button" @click.stop="confirmLogout">退出登录</button>
-      </view>
+        <list-item v-if="isLoggedIn">
+          <view class="logout-section">
+            <button class="logout-button" @click.stop="confirmLogout">退出登录</button>
+          </view>
+        </list-item>
+
+        <!-- 底部留白，保证最后一个 list-item 之后有呼吸空间 -->
+        <list-item>
+          <view class="footer-space"></view>
+        </list-item>
+      </list-view>
     </view>
 
     <!-- 登录弹窗 -->
@@ -523,28 +544,42 @@ export default {
 <style>
 .container {
   background: #160F04;
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   color: #f1cd91;
 }
 
 .content {
-  padding-bottom: 32rpx;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 用户区域 */
-.user-section {
+.content-list {
+  flex: 1;
+}
+
+/* 用户卡片 */
+.user-card {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 32rpx 32rpx 0;
+  margin: 32rpx 32rpx 0;
+  padding: 36rpx 32rpx;
+  background: linear-gradient(135deg, rgba(241, 205, 145, 0.12), rgba(241, 205, 145, 0.04));
+  border-radius: 24rpx;
+  border: 2rpx solid rgba(241, 205, 145, 0.22);
 }
 
 .avatar {
-  width: 112rpx;
-  height: 112rpx;
+  width: 120rpx;
+  height: 120rpx;
   border-radius: 50%;
   background: #333;
   overflow: hidden;
+  border: 2rpx solid rgba(241, 205, 145, 0.35);
 }
 
 .avatar-img {
@@ -554,41 +589,61 @@ export default {
 }
 
 .user-info {
-  margin-left: 32rpx;
+  margin-left: 28rpx;
   flex: 1;
 }
 
 .nickname {
-  font-size: 34rpx;
-  font-weight: 500;
+  font-size: 36rpx;
+  font-weight: 600;
   color: #f1cd91;
+}
+
+.user-sub {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: rgba(241, 205, 145, 0.55);
+}
+
+.user-arrow {
+  font-size: 40rpx;
+  color: rgba(241, 205, 145, 0.45);
+  padding: 0 8rpx;
 }
 
 /* 金刚区 */
 .menu-section {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
-  padding: 32rpx 60rpx;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 16rpx;
-  border: 2rpx solid rgba(255, 255, 255, 0.15);
-  margin: 32rpx 32rpx;
-  gap: 60rpx;
+  padding: 36rpx 20rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 24rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.12);
+  margin: 32rpx 32rpx 0;
 }
 
 .menu-item {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.menu-icon {
-  width: 90rpx;
-  height: 90rpx;
+.menu-icon-wrap {
+  width: 96rpx;
+  height: 96rpx;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
-  margin-bottom: 16rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14rpx;
+}
+
+.menu-icon {
+  width: 60rpx;
+  height: 60rpx;
 }
 
 .menu-text {
@@ -606,15 +661,17 @@ export default {
   text-fill-color: transparent;
 }
 
-/* 轮播图 */
+/* 轮播图 Banner */
 .banner-section {
-  margin: 0 32rpx;
+  margin: 32rpx 32rpx 0;
 }
 
 .banner-swiper {
   width: 100%;
-  height: 352rpx;
+  height: 320rpx;
   overflow: hidden;
+  border-radius: 24rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.12);
 }
 
 .banner-image {
@@ -623,15 +680,14 @@ export default {
 }
 
 .logout-section {
-  margin: 56rpx 32rpx 0;
-  padding-bottom: 24rpx;
+  margin: 40rpx 32rpx 0;
 }
 
 .logout-button {
   width: 100%;
   height: 88rpx;
   line-height: 88rpx;
-  border-radius: 12rpx;
+  border-radius: 24rpx;
   background: rgba(255, 255, 255, 0.08);
   color: #ff6b6b;
   font-size: 28rpx;
@@ -641,6 +697,11 @@ export default {
 
 .logout-button::after {
   border: none;
+}
+
+/* 列表底部留白 */
+.footer-space {
+  height: 48rpx;
 }
 
 </style>
