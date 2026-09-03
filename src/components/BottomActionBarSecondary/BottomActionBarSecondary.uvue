@@ -1,0 +1,51 @@
+<!--
+  BottomActionBarSecondary — 底部固定栏（次级款，组件级重构）
+
+  与 BottomActionBar 同款容器（渐变遮罩 + 64/24 节奏 + 12rpx 底部），但不内置版权 footer，
+  用于接入次级操作（如我的页退出登录按钮）。
+  - bottomOffset：底部偏移（tab 页需上移避开底部 tabbar），传完整 CSS bottom 值，默认贴底 0
+  - 按钮由 slot 传入
+
+  使用：
+  <BottomActionBarSecondary bottomOffset="calc(116rpx + env(safe-area-inset-bottom))">
+    <button class="xxx">退出登录</button>
+  </BottomActionBarSecondary>
+-->
+<template>
+	<view class="bottom-bar-secondary" :style="barStyle">
+		<slot />
+	</view>
+</template>
+
+<script lang="uts">
+	export default {
+		name: 'BottomActionBarSecondary',
+		props: {
+			bottomOffset: {
+				type: String,
+				default: ''
+			}
+		},
+		computed: {
+			barStyle(): string {
+				return this.bottomOffset !== '' ? 'bottom: ' + this.bottomOffset + ';' : ''
+			}
+		}
+	}
+</script>
+
+<style>
+	.bottom-bar-secondary {
+		position: fixed;
+		left: 0;
+		bottom: 0;
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 64rpx 0 24rpx 0;
+		padding-bottom: 30rpx;
+		background: linear-gradient(to top, var(--color-bg) 59.6%, rgba(22, 15, 4, 0));
+		z-index: 100;
+	}
+</style>

@@ -6,26 +6,25 @@
 			<text class="desc-text">上传照片，AI为您推荐最合适的服饰风格</text>
 		</view>
 
-		<!-- 上传图片框 -->
+		<!-- 上传图片框（组件化 AppPhotoPicker） -->
 		<view class="section">
-			<view class="upload-area" @click="choosePhoto">
-				<image v-if="photoPreviewUrl" class="upload-preview" :src="photoPreviewUrl" mode="widthFix"></image>
-				<view v-else class="upload-placeholder">
-					<text class="upload-plus">+</text>
-					<text class="upload-hint">点击上传你的照片</text>
-				</view>
-			</view>
+			<AppPhotoPicker
+				:photo-url="photoPreviewUrl"
+				:busy="uploading"
+				@click="choosePhoto"
+			/>
 		</view>
 
 		<!-- 底部占位 -->
 		<view class="bottom-spacer"></view>
 
-		<!-- 底部固定按钮 -->
-		<view class="fixed-bottom">
+		<!-- 底部固定按钮（组件化 BottomActionBar：按钮组 slot + 内置版权 footer） -->
+		<BottomActionBar>
 			<!-- 付费模式且无剩余次数：价格按钮，点击引导充值，到账后自动继续分析 -->
 			<view v-if="isPaidMode && creditBalance <= 0" class="action-btn-wrap">
 				<view
 					:class="photoPreviewUrl !== '' ? 'action-btn' : 'action-btn action-btn-disabled'"
+					hover-class="press-dim"
 					@click="handleStartAnalysis"
 				>
 					<text class="action-btn-price">¥{{ priceText }}</text>
@@ -36,6 +35,7 @@
 			<view v-else class="action-btn-wrap">
 				<view
 					:class="photoPreviewUrl !== '' ? 'action-btn' : 'action-btn action-btn-disabled'"
+					hover-class="press-dim"
 					@click="handleStartAnalysis"
 				>
 					<text class="action-btn-text">{{ uploading ? '上传中...' : '开始AI分析推荐' }}</text>
@@ -44,65 +44,36 @@
 					<text class="action-btn-badge-text">限时免费 {{ creditBalance }} 次</text>
 				</view>
 			</view>
-			<view class="footer-copyright">
-				<AppFooter />
-			</view>
-		</view>
+		</BottomActionBar>
 
 		<!-- 登录弹窗 -->
-		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
-			<view class="login-popup login-auth-popup" @click.stop>
-				<view class="login-popup-title">手机号快捷登陆</view>
-				<view class="login-agreement-row">
-					<view
-						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
-						@click.stop="toggleLoginAgreement"
-					>
-						<view v-if="loginAgreementChecked" class="login-agreement-dot"></view>
-					</view>
-					<text class="login-agreement-text"><text>登录即代表同意 </text><text class="login-agreement-link" @click.stop="openUserAgreement">{{ userAgreementName }}</text><text>、</text><text class="login-agreement-link" @click.stop="openPrivacyPolicy">{{ privacyPolicyName }}</text></text>
-				</view>
-				<button
-					v-if="loginAgreementChecked"
-					class="login-phone-btn"
-					open-type="getPhoneNumber"
-					@getphonenumber="onGetPhoneNumber"
-				>一键登录</button>
-				<button
-					v-else
-					class="login-phone-btn"
-					@click="showLoginAgreementToast"
-				>一键登录</button>
-				<view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
-			</view>
-		</view>
+		<LoginPopup
+	v-if="showLoginPopup"
+	:agreement-checked="loginAgreementChecked"
+	:user-agreement-name="userAgreementName"
+	:privacy-policy-name="privacyPolicyName"
+	@close="closeLoginPopup"
+	@toggle-agreement="toggleLoginAgreement"
+	@show-toast="showLoginAgreementToast"
+	@open-user="openUserAgreement"
+	@open-privacy="openPrivacyPolicy"
+	@get-phone="onGetPhoneNumber"
+/>
 
 		<!-- 头像昵称授权弹窗 -->
-		<view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
-			<view class="login-popup" @click.stop>
-				<view class="login-popup-title">完善个人资料</view>
-				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
-				<button
-					class="profile-avatar-btn"
-					open-type="chooseAvatar"
-					@chooseavatar="onChooseAvatar"
-				>
-					<image class="profile-avatar-img" :src="profileAvatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
-					<text class="profile-avatar-tip">点击选择头像</text>
-				</button>
-				<view class="profile-nickname-row">
-					<text class="profile-nickname-label">昵称</text>
-					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
-				</view>
-				<button class="login-phone-btn" @click="submitProfile">确认</button>
-				<view class="login-cancel" @click="skipProfile">跳过</view>
-			</view>
-		</view>
+		<ProfilePopup
+	v-if="showProfilePopup"
+	:avatar-url="profileAvatarUrl"
+	:nickname="profileNickname"
+	@choose-avatar="onChooseAvatar"
+	@update-nickname="(v: string) => { this.profileNickname = v }"
+	@submit="submitProfile"
+	@skip="skipProfile"
+/>
 	</view>
 </template>
 
 <script lang="uts">
-import AppFooter from '../../components/AppFooter/AppFooter.uvue'
 import { uploadPhoto, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
 import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
@@ -116,7 +87,6 @@ import {
 } from '../../utils/legal.uts'
 
 export default {
-	components: { AppFooter },
 	data() {
 		return {
 			shopId: '',
@@ -505,7 +475,7 @@ export default {
 
 <style>
 .page {
-	background: #160F04;
+	background: var(--color-bg);
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -513,26 +483,26 @@ export default {
 
 /* 描述文案 */
 .desc-bar {
-	padding: 40rpx 32rpx 8rpx;
+	padding: 40rpx var(--spacing-lg) 8rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 }
 .desc-text {
-	font-size: 28rpx;
-	color: rgba(241, 205, 145, 0.7);
+	font-size: var(--font-size-body-plus);
+	color: var(--color-primary-70);
 	text-align: center;
 }
 
 /* 上传区 */
 .section {
-	padding: 24rpx 32rpx;
+	padding: 24rpx var(--spacing-lg);
 }
 .upload-area {
 	position: relative;
 	width: 100%;
 	min-height: 320rpx;
-	border-radius: 16rpx;
+	border-radius: var(--radius-sm);
 	border-width: 2rpx;
 	border-style: dashed;
 	border-color: rgba(255, 255, 255, 0.3);
@@ -554,7 +524,7 @@ export default {
 	margin-bottom: 16rpx;
 }
 .upload-hint {
-	font-size: 26rpx;
+	font-size: var(--font-size-body-lg);
 	color: rgba(241, 205, 145, 0.4);
 }
 .upload-preview {
@@ -566,50 +536,37 @@ export default {
 	height: 260rpx;
 }
 
-/* 底部固定 */
-.fixed-bottom {
-	position: fixed;
-	left: 0;
-	bottom: 0;
-	width: 100%;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	padding: 24rpx 32rpx;
-	padding-bottom: 40rpx;
-	background-color: #160F04;
-}
-
 /* 分析按钮 — 与AI试衣生成按钮一致的渐变背景 */
 .action-btn {
 	width: 100%;
 	height: 88rpx;
-	border-radius: 44rpx;
+	border-radius: var(--radius-xl);
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
-	background: rgba(241, 205, 145, 1);
+	background: var(--color-primary);
 }
 .action-btn-disabled {
 	opacity: 0.4;
 }
 .action-btn-text {
 	font-size: 32rpx;
-	color: rgba(22, 15, 4, 1);
-	font-weight: 500;
+	color: var(--color-bg);
+	font-weight: 400;
 }
 .action-btn-price {
 	font-size: 32rpx;
-	color: rgba(22, 15, 4, 1);
-	font-weight: 700;
+	color: var(--color-bg);
+	font-weight: 400;
 }
 
 /* 分析按钮容器（预留 padding-top 承载角标，避免角标负偏移被裁剪） */
 .action-btn-wrap {
 	position: relative;
 	width: 100%;
-	padding-top: 20rpx;
+	/* 左右边距：固定栏组件无横向 padding，此处补齐 */
+	padding: var(--spacing-sm) var(--spacing-lg) 0;
 }
 /* 限免角标（整体落在容器 padding 预留空间内，不用负偏移，避免被裁剪） */
 .action-btn-badge {
@@ -618,19 +575,12 @@ export default {
 	right: 0rpx;
 	z-index: 1;
 	background: #ff3b30;
-	border-radius: 16rpx;
+	border-radius: var(--radius-sm);
 	padding: 4rpx 12rpx;
 }
 .action-btn-badge-text {
-	font-size: 20rpx;
+	font-size: var(--font-size-body-xs);
 	color: #fff;
 }
 
-/* Copyright */
-.footer-copyright {
-	margin-top: 20rpx;
-	font-size: 18rpx;
-	color: rgba(241, 205, 145, 0.5);
-	font-weight: 400;
-}
 </style>

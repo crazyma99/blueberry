@@ -32,11 +32,12 @@
 					v-for="(item, index) in taskList"
 					:key="index"
 					class="photoItem"
+					hover-class="press-dim"
 					@click="handleItemClick(item)"
 				>
 					<image
 						:src="getCoverUrl(item)"
-						class="photo"
+						class="photo fade-in"
 						mode="aspectFill"
 					/>
 					<!-- 状态遮罩：生成中 -->
@@ -199,7 +200,7 @@ export default {
 
 <style>
 .container {
-	background: #160F04;
+	background: var(--color-bg);
 	min-height: 100vh;
 	color: #fff;
 	display: flex;
@@ -223,7 +224,7 @@ export default {
 	top: 0;
 	left: 0;
 	width: 100%;
-	background: #160F04;
+	background: var(--color-bg);
 	z-index: 100;
 }
 .nav-content {
@@ -236,20 +237,20 @@ export default {
 .back-btn {
 	width: 44rpx;
 	height: 44rpx;
-	padding: 10rpx;
+	padding: var(--spacing-xs);
 }
 .nav-title {
 	flex: 1;
 	text-align: center;
 	font-size: 32rpx;
-	font-weight: 600;
-	color: #F1CD91;
+	font-weight: 400;
+	color: var(--color-primary);
 	/* 视觉补偿返回按钮宽度，使标题真正居中 */
 	margin-right: 64rpx;
 }
 
 .content {
-	padding: 0 8rpx 32rpx;
+	padding: 0 8rpx var(--spacing-lg);
 }
 
 /* 空状态 */
@@ -258,7 +259,7 @@ export default {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: 200rpx 32rpx;
+	padding: 200rpx var(--spacing-lg);
 }
 .empty-title {
 	font-size: 32rpx;
@@ -266,7 +267,7 @@ export default {
 	margin-bottom: 16rpx;
 }
 .empty-desc {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: rgba(255, 255, 255, 0.3);
 }
 
@@ -289,7 +290,7 @@ export default {
 .photo {
 	width: 100%;
 	height: 100%;
-	border-radius: 8rpx;
+	border-radius: var(--radius-xs);
 	background: rgba(255, 255, 255, 0.06);
 }
 .mask {
@@ -298,7 +299,7 @@ export default {
 	height: 482rpx;
 	top: 0;
 	left: 0;
-	border-radius: 8rpx;
+	border-radius: var(--radius-xs);
 	background: linear-gradient(180deg, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.4) 75%, rgba(0, 0, 0, 0.7) 89%, #000000 100%);
 }
 .desc {
@@ -309,8 +310,8 @@ export default {
 	align-items: center;
 }
 .photoName {
-	font-size: 28rpx;
-	font-weight: 500;
+	font-size: var(--font-size-body-plus);
+	font-weight: 400;
 	color: #fff;
 	flex: 1;
 	overflow: hidden;
@@ -318,7 +319,7 @@ export default {
 	white-space: nowrap;
 }
 .time {
-	font-size: 22rpx;
+	font-size: var(--font-size-body-sm);
 	color: rgba(255, 255, 255, 0.6);
 	margin-left: 12rpx;
 }
@@ -330,7 +331,7 @@ export default {
 	height: 482rpx;
 	top: 0;
 	left: 0;
-	border-radius: 8rpx;
+	border-radius: var(--radius-xs);
 	background: rgba(0, 0, 0, 0.55);
 	display: flex;
 	align-items: center;
@@ -342,7 +343,7 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	padding: 12rpx 24rpx;
-	border-radius: 32rpx;
+	border-radius: var(--radius-lg);
 	border: 1rpx solid rgba(255, 255, 255, 0.25);
 }
 .status-badge.processing {
@@ -353,16 +354,16 @@ export default {
 	border-color: rgba(221, 82, 77, 0.5);
 }
 .status-text {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: #fff;
-	font-weight: 500;
+	font-weight: 400;
 }
 .loading-dot {
 	width: 12rpx;
 	height: 12rpx;
 	border-radius: 50%;
 	background: #F3D9AC;
-	margin-right: 10rpx;
+	margin-right: var(--spacing-xs);
 	animation: dotPulse 1s ease-in-out infinite;
 }
 @keyframes dotPulse {
@@ -373,9 +374,9 @@ export default {
 
 /* Copyright */
 .copyright {
-	margin: 32rpx auto;
-	font-size: 18rpx;
-	color: rgba(241, 205, 145, 0.5);
+	margin: var(--spacing-lg) auto;
+	font-size: var(--font-size-caption-md);
+	color: var(--color-primary-50);
 	font-weight: 400;
 	text-align: center;
 }

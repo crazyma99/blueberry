@@ -56,9 +56,9 @@
           show-menu-by-longpress="{{true}}"
         ></image>
         <view class="label">联系电话</view>
-        <view class="val">{{ phone }}</view>
+        <view class="val font-noto-serif">{{ phone }}</view>
         <view class="label">商务合作</view>
-        <view class="val">{{ coopPhone }}</view>
+        <view class="val font-noto-serif">{{ coopPhone }}</view>
       </view>
     </view>
 	</view>
@@ -131,7 +131,7 @@ import { getPageConfig } from '../../utils/api.uts'
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 28rpx;
+    gap: var(--spacing-md);
     .divider{
       width: 150rpx;
       height: 22rpx;
@@ -139,9 +139,9 @@ import { getPageConfig } from '../../utils/api.uts'
     .demoPhotoTit {
       display: flex;
       flex-direction: column;
-      font-size: 38rpx;
-      font-weight: 700;
-      color: #F1CD91;
+      font-size: var(--font-size-display);
+      font-weight: 400;
+      color: var(--color-primary);
       .icon{
         width: 143rpx;
         height: 56rpx;
@@ -150,10 +150,10 @@ import { getPageConfig } from '../../utils/api.uts'
     }
   }
   .service-contain{
-    margin: 40rpx 20rpx;
-    padding: 40rpx 20rpx 20rpx;
-    border: 2rpx solid rgba(255, 255, 221, 0.3);
-    border-radius: 24rpx;
+    margin: 40rpx var(--spacing-sm);
+    padding: 40rpx var(--spacing-sm) var(--spacing-sm);
+    border: 2rpx solid var(--color-border-soft);
+    border-radius: var(--radius-container);
     position: relative;
     .flower {
       position: absolute;
@@ -166,21 +166,21 @@ import { getPageConfig } from '../../utils/api.uts'
     .tit{
       margin-bottom: 40rpx;
       text-align: center;
-      font-weight: 700;
-      font-size: 34rpx;
-      color: rgba(241, 205, 145, 1);
+      font-weight: 400;
+      font-size: var(--font-size-slogan);
+      color: var(--color-primary);
     }
     .main-wrap {
       padding: 1rpx;
-      border-radius: 15rpx;
+      border-radius: var(--radius-card);
       /* 外层渐变：只露出 1rpx 边框线 */
-      background: linear-gradient(252.59deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0) 62.4%, rgba(241, 205, 145, 0.7) 100%);
+      background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
     }
     .main {
-      border-radius: 14rpx;
-      /* 内层必须不透明：半透明会透出外层边框渐变。已把原 rgba(241,205,145,0.06)→transparent 合成到 #160F04 底 */
-      background: linear-gradient(138.87deg, #231A0C 0%, #160F04 100%);
-      padding: 20rpx;
+      border-radius: var(--radius-card);
+      /* 内层必须不透明：半透明会透出外层边框渐变。已把原 var(--color-primary-06)→transparent 合成到 var(--color-bg) 底 */
+      background: linear-gradient(138.87deg, #231A0C 0%, var(--color-bg) 100%);
+      padding: var(--spacing-sm);
       .item{
         display: flex;
         flex-direction: column;
@@ -189,16 +189,16 @@ import { getPageConfig } from '../../utils/api.uts'
         display: flex;
         flex-direction: row;
         align-items: center;
-        padding: 10rpx 14rpx;
+        padding: var(--spacing-xs) 14rpx;
         gap: 26rpx;
         .item-mark{
           position: relative;
           display: flex;
           flex-direction: column;
           align-items: center;
-          color: #F1CD91;
-          font-size: 20rpx;
-          font-weight: 700;
+          color: var(--color-primary);
+          font-size: var(--font-size-body-xs);
+          font-weight: 400;
           .li{
             width: 44rpx;
             height: 42rpx;
@@ -213,25 +213,27 @@ import { getPageConfig } from '../../utils/api.uts'
         }
         .item-text{
           flex: 1;
-          font-size: 26rpx;
-          color: #F1CD91;
+          font-size: var(--font-size-body-lg);
+          color: var(--color-primary);
+          /* 10% 字距（letter-spacing 不支持百分比，用 0.1em 等效） */
+          letter-spacing: 0.1em;
         }
       }
       .line {
         width: 100%;
         height: 1rpx;
-        background: linear-gradient(270deg, rgba(241, 205, 145, 0) 0%, rgba(241, 205, 145, 0.7) 50.48%, rgba(241, 205, 145, 0) 100%);
-        margin: 10rpx 0;
+        background: linear-gradient(270deg, rgba(241, 205, 145, 0) 0%, var(--color-primary-70) 50.48%, rgba(241, 205, 145, 0) 100%);
+        margin: var(--spacing-xs) 0;
       }
     }
     .contact-main {
-      border-radius: 14rpx;
+      border-radius: var(--radius-card);
       display: flex;
       flex-direction: column;
       align-items: center;
-      color: #F1CD91;
-      background: linear-gradient(139deg, rgba(241, 205, 145, 0.06) 0%, rgba(241, 205, 145, 0.00) 100%);
-      border: 1px solid rgba(241, 205, 145, 0.20);
+      color: var(--color-primary);
+      background: linear-gradient(139deg, var(--color-primary-06) 0%, rgba(241, 205, 145, 0.00) 100%);
+      border: 1px solid var(--color-primary-20);
       position: relative;
       width: 670rpx;
       height: 536rpx;
@@ -246,14 +248,14 @@ import { getPageConfig } from '../../utils/api.uts'
         height: 248rpx;
       }
       .label{
-        font-size: 26rpx;
+        font-size: var(--font-size-body-lg);
         font-weight: 400;
-        margin-bottom: 10rpx;
+        margin-bottom: var(--spacing-xs);
       }
       .val{
-        font-size: 34rpx;
-        font-weight: 700;
-        margin-bottom: 20rpx;
+        font-size: var(--font-size-slogan);
+        font-weight: 400;
+        margin-bottom: var(--spacing-sm);
       }
     }
   }

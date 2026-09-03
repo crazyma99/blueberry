@@ -12,7 +12,7 @@
 						class="search-input-nav"
 						type="text"
 						placeholder="搜索客片"
-						placeholder-style="color: rgba(241, 205, 145, 0.7)"
+						placeholder-style="color: var(--color-primary-70)"
 						v-model="searchKeyword"
 						confirm-type="search"
 						@confirm="handleSearch"
@@ -49,8 +49,9 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="item.coverImageUrl" class="photo" mode="aspectFill" />
-							<view class="mask" @click="gotoDetail(item)">
+							<image :src="item.coverImageUrl" class="photo fade-in" mode="aspectFill" />
+							<view class="mask" hover-class="press-dim"
+					@click="gotoDetail(item)">
 								<view class="desc">
 									<view class="photoName font-noto-serif">{{ item.title }}</view>
 									<view class="desc-row">
@@ -60,11 +61,13 @@
 												mode="aspectFit"
 												:src="item.liked ? '/static/liked.svg' : '/static/like.svg'"
 											>
-												<view class="clickArea" @click.stop="handleLike(item)"></view>
+												<view class="clickArea" hover-class="press-dim"
+					@click.stop="handleLike(item)"></view>
 											</image>
 											<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 										</view>
-										<view v-if="item.tryonDisabled !== true" @click.stop="goToAiTryOn(item)">
+										<view v-if="item.tryonDisabled !== true" hover-class="press-dim"
+					@click.stop="goToAiTryOn(item)">
 											<image mode="aspectFit" class="ai-tryon-tag" src="/static/aitry-btn.png"/>
 										</view>
 									</view>
@@ -84,7 +87,8 @@
 			<!-- 正常分类模式 -->
 			<view v-if="!isSearching && alltabs.length > 0">
 				<!-- AI智能推荐入口 -->
-				<view class="ai-recommend-banner" @click="goToAiRecommend">
+				<view class="ai-recommend-banner" hover-class="press-dim"
+					@click="goToAiRecommend">
 					<image class="ai-recommend-bg" src="/static/ai-recom-banner.png" mode="aspectFill"></image>
 					<view class="ai-recommend-content">
 						<text class="ai-recommend-title font-noto-serif">AI智能推荐·拍照选服饰</text>
@@ -102,7 +106,8 @@
 						v-for="(item, idx) in alltabs"
 						:key="idx"
 						:class="selectedTab.parentIndex === idx ? 'tab-wrap choosed-wrap' : 'tab-wrap'"
-						@click="changeTab(idx, 'parent')"
+						hover-class="press-dim"
+					@click="changeTab(idx, 'parent')"
 					>
 						<view :class="selectedTab.parentIndex === idx ? 'tab choosed font-noto-serif' : 'tab font-noto-serif'">{{item.parentName}}</view>
 					</view>
@@ -112,7 +117,8 @@
 						v-for="(item, idx) in getSecondTab"
 						:key="idx"
 						:class="selectedTab.childIndex === idx ? 'tab-wrap choosed-wrap' : 'tab-wrap'"
-						@click="changeTab(idx, 'child')"
+						hover-class="press-dim"
+					@click="changeTab(idx, 'child')"
 					>
 						<view :class="selectedTab.childIndex === idx ? 'tab choosed font-noto-serif' : 'tab font-noto-serif'">{{item.name}}</view>
 					</view>
@@ -124,8 +130,9 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="item?.coverImageUrl" class="photo" mode="aspectFill" />
-							<view class="mask" @click="gotoDetail(item)">
+							<image :src="item?.coverImageUrl" class="photo fade-in" mode="aspectFill" />
+							<view class="mask" hover-class="press-dim"
+					@click="gotoDetail(item)">
 								<view class="desc">
 									<view class="photoName font-noto-serif">{{ item?.title }}</view>
 									<view class="desc-row">
@@ -135,11 +142,13 @@
 												mode="aspectFit"
 												:src="item.liked ? '/static/liked.svg' : '/static/like.svg'"
 											>
-												<view class="clickArea" @click.stop="handleLike(item)"></view>
+												<view class="clickArea" hover-class="press-dim"
+					@click.stop="handleLike(item)"></view>
 											</image>
 											<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 										</view>
-										<view v-if="item?.tryonDisabled !== true" @click.stop="goToAiTryOn(item)">
+										<view v-if="item?.tryonDisabled !== true" hover-class="press-dim"
+					@click.stop="goToAiTryOn(item)">
 											<image mode="aspectFit" class="ai-tryon-tag" src="/static/aitry-btn.png"/>
 										</view>
 									</view>
@@ -164,54 +173,29 @@
 		</view>
 
 		<!-- 登录弹窗 -->
-		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
-			<view class="login-popup login-auth-popup" @click.stop>
-				<view class="login-popup-title">手机号快捷登陆</view>
-				<view class="login-agreement-row">
-					<view
-						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
-						@click.stop="toggleLoginAgreement"
-					>
-						<view v-if="loginAgreementChecked" class="login-agreement-dot"></view>
-					</view>
-					<text class="login-agreement-text"><text>登录即代表同意 </text><text class="login-agreement-link" @click.stop="openUserAgreement">{{ userAgreementName }}</text><text>、</text><text class="login-agreement-link" @click.stop="openPrivacyPolicy">{{ privacyPolicyName }}</text></text>
-				</view>
-				<button
-					v-if="loginAgreementChecked"
-					class="login-phone-btn"
-					open-type="getPhoneNumber"
-					@getphonenumber="onGetPhoneNumber"
-				>一键登录</button>
-				<button
-					v-else
-					class="login-phone-btn"
-					@click="showLoginAgreementToast"
-				>一键登录</button>
-				<view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
-			</view>
-		</view>
+		<LoginPopup
+	v-if="showLoginPopup"
+	:agreement-checked="loginAgreementChecked"
+	:user-agreement-name="userAgreementName"
+	:privacy-policy-name="privacyPolicyName"
+	@close="closeLoginPopup"
+	@toggle-agreement="toggleLoginAgreement"
+	@show-toast="showLoginAgreementToast"
+	@open-user="openUserAgreement"
+	@open-privacy="openPrivacyPolicy"
+	@get-phone="onGetPhoneNumber"
+/>
 
 		<!-- 头像昵称授权弹窗 -->
-		<view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
-			<view class="login-popup" @click.stop>
-				<view class="login-popup-title">完善个人资料</view>
-				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
-				<button
-					class="profile-avatar-btn"
-					open-type="chooseAvatar"
-					@chooseavatar="onChooseAvatar"
-				>
-					<image class="profile-avatar-img" :src="profileAvatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
-					<text class="profile-avatar-tip">点击选择头像</text>
-				</button>
-				<view class="profile-nickname-row">
-					<text class="profile-nickname-label">昵称</text>
-					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
-				</view>
-				<button class="login-phone-btn" @click="submitProfile">确认</button>
-				<view class="login-cancel" @click="skipProfile">跳过</view>
-			</view>
-		</view>
+		<ProfilePopup
+	v-if="showProfilePopup"
+	:avatar-url="profileAvatarUrl"
+	:nickname="profileNickname"
+	@choose-avatar="onChooseAvatar"
+	@update-nickname="(v: string) => { this.profileNickname = v }"
+	@submit="submitProfile"
+	@skip="skipProfile"
+/>
 	</view>
 </template>
 
@@ -786,7 +770,7 @@
 
 <style>
 	.page {
-		background: #160F04;
+		background: var(--color-bg);
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
@@ -806,7 +790,7 @@
 		top: 0;
 		left: 0;
 		width: 100%;
-		background: #160F04;
+		background: var(--color-bg);
 		z-index: 100;
 	}
 	.nav-content {
@@ -819,25 +803,25 @@
 	.back-btn {
 		width: 48rpx;
 		height: 48rpx;
-		padding: 10rpx;
+		padding: var(--spacing-xs);
 	}
 	/* 渐变描边：外层 1rpx 渐变圆环 + 内层填充。
-	   内层填充 = 半透明金渐变 + 页面底色 #160F04 合成（下层实色挡住描边透出），
+	   内层填充 = 半透明金渐变 + 页面底色 var(--color-bg) 合成（下层实色挡住描边透出），
 	   视觉效果等同于半透明渐变直接叠在页面上，边缘过渡自然 */
 	.search-bar-wrap {
 		width: 65%;
-		margin-left: 20rpx;
-		padding: 1rpx;
-		border-radius: 32rpx;
-		background: linear-gradient(268.28deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0.2) 62.4%, rgba(241, 205, 145, 0.7) 100%);
+		margin-left: var(--spacing-sm);
+		/* 纯色描边（标准 border，去 padding hack） */
+		border: 1rpx solid var(--color-primary-30);
+		border-radius: var(--radius-lg);
 	}
 	.search-bar-nav {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		border-radius: 31rpx;
-		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), #160F04;
-		padding: 0 20rpx;
+		border-radius: var(--radius-lg);
+		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), var(--color-bg);
+		padding: 0 var(--spacing-sm);
 		height: 64rpx;
 	}
 	.search-icon-small {
@@ -846,8 +830,8 @@
 	}
 	.search-input-nav {
 		flex: 1;
-		font-size: 26rpx;
-		color: #F1CD91;
+		font-size: var(--font-size-body-lg);
+		color: var(--color-primary);
 		margin-left: 12rpx;
 	}
 	/* 搜索结果 */
@@ -859,7 +843,7 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 200rpx 32rpx;
+		padding: 200rpx var(--spacing-lg);
 	}
 	.empty-title {
 		font-size: 32rpx;
@@ -867,15 +851,15 @@
 		margin-bottom: 16rpx;
 	}
 	.empty-desc {
-		font-size: 24rpx;
+		font-size: var(--font-size-body);
 		color: rgba(255, 255, 255, 0.3);
 	}
 	.load-more {
-		padding: 32rpx;
+		padding: var(--spacing-lg);
 		text-align: center;
 	}
 	.load-more-text {
-		font-size: 24rpx;
+		font-size: var(--font-size-body);
 		color: rgba(241, 205, 145, 0.4);
 	}
 	/* 分类标题 */
@@ -883,12 +867,12 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		margin: 8rpx 24rpx 20rpx;
+		margin: 8rpx 24rpx var(--spacing-sm);
 	}
 	.cat-title {
-		font-size: 38rpx;
-		font-weight: 700;
-		color: #F1CD91;
+		font-size: var(--font-size-display);
+		font-weight: 400;
+		color: var(--color-primary);
 		letter-spacing: 2rpx;
 		flex-shrink: 0;
 	}
@@ -911,13 +895,13 @@
 		padding: 0 24rpx;
 	}
 	/* 胶囊标签：外层 tab-wrap 为 1rpx 渐变描边圆环；内层 tab 填充 =
-	   半透明金渐变 + 页面底色 #160F04 合成（实色底层挡住描边透出）；选中态两层实金 */
+	   半透明金渐变 + 页面底色 var(--color-bg) 合成（实色底层挡住描边透出）；选中态两层实金 */
 	.tab-wrap{
 		margin-right: 16rpx;
 		margin-bottom: 16rpx;
-		padding: 1rpx;
-		border-radius: 64rpx;
-		background: linear-gradient(260.97deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0) 62.4%, rgba(241, 205, 145, 0.7) 100%);
+		/* 纯色描边（标准 border，去 padding hack） */
+		border: 1rpx solid var(--color-primary-30);
+		border-radius: var(--radius-avatar);
 		flex-shrink: 0;
 	}
 	.tab{
@@ -928,38 +912,37 @@
 		min-width: 140rpx;
 		padding: 0 24rpx;
 		height: 54rpx;
-		font-size: 24rpx;
-		color: #F1CD91;
-		font-weight: 700;
-		border-radius: 63rpx;
-		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), #160F04;
+		font-size: var(--font-size-body);
+		color: var(--color-primary);
+		font-weight: 400;
+		border-radius: var(--radius-avatar);
+		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), var(--color-bg);
 	}
 	.choosed-wrap{
-		background: #F1CD91;
+		background: var(--color-primary);
 	}
 	.choosed{
-		color: #160F04;
-		background: #F1CD91;
+		color: var(--color-bg);
+		background: var(--color-primary);
 	}
 	.photolistContainer{
-		padding: 8rpx 24rpx 0;
+		padding: 24rpx 24rpx 0;
 		display: flex;
 		flex-direction: row;
 		flex-wrap: wrap;
 		gap: 16rpx;
 	}
-	/* 客片渐变边框：外层 photoItem-wrap 渐变 + 内层 photoItem 图片 */
+	/* 客片纯色描边（标准 border） */
 	.photoItem-wrap{
 		width: calc((100% - 16rpx) / 2);
-		padding: 1rpx;
-		border-radius: 14rpx;
-		background: linear-gradient(252.59deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0) 62.4%, rgba(241, 205, 145, 0.7) 100%);
+		border: 1rpx solid var(--color-primary-30);
+		border-radius: var(--radius-card);
 	}
 	.photoItem{
 		width: 100%;
 		height: 460rpx;
 		position: relative;
-		border-radius: 13rpx;
+		border-radius: var(--radius-card);
 		overflow: hidden;
 	}
 	.photo{
@@ -989,16 +972,16 @@
 		align-items: center;
 	}
 	.photoName{
-		font-size: 26rpx;
-		font-weight: 700;
-		color: #F1CD91;
+		font-size: var(--font-size-body-lg);
+		font-weight: 400;
+		color: var(--color-primary);
 	}
 	.collect{
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		font-size: 24rpx;
-		color: #F1CD91;
+		font-size: var(--font-size-body);
+		color: var(--color-primary);
 	}
 	.heart{
 		width: 48rpx;
@@ -1018,9 +1001,9 @@
 		background: rgba(255, 255, 255, 0.15);
 	}
 	.bottomdesc{
-		margin: 32rpx auto;
-		font-size: 18rpx;
-		color: rgba(241, 205, 145, 0.5);
+		margin: var(--spacing-lg) auto;
+		font-size: var(--font-size-caption-md);
+		color: var(--color-primary-50);
 		font-weight: 400;
 	}
 	/* AI试衣标签 */
@@ -1031,9 +1014,9 @@
 	/* AI智能推荐入口 */
 	.ai-recommend-banner {
 		position: relative;
-		margin: 36rpx 20rpx 40rpx;
+		margin: 24rpx var(--spacing-sm) 24rpx;
 		height: 178rpx;
-		border-radius: 24rpx;
+		border-radius: var(--radius-container);
 		overflow: hidden;
 	}
 	.ai-recommend-bg {
@@ -1052,15 +1035,15 @@
 		justify-content: center;
 	}
 	.ai-recommend-title {
-		font-size: 38rpx;
-		font-weight: 700;
+		font-size: var(--font-size-display);
+		font-weight: 400;
 		color: #FFF3C6;
 		letter-spacing: 4rpx;
 	}
 	.ai-recommend-subtitle {
 		margin-top: 16rpx;
-		font-size: 22rpx;
-		font-weight: 500;
+		font-size: var(--font-size-body-sm);
+		font-weight: 400;
 		color: #FFF3C6;
 		letter-spacing: 1rpx;
 	}

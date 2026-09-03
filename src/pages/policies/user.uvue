@@ -98,12 +98,12 @@ export default {
 }
 
 .policy-content {
-  padding: 32rpx 36rpx 80rpx 36rpx;
+  padding: var(--spacing-lg) 36rpx 80rpx 36rpx;
 }
 
 .policy-title {
   font-size: 40rpx;
-  font-weight: bold;
+  font-weight: 400;
   color: #1a1a1a;
   text-align: center;
   margin-top: 16rpx;
@@ -118,7 +118,7 @@ export default {
 }
 
 .policy-meta-line {
-  font-size: 26rpx;
+  font-size: var(--font-size-body-lg);
   color: #888888;
   line-height: 44rpx;
 }
@@ -131,21 +131,21 @@ export default {
 
 .policy-section-title {
   font-size: 32rpx;
-  font-weight: bold;
+  font-weight: 400;
   color: #1a1a1a;
-  margin-top: 32rpx;
+  margin-top: var(--spacing-lg);
   margin-bottom: 16rpx;
 }
 
 .policy-paragraph {
-  font-size: 28rpx;
+  font-size: var(--font-size-body-plus);
   color: #333333;
   line-height: 48rpx;
   margin-bottom: 16rpx;
 }
 
 .policy-list-item {
-  font-size: 28rpx;
+  font-size: var(--font-size-body-plus);
   color: #333333;
   line-height: 48rpx;
   margin-bottom: 8rpx;
@@ -153,7 +153,7 @@ export default {
 }
 
 .policy-footer {
-  font-size: 26rpx;
+  font-size: var(--font-size-body-lg);
   color: #666666;
   line-height: 44rpx;
   text-align: center;

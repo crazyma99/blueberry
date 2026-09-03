@@ -1,0 +1,66 @@
+<!-- AppSegment — 分段控制器（组件化 · 品牌视觉：金色渐变胶囊选中态）
+  视觉换新：深色胶囊容器 + 选中项渐变金色胶囊（与 btn-primary 渐变一致）+ 金色光晕
+  props: options 选项数组 / currentIndex 当前下标
+  events: change(index)
+-->
+<template>
+  <view class="app-segment">
+    <view
+      v-for="(opt, index) in options"
+      :key="index"
+      :class="index === currentIndex ? 'app-segment-item is-active' : 'app-segment-item'"
+      hover-class="press-dim"
+      @click="emit(index)"
+    >
+      <text :class="index === currentIndex ? 'app-segment-text is-active' : 'app-segment-text'">{{ opt }}</text>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+  export default {
+    name: 'AppSegment',
+    props: {
+      options: { type: Array as any[], default: () => [] },
+      currentIndex: { type: Number, default: 0 }
+    },
+    emits: ['change'],
+    methods: {
+      emit(index: number): void {
+        this.$emit('change', index)
+      }
+    }
+  }
+</script>
+
+<style>
+  .app-segment {
+    display: flex;
+    flex-direction: row;
+    background: rgba(255, 255, 255, 0.06);
+    border: 2rpx solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-full);
+    padding: 8rpx;
+  }
+  .app-segment-item {
+    flex: 1;
+    height: 68rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    transition: background 0.15s ease-out;
+  }
+  .app-segment-item.is-active {
+    background: var(--gradient-btn-primary);
+  }
+  .app-segment-text {
+    font-size: var(--font-size-body);
+    color: rgba(255, 255, 255, 0.75);
+    transition: color 0.15s ease-out;
+  }
+  .app-segment-text.is-active {
+    color: var(--color-bg);
+    font-weight: 400;
+  }
+</style>

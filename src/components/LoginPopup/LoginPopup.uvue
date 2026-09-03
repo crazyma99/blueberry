@@ -1,0 +1,198 @@
+<!--
+  LoginPopup — 手机号快捷登录弹窗（全局居中弹窗 · 品牌视觉统一）
+
+  视觉：居中卡片 + 顶部金色氛围光 + Noto Serif 金色标题 + 自绘勾选 + 渐变主按钮 + 弹入动画
+  交互：emit 事件交回页面既有 handler（业务逻辑完全不变）
+  事件：@close 关闭；@toggle-agreement 协议勾选；@show-toast 未勾选提示；
+        @open-user @open-privacy 协议链接；@get-phone 一键登录(getPhoneNumber 回调)
+-->
+<template>
+  <view class="login-overlay" @click="emit('close')">
+    <view class="login-card" @click.stop>
+      <!-- 顶部氛围光 -->
+      <view class="card-aura"></view>
+      <view class="card-title font-noto-serif">手机号快捷登陆</view>
+      <view class="card-desc">登录后可使用收藏与 AI 试衣</view>
+
+      <!-- 协议勾选（自绘） -->
+      <view class="agreement-row" @click="emit('toggle-agreement')">
+        <view :class="agreementChecked ? 'agreement-check is-checked' : 'agreement-check'">
+          <view v-if="agreementChecked" class="agreement-mark"></view>
+        </view>
+        <text class="agreement-text">
+          <text>登录即代表同意 </text>
+          <text class="agreement-link" @click.stop="emit('open-user')">{{ userAgreementName }}</text>
+          <text>、</text>
+          <text class="agreement-link" @click.stop="emit('open-privacy')">{{ privacyPolicyName }}</text>
+        </text>
+      </view>
+
+      <!-- 一键登录 -->
+      <button
+        v-if="agreementChecked"
+        class="login-btn btn-primary"
+        open-type="getPhoneNumber"
+        @getphonenumber="emit('get-phone', $event)"
+      >一键登录</button>
+      <button
+        v-else
+        class="login-btn btn-primary"
+        hover-class="press-dim"
+        @click="emit('show-toast')"
+      >一键登录</button>
+
+      <view class="login-skip" hover-class="press-dim" @click="emit('close')">暂不登陆</view>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+  export default {
+    name: 'LoginPopup',
+    props: {
+      agreementChecked: {
+        type: Boolean,
+        default: false
+      },
+      userAgreementName: {
+        type: String,
+        default: '用户协议'
+      },
+      privacyPolicyName: {
+        type: String,
+        default: '隐私政策'
+      }
+    },
+    emits: ['close', 'toggle-agreement', 'show-toast', 'open-user', 'open-privacy', 'get-phone'],
+    methods: {
+      emit(name: string, event: any): void {
+        this.$emit(name, event)
+      }
+    }
+  }
+</script>
+
+<style>
+  /* 遮罩 + 渐显（全屏：vw/vh 撑满，微信不支持 inset） */
+  .login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    animation: overlayFadeIn 0.25s ease-out;
+  }
+  @keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* 居中卡片 */
+  .login-card {
+    position: relative;
+    width: 620rpx;
+    background: var(--color-popup-card);
+    border-radius: var(--radius-2xl);
+    padding: 56rpx 48rpx 44rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    animation: cardPopIn 0.28s ease-out;
+  }
+  @keyframes cardPopIn {
+    from { opacity: 0; transform: scale(0.92) translateY(24rpx); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* 顶部金色氛围光 */
+  .card-aura {
+    position: absolute;
+    top: -100rpx;
+    left: 50%;
+    width: 420rpx;
+    height: 220rpx;
+    margin-left: -210rpx;
+    background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(241, 205, 145, 0.2), rgba(241, 205, 145, 0) 70%);
+    pointer-events: none;
+  }
+
+  .card-title {
+    font-size: 40rpx;
+    font-weight: 400;
+    color: var(--color-primary);
+    margin-bottom: 12rpx;
+  }
+
+  .card-desc {
+    font-size: var(--font-size-body-sm);
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 40rpx;
+  }
+
+  /* 协议勾选 */
+  .agreement-row {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: 40rpx;
+  }
+  .agreement-check {
+    width: 36rpx;
+    height: 36rpx;
+    border-radius: 50%;
+    border: 2rpx solid rgba(255, 255, 255, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16rpx;
+    transition: all 0.15s ease-out;
+  }
+  .agreement-check.is-checked {
+    border-color: var(--color-primary);
+    background: var(--gradient-btn-primary);
+  }
+  /* 选中对勾（CSS 画勾：两条边框旋转 45 度） */
+  .agreement-mark {
+    width: 18rpx;
+    height: 10rpx;
+    border-left: 4rpx solid var(--color-bg);
+    border-bottom: 4rpx solid var(--color-bg);
+    transform: rotate(-45deg) translate(1rpx, -2rpx);
+  }
+  .agreement-text {
+    flex: 1;
+    font-size: var(--font-size-body-xs);
+    color: rgba(255, 255, 255, 0.55);
+    word-break: break-all;
+    line-height: 1.5;
+  }
+  .agreement-link {
+    color: var(--color-primary);
+  }
+
+  /* 一键登录 */
+  .login-btn {
+    width: 100%;
+    height: 92rpx;
+    font-size: var(--font-size-body-plus);
+  }
+  .login-btn::after {
+    border: none;
+  }
+
+  /* 暂不登陆 */
+  .login-skip {
+    margin-top: 32rpx;
+    padding: 12rpx 40rpx;
+    font-size: var(--font-size-body-sm);
+    color: rgba(255, 255, 255, 0.4);
+    transition: opacity 0.15s ease-out;
+  }
+</style>
