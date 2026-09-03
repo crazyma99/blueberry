@@ -8,7 +8,8 @@
 
 		<!-- 上传图片框 -->
 		<view class="section">
-			<view class="upload-area" @click="choosePhoto">
+			<view class="upload-area" hover-class="press-dim"
+					@click="choosePhoto">
 				<image v-if="photoPreviewUrl" class="upload-preview" :src="photoPreviewUrl" mode="widthFix"></image>
 				<view v-else class="upload-placeholder">
 					<text class="upload-plus">+</text>
@@ -26,6 +27,7 @@
 			<view v-if="isPaidMode && creditBalance <= 0" class="action-btn-wrap">
 				<view
 					:class="photoPreviewUrl !== '' ? 'action-btn' : 'action-btn action-btn-disabled'"
+					hover-class="press-dim"
 					@click="handleStartAnalysis"
 				>
 					<text class="action-btn-price">¥{{ priceText }}</text>
@@ -36,6 +38,7 @@
 			<view v-else class="action-btn-wrap">
 				<view
 					:class="photoPreviewUrl !== '' ? 'action-btn' : 'action-btn action-btn-disabled'"
+					hover-class="press-dim"
 					@click="handleStartAnalysis"
 				>
 					<text class="action-btn-text">{{ uploading ? '上传中...' : '开始AI分析推荐' }}</text>
@@ -50,13 +53,16 @@
 		</view>
 
 		<!-- 登录弹窗 -->
-		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
-			<view class="login-popup login-auth-popup" @click.stop>
+		<view v-if="showLoginPopup" class="login-overlay" hover-class="press-dim"
+					@click="closeLoginPopup">
+			<view class="login-popup login-auth-popup" hover-class="press-dim"
+					@click.stop>
 				<view class="login-popup-title">手机号快捷登陆</view>
 				<view class="login-agreement-row">
 					<view
 						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
-						@click.stop="toggleLoginAgreement"
+						hover-class="press-dim"
+					@click.stop="toggleLoginAgreement"
 					>
 						<view v-if="loginAgreementChecked" class="login-agreement-dot"></view>
 					</view>
@@ -73,13 +79,16 @@
 					class="login-phone-btn"
 					@click="showLoginAgreementToast"
 				>一键登录</button>
-				<view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
+				<view class="login-cancel login-cancel-btn" hover-class="press-dim"
+					@click="closeLoginPopup">暂不登陆</view>
 			</view>
 		</view>
 
 		<!-- 头像昵称授权弹窗 -->
-		<view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
-			<view class="login-popup" @click.stop>
+		<view v-if="showProfilePopup" class="login-overlay" hover-class="press-dim"
+					@click="skipProfile">
+			<view class="login-popup" hover-class="press-dim"
+					@click.stop>
 				<view class="login-popup-title">完善个人资料</view>
 				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
 				<button
@@ -95,7 +104,8 @@
 					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
 				</view>
 				<button class="login-phone-btn" @click="submitProfile">确认</button>
-				<view class="login-cancel" @click="skipProfile">跳过</view>
+				<view class="login-cancel" hover-class="press-dim"
+					@click="skipProfile">跳过</view>
 			</view>
 		</view>
 	</view>

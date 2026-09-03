@@ -50,7 +50,8 @@
 					>
 						<view class="photoItem">
 							<image :src="item.coverImageUrl" class="photo" mode="aspectFill" />
-							<view class="mask" @click="gotoDetail(item)">
+							<view class="mask" hover-class="press-dim"
+					@click="gotoDetail(item)">
 								<view class="desc">
 									<view class="photoName font-noto-serif">{{ item.title }}</view>
 									<view class="desc-row">
@@ -60,11 +61,13 @@
 												mode="aspectFit"
 												:src="item.liked ? '/static/liked.svg' : '/static/like.svg'"
 											>
-												<view class="clickArea" @click.stop="handleLike(item)"></view>
+												<view class="clickArea" hover-class="press-dim"
+					@click.stop="handleLike(item)"></view>
 											</image>
 											<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 										</view>
-										<view v-if="item.tryonDisabled !== true" @click.stop="goToAiTryOn(item)">
+										<view v-if="item.tryonDisabled !== true" hover-class="press-dim"
+					@click.stop="goToAiTryOn(item)">
 											<image mode="aspectFit" class="ai-tryon-tag" src="/static/aitry-btn.png"/>
 										</view>
 									</view>
@@ -84,7 +87,8 @@
 			<!-- 正常分类模式 -->
 			<view v-if="!isSearching && alltabs.length > 0">
 				<!-- AI智能推荐入口 -->
-				<view class="ai-recommend-banner" @click="goToAiRecommend">
+				<view class="ai-recommend-banner" hover-class="press-dim"
+					@click="goToAiRecommend">
 					<image class="ai-recommend-bg" src="/static/ai-recom-banner.png" mode="aspectFill"></image>
 					<view class="ai-recommend-content">
 						<text class="ai-recommend-title font-noto-serif">AI智能推荐·拍照选服饰</text>
@@ -102,7 +106,8 @@
 						v-for="(item, idx) in alltabs"
 						:key="idx"
 						:class="selectedTab.parentIndex === idx ? 'tab-wrap choosed-wrap' : 'tab-wrap'"
-						@click="changeTab(idx, 'parent')"
+						hover-class="press-dim"
+					@click="changeTab(idx, 'parent')"
 					>
 						<view :class="selectedTab.parentIndex === idx ? 'tab choosed font-noto-serif' : 'tab font-noto-serif'">{{item.parentName}}</view>
 					</view>
@@ -112,7 +117,8 @@
 						v-for="(item, idx) in getSecondTab"
 						:key="idx"
 						:class="selectedTab.childIndex === idx ? 'tab-wrap choosed-wrap' : 'tab-wrap'"
-						@click="changeTab(idx, 'child')"
+						hover-class="press-dim"
+					@click="changeTab(idx, 'child')"
 					>
 						<view :class="selectedTab.childIndex === idx ? 'tab choosed font-noto-serif' : 'tab font-noto-serif'">{{item.name}}</view>
 					</view>
@@ -125,7 +131,8 @@
 					>
 						<view class="photoItem">
 							<image :src="item?.coverImageUrl" class="photo" mode="aspectFill" />
-							<view class="mask" @click="gotoDetail(item)">
+							<view class="mask" hover-class="press-dim"
+					@click="gotoDetail(item)">
 								<view class="desc">
 									<view class="photoName font-noto-serif">{{ item?.title }}</view>
 									<view class="desc-row">
@@ -135,11 +142,13 @@
 												mode="aspectFit"
 												:src="item.liked ? '/static/liked.svg' : '/static/like.svg'"
 											>
-												<view class="clickArea" @click.stop="handleLike(item)"></view>
+												<view class="clickArea" hover-class="press-dim"
+					@click.stop="handleLike(item)"></view>
 											</image>
 											<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 										</view>
-										<view v-if="item?.tryonDisabled !== true" @click.stop="goToAiTryOn(item)">
+										<view v-if="item?.tryonDisabled !== true" hover-class="press-dim"
+					@click.stop="goToAiTryOn(item)">
 											<image mode="aspectFit" class="ai-tryon-tag" src="/static/aitry-btn.png"/>
 										</view>
 									</view>
@@ -164,13 +173,16 @@
 		</view>
 
 		<!-- 登录弹窗 -->
-		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
-			<view class="login-popup login-auth-popup" @click.stop>
+		<view v-if="showLoginPopup" class="login-overlay" hover-class="press-dim"
+					@click="closeLoginPopup">
+			<view class="login-popup login-auth-popup" hover-class="press-dim"
+					@click.stop>
 				<view class="login-popup-title">手机号快捷登陆</view>
 				<view class="login-agreement-row">
 					<view
 						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
-						@click.stop="toggleLoginAgreement"
+						hover-class="press-dim"
+					@click.stop="toggleLoginAgreement"
 					>
 						<view v-if="loginAgreementChecked" class="login-agreement-dot"></view>
 					</view>
@@ -187,13 +199,16 @@
 					class="login-phone-btn"
 					@click="showLoginAgreementToast"
 				>一键登录</button>
-				<view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
+				<view class="login-cancel login-cancel-btn" hover-class="press-dim"
+					@click="closeLoginPopup">暂不登陆</view>
 			</view>
 		</view>
 
 		<!-- 头像昵称授权弹窗 -->
-		<view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
-			<view class="login-popup" @click.stop>
+		<view v-if="showProfilePopup" class="login-overlay" hover-class="press-dim"
+					@click="skipProfile">
+			<view class="login-popup" hover-class="press-dim"
+					@click.stop>
 				<view class="login-popup-title">完善个人资料</view>
 				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
 				<button
@@ -209,7 +224,8 @@
 					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
 				</view>
 				<button class="login-phone-btn" @click="submitProfile">确认</button>
-				<view class="login-cancel" @click="skipProfile">跳过</view>
+				<view class="login-cancel" hover-class="press-dim"
+					@click="skipProfile">跳过</view>
 			</view>
 		</view>
 	</view>

@@ -26,18 +26,21 @@
 			<view class="body-type-row">
 				<view
 					:class="bodyType === 'slim' ? 'body-btn body-btn-active' : 'body-btn'"
+					hover-class="press-dim"
 					@click="selectBodyType('slim')"
 				>
 					<text :class="bodyType === 'slim' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">瘦</text>
 				</view>
 				<view
 					:class="bodyType === 'medium' ? 'body-btn body-btn-active' : 'body-btn'"
+					hover-class="press-dim"
 					@click="selectBodyType('medium')"
 				>
 					<text :class="bodyType === 'medium' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">微胖</text>
 				</view>
 				<view
 					:class="bodyType === 'fat' ? 'body-btn body-btn-active' : 'body-btn'"
+					hover-class="press-dim"
 					@click="selectBodyType('fat')"
 				>
 					<text :class="bodyType === 'fat' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">胖</text>
@@ -59,7 +62,8 @@
 		<!-- 照片上传 -->
 		<view class="section">
 			<text class="section-label">上传你的照片：</text>
-			<view class="upload-area" @click="choosePhoto">
+			<view class="upload-area" hover-class="press-dim"
+					@click="choosePhoto">
 				<image v-if="photoPreviewUrl" class="upload-preview" :src="photoPreviewUrl" mode="widthFix"></image>
 				<view v-else class="upload-placeholder">
 					<text class="upload-plus">+</text>
@@ -84,6 +88,7 @@
 				<image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"/>
 				<view
 					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
+					hover-class="press-dim"
 					@click="handleGenerate"
 				>
 					<text class="generate-btn-ai">¥{{ priceText }}</text>
@@ -98,6 +103,7 @@
 				<image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"/>
 				<view
 					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
+					hover-class="press-dim"
 					@click="handleGenerate"
 				>
 					<text class="generate-btn-text">生成 </text>
@@ -116,13 +122,16 @@
 		</view>
 
 		<!-- 登录弹窗 -->
-		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
-			<view class="login-popup login-auth-popup" @click.stop>
+		<view v-if="showLoginPopup" class="login-overlay" hover-class="press-dim"
+					@click="closeLoginPopup">
+			<view class="login-popup login-auth-popup" hover-class="press-dim"
+					@click.stop>
 				<view class="login-popup-title">手机号快捷登陆</view>
 				<view class="login-agreement-row">
 					<view
 						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
-						@click.stop="toggleLoginAgreement"
+						hover-class="press-dim"
+					@click.stop="toggleLoginAgreement"
 					>
 						<view v-if="loginAgreementChecked" class="login-agreement-dot"></view>
 					</view>
@@ -139,13 +148,16 @@
 					class="login-phone-btn"
 					@click="showLoginAgreementToast"
 				>一键登录</button>
-				<view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
+				<view class="login-cancel login-cancel-btn" hover-class="press-dim"
+					@click="closeLoginPopup">暂不登陆</view>
 			</view>
 		</view>
 
 		<!-- 头像昵称授权弹窗 -->
-		<view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
-			<view class="login-popup" @click.stop>
+		<view v-if="showProfilePopup" class="login-overlay" hover-class="press-dim"
+					@click="skipProfile">
+			<view class="login-popup" hover-class="press-dim"
+					@click.stop>
 				<view class="login-popup-title">完善个人资料</view>
 				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
 				<button
@@ -161,7 +173,8 @@
 					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
 				</view>
 				<button class="login-phone-btn" @click="submitProfile">确认</button>
-				<view class="login-cancel" @click="skipProfile">跳过</view>
+				<view class="login-cancel" hover-class="press-dim"
+					@click="skipProfile">跳过</view>
 			</view>
 		</view>
 	</view>

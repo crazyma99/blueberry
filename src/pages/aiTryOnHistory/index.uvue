@@ -32,6 +32,7 @@
 					v-for="(item, index) in taskList"
 					:key="index"
 					class="photoItem"
+					hover-class="press-dim"
 					@click="handleItemClick(item)"
 				>
 					<image

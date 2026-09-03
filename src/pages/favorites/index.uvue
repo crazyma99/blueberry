@@ -45,6 +45,7 @@
 					v-for="(item, index) in favoriteList"
 					:key="index"
 					class="photoItem-wrap"
+					hover-class="press-dim"
 					@click="handleItemClick(item)"
 				>
 					<view class="photoItem">
@@ -63,7 +64,8 @@
 			</view>
 
 			<!-- 加载更多（仅搜索模式下启用分页，非搜索模式接口一次性返回全部，无需分页 UI） -->
-			<view v-if="isSearching && !isEmpty && !noMore" class="load-more" @click="loadMore">
+			<view v-if="isSearching && !isEmpty && !noMore" class="load-more" hover-class="press-dim"
+					@click="loadMore">
 				<text class="load-more-text">{{ loadingMore ? '加载中...' : '加载更多' }}</text>
 			</view>
 			<view v-if="isSearching && noMore && favoriteList.length > 0" class="load-more">
