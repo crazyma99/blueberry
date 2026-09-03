@@ -15,11 +15,15 @@
 		<!-- 主内容 -->
 		<view v-else class="main-content">
 			<!-- 顶部通栏轮播：无指示点；文案已烘焙进 banner 图，高度随首图宽高比自适应避免裁切 -->
-			<swiper class="hero" autoplay circular :interval="3000" :duration="500" :style="{ height: heroHeight }">
-				<swiper-item v-for="(item, idx) in banners" :key="idx">
-					<image class="hero-image fade-in" :src="item.imageUrl" mode="aspectFill" @load="onHeroImageLoad"></image>
-				</swiper-item>
-			</swiper>
+			<view class="hero-wrap">
+				<swiper class="hero" autoplay circular :interval="3000" :duration="500" :style="{ height: heroHeight }">
+					<swiper-item v-for="(item, idx) in banners" :key="idx">
+						<image class="hero-image fade-in" :src="item.imageUrl" mode="aspectFill" @load="onHeroImageLoad"></image>
+					</swiper-item>
+				</swiper>
+				<!-- Figma 渐变遮罩：图片底部渐隐融入页面背景（透明50% → #160F04 78.19%） -->
+				<view class="hero-mask"></view>
+			</view>
 
 			<!-- 客片欣赏：shop-container.png 以 border-image 点九图方式作背景，高度由内容撑开 -->
 			<view class="shop-section">
@@ -392,9 +396,24 @@
 		margin-top: auto;
 	}
 	/* 顶部通栏轮播：无指示点，高度由脚本按首图宽高比写入 */
+	.hero-wrap{
+		position: relative;
+		width: 100%;
+	}
 	.hero{
 		width: 100%;
 		overflow: hidden;
+	}
+	/* Figma 渐变遮罩：图片底部渐隐融入页面背景 */
+	.hero-mask{
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(180deg, rgba(22, 15, 4, 0) 50%, #160F04 78.19%);
+		pointer-events: none;
+		z-index: 10;
 	}
 	.hero-image{
 		width: 100%;
