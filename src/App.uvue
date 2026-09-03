@@ -109,7 +109,7 @@ page {
 /* 页面底色：深色主题必须显式设置，否则 tab 切换重绘间隙会透出默认白底（闪白） */
 page {
   font-family: 'HarmonyOS-Sans-SC';
-  background-color: #160F04;
+  background-color: var(--color-bg);
 }
 
 /* 自定义底部 tabbar 的页面占位（高度需与 src/custom-tab-bar 保持一致：116rpx + 底部安全区） */
@@ -295,7 +295,7 @@ page {
 .login-agreement-check {
   width: 32rpx;
   height: 32rpx;
-  border: 4rpx solid #F1CD91;
+  border: 4rpx solid var(--color-primary);
   border-radius: 50%;
   margin-right: 22rpx;
   display: flex;
@@ -305,7 +305,7 @@ page {
   box-sizing: border-box;
 }
 .login-agreement-check.is-checked {
-  background: #F1CD91;
+  background: var(--color-primary);
 }
 .login-agreement-dot {
   width: 14rpx;
@@ -326,7 +326,7 @@ page {
 .login-auth-popup .login-phone-btn {
   height: 96rpx;
   line-height: 96rpx;
-  background: #F1CD91;
+  background: var(--color-primary);
   color: #000;
   font-size: 32rpx;
   font-weight: 700;
@@ -350,7 +350,7 @@ page {
   width: 100%;
   height: 88rpx;
   line-height: 88rpx;
-  background: #F1CD91;
+  background: var(--color-primary);
   color: #1a1a1a;
   font-size: 30rpx;
   font-weight: 600;
