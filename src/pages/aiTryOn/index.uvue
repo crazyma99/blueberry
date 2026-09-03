@@ -15,7 +15,7 @@
 				@change="onSwiperChange"
 			>
 				<swiper-item v-for="(item, index) in templates" :key="index">
-					<image class="template-img" :src="item.imageUrl" mode="aspectFill"></image>
+					<image class="template-img fade-in" :src="item.imageUrl" mode="aspectFill"></image>
 				</swiper-item>
 			</swiper>
 		</view>
@@ -23,67 +23,40 @@
 		<!-- 体型选择 -->
 		<view class="section">
 			<text class="section-label">选择您的体型：</text>
-			<view class="body-type-row">
-				<view
-					:class="bodyType === 'slim' ? 'body-btn body-btn-active' : 'body-btn'"
-					@click="selectBodyType('slim')"
-				>
-					<text :class="bodyType === 'slim' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">瘦</text>
-				</view>
-				<view
-					:class="bodyType === 'medium' ? 'body-btn body-btn-active' : 'body-btn'"
-					@click="selectBodyType('medium')"
-				>
-					<text :class="bodyType === 'medium' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">微胖</text>
-				</view>
-				<view
-					:class="bodyType === 'fat' ? 'body-btn body-btn-active' : 'body-btn'"
-					@click="selectBodyType('fat')"
-				>
-					<text :class="bodyType === 'fat' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">胖</text>
-				</view>
-			</view>
+			<AppSegment
+				:options="['瘦', '微胖', '胖']"
+				:current-index="bodyIndex"
+				@change="onBodyChange"
+			/>
 		</view>
 
 		<!-- 年龄选择 -->
 		<view class="section">
 			<text class="section-label">选择您的年龄：</text>
-			<picker mode="selector" :range="ageOptions" :value="ageIndex" @change="selectAge">
-				<view class="age-picker">
-					<text class="age-picker-text">{{ ageRange }}</text>
-					<view class="age-picker-arrow"></view>
-				</view>
-			</picker>
+			<AppSelector :options="ageOptions" :value-index="ageIndex" @change="selectAge" />
 		</view>
 
-		<!-- 照片上传 -->
+		<!-- 照片上传（组件化 AppPhotoPicker：点击转发 choosePhoto，业务不动） -->
 		<view class="section">
 			<text class="section-label">上传你的照片：</text>
-			<view class="upload-area" @click="choosePhoto">
-				<image v-if="photoPreviewUrl" class="upload-preview" :src="photoPreviewUrl" mode="widthFix"></image>
-				<view v-else class="upload-placeholder">
-					<text class="upload-plus">+</text>
-					<text class="upload-hint">点击上传你的照片</text>
-				</view>
-				<view v-if="isUploading" class="upload-mask">
-					<text class="upload-mask-text">上传中...</text>
-				</view>
-				<view v-else-if="photoPreviewUrl && uploadedFilename === ''" class="upload-mask upload-mask-fail">
-					<text class="upload-mask-text">上传失败，点击重试</text>
-				</view>
-			</view>
+			<AppPhotoPicker
+				:photo-url="photoPreviewUrl"
+				:busy="isUploading"
+				@click="choosePhoto"
+			/>
 		</view>
 
 		<!-- 底部占位（给固定按钮腾出空间） -->
 		<view class="bottom-spacer"></view>
 
-		<!-- 底部固定生成按钮 -->
-		<view class="fixed-bottom">
+		<!-- 底部固定生成按钮（组件化 BottomActionBar：按钮组 slot + 内置版权 footer） -->
+		<BottomActionBar>
 			<!-- 付费模式且无限免次数：原按钮样式 + 价格文案，点击引导充值/兑换 -->
 			<view v-if="isPaidMode && creditBalance <= 0" class="gen-btn-wrap">
 				<image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"/>
 				<view
-					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
+					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn btn-primary' : 'generate-btn btn-primary generate-btn-disabled'"
+					hover-class="press-dim"
 					@click="handleGenerate"
 				>
 					<text class="generate-btn-ai">¥{{ priceText }}</text>
@@ -97,7 +70,8 @@
 			<view v-else class="gen-btn-wrap">
 				<image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"/>
 				<view
-					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
+					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn btn-primary' : 'generate-btn btn-primary generate-btn-disabled'"
+					hover-class="press-dim"
 					@click="handleGenerate"
 				>
 					<text class="generate-btn-text">生成 </text>
@@ -110,60 +84,32 @@
 					<text class="gen-btn-badge-text">限时免费 {{ creditBalance }} 次</text>
 				</view>
 			</view>
-			<view class="footer-copyright">
-				<AppFooter />
-			</view>
-		</view>
+		</BottomActionBar>
 
 		<!-- 登录弹窗 -->
-		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
-			<view class="login-popup login-auth-popup" @click.stop>
-				<view class="login-popup-title">手机号快捷登陆</view>
-				<view class="login-agreement-row">
-					<view
-						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
-						@click.stop="toggleLoginAgreement"
-					>
-						<view v-if="loginAgreementChecked" class="login-agreement-dot"></view>
-					</view>
-					<text class="login-agreement-text"><text>登录即代表同意 </text><text class="login-agreement-link" @click.stop="openUserAgreement">{{ userAgreementName }}</text><text>、</text><text class="login-agreement-link" @click.stop="openPrivacyPolicy">{{ privacyPolicyName }}</text></text>
-				</view>
-				<button
-					v-if="loginAgreementChecked"
-					class="login-phone-btn"
-					open-type="getPhoneNumber"
-					@getphonenumber="onGetPhoneNumber"
-				>一键登录</button>
-				<button
-					v-else
-					class="login-phone-btn"
-					@click="showLoginAgreementToast"
-				>一键登录</button>
-				<view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
-			</view>
-		</view>
+		<LoginPopup
+	v-if="showLoginPopup"
+	:agreement-checked="loginAgreementChecked"
+	:user-agreement-name="userAgreementName"
+	:privacy-policy-name="privacyPolicyName"
+	@close="closeLoginPopup"
+	@toggle-agreement="toggleLoginAgreement"
+	@show-toast="showLoginAgreementToast"
+	@open-user="openUserAgreement"
+	@open-privacy="openPrivacyPolicy"
+	@get-phone="onGetPhoneNumber"
+/>
 
 		<!-- 头像昵称授权弹窗 -->
-		<view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
-			<view class="login-popup" @click.stop>
-				<view class="login-popup-title">完善个人资料</view>
-				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
-				<button
-					class="profile-avatar-btn"
-					open-type="chooseAvatar"
-					@chooseavatar="onChooseAvatar"
-				>
-					<image class="profile-avatar-img" :src="profileAvatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
-					<text class="profile-avatar-tip">点击选择头像</text>
-				</button>
-				<view class="profile-nickname-row">
-					<text class="profile-nickname-label">昵称</text>
-					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
-				</view>
-				<button class="login-phone-btn" @click="submitProfile">确认</button>
-				<view class="login-cancel" @click="skipProfile">跳过</view>
-			</view>
-		</view>
+		<ProfilePopup
+	v-if="showProfilePopup"
+	:avatar-url="profileAvatarUrl"
+	:nickname="profileNickname"
+	@choose-avatar="onChooseAvatar"
+	@update-nickname="(v: string) => { this.profileNickname = v }"
+	@submit="submitProfile"
+	@skip="skipProfile"
+/>
 	</view>
 </template>
 
@@ -228,6 +174,18 @@ export default {
 			if (fen <= 0) return '0'
 			if (fen % 100 === 0) return `${fen / 100}`
 			return (fen / 100).toFixed(2)
+		},
+		// 体型下标（AppSegment 高亮）
+		bodyIndex(): number {
+			if (this.bodyType === 'medium') return 1
+			if (this.bodyType === 'fat') return 2
+			return 0
+		},
+		// 体型中文文案
+		bodyTypeText(): string {
+			if (this.bodyType === 'medium') return '微胖'
+			if (this.bodyType === 'fat') return '胖'
+			return '瘦'
 		}
 	},
 	onLoad(options) {
@@ -293,8 +251,15 @@ export default {
 			this.bodyType = type
 		},
 
+		// AppSegment 回调：index 映射回 bodyType（业务行为不变）
+		onBodyChange(index: number) {
+			const types = ['slim', 'medium', 'fat']
+			this.selectBodyType(types[index] || 'slim')
+		},
+
 		selectAge(e: any) {
-			const index = e.detail.value
+			// 兼容两种形态：组件直接传 index，或原生 picker 事件对象
+			const index = (e != null && e.detail != null) ? e.detail.value : e
 			this.ageIndex = index
 			this.ageRange = this.ageOptions[index]
 		},
@@ -348,11 +313,6 @@ export default {
 			}
 		},
 
-		bodyTypeText(): string {
-			if (this.bodyType === 'medium') return '微胖'
-			if (this.bodyType === 'fat') return '胖'
-			return '瘦'
-		},
 
 		async handleGenerate() {
 			if (this.isSubmitting) return
@@ -701,7 +661,7 @@ export default {
 
 <style>
 .page {
-	background: #160F04;
+	background: var(--color-bg);
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -710,20 +670,20 @@ export default {
 
 /* 提示文案 */
 .tip-bar {
-	padding: 20rpx 0;
+	padding: var(--spacing-sm) 0;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 }
 .tip-text {
-	font-size: 26rpx;
+	font-size: var(--font-size-body-lg);
 	color: rgba(255, 255, 255, 0.5);
 }
 
 /* 模板轮播 */
 .swiper-wrap {
 	width: 100%;
-	padding: 0 0 20rpx;
+	padding: 0 0 var(--spacing-sm);
 }
 .template-swiper {
 	width: 100%;
@@ -742,7 +702,7 @@ export default {
 	background: rgba(255, 255, 255, 0.05);
 }
 .template-empty-text {
-	font-size: 28rpx;
+	font-size: var(--font-size-body-plus);
 	color: rgba(255, 255, 255, 0.3);
 }
 
@@ -751,17 +711,17 @@ export default {
 	padding: 24rpx 40rpx;
 }
 .section-label {
-	font-size: 28rpx;
+	font-size: var(--font-size-body-plus);
 	color: rgba(255, 255, 255, 0.7);
-	margin-bottom: 20rpx;
+	margin-bottom: var(--spacing-sm);
 }
 
 /* 体型选择 */
 .body-type-row {
 	display: flex;
 	flex-direction: row;
-	margin-top: 20rpx;
-	border-radius: 44rpx;
+	margin-top: var(--spacing-sm);
+	border-radius: var(--radius-xl);
 	overflow: hidden;
 	border-width: 1rpx;
 	border-style: solid;
@@ -775,14 +735,14 @@ export default {
 	justify-content: center;
 	background-color: transparent;
   margin: 8rpx;
-  border-radius: 44rpx;
+  border-radius: var(--radius-xl);
 }
 .body-btn-active {
 	background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .body-btn-text {
-	font-size: 28rpx;
+	font-size: var(--font-size-body-plus);
 	color: #fff;
 }
 
@@ -793,15 +753,15 @@ export default {
 	align-items: center;
 	justify-content: space-between;
 	height: 80rpx;
-	border-radius: 44rpx;
+	border-radius: var(--radius-xl);
 	border-width: 1rpx;
 	border-style: solid;
 	border-color: rgba(255, 255, 255, 0.1);
-	padding: 0 32rpx;
-	margin-top: 20rpx;
+	padding: 0 var(--spacing-lg);
+	margin-top: var(--spacing-sm);
 }
 .age-picker-text {
-	font-size: 28rpx;
+	font-size: var(--font-size-body-plus);
 	color: #fff;
 }
 .age-picker-arrow {
@@ -815,10 +775,10 @@ export default {
 /* 照片上传 */
 .upload-area {
 	position: relative;
-	margin-top: 20rpx;
+	margin-top: var(--spacing-sm);
 	width: 100%;
 	min-height: 320rpx;
-	border-radius: 16rpx;
+	border-radius: var(--radius-sm);
 	border-width: 2rpx;
 	border-style: dashed;
 	border-color: rgba(255, 255, 255, 0.3);
@@ -840,7 +800,7 @@ export default {
 	margin-bottom: 16rpx;
 }
 .upload-hint {
-	font-size: 26rpx;
+	font-size: var(--font-size-body-lg);
 	color: rgba(255, 255, 255, 0.4);
 }
 .upload-preview {
@@ -861,7 +821,7 @@ export default {
 	background-color: rgba(0, 0, 0, 0.65);
 }
 .upload-mask-text {
-	font-size: 28rpx;
+	font-size: var(--font-size-body-plus);
 	color: #fff;
 }
 
@@ -870,44 +830,30 @@ export default {
 	height: 260rpx;
 }
 
-/* 底部固定 */
-.fixed-bottom {
-	position: fixed;
-	left: 0;
-	bottom: 0;
-	width: 100%;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	padding: 24rpx 40rpx;
-	padding-bottom: 40rpx;
-	background-color: #160F04;
-}
-
 /* 生成按钮 */
 .generate-btn {
 	height: 88rpx;
-	border-radius: 44rpx;
+	border-radius: var(--radius-xl);
 	padding: 0 40rpx;
   gap: 12rpx;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
-	background: #F1CD91;
+	background: var(--gradient-btn-primary);
 }
 .generate-btn-disabled {
 	opacity: 0.4;
 }
 .generate-btn-text {
 	font-size: 32rpx;
-	color: rgba(22, 15, 4, 1);
-	font-weight: 500;
+	color: var(--color-bg);
+	font-weight: 400;
 }
 .generate-btn-ai {
 	font-size: 32rpx;
-	color: rgba(22, 15, 4, 1);
-	font-weight: 700;
+	color: var(--color-bg);
+	font-weight: 400;
 }
 .generate-btn-ai-img {
 	width: 118rpx;
@@ -925,7 +871,7 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
-	padding-top: 20rpx;
+	padding-top: var(--spacing-sm);
 }
 /* 限免角标（相对容器定位：top 取 padding-top 即按钮顶边，right 取右侧 icon 宽度即按钮右边，
    再 translate 自身一半，使角标一半高一半宽与按钮右上角重叠） */
@@ -936,19 +882,12 @@ export default {
 	transform: translate(40%, -50%);
 	z-index: 10;
 	background: #ff3b30;
-	border-radius: 16rpx;
+	border-radius: var(--radius-sm);
 	padding: 4rpx 12rpx;
 }
 .gen-btn-badge-text {
-	font-size: 20rpx;
+	font-size: var(--font-size-body-xs);
 	color: #fff;
 }
 
-/* Copyright */
-.footer-copyright {
-	margin-top: 20rpx;
-	font-size: 18rpx;
-	color: rgba(241, 205, 145, 0.5);
-	font-weight: 400;
-}
 </style>

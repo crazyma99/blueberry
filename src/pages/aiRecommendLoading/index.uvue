@@ -11,13 +11,15 @@
 		</view>
 
 		<!-- 失败态 -->
-		<view v-if="status === 'failed'" class="center-content" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #160F04;">
+		<view v-if="status === 'failed'" class="center-content" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--color-bg);">
 			<view class="fail-wrapper">
 				<text class="fail-text">AI分析失败，请重试</text>
-				<view class="retry-btn" @click="handleRetry">
+				<view class="retry-btn" hover-class="press-dim"
+					@click="handleRetry">
 					<text class="retry-btn-text">重试</text>
 				</view>
-				<view class="back-btn-wrapper" @click="handleBack">
+				<view class="back-btn-wrapper" hover-class="press-dim"
+					@click="handleBack">
 					<text class="back-btn-text">返回</text>
 				</view>
 			</view>
@@ -224,7 +226,7 @@ export default {
 
 <style>
 .page {
-	background: #160F04;
+	background: var(--color-bg);
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -261,13 +263,13 @@ export default {
 	to { transform: rotate(360deg); }
 }
 .loading-tip {
-	font-size: 28rpx;
+	font-size: var(--font-size-body-plus);
 	color: rgba(255, 255, 255, 0.7);
 	text-align: center;
 	line-height: 44rpx;
 }
 .elapsed-text {
-	font-size: 24rpx;
+	font-size: var(--font-size-body);
 	color: rgba(255, 255, 255, 0.4);
 	margin-top: 24rpx;
 }
@@ -286,20 +288,20 @@ export default {
 }
 .retry-btn {
 	background: #fff;
-	border-radius: 48rpx;
+	border-radius: var(--radius-2xl);
 	padding: 24rpx 80rpx;
 	margin-bottom: 24rpx;
 }
 .retry-btn-text {
 	font-size: 32rpx;
 	color: #000;
-	font-weight: 500;
+	font-weight: 400;
 }
 .back-btn-wrapper {
 	padding: 24rpx 80rpx;
 }
 .back-btn-text {
-	font-size: 28rpx;
+	font-size: var(--font-size-body-plus);
 	color: rgba(241, 205, 145, 0.9);
 }
 
@@ -313,9 +315,9 @@ export default {
 	background: rgba(255, 255, 255, 0.15);
 }
 .bottomdesc {
-	margin: 32rpx auto;
-	font-size: 18rpx;
-	color: rgba(241, 205, 145, 0.5);
+	margin: var(--spacing-lg) auto;
+	font-size: var(--font-size-caption-md);
+	color: var(--color-primary-50);
 	font-weight: 400;
 }
 </style>

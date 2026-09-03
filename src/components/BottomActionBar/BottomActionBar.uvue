@@ -1,0 +1,60 @@
+<!--
+  BottomActionBar — 底部固定操作栏（组件级重构）
+
+  收敛重复结构：相册详情页 / AI试衣页的「AI试衣按钮组 + 版权 footer」底部固定栏。
+  - 按钮组由调用方通过默认 slot 传入（各页按钮逻辑不同）
+  - 版权 footer（分割线 + AppFooter）组件内置，样式对齐 Figma 2072:387 Footer Container
+  - 页面需自行保留底部占位（ai-tryon-spacer / bottom-spacer），避免遮挡内容
+
+  使用：
+  <BottomActionBar>
+    <view class="xxx-btn">...按钮组...</view>
+  </BottomActionBar>
+-->
+<template>
+	<view class="bottom-bar">
+		<slot />
+		<view class="bar-footer">
+			<view class="bar-divide"></view>
+			<view class="bar-copyright"><AppFooter /></view>
+		</view>
+	</view>
+</template>
+
+<script lang="uts">
+	export default {
+		name: 'BottomActionBar'
+	}
+</script>
+
+<style>
+	.bottom-bar {
+		position: fixed;
+		left: 0;
+		bottom: 0;
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 64rpx 0 24rpx 0;
+		padding-bottom: 12rpx;
+		background: linear-gradient(to top, var(--color-bg) 59.6%, rgba(22, 15, 4, 0));
+		z-index: 100;
+	}
+	.bar-footer {
+		width: 100%;
+		margin-top: 32rpx;
+	}
+	.bar-divide {
+		height: 2rpx;
+		width: 100%;
+		background: rgba(255, 255, 255, 0.15);
+	}
+	.bar-copyright {
+		margin: var(--spacing-md) auto;
+		font-size: var(--font-size-caption-md);
+		color: var(--color-primary-50);
+		font-weight: 400;
+		text-align: center;
+	}
+</style>

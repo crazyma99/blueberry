@@ -24,7 +24,7 @@
 				</view>
 				<view class="sk-block sk-animate" style="width: 48rpx; height: 48rpx; border-radius: 50%;"></view>
 			</view>
-			<view class="sk-text sk-animate" style="width: 320rpx; margin-bottom: 32rpx;"></view>
+			<view class="sk-text sk-animate" style="width: 320rpx; margin-bottom: var(--spacing-lg);"></view>
 			<view class="sk-block sk-animate" style="width: 100%; height: 500rpx; margin-bottom: 16rpx;"></view>
 			<view class="sk-block sk-animate" style="width: 100%; height: 500rpx;"></view>
 		</view>
@@ -48,7 +48,8 @@
 							<view class="txt">套餐内容：{{ detail?.packageDesc }}</view>
 						</view>
 					</view>
-					<view class="collect" @click="handleLike">
+					<view class="collect" hover-class="press-dim"
+					@click="handleLike">
 						<image
 							:src="liked ? '/static/liked.svg' : '/static/like.svg'"
 							class="heart"
@@ -60,82 +61,58 @@
 			<view class="photo-wrap">
 				<image
 					v-for="(item, index) in (detail?.images || [])"
-					class="photo"
+					class="photo fade-in"
 					:src="item.imageUrl"
 					mode="widthFix"
 					:key="index"
 				></image>
 			</view>
-			<!-- AI试衣按钮：文档流布局，图片下方 60rpx，距页脚 44rpx，水平居中 -->
-			<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-btn">
-				<image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill"/>
-				<view class="btn" @click="goToAiTryOn">
-					<view>生成</view>
-					<image src="/static/aitry-text.png" class="text" mode="aspectFill"/>
-					<view>效果</view>
+			<!-- 底部固定栏（组件化：按钮组由 slot 传入，版权 footer 组件内置） -->
+			<BottomActionBar>
+				<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-btn">
+					<image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill"/>
+					<view class="btn btn-primary" hover-class="press-dim" @click="goToAiTryOn">
+						<view>生成</view>
+						<image src="/static/aitry-text.png" class="text" mode="aspectFill"/>
+						<view>效果</view>
+					</view>
+					<image src="/static/btn-right-icon.png" class="btn-icon" mode="aspectFill"/>
 				</view>
-				<image src="/static/btn-right-icon.png" class="btn-icon" mode="aspectFill"/>
-			</view>
-			<view class="page-footer">
-				<view class="divide"></view>
-				<view class="bottomdesc"><AppFooter /></view>
-			</view>
+			</BottomActionBar>
+			<!-- 底部占位：覆盖固定栏高度（按钮组+版权footer） -->
+			<view class="ai-tryon-spacer"></view>
 		</view>
 
 		<!-- 登录弹窗 -->
-		<view v-if="showLoginPopup" class="login-overlay" @click="closeLoginPopup">
-			<view class="login-popup login-auth-popup" @click.stop>
-				<view class="login-popup-title">手机号快捷登陆</view>
-				<view class="login-agreement-row">
-					<view
-						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
-						@click.stop="toggleLoginAgreement"
-					>
-						<view v-if="loginAgreementChecked" class="login-agreement-dot"></view>
-					</view>
-					<text class="login-agreement-text"><text>登录即代表同意 </text><text class="login-agreement-link" @click.stop="openUserAgreement">{{ userAgreementName }}</text><text>、</text><text class="login-agreement-link" @click.stop="openPrivacyPolicy">{{ privacyPolicyName }}</text></text>
-				</view>
-				<button
-					v-if="loginAgreementChecked"
-					class="login-phone-btn"
-					open-type="getPhoneNumber"
-					@getphonenumber="onGetPhoneNumber"
-				>一键登录</button>
-				<button
-					v-else
-					class="login-phone-btn"
-					@click="showLoginAgreementToast"
-				>一键登录</button>
-				<view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
-			</view>
-		</view>
+		<LoginPopup
+	v-if="showLoginPopup"
+	:agreement-checked="loginAgreementChecked"
+	:user-agreement-name="userAgreementName"
+	:privacy-policy-name="privacyPolicyName"
+	@close="closeLoginPopup"
+	@toggle-agreement="toggleLoginAgreement"
+	@show-toast="showLoginAgreementToast"
+	@open-user="openUserAgreement"
+	@open-privacy="openPrivacyPolicy"
+	@get-phone="onGetPhoneNumber"
+/>
 
 		<!-- 头像昵称授权弹窗 -->
-		<view v-if="showProfilePopup" class="login-overlay" @click="skipProfile">
-			<view class="login-popup" @click.stop>
-				<view class="login-popup-title">完善个人资料</view>
-				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
-				<button
-					class="profile-avatar-btn"
-					open-type="chooseAvatar"
-					@chooseavatar="onChooseAvatar"
-				>
-					<image class="profile-avatar-img" :src="profileAvatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
-					<text class="profile-avatar-tip">点击选择头像</text>
-				</button>
-				<view class="profile-nickname-row">
-					<text class="profile-nickname-label">昵称</text>
-					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
-				</view>
-				<button class="login-phone-btn" @click="submitProfile">确认</button>
-				<view class="login-cancel" @click="skipProfile">跳过</view>
-			</view>
-		</view>
+		<ProfilePopup
+	v-if="showProfilePopup"
+	:avatar-url="profileAvatarUrl"
+	:nickname="profileNickname"
+	@choose-avatar="onChooseAvatar"
+	@update-nickname="(v: string) => { this.profileNickname = v }"
+	@submit="submitProfile"
+	@skip="skipProfile"
+/>
 	</view>
 </template>
 
 <script>
 	import { getalbumDetail, toggleLike, getLikeStatus, wxLogin, wxBindPhone, rejectAllPendingUploads } from '../../utils/api.uts'
+	import { hapticTap } from '../../utils/haptics.uts'
 	import { isLoggedIn, loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
@@ -399,6 +376,8 @@
 				return _formatCount(count)
 			},
 			goToAiTryOn() {
+				// 触感反馈：主操作按钮轻振动
+				hapticTap()
 				const albumId = this.albumId || ''
 				const style = encodeURIComponent(this.style || '')
 				uni.navigateTo({
@@ -411,7 +390,7 @@
 
 <style>
 .page{
-	background: #160F04;
+	background: var(--color-bg);
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -428,7 +407,7 @@
 	top: 0;
 	left: 0;
 	width: 100%;
-	background: #160F04;
+	background: var(--color-bg);
 	z-index: 100;
 }
 .nav-content {
@@ -436,7 +415,7 @@
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	padding: 0 16rpx;
+	padding: 0 18rpx;
 }
 .nav-center {
 	flex: 1;
@@ -444,7 +423,7 @@
 	flex-direction: row;
 	align-items: center;
 	/* 左右相距 28rpx */
-	gap: 28rpx;
+	gap: var(--spacing-md);
 }
 .title-group {
 	display: flex;
@@ -452,25 +431,22 @@
 	align-items: center;
 }
 .cn{
-	font-size: 38rpx;
-	font-weight: 700;
-	color: #F1CD91;
+	font-size: var(--font-size-display);
+	font-weight: 400;
+	color: var(--color-primary);
 }
 .en{
-	font-size: 20rpx;
+	font-size: var(--font-size-body-xs);
 	font-weight: 400;
-	color: rgba(241, 205, 145, 0.7);
+	color: var(--color-primary-70);
 	letter-spacing: 2rpx;
 }
 .line{
 	width: 300rpx;
 	height: 18rpx;
 }
-.page-footer {
-	margin-top: auto;
-}
 .title{
-	margin: 43rpx 32rpx 32rpx;
+	margin: 24rpx 18rpx 24rpx;
 }
 .title-first{
 	display: flex;
@@ -478,9 +454,9 @@
 	justify-content: space-between;
 	align-items: center;
 	.text{
-		font-size: 46rpx;
-		font-weight: 700;
-		background: linear-gradient(180deg, #F1CD91 20%, #B28A56 79.81%);
+		font-size: var(--font-size-display-xl);
+		font-weight: 400;
+		background: linear-gradient(180deg, var(--color-primary) 20%, var(--color-primary-deep) 79.81%);
 		/* 文字渐变：背景裁剪到文字区域 + 文字透明，露出渐变 */
 		-webkit-background-clip: text;
 		background-clip: text;
@@ -497,7 +473,7 @@
 	align-items: center;
 	justify-content: space-between;
 	/* info-left 与 collect 之间至少 10rpx */
-	gap: 10rpx;
+	gap: var(--spacing-xs);
 }
 .info-left{
 	flex: 1;
@@ -510,9 +486,9 @@
 	min-width: 0;
 }
 .price{
-	margin-top: 24rpx;
-	font-size: 26rpx;
-	color: rgba(241, 205, 145, 0.7);
+	margin-top: 12rpx;
+	font-size: var(--font-size-body-lg);
+	color: var(--color-primary-70);
 	display: flex;
 	flex-direction: row;
   line-height: 38rpx;
@@ -523,12 +499,12 @@
 	margin-right: 12rpx;
 }
 .count{
-	color: rgba(241, 205, 145, 0.7);
+	color: var(--color-primary-70);
 }
 .package{
-	margin-top: 24rpx;
-	font-size: 26rpx;
-	color: rgba(241, 205, 145, 0.7);
+	margin-top: 12rpx;
+	font-size: var(--font-size-body-lg);
+	color: var(--color-primary-70);
 	display: flex;
 	flex-direction: row;
   line-height: 38rpx;
@@ -543,8 +519,8 @@
 	height: 40rpx;
 }
 .like-num {
-	font-size: 20rpx;
-	color: rgba(241, 205, 145, 0.7);
+	font-size: var(--font-size-body-xs);
+	color: var(--color-primary-70);
 	margin-top: 4rpx;
 }
 .photo-wrap {
@@ -555,43 +531,27 @@
 	margin-bottom: 8rpx;
 	display: block;
 }
-.divide{
-	height: 2rpx;
-	width: 100%;
-	background: rgba(255, 255, 255, 0.15);
-}
-.bottomdesc{
-	margin: 32rpx auto;
-	font-size: 18rpx;
-	color: rgba(241, 205, 145, 0.5);
-	font-weight: 400;
-}
-/* AI试衣按钮（文档流：图片下方 60rpx，距页脚 44rpx，水平居中） */
+/* 按钮组行：items-end 底部对齐、水平居中；按钮为金色药丸、深色描边、px40/py26、gap12 */
 .ai-tryon-btn {
-	margin: 60rpx 0 44rpx;
-	align-self: center;
 	display: flex;
 	flex-direction: row;
-	align-items: center;
+	align-items: flex-end;
+	justify-content: center;
 	.btn-icon{
 		width: 104rpx;
 		height: 86rpx;
 	}
 	.btn{
-		padding: 28rpx 40rpx;
-		color: rgba(22, 15, 4, 1);
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		font-size: 26rpx;
-		font-weight: 500;
-		gap: 12rpx;
-		background: rgba(241, 205, 145, 1);
-		border-radius: 999rpx;
+		/* 通用金色按钮规范已收敛至全局 .btn-primary */
 		.text{
 			width: 118rpx;
 			height: 34rpx;
 		}
 	}
+}
+
+/* 底部占位：固定栏高度（按钮组+版权footer，爸爸确认 200rpx） */
+.ai-tryon-spacer {
+	height: 200rpx;
 }
 </style>

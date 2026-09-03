@@ -1,7 +1,6 @@
 <template>
 	<view class="container">
-		<!-- 自定义导航栏（全局 navigationStyle: custom，标题/返回键 #F1CD91） -->
-		<CustomNavBar title="蓝梅旗袍·汉服·民..." />
+		<!-- 首页无导航栏：Banner 沉浸式延伸到状态栏顶部 -->
 		<!-- 骨架屏 -->
 		<view v-if="loading" class="sk-container">
 			<view class="sk-banner sk-animate" style="height: 794rpx;"></view>
@@ -16,11 +15,15 @@
 		<!-- 主内容 -->
 		<view v-else class="main-content">
 			<!-- 顶部通栏轮播：无指示点；文案已烘焙进 banner 图，高度随首图宽高比自适应避免裁切 -->
-			<swiper class="hero" autoplay circular :interval="3000" :duration="500" :style="{ height: heroHeight }">
-				<swiper-item v-for="(item, idx) in banners" :key="idx">
-					<image class="hero-image" :src="item.imageUrl" mode="aspectFill" @load="onHeroImageLoad"></image>
-				</swiper-item>
-			</swiper>
+			<view class="hero-wrap">
+				<swiper class="hero" autoplay circular :interval="3000" :duration="500" :style="{ height: heroHeight }">
+					<swiper-item v-for="(item, idx) in banners" :key="idx">
+						<image class="hero-image fade-in" :src="item.imageUrl" mode="aspectFill" @load="onHeroImageLoad"></image>
+					</swiper-item>
+				</swiper>
+				<!-- Figma 渐变遮罩：图片底部渐隐融入页面背景（透明50% → #160F04 78.19%） -->
+				<view class="hero-mask"></view>
+			</view>
 
 			<!-- 客片欣赏：shop-container.png 以 border-image 点九图方式作背景，高度由内容撑开 -->
 			<view class="shop-section">
@@ -41,9 +44,10 @@
 								v-for="(shop, index) in shopList"
 								:key="index"
 								:class="shopList.length === 1 ? 'photo-card photo-card-full' : 'photo-card'"
+								hover-class="press-dim"
 								@click="onShopClick(shop)"
 							>
-								<image class="photo-card-img" :src="shop.homeImage" mode="aspectFill"></image>
+								<image class="photo-card-img fade-in" :src="shop.homeImage" mode="aspectFill"></image>
 								<view class="photo-card-mask"></view>
 								<view class="photo-card-info">
 									<text class="photo-card-name font-noto-serif">{{ shop.displayName }}</text>
@@ -51,10 +55,12 @@
 								</view>
 							</view>
 							<!-- 无店铺时 fallback：demo 图，同 2 列布局 -->
-							<view v-if="shopList.length === 0" class="photo-card" @click="onDemoClick(1)">
+							<view v-if="shopList.length === 0" class="photo-card" hover-class="press-dim"
+					@click="onDemoClick(1)">
 								<image class="photo-card-img" src="/static/demo1.png" mode="aspectFill"></image>
 							</view>
-							<view v-if="shopList.length === 0" class="photo-card" @click="onDemoClick(2)">
+							<view v-if="shopList.length === 0" class="photo-card" hover-class="press-dim"
+					@click="onDemoClick(2)">
 								<image class="photo-card-img" src="/static/demo2.png" mode="aspectFill"></image>
 							</view>
 						</view>
@@ -69,54 +75,28 @@
 		</view>
 
 		<!-- 登录弹窗 -->
-		<view v-if="showLoginPopup" class="login-overlay login-overlay-above-tab" @click="closeLoginPopup">
-			<view class="login-popup login-auth-popup" @click.stop>
-				<view class="login-popup-title">手机号快捷登陆</view>
-				<view class="login-agreement-row">
-					<view
-						:class="loginAgreementChecked ? 'login-agreement-check is-checked' : 'login-agreement-check'"
-						@click.stop="toggleLoginAgreement"
-					>
-						<view v-if="loginAgreementChecked" class="login-agreement-dot"></view>
-					</view>
-					<text class="login-agreement-text"><text>登录即代表同意 </text><text class="login-agreement-link" @click.stop="openUserAgreement">{{ userAgreementName }}</text><text>、</text><text class="login-agreement-link" @click.stop="openPrivacyPolicy">{{ privacyPolicyName }}</text></text>
-				</view>
-				<button
-					v-if="loginAgreementChecked"
-					class="login-phone-btn"
-					open-type="getPhoneNumber"
-					@getphonenumber="onGetPhoneNumber"
-				>一键登录</button>
-				<button
-					v-else
-					class="login-phone-btn"
-					@click="showLoginAgreementToast"
-				>一键登录</button>
-				<view class="login-cancel login-cancel-btn" @click="closeLoginPopup">暂不登陆</view>
-			</view>
-		</view>
+		<LoginPopup
+			v-if="showLoginPopup"
+			:agreement-checked="loginAgreementChecked"
+			:user-agreement-name="userAgreementName"
+			:privacy-policy-name="privacyPolicyName"
+			@close="closeLoginPopup"
+			@toggle-agreement="toggleLoginAgreement"
+			@show-toast="showLoginAgreementToast"
+			@open-user="openUserAgreement"
+			@open-privacy="openPrivacyPolicy"
+			@get-phone="onGetPhoneNumber"
+		/>
 
-		<!-- 头像昵称授权弹窗 -->
-		<view v-if="showProfilePopup" class="login-overlay login-overlay-above-tab" @click="skipProfile">
-			<view class="login-popup" @click.stop>
-				<view class="login-popup-title">完善个人资料</view>
-				<view class="login-popup-desc">设置头像和昵称以获得完整体验</view>
-				<button
-					class="profile-avatar-btn"
-					open-type="chooseAvatar"
-					@chooseavatar="onChooseAvatar"
-				>
-					<image class="profile-avatar-img" :src="profileAvatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
-					<text class="profile-avatar-tip">点击选择头像</text>
-				</button>
-				<view class="profile-nickname-row">
-					<text class="profile-nickname-label">昵称</text>
-					<input class="profile-nickname-input" type="nickname" placeholder="请输入昵称" v-model="profileNickname"/>
-				</view>
-				<button class="login-phone-btn" @click="submitProfile">确认</button>
-				<view class="login-cancel" @click="skipProfile">跳过</view>
-			</view>
-		</view>
+		<ProfilePopup
+			v-if="showProfilePopup"
+			:avatar-url="profileAvatarUrl"
+			:nickname="profileNickname"
+			@choose-avatar="onChooseAvatar"
+			@update-nickname="(v: string) => { this.profileNickname = v }"
+			@submit="submitProfile"
+			@skip="skipProfile"
+		/>
 
 		<!-- 自定义底部 tabbar 占位（116rpx + 安全区） -->
 		<view class="tabbar-safe-spacer"></view>
@@ -125,6 +105,7 @@
 
 <script>
 	import { getImage, getShops, wxLogin, wxBindPhone, wxUpdateUserInfo, rejectAllPendingUploads } from '../../utils/api.uts'
+	import { hapticTap } from '../../utils/haptics.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
 	import { loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
@@ -383,6 +364,8 @@
 				}
 			},
 			onShopClick(shop) {
+				// 触感反馈：客片卡片点击轻振动
+				hapticTap()
 				uni.navigateTo({
 					url: `/pages/demoDetail/index?from=banner&idx=${shop.id}`
 				})
@@ -398,7 +381,7 @@
 
 <style>
 	.container{
-		background: #160F04;
+		background: var(--color-bg);
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
@@ -413,9 +396,24 @@
 		margin-top: auto;
 	}
 	/* 顶部通栏轮播：无指示点，高度由脚本按首图宽高比写入 */
+	.hero-wrap{
+		position: relative;
+		width: 100%;
+	}
 	.hero{
 		width: 100%;
 		overflow: hidden;
+	}
+	/* Figma 渐变遮罩：图片底部渐隐融入页面背景 */
+	.hero-mask{
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(180deg, rgba(22, 15, 4, 0) 20%, #160F04 96%);
+		pointer-events: none;
+		z-index: 10;
 	}
 	.hero-image{
 		width: 100%;
@@ -427,7 +425,7 @@
 	   左右 42px 含圆角转角；中段透明，随内容纵向拉伸。
 	   注意：border-image 仅小程序/web 端可用，App 端 uvue 原生不支持该属性。 */
 	.shop-section{
-		margin: 0 20rpx 40rpx;
+		margin: 0 var(--spacing-sm) 40rpx;
 	}
 	.shop-header-wrap{
 		position: relative;
@@ -455,13 +453,13 @@
 		flex-direction: column;
 	}
 	.shop-title{
-		font-size: 38rpx;
-		font-weight: 700;
-		color: #F1CD91;
+		font-size: var(--font-size-display);
+		font-weight: 400;
+		color: var(--color-primary);
 	}
 	.shop-subtitle{
-		font-size: 14rpx;
-		color: rgba(241, 205, 145, 0.7);
+		font-size: var(--font-size-caption);
+		color: var(--color-primary-70);
 		font-weight: 400;
     letter-spacing: 4rpx;
 	}
@@ -470,7 +468,7 @@
 		/* 覆盖 uni-app x view 默认 overflow: hidden，允许标题上移溢出显示 */
 		overflow: visible;
 		/* 顶部 padding 为标题行留位（标题 absolute 不占流，照片从 padding-top 处开始） */
-		padding: 20rpx;
+		padding: var(--spacing-sm);
 	}
 	/* 内边框线框：内层绝对定位 view 画左/右/下三边线，缩进与内容 padding 对齐（20rpx）
 	   改 left/right/bottom 为 0 即贴边（等同原 border 效果）；顶部开口与切图拼接 */
@@ -480,9 +478,9 @@
 		left: 0rpx;
 		right: 5rpx;
 		bottom: 0rpx;
-		border-left: 2rpx solid rgba(255, 255, 219, 0.3);
-		border-right: 2rpx solid rgba(255, 255, 219, 0.3);
-		border-bottom: 2rpx solid rgba(255, 255, 219, 0.3);
+		border-left: 2rpx solid var(--color-border-soft);
+		border-right: 2rpx solid var(--color-border-soft);
+		border-bottom: 2rpx solid var(--color-border-soft);
 		/* 只保留下方两角圆角（border-radius 简写会四角同时生效） */
 		border-bottom-left-radius: 24rpx;
 		border-bottom-right-radius: 24rpx;
@@ -492,13 +490,16 @@
 		display: flex;
 		flex-direction: row;
 		flex-wrap: wrap;
-		gap: 20rpx;
+		gap: var(--spacing-sm);
+		/* 与上方「客片欣赏/COLLECTION」标题拉开距离 */
+		margin-top: var(--spacing-sm);
 	}
 	.photo-card{
 		position: relative;
 		width: calc((100% - 20rpx) / 2);
-		height: 183rpx;
-		border-radius: 12rpx;
+		height: 182rpx;
+		/* 圆角/高度对齐设计稿（design-token.md 差异对照） */
+		border-radius: var(--radius-card);
 		overflow: hidden;
 		border: 1rpx solid rgba(243, 217, 172, 0.35);
 	}
@@ -528,21 +529,21 @@
 		align-items: center;
 	}
 	.photo-card-name{
-		font-size: 26rpx;
-		font-weight: 700;
-		color: #F1CD91;
+		font-size: var(--font-size-body-lg);
+		font-weight: 400;
+		color: var(--color-primary);
 	}
 	.photo-card-sub{
 		margin-top: 2rpx;
-		font-size: 14rpx;
+		font-size: var(--font-size-caption);
 		font-weight: 400;
-		color: rgba(241, 205, 145, 0.7);
+		color: var(--color-primary-70);
 	}
 	/* 店铺卡片网格样式见 .photo-grid / .photo-card（首页已不再使用 PhotoGrid 组件） */
 	.beian{
-		margin: 40rpx auto 32rpx;
-		font-size: 18rpx;
-		color: rgba(241, 205, 145, 0.5);
+		margin: 40rpx auto var(--spacing-lg);
+		font-size: var(--font-size-caption-md);
+		color: var(--color-primary-50);
 		font-weight: 400;
 		text-align: center;
 	}
