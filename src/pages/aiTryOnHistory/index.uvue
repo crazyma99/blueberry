@@ -231,12 +231,12 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	padding: 0 16rpx;
+	padding: 0 16rpx
 }
 .back-btn {
 	width: 44rpx;
 	height: 44rpx;
-	padding: 10rpx;
+	padding: var(----spacing-xs)
 }
 .nav-title {
 	flex: 1;
@@ -249,7 +249,7 @@ export default {
 }
 
 .content {
-	padding: 0 8rpx 32rpx;
+	padding: 0 8rpx var(----spacing-lg)
 }
 
 /* 空状态 */
@@ -258,7 +258,7 @@ export default {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: 200rpx 32rpx;
+	padding: 200rpx var(----spacing-lg)
 }
 .empty-title {
 	font-size: 32rpx;
@@ -272,7 +272,7 @@ export default {
 
 /* 卡片网格（与 favorites 一致） */
 .photolistContainer {
-	margin: 16rpx 0;
+	margin: 16rpx 0
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
@@ -280,16 +280,16 @@ export default {
 .photoItem {
 	width: 362rpx;
 	height: 482rpx;
-	margin: 0 8rpx 8rpx 0;
+	margin: 0 8rpx 8rpx 0
 	position: relative;
 }
 .photoItem:nth-child(2n) {
-	margin: 0 0 8rpx;
+	margin: 0 0 8rpx
 }
 .photo {
 	width: 100%;
 	height: 100%;
-	border-radius: 8rpx;
+	border-radius: var(----radius-xs);
 	background: rgba(255, 255, 255, 0.06);
 }
 .mask {
@@ -298,18 +298,18 @@ export default {
 	height: 482rpx;
 	top: 0;
 	left: 0;
-	border-radius: 8rpx;
+	border-radius: var(----radius-xs);
 	background: linear-gradient(180deg, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.4) 75%, rgba(0, 0, 0, 0.7) 89%, #000000 100%);
 }
 .desc {
-	margin: 436rpx 16rpx 0;
+	margin: 436rpx 16rpx 0
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
 	align-items: center;
 }
 .photoName {
-	font-size: 28rpx;
+	font-size: var(----font-size-body-plus);
 	font-weight: 500;
 	color: #fff;
 	flex: 1;
@@ -330,7 +330,7 @@ export default {
 	height: 482rpx;
 	top: 0;
 	left: 0;
-	border-radius: 8rpx;
+	border-radius: var(----radius-xs);
 	background: rgba(0, 0, 0, 0.55);
 	display: flex;
 	align-items: center;
@@ -341,8 +341,8 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	padding: 12rpx 24rpx;
-	border-radius: 32rpx;
+	padding: 12rpx 24rpx
+	border-radius: var(----radius-lg);
 	border: 1rpx solid rgba(255, 255, 255, 0.25);
 }
 .status-badge.processing {
@@ -373,7 +373,7 @@ export default {
 
 /* Copyright */
 .copyright {
-	margin: 32rpx auto;
+	margin: var(----spacing-lg) auto
 	font-size: var(--font-size-caption-md);
 	color: var(--color-primary-50);
 	font-weight: 400;

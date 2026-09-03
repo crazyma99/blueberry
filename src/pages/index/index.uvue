@@ -426,7 +426,7 @@
 	   左右 42px 含圆角转角；中段透明，随内容纵向拉伸。
 	   注意：border-image 仅小程序/web 端可用，App 端 uvue 原生不支持该属性。 */
 	.shop-section{
-		margin: 0 20rpx 40rpx;
+		margin: 0 var(----spacing-sm) 40rpx
 	}
 	.shop-header-wrap{
 		position: relative;
@@ -469,7 +469,7 @@
 		/* 覆盖 uni-app x view 默认 overflow: hidden，允许标题上移溢出显示 */
 		overflow: visible;
 		/* 顶部 padding 为标题行留位（标题 absolute 不占流，照片从 padding-top 处开始） */
-		padding: 20rpx;
+		padding: var(----spacing-sm)
 	}
 	/* 内边框线框：内层绝对定位 view 画左/右/下三边线，缩进与内容 padding 对齐（20rpx）
 	   改 left/right/bottom 为 0 即贴边（等同原 border 效果）；顶部开口与切图拼接 */
@@ -542,7 +542,7 @@
 	}
 	/* 店铺卡片网格样式见 .photo-grid / .photo-card（首页已不再使用 PhotoGrid 组件） */
 	.beian{
-		margin: 40rpx auto 32rpx;
+		margin: 40rpx auto var(----spacing-lg)
 		font-size: var(--font-size-caption-md);
 		color: var(--color-primary-50);
 		font-weight: 400;

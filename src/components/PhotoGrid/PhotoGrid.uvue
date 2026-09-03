@@ -66,8 +66,8 @@ export default {
 
 <style>
 	.demoPhotoContaner{
-		margin: 40rpx 0;
-		padding: 0 8rpx;
+		margin: 40rpx 0
+		padding: 0 8rpx
 		width: 100%;
 		display: flex;
 		flex-direction: row;

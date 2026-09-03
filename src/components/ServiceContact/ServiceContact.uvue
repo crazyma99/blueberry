@@ -150,8 +150,8 @@ import { getPageConfig } from '../../utils/api.uts'
     }
   }
   .service-contain{
-    margin: 40rpx 20rpx;
-    padding: 40rpx 20rpx 20rpx;
+    margin: 40rpx var(----spacing-sm)
+    padding: 40rpx var(----spacing-sm) var(----spacing-sm)
     border: 2rpx solid var(--color-border-soft);
     border-radius: var(--radius-container);
     position: relative;
@@ -171,8 +171,8 @@ import { getPageConfig } from '../../utils/api.uts'
       color: var(--color-primary);
     }
     .main-wrap {
-      padding: 1rpx;
-      border-radius: 15rpx;
+      padding: 1rpx
+      border-radius: var(----radius-card);
       /* 外层渐变：只露出 1rpx 边框线 */
       background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
     }
@@ -180,7 +180,7 @@ import { getPageConfig } from '../../utils/api.uts'
       border-radius: var(--radius-card);
       /* 内层必须不透明：半透明会透出外层边框渐变。已把原 var(--color-primary-06)→transparent 合成到 var(--color-bg) 底 */
       background: linear-gradient(138.87deg, #231A0C 0%, var(--color-bg) 100%);
-      padding: 20rpx;
+      padding: var(----spacing-sm)
       .item{
         display: flex;
         flex-direction: column;
@@ -189,7 +189,7 @@ import { getPageConfig } from '../../utils/api.uts'
         display: flex;
         flex-direction: row;
         align-items: center;
-        padding: 10rpx 14rpx;
+        padding: var(----spacing-xs) 14rpx
         gap: 26rpx;
         .item-mark{
           position: relative;
@@ -221,7 +221,7 @@ import { getPageConfig } from '../../utils/api.uts'
         width: 100%;
         height: 1rpx;
         background: linear-gradient(270deg, rgba(241, 205, 145, 0) 0%, var(--color-primary-70) 50.48%, rgba(241, 205, 145, 0) 100%);
-        margin: 10rpx 0;
+        margin: var(----spacing-xs) 0
       }
     }
     .contact-main {
@@ -241,7 +241,7 @@ import { getPageConfig } from '../../utils/api.uts'
         height: 100%;
       }
       .code{
-        margin: 30rpx auto;
+        margin: 30rpx auto
         width: 250rpx;
         height: 248rpx;
       }

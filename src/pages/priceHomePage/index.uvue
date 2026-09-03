@@ -90,7 +90,7 @@
 	}
 	/* demoPhotoContaner / demoPhoto / shopCard / shopName 等样式已收敛至 PhotoGrid 组件 */
 	.beian{
-		margin: 40rpx auto 32rpx;
+		margin: 40rpx auto var(----spacing-lg)
 		font-size: var(--font-size-caption-md);
 		color: var(--color-primary-50);
 		font-weight: 400;
