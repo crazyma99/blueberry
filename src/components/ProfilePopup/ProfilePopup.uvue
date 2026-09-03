@@ -21,17 +21,13 @@
         <text class="avatar-tip">点击选择头像</text>
       </button>
 
-      <!-- 昵称输入 -->
-      <view class="nickname-row">
-        <text class="nickname-label">昵称</text>
-        <input
-          class="nickname-input"
-          type="nickname"
-          placeholder="请输入昵称"
-          :value="nickname"
-          @input="emit('update-nickname', $event.detail.value)"
-        />
-      </view>
+      <!-- 昵称输入（组件化 AppInput） -->
+      <AppInput
+        label="昵称"
+        :value="nickname"
+        placeholder="请输入昵称"
+        @update="emit('update-nickname', $event)"
+      />
 
       <button class="confirm-btn btn-primary" hover-class="press-dim" @click="emit('submit')">确认</button>
       <view class="profile-skip" hover-class="press-dim" @click="emit('skip')">跳过</view>
@@ -168,30 +164,7 @@
     color: rgba(255, 255, 255, 0.45);
   }
 
-  /* 昵称输入 */
-  .nickname-row {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.06);
-    border: 2rpx solid rgba(255, 255, 255, 0.12);
-    border-radius: var(--radius-item);
-    padding: 0 24rpx;
-    margin-bottom: 36rpx;
-    height: 88rpx;
-    box-sizing: border-box;
-  }
-  .nickname-label {
-    font-size: var(--font-size-body);
-    color: var(--color-primary);
-    margin-right: 20rpx;
-  }
-  .nickname-input {
-    flex: 1;
-    font-size: var(--font-size-body);
-    color: #fff;
-  }
+
 
   /* 确认 + 跳过 */
   .confirm-btn {

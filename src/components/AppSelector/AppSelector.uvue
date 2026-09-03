@@ -1,0 +1,58 @@
+<!-- AppSelector — 通用下拉选择器（组件化 · 品牌视觉：深色面板+金色箭头+选中发光）
+  视觉统一：与 AppInput 同款面板（rgba 白 6% 底 + 描边 + radius-item），右缘金箭头
+  props: options 选项数组 / valueIndex 当前下标
+  events: change(index) 选择变化（页面逻辑不变）
+-->
+<template>
+  <picker mode="selector" :range="options" :value="valueIndex" @change="onChange">
+    <view class="app-selector" hover-class="press-dim">
+      <text class="app-selector-text">{{ options[valueIndex] || '请选择' }}</text>
+      <view class="app-selector-arrow"></view>
+    </view>
+  </picker>
+</template>
+
+<script lang="uts">
+  export default {
+    name: 'AppSelector',
+    props: {
+      options: { type: Array as any[], default: () => [] },
+      valueIndex: { type: Number, default: 0 }
+    },
+    emits: ['change'],
+    methods: {
+      onChange(e: any): void {
+        this.$emit('change', e.detail.value)
+      }
+    }
+  }
+</script>
+
+<style>
+  .app-selector {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.06);
+    border: 2rpx solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-item);
+    padding: 0 24rpx;
+    height: 88rpx;
+    box-sizing: border-box;
+  }
+  .app-selector-text {
+    font-size: var(--font-size-body);
+    color: #fff;
+  }
+  /* 金色箭头（CSS 画） */
+  .app-selector-arrow {
+    width: 16rpx;
+    height: 16rpx;
+    border-right: 3rpx solid var(--color-primary);
+    border-bottom: 3rpx solid var(--color-primary);
+    transform: rotate(45deg) translateY(-3rpx);
+    margin-left: 16rpx;
+  }
+</style>

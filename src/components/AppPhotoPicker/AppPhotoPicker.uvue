@@ -1,0 +1,116 @@
+<!-- AppPhotoPicker — 照片选择器（组件化 · 品牌视觉：金色虚线框+氛围光）
+  业务逻辑保持：组件只转发点击（emit click），选图/登录检查/上传全部留在页面 handler
+  props: photoUrl 预览图 / busy 上传中
+  events: click
+-->
+<template>
+  <view class="app-photo-picker" hover-class="press-dim" @click="emit('click')">
+    <view class="picker-aura"></view>
+    <image v-if="photoUrl" class="picker-image" :src="photoUrl" mode="widthFix"></image>
+    <view v-else class="picker-placeholder">
+      <view class="picker-plus">+</view>
+      <text class="picker-hint">点击上传你的照片</text>
+    </view>
+    <view v-if="busy" class="picker-mask">
+      <view class="picker-loading"></view>
+      <text class="picker-mask-text">上传中...</text>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+  export default {
+    name: 'AppPhotoPicker',
+    props: {
+      photoUrl: { type: String, default: '' },
+      busy: { type: Boolean, default: false }
+    },
+    emits: ['click'],
+    methods: {
+      emit(name: string): void {
+        this.$emit(name)
+      }
+    }
+  }
+</script>
+
+<style>
+  .app-photo-picker {
+    position: relative;
+    width: 100%;
+    min-height: 320rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3rpx dashed rgba(241, 205, 145, 0.45);
+    border-radius: var(--radius-container);
+    background: rgba(241, 205, 145, 0.04);
+    overflow: hidden;
+  }
+  /* 金色氛围光 */
+  .picker-aura {
+    position: absolute;
+    top: -60rpx;
+    left: 50%;
+    width: 360rpx;
+    height: 180rpx;
+    margin-left: -180rpx;
+    background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(241, 205, 145, 0.16), rgba(241, 205, 145, 0) 70%);
+    pointer-events: none;
+  }
+  .picker-image {
+    width: 100%;
+    min-height: 320rpx;
+  }
+  .picker-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60rpx 0;
+  }
+  .picker-plus {
+    width: 88rpx;
+    height: 88rpx;
+    border-radius: 50%;
+    border: 3rpx solid var(--color-primary);
+    color: var(--color-primary);
+    font-size: 52rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20rpx;
+  }
+  .picker-hint {
+    font-size: var(--font-size-body-sm);
+    color: var(--color-primary-70);
+  }
+  .picker-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .picker-loading {
+    width: 48rpx;
+    height: 48rpx;
+    border: 4rpx solid rgba(241, 205, 145, 0.3);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16rpx;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .picker-mask-text {
+    font-size: var(--font-size-body-sm);
+    color: #fff;
+  }
+</style>

@@ -23,59 +23,27 @@
 		<!-- 体型选择 -->
 		<view class="section">
 			<text class="section-label">选择您的体型：</text>
-			<view class="body-type-row">
-				<view
-					:class="bodyType === 'slim' ? 'body-btn body-btn-active' : 'body-btn'"
-					hover-class="press-dim"
-					@click="selectBodyType('slim')"
-				>
-					<text :class="bodyType === 'slim' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">瘦</text>
-				</view>
-				<view
-					:class="bodyType === 'medium' ? 'body-btn body-btn-active' : 'body-btn'"
-					hover-class="press-dim"
-					@click="selectBodyType('medium')"
-				>
-					<text :class="bodyType === 'medium' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">微胖</text>
-				</view>
-				<view
-					:class="bodyType === 'fat' ? 'body-btn body-btn-active' : 'body-btn'"
-					hover-class="press-dim"
-					@click="selectBodyType('fat')"
-				>
-					<text :class="bodyType === 'fat' ? 'body-btn-text body-btn-text-active' : 'body-btn-text'">胖</text>
-				</view>
-			</view>
+			<AppSegment
+				:options="['瘦', '微胖', '胖']"
+				:current-index="bodyIndex"
+				@change="onBodyChange"
+			/>
 		</view>
 
 		<!-- 年龄选择 -->
 		<view class="section">
 			<text class="section-label">选择您的年龄：</text>
-			<picker mode="selector" :range="ageOptions" :value="ageIndex" @change="selectAge">
-				<view class="age-picker">
-					<text class="age-picker-text">{{ ageRange }}</text>
-					<view class="age-picker-arrow"></view>
-				</view>
-			</picker>
+			<AppSelector :options="ageOptions" :value-index="ageIndex" @change="selectAge" />
 		</view>
 
-		<!-- 照片上传 -->
+		<!-- 照片上传（组件化 AppPhotoPicker：点击转发 choosePhoto，业务不动） -->
 		<view class="section">
 			<text class="section-label">上传你的照片：</text>
-			<view class="upload-area" hover-class="press-dim"
-					@click="choosePhoto">
-				<image v-if="photoPreviewUrl" class="upload-preview" :src="photoPreviewUrl" mode="widthFix"></image>
-				<view v-else class="upload-placeholder">
-					<text class="upload-plus">+</text>
-					<text class="upload-hint">点击上传你的照片</text>
-				</view>
-				<view v-if="isUploading" class="upload-mask">
-					<text class="upload-mask-text">上传中...</text>
-				</view>
-				<view v-else-if="photoPreviewUrl && uploadedFilename === ''" class="upload-mask upload-mask-fail">
-					<text class="upload-mask-text">上传失败，点击重试</text>
-				</view>
-			</view>
+			<AppPhotoPicker
+				:photo-url="photoPreviewUrl"
+				:busy="isUploading"
+				@click="choosePhoto"
+			/>
 		</view>
 
 		<!-- 底部占位（给固定按钮腾出空间） -->
@@ -271,6 +239,12 @@ export default {
 			this.bodyType = type
 		},
 
+		// AppSegment 回调：index 映射回 bodyType（业务行为不变）
+		onBodyChange(index: number) {
+			const types = ['slim', 'medium', 'fat']
+			this.selectBodyType(types[index] || 'slim')
+		},
+
 		selectAge(e: any) {
 			const index = e.detail.value
 			this.ageIndex = index
@@ -326,6 +300,11 @@ export default {
 			}
 		},
 
+		bodyIndex(): number {
+			if (this.bodyType === 'medium') return 1
+			if (this.bodyType === 'fat') return 2
+			return 0
+		},
 		bodyTypeText(): string {
 			if (this.bodyType === 'medium') return '微胖'
 			if (this.bodyType === 'fat') return '胖'

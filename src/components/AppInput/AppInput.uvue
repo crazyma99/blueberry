@@ -1,0 +1,72 @@
+<!-- AppInput — 通用输入框（组件化 · 品牌视觉：深色面板+金色聚焦描边）
+  props: value 值 / placeholder 提示 / maxLength 最大长度 / label 可选标签
+  events: update 输入变化（页面 :value + @update 双向）
+-->
+<template>
+  <view class="app-input" :class="{ 'is-focused': focused }">
+    <text v-if="label" class="app-input-label">{{ label }}</text>
+    <input
+      class="app-input-field"
+      :value="value"
+      :placeholder="placeholder"
+      :maxlength="maxLength"
+      placeholder-class="app-input-placeholder"
+      @focus="focused = true"
+      @blur="focused = false"
+      @input="emit('update', $event.detail.value)"
+    />
+  </view>
+</template>
+
+<script lang="uts">
+  export default {
+    name: 'AppInput',
+    props: {
+      value: { type: String, default: '' },
+      placeholder: { type: String, default: '' },
+      maxLength: { type: Number, default: 60 },
+      label: { type: String, default: '' }
+    },
+    emits: ['update'],
+    data() {
+      return { focused: false }
+    },
+    methods: {
+      emit(name: string, val: string): void {
+        this.$emit(name, val)
+      }
+    }
+  }
+</script>
+
+<style>
+  .app-input {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 2rpx solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-item);
+    padding: 0 24rpx;
+    height: 88rpx;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease-out;
+  }
+  .app-input.is-focused {
+    border-color: var(--color-primary);
+  }
+  .app-input-label {
+    font-size: var(--font-size-body);
+    color: var(--color-primary);
+    margin-right: 20rpx;
+  }
+  .app-input-field {
+    flex: 1;
+    font-size: var(--font-size-body);
+    color: #fff;
+  }
+  .app-input-placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+</style>
