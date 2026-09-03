@@ -215,6 +215,8 @@ import { getPageConfig } from '../../utils/api.uts'
           flex: 1;
           font-size: var(--font-size-body-lg);
           color: var(--color-primary);
+          /* 10% 字距（letter-spacing 不支持百分比，用 0.1em 等效） */
+          letter-spacing: 0.1em;
         }
       }
       .line {
