@@ -47,7 +47,7 @@
           :key="index"
           @click="handleMenuClick(item)"
         >
-          <view class="menu-row" hover-class="press-dim">
+          <view class="menu-row" hover-class="press-row">
             <view class="menu-title font-harmony">{{ item.title }}</view>
             <view class="menu-arrow">›</view>
           </view>
