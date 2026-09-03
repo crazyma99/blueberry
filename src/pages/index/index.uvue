@@ -442,7 +442,7 @@
 		position: absolute;
 		/* 上移 60rpx 进入切图区：只动标题自身，容器边框线位置不受影响 */
 		top: -60rpx;
-		left: 20rpx;
+		left: 40rpx;
 		right: 20rpx;
 		display: flex;
 		flex-direction: row;
@@ -492,6 +492,8 @@
 		flex-direction: row;
 		flex-wrap: wrap;
 		gap: 20rpx;
+		/* 与上方「客片欣赏/COLLECTION」标题拉开距离 */
+		margin-top: 32rpx;
 	}
 	.photo-card{
 		position: relative;
