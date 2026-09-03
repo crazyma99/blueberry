@@ -35,7 +35,7 @@
               <view class="nickname font-noto-serif">
                 {{ displayNickname }}
               </view>
-              <view class="user-sub font-harmony">
+              <view class="user-sub font-noto-serif">
                 {{ isLoggedIn ? (userNickname === '' ? '完善头像昵称，获得完整体验' : '欢迎回来，蓝梅旅拍') : '登录后可收藏与体验AI试衣' }}
               </view>
             </view>
@@ -600,9 +600,10 @@ export default {
 }
 
 .user-sub {
-  margin-top: 8rpx;
+  margin-top: 10rpx;
   font-size: var(--font-size-body-sm);
-  color: rgba(241, 205, 145, 0.55);
+  color: rgba(241, 205, 145, 0.7);
+  letter-spacing: 1rpx;
 }
 
 .user-arrow {
@@ -617,7 +618,7 @@ export default {
   flex-direction: row;
   align-items: center;
   min-height: 88rpx;
-  margin: 16rpx var(--spacing-lg) 0;
+  margin: 20rpx var(--spacing-lg) 0;
   padding: 0 var(--spacing-md);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
   border-radius: var(--radius-md);
