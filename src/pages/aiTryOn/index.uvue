@@ -87,7 +87,7 @@
 			<view v-if="isPaidMode && creditBalance <= 0" class="gen-btn-wrap">
 				<image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"/>
 				<view
-					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
+					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn btn-primary' : 'generate-btn btn-primary generate-btn-disabled'"
 					hover-class="press-dim"
 					@click="handleGenerate"
 				>
@@ -102,7 +102,7 @@
 			<view v-else class="gen-btn-wrap">
 				<image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"/>
 				<view
-					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
+					:class="(uploadedFilename !== '' && !isUploading) ? 'generate-btn btn-primary' : 'generate-btn btn-primary generate-btn-disabled'"
 					hover-class="press-dim"
 					@click="handleGenerate"
 				>

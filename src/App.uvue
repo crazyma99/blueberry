@@ -129,6 +129,23 @@ page {
   opacity: 0.82;
 }
 
+/* 金色主按钮统一类（Phase4）：各页面主按钮引用，样式一处收敛 */
+.btn-primary {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 26rpx 40rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  color: var(--color-bg);
+  background: var(--gradient-btn-primary);
+  border: 1rpx solid var(--color-bg);
+  border-radius: var(--radius-full);
+  transition: opacity 0.15s ease-out;
+}
+
 /* 全局过渡规范（Phase3）：快速反馈 150ms / 常规过渡 250ms / 图片渐显 */
 .transition-fast {
   transition: opacity 0.15s ease-out;

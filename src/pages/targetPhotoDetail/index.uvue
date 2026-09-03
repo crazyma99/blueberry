@@ -71,7 +71,7 @@
 			<view class="ai-tryon-bar">
 				<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-btn">
 					<image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill"/>
-					<view class="btn" hover-class="press-dim" @click="goToAiTryOn">
+					<view class="btn btn-primary" hover-class="press-dim" @click="goToAiTryOn">
 						<view>生成</view>
 						<image src="/static/aitry-text.png" class="text" mode="aspectFill"/>
 						<view>效果</view>
@@ -610,17 +610,7 @@
 		height: 86rpx;
 	}
 	.btn{
-		padding: 26rpx 40rpx;
-		color: var(--color-bg);
-		display: flex;
-		flex-direction: row;
-		font-size: 32rpx;
-		font-weight: 500;
-		gap: 12rpx;
-		background: var(--gradient-btn-primary);
-		border: 1rpx solid var(--color-bg);
-		border-radius: var(--radius-full);
-		transition: opacity 0.15s ease-out;
+		/* 通用金色按钮规范已收敛至全局 .btn-primary */
 		.text{
 			width: 118rpx;
 			height: 34rpx;
