@@ -899,9 +899,9 @@
 	.tab-wrap{
 		margin-right: 16rpx;
 		margin-bottom: 16rpx;
-		padding: 1rpx;
+		/* 纯色描边（标准 border，去 padding hack） */
+		border: 1rpx solid var(--color-primary-30);
 		border-radius: var(--radius-avatar);
-		background: linear-gradient(260.97deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
 		flex-shrink: 0;
 	}
 	.tab{
