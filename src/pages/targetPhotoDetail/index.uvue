@@ -411,7 +411,7 @@
 
 <style>
 .page{
-	background: #160F04;
+	background: var(--color-bg);
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -428,7 +428,7 @@
 	top: 0;
 	left: 0;
 	width: 100%;
-	background: #160F04;
+	background: var(--color-bg);
 	z-index: 100;
 }
 .nav-content {
@@ -454,12 +454,12 @@
 .cn{
 	font-size: 38rpx;
 	font-weight: 700;
-	color: #F1CD91;
+	color: var(--color-primary);
 }
 .en{
 	font-size: 20rpx;
 	font-weight: 400;
-	color: rgba(241, 205, 145, 0.7);
+	color: var(--color-primary-70);
 	letter-spacing: 2rpx;
 }
 .line{
@@ -480,7 +480,7 @@
 	.text{
 		font-size: 46rpx;
 		font-weight: 700;
-		background: linear-gradient(180deg, #F1CD91 20%, #B28A56 79.81%);
+		background: linear-gradient(180deg, var(--color-primary) 20%, var(--color-primary-deep) 79.81%);
 		/* 文字渐变：背景裁剪到文字区域 + 文字透明，露出渐变 */
 		-webkit-background-clip: text;
 		background-clip: text;
@@ -512,7 +512,7 @@
 .price{
 	margin-top: 12rpx;
 	font-size: 26rpx;
-	color: rgba(241, 205, 145, 0.7);
+	color: var(--color-primary-70);
 	display: flex;
 	flex-direction: row;
   line-height: 38rpx;
@@ -523,12 +523,12 @@
 	margin-right: 12rpx;
 }
 .count{
-	color: rgba(241, 205, 145, 0.7);
+	color: var(--color-primary-70);
 }
 .package{
 	margin-top: 12rpx;
 	font-size: 26rpx;
-	color: rgba(241, 205, 145, 0.7);
+	color: var(--color-primary-70);
 	display: flex;
 	flex-direction: row;
   line-height: 38rpx;
@@ -544,7 +544,7 @@
 }
 .like-num {
 	font-size: 20rpx;
-	color: rgba(241, 205, 145, 0.7);
+	color: var(--color-primary-70);
 	margin-top: 4rpx;
 }
 .photo-wrap {
@@ -563,7 +563,7 @@
 .bottomdesc{
 	margin: 32rpx auto;
 	font-size: 18rpx;
-	color: rgba(241, 205, 145, 0.5);
+	color: var(--color-primary-50);
 	font-weight: 400;
 }
 /* AI试衣按钮（文档流：图片下方 60rpx，距页脚 44rpx，水平居中） */
@@ -579,14 +579,14 @@
 	}
 	.btn{
 		padding: 28rpx 40rpx;
-		color: rgba(22, 15, 4, 1);
+		color: var(--color-bg);
 		display: flex;
 		flex-direction: row;
 		align-items: center;
 		font-size: 26rpx;
 		font-weight: 500;
 		gap: 12rpx;
-		background: rgba(241, 205, 145, 1);
+		background: var(--color-primary);
 		border-radius: 999rpx;
 		.text{
 			width: 118rpx;
