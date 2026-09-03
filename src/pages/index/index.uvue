@@ -40,6 +40,7 @@
 								v-for="(shop, index) in shopList"
 								:key="index"
 								:class="shopList.length === 1 ? 'photo-card photo-card-full' : 'photo-card'"
+								hover-class="press-dim"
 								@click="onShopClick(shop)"
 							>
 								<image class="photo-card-img" :src="shop.homeImage" mode="aspectFill"></image>

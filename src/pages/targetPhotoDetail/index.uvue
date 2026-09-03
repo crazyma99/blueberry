@@ -70,7 +70,7 @@
 			<view class="ai-tryon-bar">
 				<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-btn">
 					<image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill"/>
-					<view class="btn" @click="goToAiTryOn">
+					<view class="btn" hover-class="press-dim" @click="goToAiTryOn">
 						<view>生成</view>
 						<image src="/static/aitry-text.png" class="text" mode="aspectFill"/>
 						<view>效果</view>

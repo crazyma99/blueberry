@@ -117,6 +117,12 @@ page {
 
 /* ========== 全局自定义字体（在 App onLaunch 中通过 uni.loadFontFace 全局加载） ========== */
 /* 宋体标题：font-family: 'NotoSerifSC-Bold' */
+/* ========== 全局按压反馈（hover-class 引用） ========== */
+/* 可点击元素加 hover-class="press-dim"，按压时降透明度 + 轻微变亮，不改变布局 */
+.press-dim {
+  opacity: 0.82;
+}
+
 .font-noto-serif {
   font-family: 'NotoSerifSC-Bold';
 }

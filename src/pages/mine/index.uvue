@@ -16,7 +16,7 @@
       <list-view class="content-list" :show-scrollbar="false">
         <list-item>
           <!-- 用户卡片 -->
-          <view class="user-card" @click="handleUserClick">
+          <view class="user-card" hover-class="press-dim" @click="handleUserClick">
             <!-- 头像容器：始终展示 .avatar 灰色色值 DOM；image 仅在有可用头像 url 时渲染 -->
             <!-- 加载失败时 image 透明，仍露出 .avatar 灰色背景，避免任何兜底图 -->
             <view class="avatar">
@@ -45,7 +45,7 @@
           :key="index"
           @click="handleMenuClick(item)"
         >
-          <view class="menu-row">
+          <view class="menu-row" hover-class="press-dim">
             <view class="menu-title font-harmony">{{ item.title }}</view>
             <view class="menu-arrow">›</view>
           </view>
