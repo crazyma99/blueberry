@@ -383,7 +383,8 @@ export default {
 	align-items: center;
 }
 .photoName {
-	font-size: var(--font-size-body-plus);
+	/* 与相册 list 页一致：26rpx */
+	font-size: var(--font-size-body-lg);
 	font-weight: 400;
 	color: var(--color-primary);
 }
