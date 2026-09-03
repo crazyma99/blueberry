@@ -6,16 +6,13 @@
 			<text class="desc-text">上传照片，AI为您推荐最合适的服饰风格</text>
 		</view>
 
-		<!-- 上传图片框 -->
+		<!-- 上传图片框（组件化 AppPhotoPicker） -->
 		<view class="section">
-			<view class="upload-area" hover-class="press-dim"
-					@click="choosePhoto">
-				<image v-if="photoPreviewUrl" class="upload-preview" :src="photoPreviewUrl" mode="widthFix"></image>
-				<view v-else class="upload-placeholder">
-					<text class="upload-plus">+</text>
-					<text class="upload-hint">点击上传你的照片</text>
-				</view>
-			</view>
+			<AppPhotoPicker
+				:photo-url="photoPreviewUrl"
+				:busy="uploading"
+				@click="choosePhoto"
+			/>
 		</view>
 
 		<!-- 底部占位 -->
