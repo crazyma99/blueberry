@@ -1,7 +1,6 @@
 <template>
 	<view class="container">
-		<!-- 自定义导航栏（全局 navigationStyle: custom，标题/返回键 #F1CD91） -->
-		<CustomNavBar title="蓝梅旗袍·汉服·民..." />
+		<!-- 首页无导航栏：Banner 沉浸式延伸到状态栏顶部 -->
 		<!-- 骨架屏 -->
 		<view v-if="loading" class="sk-container">
 			<view class="sk-banner sk-animate" style="height: 794rpx;"></view>
