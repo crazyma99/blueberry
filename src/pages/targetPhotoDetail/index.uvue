@@ -66,22 +66,24 @@
 					:key="index"
 				></image>
 			</view>
-			<!-- AI试衣按钮：底部固定悬浮（与 AI 试衣页 fixed-bottom 同模式，skyline 兼容） -->
-			<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-btn">
-				<image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill"/>
-				<view class="btn" @click="goToAiTryOn">
-					<view>生成</view>
-					<image src="/static/aitry-text.png" class="text" mode="aspectFill"/>
-					<view>效果</view>
+			<!-- 底部固定栏：AI试衣按钮组 + 版权 footer（与 AI 试衣页 fixed-bottom 同模式，skyline 兼容） -->
+			<view class="ai-tryon-bar">
+				<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-btn">
+					<image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill"/>
+					<view class="btn" @click="goToAiTryOn">
+						<view>生成</view>
+						<image src="/static/aitry-text.png" class="text" mode="aspectFill"/>
+						<view>效果</view>
+					</view>
+					<image src="/static/btn-right-icon.png" class="btn-icon" mode="aspectFill"/>
 				</view>
-				<image src="/static/btn-right-icon.png" class="btn-icon" mode="aspectFill"/>
+				<view class="page-footer">
+					<view class="divide"></view>
+					<view class="bottomdesc"><AppFooter /></view>
+				</view>
 			</view>
-			<view class="page-footer">
-				<view class="divide"></view>
-				<view class="bottomdesc"><AppFooter /></view>
-			</view>
-			<!-- 底部占位：避免固定按钮遮挡页脚 -->
-			<view v-if="!loading && detail?.tryonDisabled !== true" class="ai-tryon-spacer"></view>
+			<!-- 底部占位：覆盖固定栏高度（按钮组+版权footer） -->
+			<view class="ai-tryon-spacer"></view>
 		</view>
 
 		<!-- 登录弹窗 -->
@@ -468,8 +470,9 @@
 	width: 300rpx;
 	height: 18rpx;
 }
+/* 版权 footer：并入底部固定栏（ai-tryon-bar）内 */
 .page-footer {
-	margin-top: auto;
+	margin-top: 8rpx;
 }
 .title{
 	margin: 24rpx 18rpx 24rpx;
@@ -568,22 +571,28 @@
 	color: var(--color-primary-50);
 	font-weight: 400;
 }
-/* AI试衣按钮：底部固定悬浮（fixed，skyline 兼容），样式对齐 Figma 2072:387 Footer Container
-   - 容器：items-end 底部对齐、水平居中、py24、自下而上渐变遮罩（底部 59.6% 实色）
-   - 按钮：金色药丸、深色描边、px40/py26、gap12 */
-.ai-tryon-btn {
+/* 底部固定栏：AI试衣按钮组 + 版权 footer，样式对齐 Figma 2072:387 Footer Container
+   - 栏容器：fixed 吸底、自下而上渐变遮罩（底部 59.6% 实色）、py24、安全区 */
+.ai-tryon-bar {
 	position: fixed;
 	left: 0;
 	bottom: 0;
 	width: 100%;
 	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 24rpx 0 0;
+	padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+	background: linear-gradient(to top, var(--color-bg) 59.6%, rgba(22, 15, 4, 0));
+	z-index: 100;
+}
+
+/* 按钮组行：items-end 底部对齐、水平居中；按钮为金色药丸、深色描边、px40/py26、gap12 */
+.ai-tryon-btn {
+	display: flex;
 	flex-direction: row;
 	align-items: flex-end;
 	justify-content: center;
-	padding: 24rpx 0;
-	padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-	background: linear-gradient(to top, var(--color-bg) 59.6%, rgba(22, 15, 4, 0));
-	z-index: 100;
 	.btn-icon{
 		width: 104rpx;
 		height: 86rpx;
@@ -607,8 +616,8 @@
 	}
 }
 
-/* 底部占位：固定按钮区（icon86+py24*2+安全区约170rpx）+ 版权 footer（约100rpx）+ 余量 */
+/* 底部占位：固定栏高度（按钮组+版权footer，爸爸确认 200rpx） */
 .ai-tryon-spacer {
-	height: 320rpx;
+	height: 200rpx;
 }
 </style>
