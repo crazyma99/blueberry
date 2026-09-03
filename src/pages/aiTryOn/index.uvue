@@ -945,11 +945,14 @@ export default {
 	color: #fff;
 }
 
-/* Copyright */
+/* Copyright（复用相册详情页 footer 规格：撑满父容器 + 顶部 32rpx + 居中） */
 .footer-copyright {
-	margin-top: var(--spacing-sm);
+	width: 100%;
+	margin-top: 32rpx;
+	margin-bottom: var(--spacing-md);
 	font-size: var(--font-size-caption-md);
 	color: var(--color-primary-50);
 	font-weight: 400;
+	text-align: center;
 }
 </style>
