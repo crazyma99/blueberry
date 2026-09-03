@@ -1,6 +1,6 @@
 <template>
 	<view class="container">
-		<CustomNavBar title="蓝梅旗袍·汉服·民..." />
+		<CustomNavBar transparent />
 		<!-- 骨架屏 -->
 		<view v-if="loading" class="sk-container">
 			<view class="sk-title sk-animate" style="margin-top: 40rpx;"></view>
