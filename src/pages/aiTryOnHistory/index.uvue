@@ -199,7 +199,7 @@ export default {
 
 <style>
 .container {
-	background: #160F04;
+	background: var(--color-bg);
 	min-height: 100vh;
 	color: #fff;
 	display: flex;
@@ -223,7 +223,7 @@ export default {
 	top: 0;
 	left: 0;
 	width: 100%;
-	background: #160F04;
+	background: var(--color-bg);
 	z-index: 100;
 }
 .nav-content {
@@ -243,7 +243,7 @@ export default {
 	text-align: center;
 	font-size: 32rpx;
 	font-weight: 600;
-	color: #F1CD91;
+	color: var(--color-primary);
 	/* 视觉补偿返回按钮宽度，使标题真正居中 */
 	margin-right: 64rpx;
 }
@@ -375,7 +375,7 @@ export default {
 .copyright {
 	margin: 32rpx auto;
 	font-size: 18rpx;
-	color: rgba(241, 205, 145, 0.5);
+	color: var(--color-primary-50);
 	font-weight: 400;
 	text-align: center;
 }

@@ -83,7 +83,7 @@
 .page{
 	width: 100%;
 	height: 100%;
-	background: #160F04;
+	background: var(--color-bg);
 	overflow-y: scroll;
 }
 .banner{
@@ -109,7 +109,7 @@
 .bottomdesc{
 	margin: 32rpx auto;
 	font-size: 18rpx;
-	color: rgba(241, 205, 145, 0.5);
+	color: var(--color-primary-50);
 	font-weight: 400;
 }
 </style>

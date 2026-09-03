@@ -12,7 +12,7 @@
 						class="search-input-nav"
 						type="text"
 						placeholder="搜索客片"
-						placeholder-style="color: rgba(241, 205, 145, 0.7)"
+						placeholder-style="color: var(--color-primary-70)"
 						v-model="searchKeyword"
 						confirm-type="search"
 						@confirm="handleSearch"
@@ -786,7 +786,7 @@
 
 <style>
 	.page {
-		background: #160F04;
+		background: var(--color-bg);
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
@@ -806,7 +806,7 @@
 		top: 0;
 		left: 0;
 		width: 100%;
-		background: #160F04;
+		background: var(--color-bg);
 		z-index: 100;
 	}
 	.nav-content {
@@ -822,21 +822,21 @@
 		padding: 10rpx;
 	}
 	/* 渐变描边：外层 1rpx 渐变圆环 + 内层填充。
-	   内层填充 = 半透明金渐变 + 页面底色 #160F04 合成（下层实色挡住描边透出），
+	   内层填充 = 半透明金渐变 + 页面底色 var(--color-bg) 合成（下层实色挡住描边透出），
 	   视觉效果等同于半透明渐变直接叠在页面上，边缘过渡自然 */
 	.search-bar-wrap {
 		width: 65%;
 		margin-left: 20rpx;
 		padding: 1rpx;
 		border-radius: 32rpx;
-		background: linear-gradient(268.28deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0.2) 62.4%, rgba(241, 205, 145, 0.7) 100%);
+		background: linear-gradient(268.28deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, var(--color-primary-20) 62.4%, var(--color-primary-70) 100%);
 	}
 	.search-bar-nav {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
 		border-radius: 31rpx;
-		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), #160F04;
+		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), var(--color-bg);
 		padding: 0 20rpx;
 		height: 64rpx;
 	}
@@ -847,7 +847,7 @@
 	.search-input-nav {
 		flex: 1;
 		font-size: 26rpx;
-		color: #F1CD91;
+		color: var(--color-primary);
 		margin-left: 12rpx;
 	}
 	/* 搜索结果 */
@@ -888,7 +888,7 @@
 	.cat-title {
 		font-size: 38rpx;
 		font-weight: 700;
-		color: #F1CD91;
+		color: var(--color-primary);
 		letter-spacing: 2rpx;
 		flex-shrink: 0;
 	}
@@ -911,13 +911,13 @@
 		padding: 0 24rpx;
 	}
 	/* 胶囊标签：外层 tab-wrap 为 1rpx 渐变描边圆环；内层 tab 填充 =
-	   半透明金渐变 + 页面底色 #160F04 合成（实色底层挡住描边透出）；选中态两层实金 */
+	   半透明金渐变 + 页面底色 var(--color-bg) 合成（实色底层挡住描边透出）；选中态两层实金 */
 	.tab-wrap{
 		margin-right: 16rpx;
 		margin-bottom: 16rpx;
 		padding: 1rpx;
 		border-radius: 64rpx;
-		background: linear-gradient(260.97deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0) 62.4%, rgba(241, 205, 145, 0.7) 100%);
+		background: linear-gradient(260.97deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
 		flex-shrink: 0;
 	}
 	.tab{
@@ -929,17 +929,17 @@
 		padding: 0 24rpx;
 		height: 54rpx;
 		font-size: 24rpx;
-		color: #F1CD91;
+		color: var(--color-primary);
 		font-weight: 700;
 		border-radius: 63rpx;
-		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), #160F04;
+		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), var(--color-bg);
 	}
 	.choosed-wrap{
-		background: #F1CD91;
+		background: var(--color-primary);
 	}
 	.choosed{
-		color: #160F04;
-		background: #F1CD91;
+		color: var(--color-bg);
+		background: var(--color-primary);
 	}
 	.photolistContainer{
 		padding: 8rpx 24rpx 0;
@@ -953,7 +953,7 @@
 		width: calc((100% - 16rpx) / 2);
 		padding: 1rpx;
 		border-radius: 14rpx;
-		background: linear-gradient(252.59deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0) 62.4%, rgba(241, 205, 145, 0.7) 100%);
+		background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
 	}
 	.photoItem{
 		width: 100%;
@@ -991,14 +991,14 @@
 	.photoName{
 		font-size: 26rpx;
 		font-weight: 700;
-		color: #F1CD91;
+		color: var(--color-primary);
 	}
 	.collect{
 		display: flex;
 		flex-direction: row;
 		align-items: center;
 		font-size: 24rpx;
-		color: #F1CD91;
+		color: var(--color-primary);
 	}
 	.heart{
 		width: 48rpx;
@@ -1020,7 +1020,7 @@
 	.bottomdesc{
 		margin: 32rpx auto;
 		font-size: 18rpx;
-		color: rgba(241, 205, 145, 0.5);
+		color: var(--color-primary-50);
 		font-weight: 400;
 	}
 	/* AI试衣标签 */

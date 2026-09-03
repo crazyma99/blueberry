@@ -2,7 +2,7 @@
   CustomNavBar — 全局自定义顶部导航栏
 
   背景：微信小程序原生导航栏 navigationBarTextStyle 只支持 black/white，
-  无法实现 #F1CD91 金色标题与返回按钮，因此所有页面改用 navigationStyle: custom
+  无法实现 var(--color-primary) 金色标题与返回按钮，因此所有页面改用 navigationStyle: custom
   并在页面顶部放置本组件。
 
   使用：<CustomNavBar title="页面标题" />
@@ -57,7 +57,7 @@ export default {
 	top: 0;
 	left: 0;
 	right: 0;
-	background: #160F04;
+	background: var(--color-bg);
 	z-index: 998;
 }
 .custom-navbar-content {
@@ -85,7 +85,7 @@ export default {
 	text-align: center;
 	font-size: 17px;
 	font-weight: 500;
-	color: #F1CD91;
+	color: var(--color-primary);
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;

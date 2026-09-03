@@ -701,7 +701,7 @@ export default {
 
 <style>
 .page {
-	background: #160F04;
+	background: var(--color-bg);
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -881,7 +881,7 @@ export default {
 	align-items: center;
 	padding: 24rpx 40rpx;
 	padding-bottom: 40rpx;
-	background-color: #160F04;
+	background-color: var(--color-bg);
 }
 
 /* 生成按钮 */
@@ -894,19 +894,19 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
-	background: #F1CD91;
+	background: var(--color-primary);
 }
 .generate-btn-disabled {
 	opacity: 0.4;
 }
 .generate-btn-text {
 	font-size: 32rpx;
-	color: rgba(22, 15, 4, 1);
+	color: var(--color-bg);
 	font-weight: 500;
 }
 .generate-btn-ai {
 	font-size: 32rpx;
-	color: rgba(22, 15, 4, 1);
+	color: var(--color-bg);
 	font-weight: 700;
 }
 .generate-btn-ai-img {
@@ -948,7 +948,7 @@ export default {
 .footer-copyright {
 	margin-top: 20rpx;
 	font-size: 18rpx;
-	color: rgba(241, 205, 145, 0.5);
+	color: var(--color-primary-50);
 	font-weight: 400;
 }
 </style>

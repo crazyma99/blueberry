@@ -12,7 +12,7 @@
 							class="search-input-nav"
 							type="text"
 							placeholder="搜索收藏内容"
-							placeholder-style="color: rgba(241, 205, 145, 0.7)"
+							placeholder-style="color: var(--color-primary-70)"
 							v-model="searchKeyword"
 							confirm-type="search"
 							@confirm="handleSearch"
@@ -250,7 +250,7 @@ export default {
 
 <style>
 .container {
-	background: #160F04;
+	background: var(--color-bg);
 	min-height: 100vh;
 	color: #fff;
 	display: flex;
@@ -274,7 +274,7 @@ export default {
 	top: 0;
 	left: 0;
 	width: 100%;
-	background: #160F04;
+	background: var(--color-bg);
 	z-index: 100;
 }
 .nav-content {
@@ -295,14 +295,14 @@ export default {
 	padding: 1rpx;
 	border-radius: 32rpx;
 	/* 外层渐变：只露出 1rpx 边框线 */
-	background: linear-gradient(268.28deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0.2) 62.4%, rgba(241, 205, 145, 0.7) 100%);
+	background: linear-gradient(268.28deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, var(--color-primary-20) 62.4%, var(--color-primary-70) 100%);
 }
 .search-bar-nav {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	/* 内层填充 = 半透明金渐变 + 页面底色 #160F04 合成（实色底层挡住外层 1rpx 描边透出） */
-	background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), #160F04;
+	/* 内层填充 = 半透明金渐变 + 页面底色 var(--color-bg) 合成（实色底层挡住外层 1rpx 描边透出） */
+	background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), var(--color-bg);
 	border-radius: 31rpx;
 	padding: 0 20rpx;
 	height: 64rpx;
@@ -314,7 +314,7 @@ export default {
 .search-input-nav {
 	flex: 1;
 	font-size: 26rpx;
-	color: #F1CD91;
+	color: var(--color-primary);
 	margin-left: 12rpx;
 }
 
@@ -353,7 +353,7 @@ export default {
 	padding: 1rpx;
 	border-radius: 14rpx;
 	/* 外层渐变：只露出 1rpx 边框线（与客片列表页一致） */
-	background: linear-gradient(252.59deg, rgba(241, 205, 145, 0.2) 0%, rgba(241, 205, 145, 0.7) 33.41%, rgba(241, 205, 145, 0.2) 62.4%, rgba(241, 205, 145, 0.7) 100%);
+	background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, var(--color-primary-20) 62.4%, var(--color-primary-70) 100%);
 }
 .photoItem-wrap:nth-child(2n) {
 	margin: 0 0 8rpx;
@@ -387,14 +387,14 @@ export default {
 .photoName {
 	font-size: 28rpx;
 	font-weight: 500;
-	color: #F1CD91;
+	color: var(--color-primary);
 }
 .collect {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	font-size: 24rpx;
-	color: #F1CD91;
+	color: var(--color-primary);
 }
 .heart {
 	width: 48rpx;
@@ -418,7 +418,7 @@ export default {
 .copyright {
 	margin: 32rpx auto;
 	font-size: 18rpx;
-	color: rgba(241, 205, 145, 0.5);
+	color: var(--color-primary-50);
 	font-weight: 400;
 	text-align: center;
 }
