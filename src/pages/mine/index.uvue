@@ -39,20 +39,18 @@
           </view>
         </list-item>
 
-        <list-item>
-          <!-- 金刚区 -->
-          <view class="menu-section">
-            <view
-              v-for="(item, index) in menuItems"
-              :key="index"
-              class="menu-item"
-              @click="handleMenuClick(item)"
-            >
-              <view class="menu-icon-wrap">
-                <image class="menu-icon" :src="item.imageUrl" mode="aspectFill"></image>
-              </view>
-              <view :class="['menu-text', { 'special-font': item.specialFont }]">{{ item.title }}</view>
+        <!-- 功能列表：每个入口一行（纵向 list 布局） -->
+        <list-item
+          v-for="(item, index) in menuItems"
+          :key="index"
+          @click="handleMenuClick(item)"
+        >
+          <view class="menu-row">
+            <view class="menu-icon">
+              <image class="menu-icon-img" :src="item.imageUrl" mode="aspectFill"></image>
             </view>
+            <view class="menu-title font-harmony">{{ item.title }}</view>
+            <view class="menu-arrow">›</view>
           </view>
         </list-item>
 
@@ -561,21 +559,21 @@ export default {
   flex: 1;
 }
 
-/* 用户卡片 */
+/* 用户卡片（列表行样式，与功能菜单统一） */
 .user-card {
   display: flex;
   flex-direction: row;
   align-items: center;
   margin: 32rpx 32rpx 0;
-  padding: 36rpx 32rpx;
+  padding: 26rpx 28rpx;
   background: linear-gradient(135deg, rgba(241, 205, 145, 0.12), rgba(241, 205, 145, 0.04));
-  border-radius: 24rpx;
+  border-radius: 20rpx;
   border: 2rpx solid rgba(241, 205, 145, 0.22);
 }
 
 .avatar {
-  width: 120rpx;
-  height: 120rpx;
+  width: 88rpx;
+  height: 88rpx;
   border-radius: 50%;
   background: #333;
   overflow: hidden;
@@ -589,18 +587,18 @@ export default {
 }
 
 .user-info {
-  margin-left: 28rpx;
+  margin-left: 24rpx;
   flex: 1;
 }
 
 .nickname {
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: 600;
   color: #f1cd91;
 }
 
 .user-sub {
-  margin-top: 10rpx;
+  margin-top: 8rpx;
   font-size: 22rpx;
   color: rgba(241, 205, 145, 0.55);
 }
@@ -608,49 +606,50 @@ export default {
 .user-arrow {
   font-size: 40rpx;
   color: rgba(241, 205, 145, 0.45);
-  padding: 0 8rpx;
+  padding: 0 4rpx;
 }
 
-/* 金刚区 */
-.menu-section {
+/* 功能列表行 */
+.menu-row {
   display: flex;
   flex-direction: row;
-  padding: 36rpx 20rpx;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 24rpx;
-  border: 2rpx solid rgba(255, 255, 255, 0.12);
-  margin: 32rpx 32rpx 0;
-}
-
-.menu-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   align-items: center;
+  margin: 16rpx 32rpx 0;
+  padding: 26rpx 28rpx;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 20rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
 }
 
-.menu-icon-wrap {
-  width: 96rpx;
-  height: 96rpx;
+.menu-icon {
+  width: 76rpx;
+  height: 76rpx;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  margin-bottom: 14rpx;
 }
 
-.menu-icon {
-  width: 60rpx;
-  height: 60rpx;
+.menu-icon-img {
+  width: 44rpx;
+  height: 44rpx;
 }
 
-.menu-text {
-  font-size: 24rpx;
-  color: #f1cd91;
-  text-align: center;
+.menu-title {
+  flex: 1;
+  margin-left: 24rpx;
+  font-size: 28rpx;
+  color: #fff;
   font-weight: 500;
+}
+
+.menu-arrow {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 36rpx;
+  padding: 0 4rpx;
 }
 
 .special-font {
