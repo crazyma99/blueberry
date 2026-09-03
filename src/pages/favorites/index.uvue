@@ -53,9 +53,11 @@
 						<view class="mask">
 							<view class="desc">
 								<view class="photoName font-noto-serif">{{ item.title }}</view>
-								<view class="collect">
-									<image class="heart" mode="aspectFit" src="/static/liked.svg"></image>
-									<text class="stat-count">{{ formatCount(item.likeCount) }}</text>
+								<view class="desc-row">
+									<view class="collect">
+										<image class="heart" mode="aspectFit" src="/static/liked.svg"></image>
+										<text class="stat-count">{{ formatCount(item.likeCount) }}</text>
+									</view>
 								</view>
 							</view>
 						</view>
@@ -373,10 +375,17 @@ export default {
 	height: 100%;
 	top: 0;
 	left: 0;
-	background: linear-gradient(180deg, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.4) 75%, rgba(0, 0, 0, 0.7) 89%, #000000 100%);
+	background: linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 75%, rgba(0, 0, 0, 0.85) 100%);
 }
 .desc {
-	margin: 436rpx 16rpx 0;
+	position: absolute;
+	left: 20rpx;
+	right: 20rpx;
+	bottom: 20rpx;
+	display: flex;
+	flex-direction: column;
+}
+.desc-row {
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
@@ -398,6 +407,7 @@ export default {
 .heart {
 	width: 48rpx;
 	height: 40rpx;
+	position: relative;
 }
 .stat-count {
 	margin-left: 4rpx;
