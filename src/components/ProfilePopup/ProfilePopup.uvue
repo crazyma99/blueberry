@@ -21,13 +21,15 @@
         <text class="avatar-tip">点击选择头像</text>
       </button>
 
-      <!-- 昵称输入（组件化 AppInput） -->
-      <AppInput
-        label="昵称"
-        :value="nickname"
-        placeholder="请输入昵称"
-        @update="emit('update-nickname', $event)"
-      />
+      <!-- 昵称输入（组件化 AppInput，外层控制与下方按钮间距） -->
+      <view class="input-wrap">
+        <AppInput
+          label="昵称"
+          :value="nickname"
+          placeholder="请输入昵称"
+          @update="emit('update-nickname', $event)"
+        />
+      </view>
 
       <button class="confirm-btn btn-primary" hover-class="press-dim" @click="emit('submit')">确认</button>
       <view class="profile-skip" hover-class="press-dim" @click="emit('skip')">跳过</view>
@@ -165,6 +167,12 @@
   }
 
 
+
+  /* 输入框间距（使用方控制，组件不带外距） */
+  .input-wrap {
+    width: 100%;
+    margin-bottom: 36rpx;
+  }
 
   /* 确认 + 跳过 */
   .confirm-btn {
