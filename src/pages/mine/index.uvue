@@ -577,6 +577,7 @@ export default {
   background: linear-gradient(135deg, rgba(241, 205, 145, 0.12), rgba(241, 205, 145, 0.04));
   border-radius: var(--radius-md);
   border: 2rpx solid rgba(241, 205, 145, 0.22);
+  transition: opacity 0.15s ease-out;
 }
 
 .avatar {
@@ -628,6 +629,7 @@ export default {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
   border-radius: var(--radius-md);
   border: 2rpx solid rgba(255, 255, 255, 0.1);
+  transition: opacity 0.15s ease-out;
 }
 
 .menu-title {

@@ -620,6 +620,7 @@
 		background: var(--gradient-btn-primary);
 		border: 1rpx solid var(--color-bg);
 		border-radius: var(--radius-full);
+		transition: opacity 0.15s ease-out;
 		.text{
 			width: 118rpx;
 			height: 34rpx;

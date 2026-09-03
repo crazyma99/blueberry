@@ -129,6 +129,21 @@ page {
   opacity: 0.82;
 }
 
+/* 全局过渡规范（Phase3）：快速反馈 150ms / 常规过渡 250ms / 图片渐显 */
+.transition-fast {
+  transition: opacity 0.15s ease-out;
+}
+.transition-base {
+  transition: opacity 0.25s ease;
+}
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .font-noto-serif {
   font-family: 'NotoSerifSC-Bold';
 }
