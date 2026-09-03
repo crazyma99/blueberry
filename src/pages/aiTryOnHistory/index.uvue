@@ -362,7 +362,7 @@ export default {
 	height: 12rpx;
 	border-radius: 50%;
 	background: #F3D9AC;
-	margin-right: 10rpx;
+	margin-right: var(--spacing-xs);
 	animation: dotPulse 1s ease-in-out infinite;
 }
 @keyframes dotPulse {

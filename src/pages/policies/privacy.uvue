@@ -178,7 +178,7 @@ export default {
   font-size: 32rpx;
   font-weight: bold;
   color: #1a1a1a;
-  margin-top: 32rpx;
+  margin-top: var(--spacing-lg);
   margin-bottom: 16rpx;
 }
 
@@ -186,7 +186,7 @@ export default {
   font-size: 30rpx;
   font-weight: bold;
   color: #222222;
-  margin-top: 20rpx;
+  margin-top: var(--spacing-sm);
   margin-bottom: 12rpx;
 }
 

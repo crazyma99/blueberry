@@ -753,14 +753,14 @@ export default {
 .section-label {
 	font-size: 28rpx;
 	color: rgba(255, 255, 255, 0.7);
-	margin-bottom: 20rpx;
+	margin-bottom: var(--spacing-sm);
 }
 
 /* 体型选择 */
 .body-type-row {
 	display: flex;
 	flex-direction: row;
-	margin-top: 20rpx;
+	margin-top: var(--spacing-sm);
 	border-radius: 44rpx;
 	overflow: hidden;
 	border-width: 1rpx;
@@ -798,7 +798,7 @@ export default {
 	border-style: solid;
 	border-color: rgba(255, 255, 255, 0.1);
 	padding: 0 32rpx;
-	margin-top: 20rpx;
+	margin-top: var(--spacing-sm);
 }
 .age-picker-text {
 	font-size: 28rpx;
@@ -815,7 +815,7 @@ export default {
 /* 照片上传 */
 .upload-area {
 	position: relative;
-	margin-top: 20rpx;
+	margin-top: var(--spacing-sm);
 	width: 100%;
 	min-height: 320rpx;
 	border-radius: 16rpx;
@@ -925,7 +925,7 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
-	padding-top: 20rpx;
+	padding-top: var(--spacing-sm);
 }
 /* 限免角标（相对容器定位：top 取 padding-top 即按钮顶边，right 取右侧 icon 宽度即按钮右边，
    再 translate 自身一半，使角标一半高一半宽与按钮右上角重叠） */
@@ -946,7 +946,7 @@ export default {
 
 /* Copyright */
 .footer-copyright {
-	margin-top: 20rpx;
+	margin-top: var(--spacing-sm);
 	font-size: var(--font-size-caption-md);
 	color: var(--color-primary-50);
 	font-weight: 400;

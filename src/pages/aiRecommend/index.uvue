@@ -609,7 +609,7 @@ export default {
 .action-btn-wrap {
 	position: relative;
 	width: 100%;
-	padding-top: 20rpx;
+	padding-top: var(--spacing-sm);
 }
 /* 限免角标（整体落在容器 padding 预留空间内，不用负偏移，避免被裁剪） */
 .action-btn-badge {
@@ -628,7 +628,7 @@ export default {
 
 /* Copyright */
 .footer-copyright {
-	margin-top: 20rpx;
+	margin-top: var(--spacing-sm);
 	font-size: var(--font-size-caption-md);
 	color: var(--color-primary-50);
 	font-weight: 400;

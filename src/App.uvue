@@ -174,7 +174,7 @@ page {
   height: 384rpx;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 8rpx;
-  margin-bottom: 32rpx;
+  margin-bottom: var(--spacing-lg);
 }
 .sk-title {
   width: 200rpx;
@@ -233,7 +233,7 @@ page {
   height: 200rpx;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 16rpx;
-  margin-bottom: 32rpx;
+  margin-bottom: var(--spacing-lg);
 }
 
 /* ========== 登录弹窗样式 ========== */
@@ -292,7 +292,7 @@ page {
   font-size: 36rpx;
   font-weight: 700;
   color: #fff;
-  margin-bottom: 28rpx;
+  margin-bottom: var(--spacing-md);
 }
 .login-agreement-row {
   width: 100%;
@@ -341,7 +341,7 @@ page {
   font-size: 32rpx;
   font-weight: 700;
   border-radius: 16rpx;
-  margin-bottom: 32rpx;
+  margin-bottom: var(--spacing-lg);
 }
 .login-auth-popup .login-cancel-btn {
   width: 100%;

@@ -131,7 +131,7 @@ import { getPageConfig } from '../../utils/api.uts'
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 28rpx;
+    gap: var(--spacing-md);
     .divider{
       width: 150rpx;
       height: 22rpx;
@@ -248,12 +248,12 @@ import { getPageConfig } from '../../utils/api.uts'
       .label{
         font-size: var(--font-size-body-lg);
         font-weight: 400;
-        margin-bottom: 10rpx;
+        margin-bottom: var(--spacing-xs);
       }
       .val{
         font-size: var(--font-size-slogan);
         font-weight: 700;
-        margin-bottom: 20rpx;
+        margin-bottom: var(--spacing-sm);
       }
     }
   }

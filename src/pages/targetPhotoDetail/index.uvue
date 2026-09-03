@@ -24,7 +24,7 @@
 				</view>
 				<view class="sk-block sk-animate" style="width: 48rpx; height: 48rpx; border-radius: 50%;"></view>
 			</view>
-			<view class="sk-text sk-animate" style="width: 320rpx; margin-bottom: 32rpx;"></view>
+			<view class="sk-text sk-animate" style="width: 320rpx; margin-bottom: var(--spacing-lg);"></view>
 			<view class="sk-block sk-animate" style="width: 100%; height: 500rpx; margin-bottom: 16rpx;"></view>
 			<view class="sk-block sk-animate" style="width: 100%; height: 500rpx;"></view>
 		</view>
@@ -444,7 +444,7 @@
 	flex-direction: row;
 	align-items: center;
 	/* 左右相距 28rpx */
-	gap: 28rpx;
+	gap: var(--spacing-md);
 }
 .title-group {
 	display: flex;
@@ -497,7 +497,7 @@
 	align-items: center;
 	justify-content: space-between;
 	/* info-left 与 collect 之间至少 10rpx */
-	gap: 10rpx;
+	gap: var(--spacing-xs);
 }
 .info-left{
 	flex: 1;

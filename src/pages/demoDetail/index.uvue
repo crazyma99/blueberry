@@ -826,7 +826,7 @@
 	   视觉效果等同于半透明渐变直接叠在页面上，边缘过渡自然 */
 	.search-bar-wrap {
 		width: 65%;
-		margin-left: 20rpx;
+		margin-left: var(--spacing-sm);
 		padding: 1rpx;
 		border-radius: 32rpx;
 		background: linear-gradient(268.28deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, var(--color-primary-20) 62.4%, var(--color-primary-70) 100%);

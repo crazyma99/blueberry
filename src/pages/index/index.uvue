@@ -491,9 +491,9 @@
 		display: flex;
 		flex-direction: row;
 		flex-wrap: wrap;
-		gap: 20rpx;
+		gap: var(--spacing-sm);
 		/* 与上方「客片欣赏/COLLECTION」标题拉开距离 */
-		margin-top: 20rpx;
+		margin-top: var(--spacing-sm);
 	}
 	.photo-card{
 		position: relative;

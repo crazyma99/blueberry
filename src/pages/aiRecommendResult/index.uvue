@@ -158,7 +158,7 @@ export default {
 }
 .analysis-item {
 	width: 50%;
-	margin-bottom: 20rpx;
+	margin-bottom: var(--spacing-sm);
 }
 .analysis-label {
 	font-size: var(--font-size-body);
