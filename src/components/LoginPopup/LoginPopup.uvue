@@ -17,7 +17,7 @@
       <!-- 协议勾选（自绘） -->
       <view class="agreement-row" @click="emit('toggle-agreement')">
         <view :class="agreementChecked ? 'agreement-check is-checked' : 'agreement-check'">
-          <view v-if="agreementChecked" class="agreement-dot"></view>
+          <view v-if="agreementChecked" class="agreement-mark"></view>
         </view>
         <text class="agreement-text">
           <text>登录即代表同意 </text>
@@ -140,7 +140,7 @@
     width: 100%;
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 40rpx;
   }
   .agreement-check {
@@ -158,15 +158,20 @@
     border-color: var(--color-primary);
     background: var(--gradient-btn-primary);
   }
-  .agreement-dot {
-    width: 14rpx;
-    height: 14rpx;
-    border-radius: 50%;
-    background: var(--color-bg);
+  /* 选中对勾（CSS 画勾：两条边框旋转 45 度） */
+  .agreement-mark {
+    width: 18rpx;
+    height: 10rpx;
+    border-left: 4rpx solid var(--color-bg);
+    border-bottom: 4rpx solid var(--color-bg);
+    transform: rotate(-45deg) translate(1rpx, -2rpx);
   }
   .agreement-text {
+    flex: 1;
     font-size: var(--font-size-body-xs);
     color: rgba(255, 255, 255, 0.55);
+    word-break: break-all;
+    line-height: 1.5;
   }
   .agreement-link {
     color: var(--color-primary);
