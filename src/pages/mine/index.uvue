@@ -1,5 +1,7 @@
 <template>
   <view class="container">
+    <!-- 顶部氛围光晕（金色弥散，解决纯色背景的干拔感） -->
+    <view class="bg-aura"></view>
     <CustomNavBar title="我的" />
     <!-- Loading 骨架屏 -->
     <view v-if="loading" class="sk-container" style="padding-top: 64rpx;">
@@ -559,6 +561,17 @@ export default {
   color: var(--color-primary);
 }
 
+/* 顶部氛围光晕：金色弥散，视觉重心落在上半区 */
+.bg-aura {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 520rpx;
+  pointer-events: none;
+  background: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(241, 205, 145, 0.16), rgba(241, 205, 145, 0.05) 45%, rgba(22, 15, 4, 0) 75%);
+}
+
 .content {
   flex: 1;
   min-height: 0;
@@ -575,18 +588,18 @@ export default {
   display: flex;
   flex-direction: row;
   align-items: center;
-  min-height: 96rpx;
+  min-height: 140rpx;
   margin: var(--spacing-lg) var(--spacing-lg) 0;
   padding: 0 var(--spacing-md);
-  background: linear-gradient(135deg, rgba(241, 205, 145, 0.12), rgba(241, 205, 145, 0.04));
+  background: linear-gradient(135deg, rgba(241, 205, 145, 0.16), rgba(241, 205, 145, 0.05) 60%, rgba(241, 205, 145, 0.02));
   border-radius: var(--radius-md);
-  border: 2rpx solid rgba(241, 205, 145, 0.22);
+  border: 2rpx solid rgba(241, 205, 145, 0.28);
   transition: opacity 0.15s ease-out;
 }
 
 .avatar {
-  width: 88rpx;
-  height: 88rpx;
+  width: 108rpx;
+  height: 108rpx;
   border-radius: 50%;
   background: #333;
   overflow: hidden;
