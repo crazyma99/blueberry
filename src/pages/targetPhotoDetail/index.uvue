@@ -566,19 +566,24 @@
 	color: var(--color-primary-50);
 	font-weight: 400;
 }
-/* AI试衣按钮（文档流：图片下方 60rpx，距页脚 44rpx，水平居中） */
+/* AI试衣按钮：页面底部吸底（sticky），渐变遮罩浮层，对齐 Figma 2072:387 Footer Container */
 .ai-tryon-btn {
-	margin: 60rpx 0 44rpx;
-	align-self: center;
+	position: sticky;
+	bottom: 0;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
+	justify-content: center;
+	/* 设计稿 Footer Container：自下而上渐变遮罩，按钮组浮于内容之上 */
+	padding: 24rpx 0;
+	margin: 60rpx 0 0;
+	background: linear-gradient(to top, var(--color-bg) 59.6%, rgba(22, 15, 4, 0));
 	.btn-icon{
 		width: 104rpx;
 		height: 86rpx;
 	}
 	.btn{
-		padding: var(--spacing-md) 40rpx;
+		padding: 26rpx 40rpx;
 		color: var(--color-bg);
 		display: flex;
 		flex-direction: row;
@@ -587,6 +592,7 @@
 		font-weight: 500;
 		gap: 12rpx;
 		background: var(--color-primary);
+		border: 1rpx solid var(--color-bg);
 		border-radius: var(--radius-full);
 		.text{
 			width: 118rpx;
