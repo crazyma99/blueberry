@@ -1,0 +1,219 @@
+<!--
+  LoginPopup — 手机号快捷登录弹窗（组件级重构 · 新视觉）
+
+  视觉：底部弹层（bottom sheet）+ 顶部金色氛围光 + Noto Serif 标题 + 自绘勾选 + 渐变主按钮
+  交互：emit 事件交回页面既有 handler（业务逻辑完全不变）
+  事件：@close 暂不登陆/遮罩关闭；@toggle-agreement 协议勾选；@show-toast 未勾选提示；
+        @open-user @open-privacy 协议链接；@get-phone 一键登录(getPhoneNumber 回调)
+
+  使用：
+  <LoginPopup
+    v-if="showLoginPopup"
+    :agreement-checked="loginAgreementChecked"
+    :user-agreement-name="userAgreementName"
+    :privacy-policy-name="privacyPolicyName"
+    @close="closeLoginPopup"
+    @toggle-agreement="toggleLoginAgreement"
+    @show-toast="showLoginAgreementToast"
+    @open-user="openUserAgreement"
+    @open-privacy="openPrivacyPolicy"
+    @get-phone="onGetPhoneNumber"
+  />
+-->
+<template>
+	<view class="login-overlay" @click="emit('close')">
+		<view class="login-sheet" @click.stop>
+			<!-- 顶部氛围光 + 拖拽把手 -->
+			<view class="sheet-aura"></view>
+			<view class="sheet-handle"></view>
+			<view class="sheet-title font-noto-serif">手机号快捷登陆</view>
+			<view class="sheet-desc">登录后可使用收藏与 AI 试衣</view>
+
+			<!-- 协议勾选（自绘） -->
+			<view class="agreement-row" @click="emit('toggle-agreement')">
+				<view :class="agreementChecked ? 'agreement-check is-checked' : 'agreement-check'">
+					<view v-if="agreementChecked" class="agreement-dot"></view>
+				</view>
+				<text class="agreement-text">
+					<text>登录即代表同意 </text>
+					<text class="agreement-link" @click.stop="emit('open-user')">{{ userAgreementName }}</text>
+					<text>、</text>
+					<text class="agreement-link" @click.stop="emit('open-privacy')">{{ privacyPolicyName }}</text>
+				</text>
+			</view>
+
+			<!-- 一键登录 -->
+			<button
+				v-if="agreementChecked"
+				class="login-btn btn-primary"
+				open-type="getPhoneNumber"
+				@getphonenumber="emit('get-phone', $event)"
+			>一键登录</button>
+			<button
+				v-else
+				class="login-btn btn-primary"
+				hover-class="press-dim"
+				@click="emit('show-toast')"
+			>一键登录</button>
+
+			<view class="login-skip" hover-class="press-dim" @click="emit('close')">暂不登陆</view>
+		</view>
+	</view>
+</template>
+
+<script lang="uts">
+	export default {
+		name: 'LoginPopup',
+		props: {
+			agreementChecked: {
+				type: Boolean,
+				default: false
+			},
+			userAgreementName: {
+				type: String,
+				default: '用户协议'
+			},
+			privacyPolicyName: {
+				type: String,
+				default: '隐私政策'
+			}
+		},
+		emits: ['close', 'toggle-agreement', 'show-toast', 'open-user', 'open-privacy', 'get-phone'],
+		methods: {
+			emit(name: string, event: any): void {
+				this.$emit(name, event)
+			}
+		}
+	}
+</script>
+
+<style>
+	/* 遮罩 + 渐显（复用全局 login-overlay 基础样式） */
+	.login-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.55);
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+		z-index: 999;
+		animation: overlayFadeIn 0.25s ease-out;
+	}
+	@keyframes overlayFadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+
+	/* 底部弹层 */
+	.login-sheet {
+		position: relative;
+		width: 100vw;
+		background: var(--color-popup);
+		border-top-left-radius: 32rpx;
+		border-top-right-radius: 32rpx;
+		padding: 40rpx 48rpx 48rpx;
+		padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		overflow: hidden;
+		animation: sheetSlideUp 0.3s ease-out;
+	}
+	@keyframes sheetSlideUp {
+		from { transform: translateY(100%); }
+		to { transform: translateY(0); }
+	}
+
+	/* 顶部金色氛围光 */
+	.sheet-aura {
+		position: absolute;
+		top: -80rpx;
+		left: 50%;
+		width: 480rpx;
+		height: 240rpx;
+		margin-left: -240rpx;
+		background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(241, 205, 145, 0.22), rgba(241, 205, 145, 0) 70%);
+		pointer-events: none;
+	}
+
+	/* 拖拽把手 */
+	.sheet-handle {
+		width: 72rpx;
+		height: 8rpx;
+		border-radius: var(--radius-full);
+		background: rgba(255, 255, 255, 0.18);
+		margin-bottom: 28rpx;
+	}
+
+	.sheet-title {
+		font-size: 40rpx;
+		font-weight: 700;
+		color: var(--color-primary);
+		margin-bottom: 12rpx;
+	}
+
+	.sheet-desc {
+		font-size: var(--font-size-body-sm);
+		color: rgba(255, 255, 255, 0.45);
+		margin-bottom: 44rpx;
+	}
+
+	/* 协议勾选 */
+	.agreement-row {
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 40rpx;
+	}
+	.agreement-check {
+		width: 36rpx;
+		height: 36rpx;
+		border-radius: 50%;
+		border: 2rpx solid rgba(255, 255, 255, 0.35);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-right: 16rpx;
+		transition: all 0.15s ease-out;
+	}
+	.agreement-check.is-checked {
+		border-color: var(--color-primary);
+		background: var(--gradient-btn-primary);
+	}
+	.agreement-dot {
+		width: 14rpx;
+		height: 14rpx;
+		border-radius: 50%;
+		background: var(--color-bg);
+	}
+	.agreement-text {
+		font-size: var(--font-size-body-xs);
+		color: rgba(255, 255, 255, 0.55);
+	}
+	.agreement-link {
+		color: var(--color-primary);
+	}
+
+	/* 一键登录 */
+	.login-btn {
+		width: 100%;
+		height: 92rpx;
+		font-size: var(--font-size-body-plus);
+	}
+	.login-btn::after {
+		border: none;
+	}
+
+	/* 暂不登陆 */
+	.login-skip {
+		margin-top: 32rpx;
+		padding: 12rpx 40rpx;
+		font-size: var(--font-size-body-sm);
+		color: rgba(255, 255, 255, 0.4);
+		transition: opacity 0.15s ease-out;
+	}
+</style>
