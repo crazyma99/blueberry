@@ -50,7 +50,7 @@
           @click="handleMenuClick(item)"
         >
           <view class="menu-row" hover-class="press-row">
-            <view class="menu-title font-harmony">{{ item.title }}</view>
+            <view class="menu-title font-noto-serif">{{ item.title }}</view>
             <view class="menu-arrow">›</view>
           </view>
         </list-item>
@@ -629,8 +629,9 @@ export default {
 .menu-title {
   flex: 1;
   font-size: var(--font-size-body-plus);
-  color: #fff;
-  font-weight: 500;
+  color: var(--color-primary);
+  font-weight: 600;
+  letter-spacing: 1rpx;
 }
 
 .menu-arrow {
