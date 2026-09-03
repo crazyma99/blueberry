@@ -814,12 +814,12 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		padding: 0 16rpx
+		padding: 0 16rpx;
 	}
 	.back-btn {
 		width: 48rpx;
 		height: 48rpx;
-		padding: var(----spacing-xs)
+		padding: var(--spacing-xs);
 	}
 	/* 渐变描边：外层 1rpx 渐变圆环 + 内层填充。
 	   内层填充 = 半透明金渐变 + 页面底色 var(--color-bg) 合成（下层实色挡住描边透出），
@@ -827,17 +827,17 @@
 	.search-bar-wrap {
 		width: 65%;
 		margin-left: var(--spacing-sm);
-		padding: 1rpx
-		border-radius: var(----radius-lg);
+		padding: 1rpx;
+		border-radius: var(--radius-lg);
 		background: linear-gradient(268.28deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, var(--color-primary-20) 62.4%, var(--color-primary-70) 100%);
 	}
 	.search-bar-nav {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		border-radius: var(----radius-lg);
+		border-radius: var(--radius-lg);
 		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), var(--color-bg);
-		padding: 0 var(----spacing-sm)
+		padding: 0 var(--spacing-sm);
 		height: 64rpx;
 	}
 	.search-icon-small {
@@ -859,7 +859,7 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 200rpx var(----spacing-lg)
+		padding: 200rpx var(--spacing-lg);
 	}
 	.empty-title {
 		font-size: 32rpx;
@@ -871,7 +871,7 @@
 		color: rgba(255, 255, 255, 0.3);
 	}
 	.load-more {
-		padding: var(----spacing-lg)
+		padding: var(--spacing-lg);
 		text-align: center;
 	}
 	.load-more-text {
@@ -883,7 +883,7 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		margin: 8rpx 24rpx var(----spacing-sm)
+		margin: 8rpx 24rpx var(--spacing-sm);
 	}
 	.cat-title {
 		font-size: var(--font-size-display);
@@ -908,15 +908,15 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		padding: 0 24rpx
+		padding: 0 24rpx;
 	}
 	/* 胶囊标签：外层 tab-wrap 为 1rpx 渐变描边圆环；内层 tab 填充 =
 	   半透明金渐变 + 页面底色 var(--color-bg) 合成（实色底层挡住描边透出）；选中态两层实金 */
 	.tab-wrap{
 		margin-right: 16rpx;
 		margin-bottom: 16rpx;
-		padding: 1rpx
-		border-radius: var(----radius-avatar);
+		padding: 1rpx;
+		border-radius: var(--radius-avatar);
 		background: linear-gradient(260.97deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
 		flex-shrink: 0;
 	}
@@ -926,12 +926,12 @@
 		justify-content: center;
 		/* 最小宽度 140rpx，左右 padding 24rpx，宽度由内容撑开 */
 		min-width: 140rpx;
-		padding: 0 24rpx
+		padding: 0 24rpx;
 		height: 54rpx;
 		font-size: var(--font-size-body);
 		color: var(--color-primary);
 		font-weight: 700;
-		border-radius: var(----radius-avatar);
+		border-radius: var(--radius-avatar);
 		background: linear-gradient(99.85deg, rgba(241, 205, 145, 0.12) 0%, rgba(241, 205, 145, 0) 100%), var(--color-bg);
 	}
 	.choosed-wrap{
@@ -942,7 +942,7 @@
 		background: var(--color-primary);
 	}
 	.photolistContainer{
-		padding: 8rpx 24rpx 0
+		padding: 8rpx 24rpx 0;
 		display: flex;
 		flex-direction: row;
 		flex-wrap: wrap;
@@ -951,7 +951,7 @@
 	/* 客片渐变边框：外层 photoItem-wrap 渐变 + 内层 photoItem 图片 */
 	.photoItem-wrap{
 		width: calc((100% - 16rpx) / 2);
-		padding: 1rpx
+		padding: 1rpx;
 		border-radius: var(--radius-card);
 		background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
 	}
@@ -959,7 +959,7 @@
 		width: 100%;
 		height: 460rpx;
 		position: relative;
-		border-radius: var(----radius-card);
+		border-radius: var(--radius-card);
 		overflow: hidden;
 	}
 	.photo{
@@ -1018,7 +1018,7 @@
 		background: rgba(255, 255, 255, 0.15);
 	}
 	.bottomdesc{
-		margin: var(----spacing-lg) auto
+		margin: var(--spacing-lg) auto;
 		font-size: var(--font-size-caption-md);
 		color: var(--color-primary-50);
 		font-weight: 400;
@@ -1031,7 +1031,7 @@
 	/* AI智能推荐入口 */
 	.ai-recommend-banner {
 		position: relative;
-		margin: 36rpx var(----spacing-sm) 40rpx
+		margin: 36rpx var(--spacing-sm) 40rpx;
 		height: 178rpx;
 		border-radius: var(--radius-container);
 		overflow: hidden;

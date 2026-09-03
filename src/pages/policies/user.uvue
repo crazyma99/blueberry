@@ -98,7 +98,7 @@ export default {
 }
 
 .policy-content {
-  padding: var(----spacing-lg) 36rpx 80rpx 36rpx
+  padding: var(--spacing-lg) 36rpx 80rpx 36rpx;
 }
 
 .policy-title {
@@ -126,7 +126,7 @@ export default {
 .policy-divider {
   height: 1rpx;
   background-color: #e5e5e5;
-  margin: 24rpx 0
+  margin: 24rpx 0;
 }
 
 .policy-section-title {
@@ -138,14 +138,14 @@ export default {
 }
 
 .policy-paragraph {
-  font-size: var(----font-size-body-plus);
+  font-size: var(--font-size-body-plus);
   color: #333333;
   line-height: 48rpx;
   margin-bottom: 16rpx;
 }
 
 .policy-list-item {
-  font-size: var(----font-size-body-plus);
+  font-size: var(--font-size-body-plus);
   color: #333333;
   line-height: 48rpx;
   margin-bottom: 8rpx;

@@ -160,12 +160,12 @@ page {
 }
 /* 骨架屏容器 */
 .sk-container {
-  padding: var(----spacing-lg)
+  padding: var(--spacing-lg);
 }
 /* 通用矩形块 */
 .sk-block {
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(----radius-xs);
+  border-radius: var(--radius-xs);
 }
 /* 圆形（头像等） */
 .sk-circle {
@@ -183,33 +183,33 @@ page {
   width: 100%;
   height: 384rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(----radius-xs);
+  border-radius: var(--radius-xs);
   margin-bottom: var(--spacing-lg);
 }
 .sk-title {
   width: 200rpx;
   height: 24rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(----radius-2xs);
-  margin: 0 auto 16rpx
+  border-radius: var(--radius-2xs);
+  margin: 0 auto 16rpx;
 }
 .sk-subtitle {
   width: 140rpx;
   height: 36rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(----radius-2xs);
-  margin: 0 auto var(----spacing-lg)
+  border-radius: var(--radius-2xs);
+  margin: 0 auto var(--spacing-lg);
 }
 .sk-text {
   height: 28rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(----radius-2xs);
+  border-radius: var(--radius-2xs);
 }
 .sk-photo-card {
   width: 364rpx;
   height: 226rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(----radius-xs);
+  border-radius: var(--radius-xs);
   margin-right: 8rpx;
 }
 .sk-photo-card:last-child {
@@ -219,17 +219,17 @@ page {
   width: 340rpx;
   height: 482rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(----radius-xs);
-  margin: 0 8rpx 8rpx 0
+  border-radius: var(--radius-xs);
+  margin: 0 8rpx 8rpx 0;
 }
 .sk-photo-item:nth-child(2n) {
-  margin: 0 0 8rpx
+  margin: 0 0 8rpx;
 }
 .sk-tab {
   width: 128rpx;
   height: 42rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(----radius-xs);
+  border-radius: var(--radius-xs);
   margin-right: 16rpx;
 }
 .sk-avatar {
@@ -242,7 +242,7 @@ page {
   width: 100%;
   height: 200rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(----radius-sm);
+  border-radius: var(--radius-sm);
   margin-bottom: var(--spacing-lg);
 }
 
@@ -271,7 +271,7 @@ page {
   background: #1a1a1a;
   border-top-left-radius: 24rpx;
   border-top-right-radius: 24rpx;
-  padding: 64rpx 48rpx 48rpx
+  padding: 64rpx 48rpx 48rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -291,10 +291,10 @@ page {
 .login-auth-popup {
   align-self: flex-end;
   width: 710rpx;
-  margin: 0 var(----spacing-sm) var(----spacing-sm)
-  padding: 54rpx 48rpx 48rpx
+  margin: 0 var(--spacing-sm) var(--spacing-sm);
+  padding: 54rpx 48rpx 48rpx;
   background: #262626;
-  border-radius: var(----radius-2xl);
+  border-radius: var(--radius-2xl);
   border: none;
   box-sizing: border-box;
 }
@@ -350,16 +350,16 @@ page {
   color: #000;
   font-size: 32rpx;
   font-weight: 700;
-  border-radius: var(----radius-sm);
+  border-radius: var(--radius-sm);
   margin-bottom: var(--spacing-lg);
 }
 .login-auth-popup .login-cancel-btn {
   width: 100%;
   height: 96rpx;
   line-height: 96rpx;
-  padding: 0
+  padding: 0;
   background: #17150F;
-  border-radius: var(----radius-sm);
+  border-radius: var(--radius-sm);
   color: #fff;
   font-size: 32rpx;
   font-weight: 700;
@@ -374,7 +374,7 @@ page {
   color: #1a1a1a;
   font-size: 30rpx;
   font-weight: 600;
-  border-radius: var(----radius-xl);
+  border-radius: var(--radius-xl);
   text-align: center;
   border: none;
   margin-bottom: 24rpx;
@@ -385,7 +385,7 @@ page {
 .login-cancel {
   font-size: var(--font-size-body-lg);
   color: rgba(255, 255, 255, 0.4);
-  padding: 16rpx var(----spacing-lg)
+  padding: 16rpx var(--spacing-lg);
 }
 
 /* 头像昵称授权弹窗（复用 .login-overlay / .login-popup / .login-phone-btn / .login-cancel）*/
@@ -394,8 +394,8 @@ page {
   flex-direction: column;
   align-items: center;
   background: transparent;
-  padding: 0
-  margin: 0 0 var(----spacing-lg)
+  padding: 0;
+  margin: 0 0 var(--spacing-lg);
   line-height: 1;
 }
 .profile-avatar-btn::after {
@@ -417,20 +417,20 @@ page {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 16rpx 24rpx
+  padding: 16rpx 24rpx;
   margin-bottom: 40rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(----radius-card);
+  border-radius: var(--radius-card);
   box-sizing: border-box;
 }
 .profile-nickname-label {
-  font-size: var(----font-size-body-plus);
+  font-size: var(--font-size-body-plus);
   color: #fff;
   margin-right: 24rpx;
 }
 .profile-nickname-input {
   flex: 1;
-  font-size: var(----font-size-body-plus);
+  font-size: var(--font-size-body-plus);
   color: #fff;
 }
 </style>
