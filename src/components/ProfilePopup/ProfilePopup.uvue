@@ -1,7 +1,8 @@
 <!--
-  ProfilePopup — 完善个人资料弹窗（组件级重构 · 新视觉）
+  ProfilePopup — 完善个人资料弹窗（近手弹窗 · 底部弹层 · 与 LoginPopup 品牌视觉一致）
 
-  视觉：居中卡片 + 顶部金色氛围光 + 头像金描边 + 深色输入面板 + 渐变确认按钮 + 弹入动画
+  视觉：底部弹层（bottom sheet）+ 顶部金色氛围光 + 拖拽把手 + Noto Serif 标题
+        + 头像金描边角标 + 深色输入面板 + 渐变主按钮 + 滑入动画
   交互：emit 事件交回页面既有 handler（业务逻辑完全不变）
   事件：@choose-avatar 头像选择；@update-nickname 昵称输入；@submit 确认；@skip 跳过/遮罩关闭
 
@@ -17,202 +18,218 @@
   />
 -->
 <template>
-	<view class="profile-overlay" @click="emit('skip')">
-		<view class="profile-card" @click.stop>
-			<view class="card-aura"></view>
-			<view class="profile-title font-noto-serif">完善个人资料</view>
-			<view class="profile-desc">设置头像和昵称以获得完整体验</view>
+  <view class="profile-overlay" @click="emit('skip')">
+    <view class="profile-sheet" @click.stop>
+      <!-- 顶部氛围光 + 拖拽把手 -->
+      <view class="sheet-aura"></view>
+      <view class="sheet-handle"></view>
+      <view class="sheet-title font-noto-serif">完善个人资料</view>
+      <view class="sheet-desc">设置头像和昵称以获得完整体验</view>
 
-			<!-- 头像选择 -->
-			<button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="emit('choose-avatar', $event)">
-				<image class="avatar-img" :src="avatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
-				<view class="avatar-badge">+</view>
-				<text class="avatar-tip">点击选择头像</text>
-			</button>
+      <!-- 头像选择 -->
+      <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="emit('choose-avatar', $event)">
+        <image class="avatar-img" :src="avatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
+        <view class="avatar-badge">+</view>
+        <text class="avatar-tip">点击选择头像</text>
+      </button>
 
-			<!-- 昵称输入 -->
-			<view class="nickname-row">
-				<text class="nickname-label">昵称</text>
-				<input
-					class="nickname-input"
-					type="nickname"
-					placeholder="请输入昵称"
-					:value="nickname"
-					@input="emit('update-nickname', $event.detail.value)"
-				/>
-			</view>
+      <!-- 昵称输入 -->
+      <view class="nickname-row">
+        <text class="nickname-label">昵称</text>
+        <input
+          class="nickname-input"
+          type="nickname"
+          placeholder="请输入昵称"
+          :value="nickname"
+          @input="emit('update-nickname', $event.detail.value)"
+        />
+      </view>
 
-			<button class="confirm-btn btn-primary" hover-class="press-dim" @click="emit('submit')">确认</button>
-			<view class="profile-skip" hover-class="press-dim" @click="emit('skip')">跳过</view>
-		</view>
-	</view>
+      <button class="confirm-btn btn-primary" hover-class="press-dim" @click="emit('submit')">确认</button>
+      <view class="profile-skip" hover-class="press-dim" @click="emit('skip')">跳过</view>
+    </view>
+  </view>
 </template>
 
 <script lang="uts">
-	export default {
-		name: 'ProfilePopup',
-		props: {
-			avatarUrl: {
-				type: String,
-				default: ''
-			},
-			nickname: {
-				type: String,
-				default: ''
-			}
-		},
-		emits: ['choose-avatar', 'update-nickname', 'submit', 'skip'],
-		methods: {
-			emit(name: string, event: any): void {
-				this.$emit(name, event)
-			}
-		}
-	}
+  export default {
+    name: 'ProfilePopup',
+    props: {
+      avatarUrl: {
+        type: String,
+        default: ''
+      },
+      nickname: {
+        type: String,
+        default: ''
+      }
+    },
+    emits: ['choose-avatar', 'update-nickname', 'submit', 'skip'],
+    methods: {
+      emit(name: string, event: any): void {
+        this.$emit(name, event)
+      }
+    }
+  }
 </script>
 
 <style>
-	.profile-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(0, 0, 0, 0.55);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 999;
-		animation: overlayFadeIn 0.25s ease-out;
-	}
-	@keyframes overlayFadeIn {
-		from { opacity: 0; }
-		to { opacity: 1; }
-	}
+  /* 遮罩 + 渐显（与 LoginPopup 一致） */
+  .profile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 999;
+    animation: overlayFadeIn 0.25s ease-out;
+  }
+  @keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 
-	.profile-card {
-		position: relative;
-		width: 620rpx;
-		background: var(--color-popup-card);
-		border-radius: var(--radius-2xl);
-		padding: 56rpx 48rpx 48rpx;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		overflow: hidden;
-		animation: cardPopIn 0.28s ease-out;
-	}
-	@keyframes cardPopIn {
-		from { opacity: 0; transform: scale(0.92) translateY(24rpx); }
-		to { opacity: 1; transform: scale(1) translateY(0); }
-	}
+  /* 底部弹层（近手弹窗，与 LoginPopup .login-sheet 同款视觉） */
+  .profile-sheet {
+    position: relative;
+    width: 100vw;
+    background: var(--color-popup);
+    border-top-left-radius: 32rpx;
+    border-top-right-radius: 32rpx;
+    padding: 40rpx 48rpx 48rpx;
+    padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    animation: sheetSlideUp 0.3s ease-out;
+  }
+  @keyframes sheetSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
 
-	/* 顶部金色氛围光 */
-	.card-aura {
-		position: absolute;
-		top: -100rpx;
-		left: 50%;
-		width: 420rpx;
-		height: 220rpx;
-		margin-left: -210rpx;
-		background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(241, 205, 145, 0.2), rgba(241, 205, 145, 0) 70%);
-		pointer-events: none;
-	}
+  /* 顶部金色氛围光 */
+  .sheet-aura {
+    position: absolute;
+    top: -80rpx;
+    left: 50%;
+    width: 480rpx;
+    height: 240rpx;
+    margin-left: -240rpx;
+    background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(241, 205, 145, 0.22), rgba(241, 205, 145, 0) 70%);
+    pointer-events: none;
+  }
 
-	.profile-title {
-		font-size: 38rpx;
-		font-weight: 700;
-		color: var(--color-primary);
-		margin-bottom: 10rpx;
-	}
-	.profile-desc {
-		font-size: var(--font-size-body-sm);
-		color: rgba(255, 255, 255, 0.45);
-		margin-bottom: 40rpx;
-	}
+  /* 拖拽把手 */
+  .sheet-handle {
+    width: 72rpx;
+    height: 8rpx;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.18);
+    margin-bottom: 28rpx;
+  }
 
-	/* 头像 */
-	.avatar-btn {
-		position: relative;
-		background: transparent;
-		border: none;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		margin-bottom: 36rpx;
-		padding: 0;
-		line-height: normal;
-	}
-	.avatar-btn::after {
-		border: none;
-	}
-	.avatar-img {
-		width: 128rpx;
-		height: 128rpx;
-		border-radius: 50%;
-		border: 3rpx solid var(--color-primary);
-		background: rgba(255, 255, 255, 0.08);
-	}
-	.avatar-badge {
-		position: absolute;
-		right: -6rpx;
-		bottom: 30rpx;
-		width: 36rpx;
-		height: 36rpx;
-		border-radius: 50%;
-		background: var(--gradient-btn-primary);
-		color: var(--color-bg);
-		font-size: 26rpx;
-		font-weight: 700;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border: 2rpx solid var(--color-popup-card);
-	}
-	.avatar-tip {
-		margin-top: 14rpx;
-		font-size: var(--font-size-body-xs);
-		color: rgba(255, 255, 255, 0.45);
-	}
+  .sheet-title {
+    font-size: 40rpx;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 12rpx;
+  }
 
-	/* 昵称输入 */
-	.nickname-row {
-		width: 100%;
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		background: rgba(255, 255, 255, 0.06);
-		border: 2rpx solid rgba(255, 255, 255, 0.12);
-		border-radius: var(--radius-item);
-		padding: 0 24rpx;
-		margin-bottom: 40rpx;
-		height: 88rpx;
-		box-sizing: border-box;
-	}
-	.nickname-label {
-		font-size: var(--font-size-body);
-		color: var(--color-primary);
-		margin-right: 20rpx;
-	}
-	.nickname-input {
-		flex: 1;
-		font-size: var(--font-size-body);
-		color: #fff;
-	}
+  .sheet-desc {
+    font-size: var(--font-size-body-sm);
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 36rpx;
+  }
 
-	/* 确认 + 跳过 */
-	.confirm-btn {
-		width: 100%;
-		height: 92rpx;
-		font-size: var(--font-size-body-plus);
-	}
-	.confirm-btn::after {
-		border: none;
-	}
-	.profile-skip {
-		margin-top: 28rpx;
-		padding: 10rpx 40rpx;
-		font-size: var(--font-size-body-sm);
-		color: rgba(255, 255, 255, 0.4);
-		transition: opacity 0.15s ease-out;
-	}
+  /* 头像 */
+  .avatar-btn {
+    position: relative;
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 32rpx;
+    padding: 0;
+    line-height: normal;
+  }
+  .avatar-btn::after {
+    border: none;
+  }
+  .avatar-img {
+    width: 128rpx;
+    height: 128rpx;
+    border-radius: 50%;
+    border: 3rpx solid var(--color-primary);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .avatar-badge {
+    position: absolute;
+    right: -6rpx;
+    bottom: 30rpx;
+    width: 36rpx;
+    height: 36rpx;
+    border-radius: 50%;
+    background: var(--gradient-btn-primary);
+    color: var(--color-bg);
+    font-size: 26rpx;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2rpx solid var(--color-popup);
+  }
+  .avatar-tip {
+    margin-top: 14rpx;
+    font-size: var(--font-size-body-xs);
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  /* 昵称输入 */
+  .nickname-row {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 2rpx solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-item);
+    padding: 0 24rpx;
+    margin-bottom: 36rpx;
+    height: 88rpx;
+    box-sizing: border-box;
+  }
+  .nickname-label {
+    font-size: var(--font-size-body);
+    color: var(--color-primary);
+    margin-right: 20rpx;
+  }
+  .nickname-input {
+    flex: 1;
+    font-size: var(--font-size-body);
+    color: #fff;
+  }
+
+  /* 确认 + 跳过 */
+  .confirm-btn {
+    width: 100%;
+    height: 92rpx;
+    font-size: var(--font-size-body-plus);
+  }
+  .confirm-btn::after {
+    border: none;
+  }
+  .profile-skip {
+    margin-top: 28rpx;
+    padding: 10rpx 40rpx;
+    font-size: var(--font-size-body-sm);
+    color: rgba(255, 255, 255, 0.4);
+    transition: opacity 0.15s ease-out;
+  }
 </style>
