@@ -7,6 +7,9 @@ export interface HttpConfig {
 export function getHttpConfig(): HttpConfig {
   // TODO: 替换为你的域名，当前测试环境https://crazyma99.xyz
   // https://lanmei66.cloud https://crazyma99.xyz
-  const baseURL = 'https://lanmei66.cloud'
+  // 本地联调：VITE_API_BASE=http://127.0.0.1:8155 npm run dev:mp-weixin
+  // 未设置 VITE_API_BASE 时默认正式域名（生产行为不变）
+  const envBase = import.meta.env.VITE_API_BASE as string | null
+  const baseURL = (envBase != null && envBase.length > 0) ? envBase : 'https://lanmei66.cloud'
   return { baseURL, timeout: 15000 }
 }

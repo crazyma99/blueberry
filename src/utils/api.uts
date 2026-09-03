@@ -369,14 +369,27 @@ export const getShops = async () => {
 
 /**
  * 获取中台页配置（金刚区+Banner，公开，无需登录）
+ * 服务保障 / 联系我们 / 版权信息等同源下发，组件侧按 type 过滤。
+ * 内存缓存：多组件共用（ServiceContact / AppFooter 等），force=true 强制刷新。
  */
-export const getPageConfig = async () => {
+let _pageConfigCache: any[] | null = null
+let _pageConfigCacheAt = 0
+const PAGE_CONFIG_CACHE_TTL = 60 * 1000 // 60 秒过期，OPS 改动后重进页面即可生效
+export const getPageConfig = async (force = false) => {
+  const now = Date.now()
+  if (!force && _pageConfigCache != null && now - _pageConfigCacheAt < PAGE_CONFIG_CACHE_TTL) {
+    return { code: 200, data: _pageConfigCache }
+  }
   const res = await request({
     url: '/api/page-config',
     method: 'GET',
     showLoading: false,
   })
-  return res as { code: number, data: { menuItems: any[], banners: any[] } }
+  if (res.code === 200 && Array.isArray(res.data)) {
+    _pageConfigCache = res.data as any[]
+    _pageConfigCacheAt = Date.now()
+  }
+  return res as { code: number, data: any[] }
 }
 
 // ============ AI试衣相关接口（注意：aiface 接口成功 code === 0，非 200） ============

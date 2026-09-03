@@ -8,16 +8,42 @@
   - 渲染为行内 <text>，外层包裹由各页保留（.copyright / .bottomdesc / .beian），保证视觉零变化。
 -->
 <template>
-  <text>{{ copyrightText }}</text>
+  <text>{{ remoteText || copyrightText }}</text>
 </template>
 
 <script lang="uts">
+import { getPageConfig } from '../../utils/api.uts'
+
 export default {
   name: 'AppFooter',
   props: {
     copyrightText: {
       type: String,
       default: 'Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有'
+    }
+  },
+  data() {
+    return {
+      // OPS 页面配置（copyright 组件的 config.text）下发值；为空时回退 props/default。
+      remoteText: '' as string
+    }
+  },
+  mounted() {
+    this.loadCopyright()
+  },
+  methods: {
+    async loadCopyright() {
+      try {
+        const res = await getPageConfig()
+        if (res.code !== 200 || !Array.isArray(res.data)) return
+        const comp = (res.data as any[]).filter((c: any) => c.type === 'copyright')[0]
+        if (comp != null && comp.config != null && comp.config.length > 0) {
+          const cfg = JSON.parse(comp.config as string)
+          if (cfg.text != null && cfg.text.length > 0) this.remoteText = cfg.text as string
+        }
+      } catch (e) {
+        // 拉取失败保持默认值
+      }
     }
   }
 }
