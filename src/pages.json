@@ -4,6 +4,12 @@
       "path": "pages/index/index"
     },
     {
+      "path": "pages/brandHub/index",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/demoDetail/index",
       "style": {
         "onReachBottomDistance": 80

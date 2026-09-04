@@ -4,18 +4,37 @@
 // 直接打开小程序（无场景值）走默认旧逻辑（X-App-Code），与历史行为一致。
 
 let _brandId = ''
+let _storageLoaded = false
 
 /**
- * 设置品牌上下文（扫码/带参进入时调用，重复进入覆盖）
+ * 设置品牌上下文（扫码/带参/品牌馆选择时调用，重复进入覆盖）
+ * 持久化到 storage：记住上次品牌，冷启动直接进入该品牌首页（行业惯例）
  * @param id 品牌编码（如 lanmei、huahua），不是数字 ID
  */
 export function setBrandId(id: string): void {
   _brandId = id
+  try {
+    uni.setStorageSync('brand_id', id)
+  } catch (e) {
+    // storage 不可用则仅内存生效
+  }
 }
 
 /**
  * 当前品牌编码；空串 = 无品牌上下文（不携带 X-Brand-Id，走后端旧逻辑）
+ * 首次调用时从 storage 恢复上次品牌（懒加载，避免启动即读）
  */
 export function getBrandId(): string {
+  if (!_storageLoaded) {
+    _storageLoaded = true
+    try {
+      const saved = uni.getStorageSync('brand_id')
+      if (typeof saved === 'string' && saved !== '') {
+        _brandId = saved
+      }
+    } catch (e) {
+      // 忽略
+    }
+  }
   return _brandId
 }
