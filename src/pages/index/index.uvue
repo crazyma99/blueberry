@@ -193,17 +193,22 @@
 		onHide() {
 			uni.$off('login-required')
 		},
-		// 右上角胶囊菜单「转发」：定义该生命周期后菜单自动亮起，无需接入额外 API
+		// 右上角胶囊菜单「转发」：卡片动态化（品牌落地 + 首张 banner 图）
 		onShareAppMessage() {
+			const brandId = getBrandId()
+			const cover = this.banners.length > 0 && this.banners[0].imageUrl ? this.banners[0].imageUrl : ''
 			return {
-				title: '蓝梅旗袍·汉服·民族服体验馆',
-				path: '/pages/index/index'
+				title: '蓝梅旅拍 · 旗袍汉服民族服写真',
+				path: '/pages/index/index' + (brandId !== '' ? '?brandId=' + brandId : ''),
+				imageUrl: cover
 			}
 		},
 		// 右上角胶囊菜单「分享到朋友圈」
 		onShareTimeline() {
+			const cover = this.banners.length > 0 && this.banners[0].imageUrl ? this.banners[0].imageUrl : ''
 			return {
-				title: '蓝梅旗袍·汉服·民族服体验馆'
+				title: '蓝梅旅拍 · 旗袍汉服民族服写真',
+				imageUrl: cover
 			}
 		},
 		methods: {

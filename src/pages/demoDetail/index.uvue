@@ -264,6 +264,15 @@
 				return this.albumList
 			},
 		},
+		onShareAppMessage() {
+			const list = this.getCurPhotoList
+			const cover = list.length > 0 && list[0].coverImageUrl ? list[0].coverImageUrl : ''
+			return {
+				title: '蓝梅旅拍 · 客片欣赏',
+				path: this.idx ? `/pages/demoDetail/index?idx=${this.idx}` : '/pages/index/index',
+				imageUrl: cover
+			}
+		},
 		onLoad(query) {
 			const systemInfo = uni.getSystemInfoSync()
 			this.statusBarHeight = systemInfo.statusBarHeight || 20

@@ -148,6 +148,16 @@
 				profileNickname: ''
 			}
 		},
+		onShareAppMessage() {
+			const images = this.detail?.images || []
+			const cover = images.length > 0 ? images[0] : ''
+			const t = this.detail?.title
+			return {
+				title: t ? (t + ' · 蓝梅旅拍') : '蓝梅旅拍',
+				path: `/pages/targetPhotoDetail/index?idx=${this.albumId}&type=${this.shopId}`,
+				imageUrl: cover
+			}
+		},
 		onLoad(query) {
 			const systemInfo = uni.getSystemInfoSync()
 			this.statusBarHeight = systemInfo.statusBarHeight || 20
