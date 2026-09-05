@@ -130,6 +130,7 @@ export default {
 	data() {
 		return {
 			shopId: '',
+			albumId: '',
 			category: '',
 			subCategory: '',
 			style: '',
@@ -192,6 +193,10 @@ export default {
 		if (options && options.shopId) {
 			this.shopId = String(options.shopId)
 		}
+		// 相册入口传入的相册 ID：模板列表按该相册过滤（只展示该相册的客片图作试衣模板）
+		if (options && options.albumId) {
+			this.albumId = String(options.albumId)
+		}
 		if (options && options.category) {
 			this.category = String(options.category)
 		}
@@ -231,9 +236,18 @@ export default {
 	methods: {
 		async loadTemplates() {
 			try {
-				const params: Record<string, any> = { category: 'travel' }
-				if (this.style) params.style = this.style
-				if (this.gender) params.gender = this.gender
+				// 相册入口：按 shop_id + album_id 精确取该相册的客片图作模板（不再叠加 style/category，防止滤空）
+				// 其他入口：沿用原店铺维度过滤（style/gender），并补齐 shop_id 防止跨店
+				const params: Record<string, any> = {}
+				if (this.albumId !== '') {
+					params.shop_id = this.shopId
+					params.album_id = this.albumId
+				} else {
+					params.category = 'travel'
+					if (this.shopId !== '') params.shop_id = this.shopId
+					if (this.style) params.style = this.style
+					if (this.gender) params.gender = this.gender
+				}
 				const res = await getAiTemplates(params)
 				if ((res.code === 0 || res.code === 200) && res.data) {
 					this.templates = res.data
