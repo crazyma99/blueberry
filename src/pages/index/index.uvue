@@ -198,7 +198,7 @@
 			const brandId = getBrandId()
 			const cover = this.banners.length > 0 && this.banners[0].imageUrl ? this.banners[0].imageUrl : ''
 			return {
-				title: '蓝梅旅拍 · 旗袍汉服民族服写真',
+				title: '一键解锁AI推荐｜AI试衣｜客片展示',
 				path: '/pages/index/index' + (brandId !== '' ? '?brandId=' + brandId : ''),
 				imageUrl: cover
 			}
@@ -207,7 +207,7 @@
 		onShareTimeline() {
 			const cover = this.banners.length > 0 && this.banners[0].imageUrl ? this.banners[0].imageUrl : ''
 			return {
-				title: '蓝梅旅拍 · 旗袍汉服民族服写真',
+				title: '一键解锁AI推荐｜AI试衣｜客片展示',
 				imageUrl: cover
 			}
 		},
