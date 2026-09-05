@@ -5,11 +5,17 @@ export interface HttpConfig {
 }
 
 export function getHttpConfig(): HttpConfig {
-  // TODO: 替换为你的域名，当前测试环境https://crazyma99.xyz
-  // https://lanmei66.cloud https://crazyma99.xyz
-  // 本地联调：VITE_API_BASE=http://127.0.0.1:8155 npm run dev:mp-weixin
-  // 未设置 VITE_API_BASE 时默认正式域名（生产行为不变）
+  // 本地联调优先：VITE_API_BASE=http://127.0.0.1:8155 npm run dev:mp-weixin
+  // 显式指定时直接生效，跳过版本自动分流
   const envBase = import.meta.env.VITE_API_BASE as string | null
-  const baseURL = (envBase != null && envBase.length > 0) ? envBase : 'https://lanmei66.cloud'
+  if (envBase != null && envBase.length > 0) {
+    return { baseURL: envBase, timeout: 15000 }
+  }
+  // 按小程序版本自动分流：开发版/体验版走测试环境，正式版走线上。
+  // 注意：体验版仍受 request 合法域名白名单约束，测试域名需在 mp 后台配置，
+  // 或在体验版开启调试模式跳过校验。
+  // 注入合同：release 分支的域名字面量是 profile 注入点（apply-profile.mjs 按行匹配替换），勿改写法。
+  const envVersion = uni.getAccountInfoSync().miniProgram.envVersion
+  const baseURL = envVersion === 'release' ? 'https://lanmei66.cloud' : 'https://crazyma99.xyz'
   return { baseURL, timeout: 15000 }
 }

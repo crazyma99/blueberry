@@ -131,9 +131,10 @@ function updatePagesJson() {
 }
 
 function updateConfig() {
-  // config.uts 支持 VITE_API_BASE 本地联调覆盖；这里只替换兜底默认域名
+  // config.uts 按小程序版本自动分流（release→线上，其余→测试），VITE_API_BASE 本地联调优先；
+  // 这里只替换 release 分支的线上域名兜底值
   replaceText('src/utils/config.uts', [
-    [/(\? envBase : )'[^']*'/, `$1${utsString(env.API_BASE_URL)}`]
+    [/(=== 'release' \? )'[^']*'/, `$1${utsString(env.API_BASE_URL)}`]
   ])
 }
 
