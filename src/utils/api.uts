@@ -374,10 +374,13 @@ export const getShops = async () => {
  */
 let _pageConfigCache: any[] | null = null
 let _pageConfigCacheAt = 0
+let _pageConfigCacheBrand = '' // 缓存对应的品牌上下文
 const PAGE_CONFIG_CACHE_TTL = 60 * 1000 // 60 秒过期，OPS 改动后重进页面即可生效
 export const getPageConfig = async (force = false) => {
   const now = Date.now()
-  if (!force && _pageConfigCache != null && now - _pageConfigCacheAt < PAGE_CONFIG_CACHE_TTL) {
+  const brandKey = getBrandId()
+  // 品牌变化视为缓存失效（中台切换品牌后立即拉取该品牌配置）
+  if (!force && _pageConfigCache != null && _pageConfigCacheBrand === brandKey && now - _pageConfigCacheAt < PAGE_CONFIG_CACHE_TTL) {
     return { code: 200, data: _pageConfigCache }
   }
   const res = await request({
@@ -387,6 +390,7 @@ export const getPageConfig = async (force = false) => {
   })
   if (res.code === 200 && Array.isArray(res.data)) {
     _pageConfigCache = res.data as any[]
+    _pageConfigCacheBrand = brandKey
     _pageConfigCacheAt = Date.now()
   }
   return res as { code: number, data: any[] }
@@ -745,4 +749,31 @@ export const getAiRecommend = async (params: {
       recommendations: AiRecommendation[]
     }
   }
+}
+
+/**
+ * 品牌列表（品牌馆页面）
+ * GET /api/brands —— 所有启用品牌（商户维度），前端过滤 PLATFORM
+ */
+export const getBrands = async () => {
+  const res = await request({
+    url: '/api/brands',
+    method: 'GET',
+    showLoading: false,
+  })
+  return res as {
+    code: number
+    message: string
+    data: BrandBrief[]
+  }
+}
+
+/** 品牌简要信息（/api/brands 返回项） */
+export type BrandBrief = {
+  brandId: string
+  brandName: string
+  logoUrl: string
+  coverImageUrl: string
+  description: string
+  sortOrder: number
 }

@@ -1,6 +1,10 @@
 <template>
 	<view class="container">
 		<!-- 首页无导航栏：Banner 沉浸式延伸到状态栏顶部 -->
+		<!-- 品牌馆入口（home 按钮）：圆形悬浮左上角，点击进入中台切换品牌 -->
+		<view class="home-btn" :style="{ top: (statusBarHeight + 8) + 'px' }" hover-class="press-dim" @click="goBrandHub">
+			<text class="home-btn-text font-noto-serif">馆</text>
+		</view>
 		<!-- 骨架屏 -->
 		<view v-if="loading" class="sk-container">
 			<view class="sk-banner sk-animate" style="height: 794rpx;"></view>
@@ -18,7 +22,13 @@
 			<view class="hero-wrap">
 				<swiper class="hero" autoplay circular :interval="3000" :duration="500" :style="{ height: heroHeight }">
 					<swiper-item v-for="(item, idx) in banners" :key="idx">
-						<image class="hero-image fade-in" :src="item.imageUrl" mode="aspectFill" @load="onHeroImageLoad"></image>
+						<image
+							class="hero-image fade-in"
+							:src="item.imageUrl"
+							mode="aspectFill"
+							@load="onHeroImageLoad"
+							@click="onBannerClick(item)"
+						></image>
 					</swiper-item>
 				</swiper>
 				<!-- Figma 渐变遮罩：图片底部渐隐融入页面背景（透明50% → #160F04 78.19%） -->
@@ -110,7 +120,7 @@
 	import { loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import { submitUserProfile } from '../../utils/profileSubmit.uts'
-	import { setBrandId } from '../../utils/brand.uts'
+	import { setBrandId, getBrandId } from '../../utils/brand.uts'
 	import { syncTabBarSelected } from '../../utils/tabbar.uts'
 	import { cosThumb } from '../../utils/imageLoader.uts'
 	import {
@@ -126,6 +136,11 @@
 				loading: true,
 				banners: [],
 				shopList: [],
+				// 品牌馆入口按钮定位 + 品牌切换检测
+				statusBarHeight: 20,
+				lastBrandId: '',
+				// banner 点击防重复（300ms 节流）
+				lastBannerClickAt: 0,
 				// 轮播高度：随首张 banner 图宽高比自适应（兜底 794rpx ≈ 设计稿比例）
 				heroHeight: '794rpx',
 				heroHeightReady: false,
@@ -142,14 +157,63 @@
 			}
 		},
 		async onLoad(options : any) {
-			// 扫品牌小程序码进入：场景值写入品牌上下文（纯内存，冷启动即恢复默认逻辑）
+			// 状态栏高度（品牌馆 home 按钮定位）
+			const sysInfo = uni.getSystemInfoSync()
+			this.statusBarHeight = sysInfo.statusBarHeight != null ? sysInfo.statusBarHeight : 20
+			// 扫品牌小程序码进入：场景值写入品牌上下文（持久化，冷启动保留）
 			const scene = decodeURIComponent(options?.scene || '')
 			const brandId = scene !== '' ? scene : (options?.brandId ?? '')
 			if (brandId !== '') {
 				setBrandId(brandId)
 			}
+			await this.reloadHomeData()
+			// 记录当前品牌基线，onShow 只在品牌变化时重载
+			this.lastBrandId = getBrandId()
+		},
+		onShow() {
+			// 同步自定义底部 tabbar 选中态（本页下标 0）
+			syncTabBarSelected(0)
+			// 品牌馆切换品牌后回首页：品牌变化 → 重载首页数据
+			const brandId = getBrandId()
+			if (brandId !== this.lastBrandId) {
+				this.lastBrandId = brandId
+				this.loading = true
+				this.reloadHomeData()
+			}
+			// 监听 401 登录过期事件，自动拉起登录弹窗
+			uni.$off('login-required')
+			uni.$on('login-required', () => {
+				this.showLoginPopup = true
+			})
+			// 兑底：其他页面触发 401 后导航回来时自动弹出
+			if (consumeLoginExpired()) {
+				this.showLoginPopup = true
+			}
+		},
+		onHide() {
+			uni.$off('login-required')
+		},
+		// 右上角胶囊菜单「转发」：卡片动态化（品牌落地 + 首张 banner 图）
+		onShareAppMessage() {
+			const brandId = getBrandId()
+			return {
+				title: '一键解锁AI推荐｜AI试衣｜客片展示',
+				path: '/pages/index/index' + (brandId !== '' ? '?brandId=' + brandId : ''),
+				imageUrl: '/static/share-home.jpg'
+			}
+		},
+		// 右上角胶囊菜单「分享到朋友圈」
+		onShareTimeline() {
+			return {
+				title: '一键解锁AI推荐｜AI试衣｜客片展示',
+				imageUrl: '/static/share-home.jpg'
+			}
+		},
+		methods: {
+			// 首页数据加载（onLoad 与品牌切换 onShow 共用）
+		async reloadHomeData() {
 			try {
-				// 并行加载轮播图和店铺列表
+				// 并行加载轮播图和店铺列表（X-Brand-Id 由 http 层自动携带）
 				const [bannerRes, shopRes] = await Promise.all([
 					getImage('get', { type: 0 }).catch(() => null),
 					getShops().catch(() => null)
@@ -174,36 +238,6 @@
 				this.loading = false
 			}
 		},
-		onShow() {
-			// 同步自定义底部 tabbar 选中态（本页下标 0）
-			syncTabBarSelected(0)
-			// 监听 401 登录过期事件，自动拉起登录弹窗
-			uni.$off('login-required')
-			uni.$on('login-required', () => {
-				this.showLoginPopup = true
-			})
-			// 兑底：其他页面触发 401 后导航回来时自动弹出
-			if (consumeLoginExpired()) {
-				this.showLoginPopup = true
-			}
-		},
-		onHide() {
-			uni.$off('login-required')
-		},
-		// 右上角胶囊菜单「转发」：定义该生命周期后菜单自动亮起，无需接入额外 API
-		onShareAppMessage() {
-			return {
-				title: '蓝梅旗袍·汉服·民族服体验馆',
-				path: '/pages/index/index'
-			}
-		},
-		// 右上角胶囊菜单「分享到朋友圈」
-		onShareTimeline() {
-			return {
-				title: '蓝梅旗袍·汉服·民族服体验馆'
-			}
-		},
-		methods: {
 			// 关闭登录弹窗
 			closeLoginPopup() {
 				this.showLoginPopup = false
@@ -363,7 +397,32 @@
 					this.heroHeightReady = true
 				}
 			},
-			onShopClick(shop) {
+			goBrandHub() {
+			// 触感反馈 + 进入品牌馆（中台页面）
+			hapticTap()
+			uni.navigateTo({ url: '/pages/brandHub/index' })
+		},
+		onBannerClick(item: any) {
+			// 无跳转链接：不响应
+			const linkUrl = (item != null && item.linkUrl != null) ? (item.linkUrl as string).trim() : ''
+			if (linkUrl === '') return
+			// 防重复点击（300ms 节流）
+			const now = Date.now()
+			if (now - this.lastBannerClickAt < 300) return
+			this.lastBannerClickAt = now
+			hapticTap()
+			// 前端白名单兜底：仅 /pages/ 或 http(s) 允许跳转
+			if (linkUrl.startsWith('/pages/')) {
+				if (linkUrl.startsWith('/pages/index/index') || linkUrl.startsWith('/pages/priceHomePage/index') || linkUrl.startsWith('/pages/mine/index')) {
+					uni.switchTab({ url: linkUrl })
+				} else {
+					uni.navigateTo({ url: linkUrl })
+				}
+			} else if (linkUrl.startsWith('http://') || linkUrl.startsWith('https://')) {
+				uni.navigateTo({ url: '/pages/webview/index?url=' + encodeURIComponent(linkUrl) })
+			}
+		},
+		onShopClick(shop) {
 				// 触感反馈：客片卡片点击轻振动
 				hapticTap()
 				uni.navigateTo({
@@ -380,6 +439,26 @@
 </script>
 
 <style>
+	/* 品牌馆入口：圆形悬浮按钮（沉浸式左上角） */
+	.home-btn {
+		position: absolute;
+		left: 16px;
+		width: 64rpx;
+		height: 64rpx;
+		border-radius: 50%;
+		background: rgba(22, 15, 4, 0.55);
+		border: 2rpx solid var(--color-primary);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 50;
+		transition: opacity 0.15s ease-out;
+	}
+	.home-btn-text {
+		font-size: 28rpx;
+		color: var(--color-primary);
+		font-weight: 700;
+	}
 	.container{
 		background: var(--color-bg);
 		min-height: 100vh;
@@ -407,11 +486,11 @@
 	/* Figma 渐变遮罩：图片底部渐隐融入页面背景 */
 	.hero-mask{
 		position: absolute;
-		top: 0;
+		bottom: 0;
 		left: 0;
 		width: 100%;
-		height: 100%;
-		background: linear-gradient(180deg, rgba(22, 15, 4, 0) 20%, #160F04 96%);
+		height: 50%;
+		background: linear-gradient(#160f0400 20%, #160f04 96%);
 		pointer-events: none;
 		z-index: 10;
 	}

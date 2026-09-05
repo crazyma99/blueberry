@@ -8,7 +8,10 @@
   - 渲染为行内 <text>，外层包裹由各页保留（.copyright / .bottomdesc / .beian），保证视觉零变化。
 -->
 <template>
-  <text>{{ remoteText || copyrightText }}</text>
+  <view class="app-footer">
+    <text class="footer-main">{{ remoteText || copyrightText }}</text>
+    <text class="footer-support">{{ supportText }}</text>
+  </view>
 </template>
 
 <script lang="uts">
@@ -25,7 +28,9 @@ export default {
   data() {
     return {
       // OPS 页面配置（copyright 组件的 config.text）下发值；为空时回退 props/default。
-      remoteText: '' as string
+      remoteText: '' as string,
+      // 第二行支持文案：默认固定，OPS copyright 配置 supportText 可覆盖
+      supportText: '小程序及AI技术能力由 蓝梅网络 提供支持' as string
     }
   },
   mounted() {
@@ -40,6 +45,10 @@ export default {
         if (comp != null && comp.config != null && comp.config.length > 0) {
           const cfg = JSON.parse(comp.config as string)
           if (cfg.text != null && cfg.text.length > 0) this.remoteText = cfg.text as string
+          // 第二行支持文案可配置覆盖（默认保留前端固定文案）
+          if (cfg.supportText != null && (cfg.supportText as string).length > 0) {
+            this.supportText = cfg.supportText as string
+          }
         }
       } catch (e) {
         // 拉取失败保持默认值
@@ -48,3 +57,16 @@ export default {
   }
 }
 </script>
+
+<style>
+  .app-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .footer-support {
+    margin-top: 8rpx;
+    font-size: var(--font-size-caption);
+    color: var(--color-primary-50);
+  }
+</style>

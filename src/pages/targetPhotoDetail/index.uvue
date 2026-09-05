@@ -148,6 +148,13 @@
 				profileNickname: ''
 			}
 		},
+		onShareAppMessage() {
+			return {
+				title: '点击查看客片详情信息，也支持一键AI试衣哦～',
+				path: `/pages/targetPhotoDetail/index?idx=${this.albumId}&type=${this.shopId}`,
+				imageUrl: '/static/share-aitryon.jpg'
+			}
+		},
 		onLoad(query) {
 			const systemInfo = uni.getSystemInfoSync()
 			this.statusBarHeight = systemInfo.statusBarHeight || 20
