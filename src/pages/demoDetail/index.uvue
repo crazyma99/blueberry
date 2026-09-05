@@ -265,12 +265,10 @@
 			},
 		},
 		onShareAppMessage() {
-			const list = this.getCurPhotoList
-			const cover = list.length > 0 && list[0].coverImageUrl ? list[0].coverImageUrl : ''
 			return {
 				title: '点击查看品牌客片展示',
 				path: this.idx ? `/pages/demoDetail/index?idx=${this.idx}` : '/pages/index/index',
-				imageUrl: cover
+				imageUrl: '/static/share-album.jpg'
 			}
 		},
 		onLoad(query) {

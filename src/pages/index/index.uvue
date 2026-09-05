@@ -196,19 +196,17 @@
 		// 右上角胶囊菜单「转发」：卡片动态化（品牌落地 + 首张 banner 图）
 		onShareAppMessage() {
 			const brandId = getBrandId()
-			const cover = this.banners.length > 0 && this.banners[0].imageUrl ? this.banners[0].imageUrl : ''
 			return {
 				title: '一键解锁AI推荐｜AI试衣｜客片展示',
 				path: '/pages/index/index' + (brandId !== '' ? '?brandId=' + brandId : ''),
-				imageUrl: cover
+				imageUrl: '/static/share-home.jpg'
 			}
 		},
 		// 右上角胶囊菜单「分享到朋友圈」
 		onShareTimeline() {
-			const cover = this.banners.length > 0 && this.banners[0].imageUrl ? this.banners[0].imageUrl : ''
 			return {
 				title: '一键解锁AI推荐｜AI试衣｜客片展示',
-				imageUrl: cover
+				imageUrl: '/static/share-home.jpg'
 			}
 		},
 		methods: {
