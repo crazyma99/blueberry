@@ -213,6 +213,7 @@
 	} from '../../utils/legal.uts'
 	import { formatCount as _formatCount } from '../../utils/format.uts'
 	import { preloadImage as _preloadImage, preloadImages as _preloadImages } from '../../utils/imageLoader.uts'
+	import { resolveShareCard } from '../../utils/share.uts'
 
 	export default {
 		data() {
@@ -251,7 +252,9 @@
 				// 头像昵称授权弹窗
 				showProfilePopup: false,
 				profileAvatarUrl: '',
-				profileNickname: ''
+				profileNickname: '',
+				// 分享卡片（品牌配置 > 中台全局 > 代码默认），onLoad 异步解析后覆盖
+				shareCard: { title: '点击查看品牌客片展示', imageUrl: '/static/share-album.jpg' }
 			}
 		},
 		computed: {
@@ -266,9 +269,9 @@
 		},
 		onShareAppMessage() {
 			return {
-				title: '点击查看品牌客片展示',
+				title: this.shareCard.title,
 				path: this.idx ? `/pages/demoDetail/index?idx=${this.idx}` : '/pages/index/index',
-				imageUrl: '/static/share-album.jpg'
+				imageUrl: this.shareCard.imageUrl
 			}
 		},
 		onLoad(query) {
@@ -286,6 +289,7 @@
 					}
 				}
 			}
+			this.loadShareCard()
 			this.idx = idx
 			this.from = query?.from ?? ''
 			this.initPage(idx)
@@ -319,6 +323,14 @@
 			}
 		},
 		methods: {
+			// 分享卡片解析：品牌配置 > 中台全局 > 代码默认（{brand} 占位符自动替换品牌名）
+			async loadShareCard() {
+				try {
+					this.shareCard = await resolveShareCard('demoDetail')
+				} catch (e) {
+					// 解析失败保留默认卡片
+				}
+			},
 			goBack() {
 				if (this.searchKeyword.trim()) {
 					// 搜索框有值：清空搜索并恢复分类模式

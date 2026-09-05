@@ -1,0 +1,90 @@
+// 分享卡片配置解析：品牌配置 → 中台全局 → 代码默认（三层兜底）。
+// 数据源复用 GET /api/page-config 的 share_card 组件，component_items 按 bizName 定位页面槽位
+// （后端已做「品牌缺失槽位回退全局同键」的合并，本文件兜底整体级与字段级默认）。
+import { getPageConfig, getBrands } from './api'
+import { getBrandId } from './brand'
+
+export type ShareCard = {
+	title: string
+	imageUrl: string
+}
+
+/** 蓝梅官方默认卡片：首页 / 相册页 / 客片详情（与 OPS 懒预置槽位一致） */
+function defaultCard(key: string): ShareCard {
+	if (key === 'index') {
+		return { title: '一键解锁AI推荐｜AI试衣｜客片展示', imageUrl: '/static/share-home.jpg' }
+	}
+	if (key === 'demoDetail') {
+		return { title: '点击查看品牌客片展示', imageUrl: '/static/share-album.jpg' }
+	}
+	return { title: '点击查看客片详情信息，也支持一键AI试衣哦～', imageUrl: '/static/share-aitryon.jpg' }
+}
+
+// 品牌名缓存（{brand} 占位符替换用），60 秒
+let _brandNameCache = ''
+let _brandNameKey = ''
+let _brandNameAt = 0
+
+async function resolveBrandName(): Promise<string> {
+	const brandId = getBrandId()
+	if (brandId === '') return ''
+	const now = Date.now()
+	if (_brandNameKey === brandId && _brandNameCache !== '' && now - _brandNameAt < 60 * 1000) {
+		return _brandNameCache
+	}
+	try {
+		const res = await getBrands()
+		if (res.code === 200 && Array.isArray(res.data)) {
+			const list = res.data
+			for (let i = 0; i < list.length; i++) {
+				if (list[i] != null && list[i].brandId === brandId) {
+					_brandNameCache = list[i].brandName
+					_brandNameKey = brandId
+					_brandNameAt = now
+					return _brandNameCache
+				}
+			}
+		}
+	} catch (e) {
+		// 品牌名解析失败静默：占位符剔除，标题仍可用
+	}
+	return ''
+}
+
+/**
+ * 解析某页面的分享卡片（title + imageUrl）。
+ * 优先级：品牌 share_card 槽位 > 中台全局同键 > 代码默认；
+ * 字段级兜底：title/imageUrl 任一为空则用默认值。
+ * 标题支持 {brand} 占位符，自动替换为当前品牌名（无品牌上下文时剔除占位符）。
+ */
+export async function resolveShareCard(key: string): Promise<ShareCard> {
+	const card = defaultCard(key)
+	try {
+		const res = await getPageConfig(false)
+		if (res.code === 200 && Array.isArray(res.data)) {
+			const list = res.data
+			for (let i = 0; i < list.length; i++) {
+				const comp = list[i]
+				if (comp == null || comp.type !== 'share_card') continue
+				const items = comp.items
+				if (Array.isArray(items)) {
+					for (let j = 0; j < items.length; j++) {
+						const it = items[j]
+						if (it == null || it.bizName !== key) continue
+						if (it.title != null && it.title !== '') card.title = it.title
+						if (it.imageUrl != null && it.imageUrl !== '') card.imageUrl = it.imageUrl
+						break
+					}
+				}
+				break
+			}
+		}
+	} catch (e) {
+		// 配置拉取失败静默兜底默认卡片
+	}
+	if (card.title.indexOf('{brand}') >= 0) {
+		const brandName = await resolveBrandName()
+		card.title = card.title.split('{brand}').join(brandName)
+	}
+	return card
+}
