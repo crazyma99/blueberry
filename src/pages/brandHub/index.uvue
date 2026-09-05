@@ -1,0 +1,209 @@
+<!--
+  BrandHub — 品牌馆（中台页面，所有入驻品牌按商户维度展示）
+  进入：首页左上角圆形品牌 logo 悬浮按钮（home 按钮）
+  行为：点击品牌卡 → setBrandId(code) 持久化 → 切回首页（首页按品牌维度加载）
+  视觉：与全站统一（金色氛围/Noto Serif 标题/卡片/按压/渐显）
+-->
+<template>
+  <view class="container">
+    <CustomNavBar title="品牌馆" />
+    <view class="brand-hub">
+      <!-- 顶部氛围光 -->
+      <view class="hub-aura"></view>
+
+      <!-- 骨架屏 -->
+      <view v-if="loading" class="sk-wrap">
+        <view v-for="i in 4" :key="i" class="sk-card sk-animate"></view>
+      </view>
+
+      <!-- 品牌列表 -->
+      <view v-else class="brand-list">
+        <view
+          v-for="(b, index) in brands"
+          :key="index"
+          class="brand-card"
+          hover-class="press-dim"
+          @click="enterBrand(b)"
+        >
+          <view class="brand-logo-wrap">
+            <image
+              v-if="b.logoUrl"
+              class="brand-logo fade-in"
+              :src="b.logoUrl"
+              mode="aspectFill"
+            ></image>
+            <view v-else class="brand-logo brand-logo-default">
+              <text class="brand-logo-text">{{ b.brandName.charAt(0) }}</text>
+            </view>
+          </view>
+          <view class="brand-info">
+            <view class="brand-name font-noto-serif">{{ b.brandName }}</view>
+            <view v-if="b.description" class="brand-desc font-harmony">{{ b.description }}</view>
+          </view>
+          <view class="brand-enter">
+            <text class="brand-enter-text">进入</text>
+            <view class="brand-arrow">›</view>
+          </view>
+        </view>
+
+        <!-- 空态 -->
+        <view v-if="brands.length === 0" class="hub-empty">
+          <view class="empty-title">暂无入驻品牌</view>
+        </view>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+  import { getBrands, BrandBrief } from '../../utils/api.uts'
+  import { setBrandId } from '../../utils/brand.uts'
+  import { hapticTap } from '../../utils/haptics.uts'
+
+  export default {
+    data() {
+      return {
+        loading: true,
+        brands: [] as BrandBrief[]
+      }
+    },
+    onLoad() {
+      this.loadBrands()
+    },
+    methods: {
+      async loadBrands() {
+        this.loading = true
+        try {
+          const res = await getBrands()
+          // 过滤平台管理品牌（PLATFORM 是超管配置用的占位品牌）
+          const list = (res.code === 200 || res.code === 0) ? (res.data ?? []) : []
+          this.brands = list.filter((b: BrandBrief) => b.brandId !== 'PLATFORM')
+        } catch (e) {
+          this.brands = []
+        } finally {
+          this.loading = false
+        }
+      },
+      enterBrand(b: BrandBrief) {
+        // 触感反馈 + 写入品牌上下文（持久化，下次冷启动直接进该品牌首页）
+        hapticTap()
+        setBrandId(b.brandId)
+        uni.switchTab({ url: '/pages/index/index' })
+      }
+    }
+  }
+</script>
+
+<style>
+  .container {
+    background: var(--color-bg);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .brand-hub {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow-y: auto;
+  }
+  /* 顶部金色氛围光 */
+  .hub-aura {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 420rpx;
+    pointer-events: none;
+    background: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(241, 205, 145, 0.14), rgba(241, 205, 145, 0.04) 46%, rgba(22, 15, 4, 0) 78%);
+  }
+  .sk-wrap {
+    padding: 32rpx;
+  }
+  .sk-card {
+    height: 140rpx;
+    border-radius: var(--radius-md);
+    margin-bottom: 24rpx;
+  }
+  .brand-list {
+    padding: 24rpx 32rpx 40rpx;
+  }
+  .brand-card {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-height: 132rpx;
+    padding: 0 28rpx;
+    margin-bottom: 24rpx;
+    background: linear-gradient(135deg, rgba(241, 205, 145, 0.1), rgba(241, 205, 145, 0.03) 60%, rgba(241, 205, 145, 0.01));
+    border: 2rpx solid rgba(241, 205, 145, 0.2);
+    border-radius: var(--radius-md);
+    transition: opacity 0.15s ease-out;
+  }
+  .brand-logo-wrap {
+    width: 96rpx;
+    height: 96rpx;
+    margin-right: 24rpx;
+    flex-shrink: 0;
+  }
+  .brand-logo {
+    width: 96rpx;
+    height: 96rpx;
+    border-radius: 50%;
+    border: 3rpx solid var(--color-primary);
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .brand-logo-default {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .brand-logo-text {
+    font-size: 40rpx;
+    color: var(--color-primary);
+  }
+  .brand-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .brand-name {
+    font-size: 34rpx;
+    color: var(--color-primary);
+    letter-spacing: 2rpx;
+  }
+  .brand-desc {
+    margin-top: 8rpx;
+    font-size: var(--font-size-body-sm);
+    color: rgba(255, 255, 255, 0.5);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .brand-enter {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-left: 16rpx;
+    flex-shrink: 0;
+  }
+  .brand-enter-text {
+    font-size: var(--font-size-body);
+    color: var(--color-primary);
+  }
+  .brand-arrow {
+    font-size: 40rpx;
+    color: rgba(255, 255, 255, 0.35);
+    margin-left: 4rpx;
+  }
+  .hub-empty {
+    padding: 160rpx 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .empty-title {
+    font-size: var(--font-size-body);
+    color: rgba(255, 255, 255, 0.4);
+  }
+</style>
