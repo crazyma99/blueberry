@@ -74,7 +74,7 @@
 </template>
 
 <script lang="uts">
-import { uploadPhoto, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
+import { uploadPhoto, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus, getShops } from '../../utils/api.uts'
 import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
@@ -127,6 +127,31 @@ export default {
 	},
 	onLoad(options : any) {
 		this.shopId = options?.shopId ?? ''
+		// 入口未带 shopId（如首页 banner 直达）时兜底解析默认店铺，
+		// 保证余额查询 / AI 分析 / 充值都有店铺上下文（后端按店铺反查商家与定价）
+		this.resolveShopIfNeeded()
+	},
+	async resolveShopIfNeeded() {
+		if (this.shopId !== '') {
+			if (isLoggedIn()) this.loadCreditInfo()
+			return
+		}
+		try {
+			const res = await getShops()
+			if (res.code === 200 && Array.isArray(res.data)) {
+				for (let i = 0; i < res.data.length; i++) {
+					const shop = res.data[i]
+					if (shop != null && shop.id != null) {
+						this.shopId = String(shop.id)
+						break
+					}
+				}
+			}
+		} catch (e) {
+			// 解析失败保持 shopId 为空，走后续失败提示，不阻塞页面
+		}
+		// 店铺兜底完成后补查推荐余额（onShow 早于异步解析完成时由这里补）
+		if (isLoggedIn()) this.loadCreditInfo()
 	},
 	onShow() {
 		// 监听 401 登录过期事件，自动拉起登录弹窗
@@ -139,7 +164,8 @@ export default {
 			this.showLoginPopup = true
 		}
 		// 查询推荐次数余额（需登录；未登录时保持原按钮，避免进页即拉起登录）
-		if (isLoggedIn()) {
+		// 店铺已兜底解析后才查询，避免无店铺上下文查不到免费次数
+		if (isLoggedIn() && this.shopId !== '') {
 			this.loadCreditInfo()
 		}
 	},
@@ -181,7 +207,12 @@ export default {
 				return
 			}
 
-			// 付费模式且已知无剩余次数：直接拉起支付，省一次必败请求
+			// 点击时余额未知（此前查询失败/刚登录）→ 先补查后端免费次数与单次定价，再决定免费 or 付费
+			if (!this.creditLoaded) {
+				await this.loadCreditInfo()
+			}
+
+			// 付费模式且已知无剩余次数：直接拉起支付（金额取后端配置的单次价格），省一次必败请求
 			if (this.isPaidMode && this.creditBalance <= 0) {
 				this.handleRecharge()
 				return
