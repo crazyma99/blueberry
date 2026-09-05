@@ -129,6 +129,7 @@
 		openUserAgreement,
 		openPrivacyPolicy
 	} from '../../utils/legal.uts'
+	import { resolveShareCard } from '../../utils/share.uts'
 
 	export default {
 		data() {
@@ -153,7 +154,9 @@
 				profileAvatarUrl: '',
 				profileNickname: '',
 				// profile 弹窗是否由登录流程拉起（仅登录流程关闭弹窗时才弹"登录成功"toast）
-				profileFromLogin: false
+				profileFromLogin: false,
+				// 分享卡片（品牌配置 > 中台全局 > 代码默认），onLoad 异步解析后覆盖
+				shareCard: { title: '一键解锁AI推荐｜AI试衣｜客片展示', imageUrl: '/static/share-home.jpg' }
 			}
 		},
 		async onLoad(options : any) {
@@ -166,6 +169,7 @@
 			if (brandId !== '') {
 				setBrandId(brandId)
 			}
+			this.loadShareCard()
 			await this.reloadHomeData()
 			// 记录当前品牌基线，onShow 只在品牌变化时重载
 			this.lastBrandId = getBrandId()
@@ -179,6 +183,7 @@
 				this.lastBrandId = brandId
 				this.loading = true
 				this.reloadHomeData()
+				this.loadShareCard()
 			}
 			// 监听 401 登录过期事件，自动拉起登录弹窗
 			uni.$off('login-required')
@@ -197,19 +202,27 @@
 		onShareAppMessage() {
 			const brandId = getBrandId()
 			return {
-				title: '一键解锁AI推荐｜AI试衣｜客片展示',
+				title: this.shareCard.title,
 				path: '/pages/index/index' + (brandId !== '' ? '?brandId=' + brandId : ''),
-				imageUrl: '/static/share-home.jpg'
+				imageUrl: this.shareCard.imageUrl
 			}
 		},
 		// 右上角胶囊菜单「分享到朋友圈」
 		onShareTimeline() {
 			return {
-				title: '一键解锁AI推荐｜AI试衣｜客片展示',
-				imageUrl: '/static/share-home.jpg'
+				title: this.shareCard.title,
+				imageUrl: this.shareCard.imageUrl
 			}
 		},
 		methods: {
+			// 分享卡片解析：品牌配置 > 中台全局 > 代码默认（{brand} 占位符自动替换品牌名）
+			async loadShareCard() {
+				try {
+					this.shareCard = await resolveShareCard('index')
+				} catch (e) {
+					// 解析失败保留默认卡片
+				}
+			},
 			// 首页数据加载（onLoad 与品牌切换 onShow 共用）
 		async reloadHomeData() {
 			try {

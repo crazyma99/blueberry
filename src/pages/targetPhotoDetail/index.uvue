@@ -124,6 +124,7 @@
 	} from '../../utils/legal.uts'
 	import { formatCount as _formatCount } from '../../utils/format.uts'
 	import { preloadImage as _preloadImage, preloadImages as _preloadImages } from '../../utils/imageLoader.uts'
+	import { resolveShareCard } from '../../utils/share.uts'
 
 	export default {
 		data() {
@@ -145,14 +146,16 @@
 				// 头像昵称授权弹窗
 				showProfilePopup: false,
 				profileAvatarUrl: '',
-				profileNickname: ''
+				profileNickname: '',
+				// 分享卡片（品牌配置 > 中台全局 > 代码默认），onLoad 异步解析后覆盖
+				shareCard: { title: '点击查看客片详情信息，也支持一键AI试衣哦～', imageUrl: '/static/share-aitryon.jpg' }
 			}
 		},
 		onShareAppMessage() {
 			return {
-				title: '点击查看客片详情信息，也支持一键AI试衣哦～',
+				title: this.shareCard.title,
 				path: `/pages/targetPhotoDetail/index?idx=${this.albumId}&type=${this.shopId}`,
-				imageUrl: '/static/share-aitryon.jpg'
+				imageUrl: this.shareCard.imageUrl
 			}
 		},
 		onLoad(query) {
@@ -166,6 +169,7 @@
 			this.subCategory = query?.subCategory ?? ''
 			this.style = query?.style ? decodeURIComponent(query.style) : ''
 			this.liked = query?.liked === 'true'
+			this.loadShareCard()
 			this.getDetail(id, type)
 		},
 		onShow() {
@@ -183,6 +187,14 @@
 			uni.$off('login-required')
 		},
 		methods: {
+			// 分享卡片解析：品牌配置 > 中台全局 > 代码默认（{brand} 占位符自动替换品牌名）
+			async loadShareCard() {
+				try {
+					this.shareCard = await resolveShareCard('targetPhotoDetail')
+				} catch (e) {
+					// 解析失败保留默认卡片
+				}
+			},
 			// ====== 图片预加载工具方法（转发至 utils/imageLoader） ======
 			preloadImage(url) {
 				return _preloadImage(url)
