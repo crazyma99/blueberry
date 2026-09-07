@@ -499,7 +499,18 @@ export const uploadPhoto = async (filePath: string) => {
           }
           return
         }
-        const data = JSON.parse(res.data)
+        // 防御：uni-app x 各端 res.data 可能是 string 或已解析对象，统一归一后再 resolve
+        let data: any = res.data
+        if (typeof res.data === 'string') {
+          try {
+            data = JSON.parse(res.data)
+          } catch (e) {
+            console.error('[uploadPhoto] 响应解析失败:', e, 'raw:', res.data)
+            reject(new Error('上传响应解析失败'))
+            return
+          }
+        }
+        console.log('[uploadPhoto] upload success status=', res.statusCode, 'code=', (data as any)?.code, 'filename=', (data as any)?.data?.filename)
         resolve(data)
       },
       fail: (err) => {

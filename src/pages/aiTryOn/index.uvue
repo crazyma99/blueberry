@@ -311,7 +311,8 @@ export default {
 			uni.showLoading({ title: '上传中...', mask: true })
 			try {
 				const uploadRes = await uploadPhoto(this.photoPath)
-				if ((uploadRes.code === 0 || uploadRes.code === 200) && uploadRes.data) {
+				console.log('[aiTryOn] 上传完成 code=', uploadRes.code, 'filename=', uploadRes.data?.filename ?? '(空)')
+				if ((uploadRes.code === 0 || uploadRes.code === 200) && uploadRes.data && uploadRes.data.filename !== '') {
 					this.uploadedFilename = uploadRes.data.filename
 				} else {
 					this.uploadedFilename = ''
@@ -329,6 +330,7 @@ export default {
 
 
 		async handleGenerate() {
+			console.log('[aiTryOn] handleGenerate 点击 | isSubmitting=', this.isSubmitting, '| isUploading=', this.isUploading, '| uploadedFilename=', this.uploadedFilename, '| shopId=', this.shopId, '| templates=', this.templates.length, '| creditLoaded=', this.creditLoaded, '| creditBalance=', this.creditBalance, '| priceFen=', this.priceFenPerCredit)
 			if (this.isSubmitting) return
 
 			// 检查登录态
@@ -382,13 +384,14 @@ export default {
 					userPhotoFilename: this.uploadedFilename,
 					shopId: parseInt(this.shopId) || 0,
 					category: 'travel',
-					bodyType: this.bodyTypeText(),
+					bodyType: this.bodyTypeText,
 					ageRange: this.ageRange
 				}
 				if (userOpenid !== '') submitParams.userOpenid = userOpenid
 
 				// 创建AI试衣任务（code === 0 表示成功；code !== 0 统一以 message toast）
 				const submitRes = await submitAiTryOn(submitParams as any)
+				console.log('[aiTryOn] submit 响应:', submitRes.code, submitRes.message)
 
 				if ((submitRes.code === 0 || submitRes.code === 200) && submitRes.data) {
 					// 任务创建成功即扣 1 次，本地余额同步 -1（角标实时刷新）
