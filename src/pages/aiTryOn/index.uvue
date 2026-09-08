@@ -237,6 +237,11 @@ export default {
 		// 防截屏：离页必须恢复，否则截屏隐藏效果会残留到其他页面
 		this.disableCaptureProtection()
 	},
+	onUnload() {
+		// redirectTo/reLaunch 销毁页面时只触发 onUnload 不触发 onHide——
+		// 之前缺这条导致 hidden 残留全局（整个小程序无法截屏），此处补恢复
+		this.disableCaptureProtection()
+	},
 	methods: {
 		// 防截屏防御：调用微信原生 wx.setVisualEffectOnCapture（基础库 ≥2.13.0，安卓/iOS 真机均支持；
 		// hidden=截屏/录屏时页面内容隐藏）。纯前端条件编译，仅打包进微信小程序端；异常静默兜底不阻塞业务。

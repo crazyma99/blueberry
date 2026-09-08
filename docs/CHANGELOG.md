@@ -1,5 +1,10 @@
 # 变更日志
 
+## 2026-09-09 · 防截屏污染修复 + 试衣结果下载永久买断（分支 fix/download-buyout）
+
+- **防截屏污染修复**：AI试衣页补 `onUnload` 恢复截屏设置——此前 redirectTo/reLaunch 销毁页面只触发 onUnload 不触发 onHide，导致 wx.setVisualEffectOnCapture(hidden) 残留全局、其他页面乃至整个小程序无法截屏；
+- **下载永久买断**：结果页保存按钮新增 taskBought 态——付款一次该结果永久解锁（后端下发 taskBought），保存不再因余额 0 重复拉起支付；充值订单携带 taskId；支付到账提示「该结果已永久解锁」并自动重试保存；扣费成功本地标记已解锁。
+
 ## 2026-09-08 · Hero 轮播双层 + 上层配置 + 防截屏 + UI 统一（分支 feat/hero-parallax-overlay）
 
 - **Hero 双层改造（最终方案）**：背景图滑动仅渐隐渐显（当前页 opacity 1 / 其他 0.3，500ms 过渡，位移交给 swiper 原生）；前景层（上层文字/图片 2 选 1）换页按 fgTick 重挂载，两段式 opacity 渐入（无位移）；文字层位于 hero-mask 之上、bottom:0+height:25% 内水平垂直居中；图片型全幅覆盖背景严丝合缝；标题字距 0.1em / 副标题 0.2em；保留 onHeroImageLoad 高度自适应、cosThumb、点击节流等原逻辑。

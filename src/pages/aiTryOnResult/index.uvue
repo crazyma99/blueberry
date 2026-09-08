@@ -23,8 +23,8 @@
 				></image>
 			</view>
 			<view class="action-bar">
-				<!-- 付费模式且无剩余次数：价格按钮，点击直接拉起支付 -->
-				<view v-if="isPaidMode && creditBalance <= 0" class="save-btn-wrap">
+				<!-- 付费模式且无剩余次数且未买断：价格按钮，点击直接拉起支付（已买断永久免费保存） -->
+				<view v-if="isPaidMode && creditBalance <= 0 && !taskBought" class="save-btn-wrap">
 					<view class="save-btn" hover-class="press-dim"
 					@click="saveToAlbum">
 						<text class="save-btn-price">¥{{ priceText }}</text>
@@ -37,8 +37,8 @@
 					@click="saveToAlbum">
 						<text class="save-btn-text">保存到相册</text>
 					</view>
-					<view v-if="isPaidMode && creditBalance > 0" class="save-btn-badge">
-						<text class="save-btn-badge-text">限时免费 {{ creditBalance }} 次</text>
+					<view v-if="isPaidMode && (creditBalance > 0 || taskBought)" class="save-btn-badge">
+						<text class="save-btn-badge-text">{{ taskBought ? '已解锁 · 永久保存' : '限时免费 ' + creditBalance + ' 次' }}</text>
 					</view>
 				</view>
 			</view>
@@ -89,6 +89,7 @@ export default {
 			isSaving: false,     // 保存流程防重入（扣费+下载保存期间拦截重复点击）
 			creditBalance: -1,        // 下载池剩余次数，-1 = 未查询到
 			priceFenPerCredit: 0,     // 单次价格（分），0 = 未开通付费购买（非付费模式）
+			taskBought: false,        // 该任务是否已永久买断（付款一次后无限次免费保存）
 			creditLoaded: false,      // 是否已成功查询到余额
 			// 下载次数不足（4001）时的充值支付
 			isPaying: false,
@@ -245,8 +246,8 @@ export default {
 			}
 			if (this.isSaving) return
 
-			// 付费模式且已知无剩余次数：直接拉起支付，省一次必败请求
-			if (this.isPaidMode && this.creditBalance <= 0) {
+			// 付费模式且已知无剩余次数且未买断：直接拉起支付，省一次必败请求（已买断永久免费保存）
+			if (this.isPaidMode && this.creditBalance <= 0 && !this.taskBought) {
 				this.handleRecharge()
 				return
 			}
@@ -359,10 +360,12 @@ export default {
 		async loadCreditInfo() {
 			try {
 				const shopIdNum = await this.ensureShopId()
-				const res = await getCreditBalance(shopIdNum > 0 ? shopIdNum : undefined, 'download')
+				const tid = parseInt(this.taskId) || 0
+				const res = await getCreditBalance(shopIdNum > 0 ? shopIdNum : undefined, 'download', tid)
 				if (res.code === 200 && res.data) {
 					this.creditBalance = res.data.balance
 					this.priceFenPerCredit = res.data.priceFenPerCredit
+					this.taskBought = res.data.taskBought === true
 					this.creditLoaded = true
 				}
 			} catch (err) {
@@ -380,6 +383,7 @@ export default {
 					if (this.isPaidMode && this.creditBalance > 0) {
 						this.creditBalance = this.creditBalance - 1
 					}
+					this.taskBought = true
 					return res.data.url
 				}
 				if (res.code === 4001) {
@@ -409,7 +413,7 @@ export default {
 					uni.showToast({ title: '缺少店铺信息，请稍后重试', icon: 'none' })
 					return
 				}
-				const res = await createCreditRecharge({ shopId: shopIdNum, credits: 1, feature: 'download' })
+				const res = await createCreditRecharge({ shopId: shopIdNum, credits: 1, feature: 'download', taskId: parseInt(this.taskId) || 0 })
 				if (res.code !== 200 || !res.data) {
 					this.isPaying = false
 					uni.showToast({ title: res.message || '下单失败，请重试', icon: 'none' })
@@ -465,8 +469,9 @@ export default {
 						this.isPaying = false
 						// 同步最新余额（角标实时刷新），再自动重试保存
 						this.creditBalance = res.data.balance
-						uni.showToast({ title: `支付成功，${res.data.credits} 次到账`, icon: 'none' })
-						// 到账后自动重试保存（下载次数已到账，扣费会成功）
+						this.taskBought = true
+						uni.showToast({ title: '支付成功，该结果已永久解锁', icon: 'none' })
+						// 到账后自动重试保存（该任务已永久买断，扣费直接放行）
 						this.saveToAlbum()
 						return
 					}
