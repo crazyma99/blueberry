@@ -50,7 +50,7 @@
             hover-class="press-row"
             @click="handleMenuClick(item)"
           >
-            <view class="menu-title font-harmony">{{ item.title }}</view>
+            <view class="menu-title font-noto-serif">{{ item.title }}</view>
             <view class="menu-arrow">›</view>
           </view>
         </view>

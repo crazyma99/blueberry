@@ -312,6 +312,15 @@
 		onHide() {
 			uni.$off('login-required')
 		},
+		// 下拉刷新：搜索模式刷新当前搜索结果，浏览模式重新加载分类+第一页客片
+		onPullDownRefresh() {
+			const p = this.isSearching ? this.handleSearch() : this.initPage(this.idx)
+			Promise.resolve(p).then(() => {
+				uni.stopPullDownRefresh()
+			}).catch(() => {
+				uni.stopPullDownRefresh()
+			})
+		},
 		// 滚动触底加载更多
 		onReachBottom() {
 			if (this.isSearching && !this.searchNoMore && !this.searchLoading) {

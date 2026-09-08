@@ -4,6 +4,7 @@
 		<view class="custom-nav">
 			<view :style="{height: statusBarHeight + 'px'}"></view>
 			<view class="nav-content">
+				<image class="back-btn" src="/static/back-arrow.svg" mode="aspectFit" @click="goBack"></image>
 				<view class="nav-center">
 					<view class="title-group">
 						<view class="cn font-noto-serif">客片欣赏</view>
@@ -187,6 +188,10 @@
 			uni.$off('login-required')
 		},
 		methods: {
+			// 标题栏返回按钮
+			goBack() {
+				uni.navigateBack()
+			},
 			// 分享卡片解析：品牌配置 > 中台全局 > 代码默认（{brand} 占位符自动替换品牌名）
 			async loadShareCard() {
 				try {
@@ -435,6 +440,11 @@
 	flex-direction: row;
 	align-items: center;
 	padding: 0 18rpx;
+}
+.back-btn {
+	width: 48rpx;
+	height: 48rpx;
+	padding: var(--spacing-xs);
 }
 .nav-center {
 	flex: 1;

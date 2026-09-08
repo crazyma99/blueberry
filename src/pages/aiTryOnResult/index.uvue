@@ -118,6 +118,8 @@ export default {
 		}
 	},
 	onShow() {
+		// 防截屏：进页开启（微信原生 API，仅小程序端生效）
+		this.enableCaptureProtection()
 		// 查询下载次数余额（需登录；未登录时保持原按钮，避免进页即拉起登录）
 		if (isLoggedIn()) {
 			this.loadCreditInfo()
@@ -127,8 +129,41 @@ export default {
 		this.stopPolling()
 		// 终止可能进行中的到账轮询
 		this.payPollToken = this.payPollToken + 1
+		// 防截屏：离页恢复
+		this.disableCaptureProtection()
 	},
 	methods: {
+		// 防截屏防御：wx.setVisualEffectOnCapture(hidden)，基础库 ≥2.13.0 安卓/iOS 真机生效；条件编译仅打包微信端
+		enableCaptureProtection() {
+			// #ifdef MP-WEIXIN
+			try {
+				if (typeof wx !== 'undefined' && wx.canIUse != null && wx.canIUse('setVisualEffectOnCapture')) {
+					(wx as any).setVisualEffectOnCapture({
+						visualEffect: 'hidden',
+						success: () => {},
+						fail: () => {}
+					})
+				}
+			} catch (e) {
+				// 低版本/开发者工具不支持时静默忽略
+			}
+			// #endif
+		},
+		disableCaptureProtection() {
+			// #ifdef MP-WEIXIN
+			try {
+				if (typeof wx !== 'undefined' && wx.canIUse != null && wx.canIUse('setVisualEffectOnCapture')) {
+					(wx as any).setVisualEffectOnCapture({
+						visualEffect: 'none',
+						success: () => {},
+						fail: () => {}
+					})
+				}
+			} catch (e) {
+				// 静默忽略
+			}
+			// #endif
+		},
 		startPolling() {
 			this.status = 'processing'
 			this.elapsedSeconds = 0

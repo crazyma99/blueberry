@@ -214,6 +214,8 @@ export default {
 		this.loadTemplates()
 	},
 	onShow() {
+		// 防截屏：进页开启（微信原生 API，仅小程序端生效）
+		this.enableCaptureProtection()
 		// 监听 401 登录过期事件，自动拉起登录弹窗
 		uni.$off('login-required')
 		uni.$on('login-required', () => {
@@ -232,8 +234,42 @@ export default {
 		uni.$off('login-required')
 		// 页面隐藏时终止可能进行中的到账轮询
 		this.payPollToken = this.payPollToken + 1
+		// 防截屏：离页必须恢复，否则截屏隐藏效果会残留到其他页面
+		this.disableCaptureProtection()
 	},
 	methods: {
+		// 防截屏防御：调用微信原生 wx.setVisualEffectOnCapture（基础库 ≥2.13.0，安卓/iOS 真机均支持；
+		// hidden=截屏/录屏时页面内容隐藏）。纯前端条件编译，仅打包进微信小程序端；异常静默兜底不阻塞业务。
+		enableCaptureProtection() {
+			// #ifdef MP-WEIXIN
+			try {
+				if (typeof wx !== 'undefined' && wx.canIUse != null && wx.canIUse('setVisualEffectOnCapture')) {
+					(wx as any).setVisualEffectOnCapture({
+						visualEffect: 'hidden',
+						success: () => {},
+						fail: () => {}
+					})
+				}
+			} catch (e) {
+				// 低版本/开发者工具不支持时静默忽略
+			}
+			// #endif
+		},
+		disableCaptureProtection() {
+			// #ifdef MP-WEIXIN
+			try {
+				if (typeof wx !== 'undefined' && wx.canIUse != null && wx.canIUse('setVisualEffectOnCapture')) {
+					(wx as any).setVisualEffectOnCapture({
+						visualEffect: 'none',
+						success: () => {},
+						fail: () => {}
+					})
+				}
+			} catch (e) {
+				// 静默忽略
+			}
+			// #endif
+		},
 		async loadTemplates() {
 			try {
 				// 相册入口：按 shop_id + album_id 精确取该相册的客片图作模板（不再叠加 style/category，防止滤空）
@@ -458,11 +494,15 @@ export default {
 					signType: order.signType,
 					paySign: order.paySign,
 					success: () => {
+						// 原生支付面板可能打断页面 onShow/onHide 时序：返回后重断言防截屏
+						this.enableCaptureProtection()
 						// 支付成功：到账为微信异步回调入账，轮询订单状态确认
 						this.pollRechargeStatus(outTradeNo)
 					},
 					fail: (payErr: any) => {
 						this.isPaying = false
+						// 取消/失败返回页面同样重断言防截屏
+						this.enableCaptureProtection()
 						const errMsg: string = payErr?.errMsg ?? ''
 						if (errMsg.indexOf('cancel') !== -1) {
 							uni.showToast({ title: '已取消支付', icon: 'none' })

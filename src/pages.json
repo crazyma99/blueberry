@@ -1,7 +1,11 @@
 {
   "pages": [
     {
-      "path": "pages/index/index"
+      "path": "pages/index/index",
+      "style": {
+        "enablePullDownRefresh": true,
+        "backgroundTextStyle": "light"
+      }
     },
     {
       "path": "pages/brandHub/index",
@@ -12,7 +16,9 @@
     {
       "path": "pages/demoDetail/index",
       "style": {
-        "onReachBottomDistance": 80
+        "onReachBottomDistance": 80,
+        "enablePullDownRefresh": true,
+        "backgroundTextStyle": "light"
       }
     },
     {

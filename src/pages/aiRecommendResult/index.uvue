@@ -148,6 +148,7 @@ export default {
 }
 .card-title {
 	font-size: 32rpx;
+	font-family: var(--font-display);
 	color: #fff;
 	font-weight: 400;
 	margin-bottom: 24rpx;
@@ -191,6 +192,7 @@ export default {
 }
 .section-title {
 	font-size: 32rpx;
+	font-family: var(--font-display);
 	color: #fff;
 	font-weight: 400;
 	margin-bottom: 24rpx;

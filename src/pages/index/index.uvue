@@ -18,14 +18,17 @@
 
 		<!-- 主内容 -->
 		<view v-else class="main-content">
-			<!-- 顶部通栏轮播：无指示点；文案已烘焙进 banner 图，高度随首图宽高比自适应避免裁切 -->
+			<!-- 顶部通栏轮播：无指示点，高度随首图宽高比自适应避免裁切；双层视差（背景图+前景层） -->
 			<view class="hero-wrap">
-				<swiper class="hero" autoplay circular :interval="3000" :duration="500" :style="{ height: heroHeight }">
+				<swiper class="hero" autoplay circular :interval="3000" :duration="500" :style="{ height: heroHeight }"
+					@change="onHeroChange">
 					<swiper-item v-for="(item, idx) in banners" :key="idx">
+						<!-- 背景层：底层铺满容器，滑动时渐隐渐显（仅 opacity，不做位移） -->
 						<image
-							class="hero-image fade-in"
+							class="hero-image fade-in hero-bg-layer"
 							:src="item.imageUrl"
 							mode="aspectFill"
+							:style="heroBgOpacity(idx)"
 							@load="onHeroImageLoad"
 							@click="onBannerClick(item)"
 						></image>
@@ -33,6 +36,18 @@
 				</swiper>
 				<!-- Figma 渐变遮罩：图片底部渐隐融入页面背景（透明50% → #160F04 78.19%） -->
 				<view class="hero-mask"></view>
+				<!-- 前景层（顶层）：文字=bottom:0+height:25% 居中；图片=全幅 hero-fg-layer-full，与 bg 等高等宽严丝合缝覆盖 -->
+				<view class="hero-fg-layer" :class="currentBanner.overlayType === 2 ? 'hero-fg-layer-full' : ''">
+					<!-- 上层配置 2 选 1：上层图片 / 标题(NotoSerif)+副标题(HarmonyOS Sans)；
+					     :key=fgTick 每次切换重挂载；渐入渐出=两段式 opacity 过渡（先淡出旧、再淡入新） -->
+					<view v-if="banners.length > 0" :key="fgTick" :class="fgHidden ? 'hero-fg-content hero-fg-hide' : 'hero-fg-content'">
+						<image v-if="currentBanner.overlayType === 2 && currentBanner.overlayImage" class="hero-fg-image" :src="currentBanner.overlayImage" mode="aspectFill"></image>
+						<view v-else-if="currentBanner.title" class="hero-fg-text">
+							<text class="hero-fg-title">{{ currentBanner.title }}</text>
+							<text v-if="currentBanner.subtitle" class="hero-fg-subtitle">{{ currentBanner.subtitle }}</text>
+						</view>
+					</view>
+				</view>
 			</view>
 
 			<!-- 客片欣赏：shop-container.png 以 border-image 点九图方式作背景，高度由内容撑开 -->
@@ -145,6 +160,11 @@
 				// 轮播高度：随首张 banner 图宽高比自适应（兜底 794rpx ≈ 设计稿比例）
 				heroHeight: '794rpx',
 				heroHeightReady: false,
+				// 双层视差：当前轮播索引 / 动效重播 tick（每次切换必递增） / 渐隐标记 / 前景层当前项
+				currentIndex: 0,
+				fgTick: 0,
+				fgHidden: false,
+				currentBanner: {} as any,
 				showLoginPopup: false,
 				loginAgreementChecked: false,
 				userAgreementName: USER_AGREEMENT_NAME,
@@ -198,6 +218,17 @@
 		onHide() {
 			uni.$off('login-required')
 		},
+		// 下拉刷新：重新加载首页数据（轮播配置含上层文字/图片同步刷新 + 店铺 + 分享卡片）；
+		// 刷新完成后重挂载前景层（fgTick+1）重播渐入动效，配置变化一眼可见
+		onPullDownRefresh() {
+			this.reloadHomeData().then(() => {
+				this.loadShareCard()
+				this.fgTick = this.fgTick + 1
+				uni.stopPullDownRefresh()
+			}).catch(() => {
+				uni.stopPullDownRefresh()
+			})
+		},
 		// 右上角胶囊菜单「转发」：卡片动态化（品牌落地 + 首张 banner 图）
 		onShareAppMessage() {
 			const brandId = getBrandId()
@@ -215,6 +246,41 @@
 			}
 		},
 		methods: {
+			// ===== 双层视差：状态与方法（仅扩展，不改动原有业务逻辑） =====
+			// 轮播索引同步（手动/自动轮播都会触发）：两段式渐入渐出——
+			// ① 先置隐藏（旧内容淡出）② 220ms 后换内容重挂载（仍隐藏）③ 250ms 后取消隐藏（新内容淡入）
+			onHeroChange(e) {
+				const next = e?.detail?.current ?? 0
+				this.currentIndex = next
+				this.fgHidden = true
+				const self = this
+				setTimeout(() => {
+					self.fgTick = self.fgTick + 1
+					self.updateCurrentBanner()
+				}, 220)
+				setTimeout(() => {
+					self.fgHidden = false
+				}, 260)
+			},
+			// 前景层当前展示项（循环安全取模，无越界）
+			updateCurrentBanner() {
+				const n = this.banners.length
+				if (n === 0) {
+					this.currentBanner = {}
+					return
+				}
+				const i = ((this.currentIndex % n) + n) % n
+				this.currentBanner = this.banners[i] ?? {}
+			},
+			// 背景层：只做渐隐渐显（当前页 opacity=1，其余 0.3），位移交给 swiper 原生滑动
+			heroBgOpacity(index) {
+				const n = this.banners.length
+				if (n === 0) return ''
+				let diff = index - this.currentIndex
+				if (diff > n / 2) diff -= n
+				if (diff < -n / 2) diff += n
+				return 'opacity: ' + (diff === 0 ? 1 : 0.3) + '; will-change: opacity;'
+			},
 			// 分享卡片解析：品牌配置 > 中台全局 > 代码默认（{brand} 占位符自动替换品牌名）
 			async loadShareCard() {
 				try {
@@ -228,7 +294,8 @@
 			try {
 				// 并行加载轮播图和店铺列表（X-Brand-Id 由 http 层自动携带）
 				const [bannerRes, shopRes] = await Promise.all([
-					getImage('get', { type: 0 }).catch(() => null),
+					// t 时间戳防缓存：下拉刷新时 banner 配置必定重新拉取
+					getImage('get', { type: 0, t: Date.now() }).catch(() => null),
 					getShops().catch(() => null)
 				])
 				if (bannerRes && bannerRes.code === 200) {
@@ -237,6 +304,8 @@
 						item.imageUrl = cosThumb(item.imageUrl, 750)
 						return item
 					})
+					// 双层视差：banners 就绪后刷新前景层当前项
+					this.updateCurrentBanner()
 				}
 				if (shopRes && shopRes.code === 200 && shopRes.data) {
 					// 网格封面图出 600px WebP 缩略图
@@ -511,6 +580,82 @@
 		width: 100%;
 		height: 100%;
 		display: block;
+	}
+	/* ===== 双层视差图层（仅本页作用域，基于 design token） ===== */
+	/* 背景层：底层铺满容器；滑动渐隐渐显（仅 opacity 过渡，位移交给 swiper 原生滑动） */
+	.hero-bg-layer{
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		transition: opacity 500ms ease;
+		will-change: opacity;
+	}
+	/* 前景层：顶层，位于 hero-mask 之上；区域 bottom:0 + height:25%，文字在区域内水平垂直居中 */
+	.hero-fg-layer{
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		width: 100%;
+		height: 25%;
+		z-index: 30;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		pointer-events: none;
+		will-change: transform, opacity;
+	}
+	.hero-fg-content{
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+	/* 渐入渐出：仅透明度过渡（两段式：淡出旧→淡入新），不位移 */
+	.hero-fg-content{
+		transition: opacity 220ms ease;
+	}
+	.hero-fg-hide{
+		opacity: 0;
+	}
+	.hero-fg-text{
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8rpx;
+		padding: 0 48rpx;
+	}
+	.hero-fg-title{
+		width: 100%;
+		font-family: var(--font-display);
+		font-size: 44rpx;
+		letter-spacing: 0.1em;
+		color: var(--color-primary);
+		text-align: center;
+	}
+	.hero-fg-subtitle{
+		width: 100%;
+		font-family: var(--font-body);
+		font-size: 26rpx;
+		letter-spacing: 0.2em;
+		color: var(--color-primary-70);
+		text-align: center;
+	}
+	/* 上层图片模式：前景层全幅覆盖（top:0 + height:100%），与背景图等高等宽 */
+	.hero-fg-layer-full{
+		top: 0;
+		bottom: auto;
+		height: 100%;
+	}
+	.hero-fg-layer-full .hero-fg-content{
+		height: 100%;
+	}
+	.hero-fg-image{
+		width: 100%;
+		height: 100%;
 	}
 	/* 客片欣赏：shop-container.png 以 border-image 点九图方式铺满，高度由内容撑开。
 	   切片（源图 1424×486）：顶 250px 含整条金色光线（最低点 y≈240）、底 46px 含底部边线与圆角、

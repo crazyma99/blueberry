@@ -244,6 +244,7 @@ export default {
 	text-align: center;
 	font-size: 32rpx;
 	font-weight: 400;
+	font-family: var(--font-display);
 	color: var(--color-primary);
 	/* 视觉补偿返回按钮宽度，使标题真正居中 */
 	margin-right: 64rpx;
