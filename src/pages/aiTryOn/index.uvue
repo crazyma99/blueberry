@@ -20,6 +20,23 @@
 			</swiper>
 		</view>
 
+		<!-- 模板缩略图横滑条：展示当前相册全部模板，点击直达；箭头折叠/展开（默认展开），位于主图下方不遮挡 -->
+		<view class="thumb-strip">
+			<view class="thumb-strip-head" @click="toggleThumbStrip">
+				<text class="thumb-strip-arrow">{{ thumbCollapsed ? '▾' : '▴' }}</text>
+				<text class="thumb-strip-label">模板快速选择（{{ templates.length }}）</text>
+			</view>
+			<scroll-view v-if="!thumbCollapsed" class="thumb-scroll" scroll-x :show-scrollbar="false">
+				<view class="thumb-list">
+					<view v-for="(item, index) in templates" :key="index"
+						class="thumb-item" :class="index === currentTemplateIndex ? 'thumb-item-active' : ''"
+						@click="selectTemplate(index)">
+						<image class="thumb-img" :src="item.imageUrl" mode="aspectFill"></image>
+					</view>
+				</view>
+			</scroll-view>
+		</view>
+
 		<!-- 体型选择 -->
 		<view class="section">
 			<text class="section-label">选择您的体型：</text>
@@ -136,7 +153,7 @@ export default {
 			style: '',
 			gender: '',
 			templates: [] as any[],
-			currentTemplateIndex: 0,
+			currentTemplateIndex: 0,		thumbCollapsed: false,   // 模板缩略图条折叠态（默认展开）
 			bodyType: 'slim',
 			ageRange: '10岁及以下',
 			ageOptions: ['10岁及以下', '11-18岁', '19-30岁', '31-45岁', '46-60岁', '60岁以上'],
@@ -300,6 +317,16 @@ export default {
 
 		onSwiperChange(e: any) {
 			this.currentTemplateIndex = e.detail.current
+		},
+
+		// 缩略图条：折叠/展开
+		toggleThumbStrip() {
+			this.thumbCollapsed = !this.thumbCollapsed
+		},
+
+		// 点击缩略图直达对应模板（主 swiper 通过 :current 联动切换）
+		selectTemplate(index: number) {
+			this.currentTemplateIndex = index
 		},
 
 		selectBodyType(type: string) {
@@ -747,6 +774,55 @@ export default {
 	width: 100%;
 	padding: 0 0 var(--spacing-sm);
 }
+/* ===== 模板缩略图横滑条（纯前端快速选择） ===== */
+.thumb-strip {
+	margin: 12rpx var(--spacing-md) 0;
+	border: 1rpx solid var(--color-primary-30);
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+	overflow: hidden;
+}
+.thumb-strip-head {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 8rpx;
+	padding: 10rpx 20rpx;
+}
+.thumb-strip-arrow {
+	color: var(--color-primary);
+	font-size: 26rpx;
+}
+.thumb-strip-label {
+	font-size: 24rpx;
+	color: var(--color-primary-70);
+}
+.thumb-scroll {
+	width: 100%;
+	white-space: nowrap;
+}
+.thumb-list {
+	display: flex;
+	flex-direction: row;
+	gap: 12rpx;
+	padding: 0 20rpx 16rpx;
+}
+.thumb-item {
+	width: 96rpx;
+	height: 96rpx;
+	flex-shrink: 0;
+	border-radius: var(--radius-sm);
+	overflow: hidden;
+	border: 3rpx solid transparent;
+}
+.thumb-item-active {
+	border-color: var(--color-primary);
+}
+.thumb-img {
+	width: 100%;
+	height: 100%;
+}
+
 .template-swiper {
 	width: 100%;
 	height: 780rpx;
