@@ -776,7 +776,7 @@ export default {
 }
 /* ===== 模板缩略图横滑条（纯前端快速选择） ===== */
 .thumb-strip {
-	margin: var(--spacing-sm) var(--spacing-sm) 0;
+	margin: var(--spacing-sm) var(--spacing-sm) 24rpx;
 	border: 1rpx solid var(--color-primary-30);
 	border-radius: var(--radius-container);
 	background: var(--color-surface);
@@ -798,7 +798,7 @@ export default {
 	transform: rotate(180deg);
 }
 .thumb-strip-label {
-	font-size: var(--font-size-body-xs);
+	font-size: var(--font-size-body);
 	color: var(--color-primary-70);
 }
 .thumb-scroll {
