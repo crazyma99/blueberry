@@ -126,6 +126,10 @@ export default {
 			this.loadCreditInfo()
 		}
 	},
+	onHide() {
+		// 防截屏解限：从结果页前进到其他页面（navigateTo 等）时必须恢复，防止过分防御
+		this.disableCaptureProtection()
+	},
 	onUnload() {
 		this.stopPolling()
 		// 终止可能进行中的到账轮询
