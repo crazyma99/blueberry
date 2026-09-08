@@ -623,6 +623,7 @@ export interface CreditBalance {
   balance: number            // 剩余次数（对应 feature 池：试衣或推荐）
   inited: boolean            // 是否已初始化免费次数
   priceFenPerCredit: number  // 单次价格（分），0 = 未开通付费购买（前端只给兑换码入口）
+  taskBought?: boolean       // feature=download 且传 taskId 时：该任务是否已永久买断
 }
 
 export interface CreditRechargeOrder {
@@ -650,10 +651,11 @@ export interface CreditRechargeStatus {
  * @param shopId  可选，传了才返回该店所属商户的单次价格
  * @param feature 可选，次数池标识：不传默认试衣池；查推荐次数传 'recommend'
  */
-export const getCreditBalance = async (shopId?: number, feature?: string) => {
+export const getCreditBalance = async (shopId?: number, feature?: string, taskId?: number) => {
   const data: Record<string, any> = {}
   if (shopId != null) data.shopId = shopId
   if (feature != null && feature !== '') data.feature = feature
+  if (taskId != null && taskId > 0) data.taskId = taskId
   const res = await request({
     url: '/api/aiface/credit/balance',
     method: 'GET',
@@ -672,6 +674,7 @@ export const createCreditRecharge = async (params: {
   shopId: number
   credits: number
   feature?: string
+  taskId?: number   // feature=download 时绑定试衣任务：付款即永久买断该任务下载
 }) => {
   const res = await request({
     url: '/api/aiface/credit/recharge',
