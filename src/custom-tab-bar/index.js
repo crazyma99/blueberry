@@ -33,7 +33,7 @@ Component({
       wx.loadFontFace({
         global: true,
         family: 'NotoSerifSC-Bold',
-        source: 'url("https://www.lanmei66.cloud/font/NotoSerifSC-Bold-subset.woff")',
+        source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/NotoSerifSC-Bold-subset.woff")',
       });
     },
   },

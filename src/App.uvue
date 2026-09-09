@@ -11,7 +11,7 @@
 			uni.loadFontFace({
 				global: true,
 				family: 'NotoSerifSC-Bold',
-				source: 'url("https://www.lanmei66.cloud/font/NotoSerifSC-Bold-subset.woff")',
+				source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/NotoSerifSC-Bold-subset.woff")',
 				fail: (err) => {
 					console.warn('NotoSerifSC-Bold 字体加载失败', err)
 				}
@@ -19,7 +19,7 @@
 			uni.loadFontFace({
 				global: true,
 				family: 'HarmonyOS-Sans-SC',
-				source: 'url("https://www.lanmei66.cloud/font/HarmonyOS_Sans_SC-subset.woff")',
+				source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/HarmonyOS_Sans_SC-subset.woff")',
 				fail: (err) => {
 					console.warn('HarmonyOS-Sans-SC 字体加载失败', err)
 				}
