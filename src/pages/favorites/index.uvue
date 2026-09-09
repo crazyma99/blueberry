@@ -49,7 +49,7 @@
 					@click="handleItemClick(item)"
 				>
 					<view class="photoItem">
-						<image :src="item.coverImageUrl" class="photo fade-in" mode="aspectFill" />
+						<image :src="cosThumb(item.coverImageUrl, 600)" class="photo fade-in" mode="aspectFill" lazy-load />
 						<view class="mask">
 							<view class="desc">
 								<view class="photoName font-noto-serif">{{ item.title }}</view>
@@ -85,6 +85,7 @@
 
 <script lang="uts">
 import { getFavoriteList, searchAlbums } from '../../utils/api.uts'
+import { cosThumb } from '../../utils/imageLoader.uts'
 import { formatCount as _formatCount } from '../../utils/format.uts'
 
 export default {

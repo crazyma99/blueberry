@@ -49,7 +49,7 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="item.coverImageUrl" class="photo fade-in" mode="aspectFill" />
+							<image :src="cosThumb(item.coverImageUrl, 600)" class="photo fade-in" mode="aspectFill" lazy-load />
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
@@ -130,7 +130,7 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="item?.coverImageUrl" class="photo fade-in" mode="aspectFill" />
+							<image :src="cosThumb(item?.coverImageUrl, 600)" class="photo fade-in" mode="aspectFill" lazy-load />
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
@@ -205,6 +205,7 @@
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import { submitUserProfile } from '../../utils/profileSubmit.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
+import { cosThumb } from '../../utils/imageLoader.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -394,10 +395,10 @@
 					// 3. 加载第一页客片
 					await this.fetchAlbumList(1)
 
-					// 4. 预加载首屏封面图（最多前6张），图片缓存就绪后再隐藏骨架屏
+					// 4. 预加载首屏封面缩略图（最多前6张，与网格渲染口径一致），就绪后再隐藏骨架屏
 					const coverUrls = this.albumList
 						.slice(0, 6)
-						.map(item => item.coverImageUrl)
+						.map(item => cosThumb(item.coverImageUrl, 600))
 						.filter(Boolean)
 					await this.preloadImages(coverUrls, 2000)
 				} catch (err) {

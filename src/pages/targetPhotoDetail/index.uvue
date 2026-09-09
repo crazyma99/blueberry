@@ -60,12 +60,14 @@
 				</view>
 			</view>
 			<view class="photo-wrap">
+				<!-- 详情图渐进加载：首图原图（高清主视觉），其余 750px WebP 缩略 + 懒加载 -->
 				<image
 					v-for="(item, index) in (detail?.images || [])"
 					class="photo fade-in"
-					:src="item.imageUrl"
+					:src="index === 0 ? item.imageUrl : cosThumb(item.imageUrl, 750)"
 					mode="widthFix"
 					:key="index"
+					lazy-load
 				></image>
 			</view>
 			<!-- 底部固定栏（组件化：按钮组由 slot 传入，版权 footer 组件内置） -->
@@ -117,6 +119,7 @@
 	import { isLoggedIn, loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 	import { runPhoneLogin } from '../../utils/loginFlow.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
+import { cosThumb } from '../../utils/imageLoader.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -221,10 +224,10 @@
 						await this.refreshLikeStatus(id)
 					}
 
-					// 预加载前几张详情图片（最多前3张），图片缓存就绪后再隐藏骨架屏
+					// 预加载前几张详情图（最多前3张，与渲染口径一致：首图原图、其余 750 缩略），就绪后再隐藏骨架屏
 					const imageUrls = (data?.images || [])
 						.slice(0, 3)
-						.map(img => img.imageUrl)
+						.map((img, idx) => idx === 0 ? img.imageUrl : cosThumb(img.imageUrl, 750))
 						.filter(Boolean)
 					await this.preloadImages(imageUrls, 2500)
 				} catch (err) {

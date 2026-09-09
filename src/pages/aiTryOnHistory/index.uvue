@@ -39,6 +39,7 @@
 						:src="getCoverUrl(item)"
 						class="photo fade-in"
 						mode="aspectFill"
+						lazy-load
 					/>
 					<!-- 状态遮罩：生成中 -->
 					<view v-if="isProcessing(item.status)" class="status-overlay">
@@ -75,6 +76,7 @@
 
 <script lang="uts">
 import { getAiTasks } from '../../utils/api.uts'
+import { cosThumb } from '../../utils/imageLoader.uts'
 import { getUserInfo } from '../../utils/auth.uts'
 
 type AiTaskItem = {
@@ -164,12 +166,12 @@ export default {
 			}
 		},
 
-		// 选择卡片封面图：completed 用结果图，其它用模板图兜底
+		// 选择卡片封面图：completed 用结果图，其它用模板图兜底；网格统一 400px WebP 缩略（原图几 MB 级直出极卡）
 		getCoverUrl(item: AiTaskItem): string {
 			if (item.status === 'completed' && item.result_image_url != null && item.result_image_url !== '') {
-				return item.result_image_url
+				return cosThumb(item.result_image_url, 400)
 			}
-			return item.template_image_url || ''
+			return cosThumb(item.template_image_url, 400)
 		},
 
 		isProcessing(status: string): boolean {
