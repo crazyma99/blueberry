@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # 蓝莓小程序「忽略 env → 构建 → 上传体验版 → 恢复 env」
 # 红线：构建/发布绝不允许携带任何硬编码接口地址（env 一律留空自动分流）。
-# 用法：./scripts/release-trial.sh <版本号> [描述]  例：./scripts/release-trial.sh 1.0.24 "更新说明"
+# 用法：./scripts/release-trial.sh <版本号> [描述]  例：./scripts/release-trial.sh 1.0.25 "更新说明"
+# 版本号规范（主人 2026-09-10 定，最终修订）：体验版版本号=纯数字 v<版本号>（微信后台可见）；
+#   git commit 短号自动写入上传描述开头 [g<sha>] 便于对号。
 set -euo pipefail
 
 VERSION="${1:?用法: ./scripts/release-trial.sh <版本号> [描述]}"
@@ -32,11 +34,14 @@ if grep -qE "10\.[0-9]+\.[0-9]+\.[0-9]+|127\.0\.0\.1|192\.168\." "dist/build/mp-
 fi
 echo "✓ 产物无硬编码地址（自动分流字面量：lanmei66.cloud / crazyma99.xyz）"
 
-# 5) 上传体验版
+# 5) 上传体验版（版本号=纯数字 v<版本号>；commit 短号写描述开头 [g<sha>]）
+SHA="$(git rev-parse --short HEAD)"
+FINAL_VERSION="v${VERSION}"
+FINAL_DESC="[g${SHA}] ${DESC}"
 CLI="/opt/apps/io.github.msojocs.wechat-devtools-linux/files/bin/bin/wechat-devtools-cli"
-"$CLI" upload --project "$ROOT/dist/build/mp-weixin" -v "$VERSION" -d "$DESC" || { echo "✗ 上传失败"; exit 1; }
+"$CLI" upload --project "$ROOT/dist/build/mp-weixin" -v "$FINAL_VERSION" -d "$FINAL_DESC" || { echo "✗ 上传失败"; exit 1; }
 
 # 6) 恢复 env
 if [ -n "$BAK" ]; then mv "$BAK" "$ENV_FILE"; fi
 
-echo "✓ 体验版 v$VERSION 上传完成"
+echo "✓ 体验版 ${FINAL_VERSION}（[g${SHA}]）上传完成"
