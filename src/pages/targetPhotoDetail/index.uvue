@@ -67,7 +67,6 @@
 					:src="index === 0 ? item.imageUrl : cosThumb(item.imageUrl, 750)"
 					mode="widthFix"
 					:key="index"
-					lazy-load
 				></image>
 			</view>
 			<!-- 底部固定栏（组件化：按钮组由 slot 传入，版权 footer 组件内置） -->

@@ -49,7 +49,7 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="cosThumb(item.coverImageUrl, 600)" class="photo fade-in" mode="aspectFill" lazy-load />
+							<image :src="cosThumb(item.coverImageUrl, 600)" class="photo fade-in" mode="aspectFill" />
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
@@ -130,7 +130,7 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="cosThumb(item?.coverImageUrl, 600)" class="photo fade-in" mode="aspectFill" lazy-load />
+							<image :src="cosThumb(item?.coverImageUrl, 600)" class="photo fade-in" mode="aspectFill" />
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">

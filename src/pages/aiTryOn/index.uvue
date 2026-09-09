@@ -31,7 +31,7 @@
 					<view v-for="(item, index) in templates" :key="index"
 						class="thumb-item" :class="index === currentTemplateIndex ? 'thumb-item-active' : ''"
 						@click="selectTemplate(index)">
-						<image class="thumb-img" :src="cosThumb(item.imageUrl, 200)" mode="aspectFill" lazy-load></image>
+						<image class="thumb-img" :src="cosThumb(item.imageUrl, 200)" mode="aspectFill"></image>
 					</view>
 				</view>
 			</scroll-view>
