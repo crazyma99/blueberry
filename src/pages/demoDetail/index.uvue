@@ -32,21 +32,17 @@
 			<view class="sk-row" style="margin-top: 24rpx;">
 				<SkeletonBlock width="42%" height="36rpx" radius="8rpx" />
 			</view>
-			<!-- 一级分类胶囊 -->
+			<!-- 一级分类胶囊（复用真实 tab-wrap：自带 16rpx 间距） -->
 			<view class="sk-row" style="margin-top: 16rpx;">
-				<SkeletonBlock v-for="i in 4" :key="'p' + i" :width="['20%','26%','24%','22%'][i-1]" height="56rpx" radius="28rpx" />
+				<view v-for="i in 4" :key="'p' + i" class="tab-wrap"><SkeletonBlock width="150rpx" height="56rpx" radius="28rpx" /></view>
 			</view>
 			<!-- 二级分类胶囊 -->
 			<view class="sk-row" style="margin-top: 12rpx;">
-				<SkeletonBlock v-for="i in 4" :key="'c' + i" :width="['22%','20%','26%','24%'][i-1]" height="56rpx" radius="28rpx" />
+				<view v-for="i in 4" :key="'c' + i" class="tab-wrap"><SkeletonBlock width="150rpx" height="56rpx" radius="28rpx" /></view>
 			</view>
-			<!-- 照片网格：2 列，镜像真实卡片（封面 + 标题 + 信息行） -->
+			<!-- 照片网格：只需整块灰方块（全局 .sk-photo-item 灰底圆角 + sk-animate） -->
 			<view class="sk-row" style="flex-wrap: wrap; justify-content: space-between; margin-top: 20rpx;">
-				<view v-for="i in 6" :key="'g' + i" class="sk-photo-item">
-					<SkeletonBlock height="300rpx" radius="12rpx" />
-					<SkeletonBlock width="64%" height="28rpx" radius="8rpx" />
-					<SkeletonBlock width="40%" height="22rpx" radius="6rpx" />
-				</view>
+				<view v-for="i in 6" :key="'g' + i" class="sk-photo-item sk-animate"></view>
 			</view>
 		</view>
 
