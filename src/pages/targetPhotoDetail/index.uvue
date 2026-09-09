@@ -16,18 +16,27 @@
 		</view>
 		<!-- 状态栏+导航栏占位 -->
 		<view :style="{height: (statusBarHeight + 44) + 'px'}"></view>
-		<!-- 骨架屏 -->
-		<view v-if="loading" class="sk-container">
-			<view class="sk-row" style="justify-content: space-between; margin-bottom: 24rpx;">
-				<view>
-					<view class="sk-text sk-animate" style="width: 280rpx; height: 36rpx; margin-bottom: 16rpx;"></view>
-					<view class="sk-text sk-animate" style="width: 200rpx;"></view>
+		<!-- 骨架屏：与真实页面 1:1 镜像（标题卡=标题+云朵/价格行/套餐行/收藏 复用真实容器；详情图区同 padding 同图间距） -->
+		<view v-if="loading" class="sk-container" style="padding: 0;">
+			<view class="title">
+				<view class="title-first">
+					<SkeletonBlock width="52%" height="46rpx" radius="8rpx" />
+					<SkeletonBlock width="122rpx" height="40rpx" radius="6rpx" />
 				</view>
-				<view class="sk-block sk-animate" style="width: 48rpx; height: 48rpx; border-radius: 50%;"></view>
+				<view class="info-row">
+					<view class="info-left">
+						<SkeletonBlock width="58%" height="32rpx" radius="6rpx" />
+						<view style="height: 12rpx;"></view>
+						<SkeletonBlock width="76%" height="32rpx" radius="6rpx" />
+					</view>
+					<SkeletonBlock width="56rpx" height="56rpx" radius="50%" />
+				</view>
 			</view>
-			<view class="sk-text sk-animate" style="width: 320rpx; margin-bottom: var(--spacing-lg);"></view>
-			<view class="sk-block sk-animate" style="width: 100%; height: 500rpx; margin-bottom: 16rpx;"></view>
-			<view class="sk-block sk-animate" style="width: 100%; height: 500rpx;"></view>
+			<view style="padding: 0 8rpx;">
+				<SkeletonBlock height="500rpx" radius="0" />
+				<view style="height: 8rpx;"></view>
+				<SkeletonBlock height="500rpx" radius="0" />
+			</view>
 		</view>
 
 		<!-- 主内容 -->
