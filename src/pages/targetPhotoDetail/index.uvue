@@ -64,7 +64,7 @@
 				<image
 					v-for="(item, index) in (detail?.images || [])"
 					class="photo fade-in"
-					:src="photoSrc(item.imageUrl, index)" lazy-load @error="onImgError"
+					:src="photoSrc(item.imageUrl, index)" lazy-load
 					mode="widthFix"
 					:key="index"
 				></image>
@@ -190,9 +190,6 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 			uni.$off('login-required')
 		},
 		methods: {
-			onImgError(e: any) {
-				console.log('[imgError targetPhotoDetail]', e?.detail?.errMsg ?? e?.errMsg ?? 'unknown')
-			},
 			// 详情图渐进加载：首图原图，其余 750 缩略（模板作用域需 methods 包装）
 			photoSrc(url: string, idx: number): string {
 				return idx === 0 ? url : cosThumb(url, 750)

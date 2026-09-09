@@ -15,7 +15,7 @@
 				@change="onSwiperChange"
 			>
 				<swiper-item v-for="(item, index) in templates" :key="index">
-					<image class="template-img fade-in" :src="tplThumb(item.imageUrl)" mode="aspectFill" @error="onImgError"></image>
+					<image class="template-img fade-in" :src="tplThumb(item.imageUrl)" mode="aspectFill"></image>
 				</swiper-item>
 			</swiper>
 		</view>
@@ -31,7 +31,7 @@
 					<view v-for="(item, index) in templates" :key="index"
 						class="thumb-item" :class="index === currentTemplateIndex ? 'thumb-item-active' : ''"
 						@click="selectTemplate(index)">
-						<image class="thumb-img" :src="thThumb(item.imageUrl)" mode="aspectFill" lazy-load @error="onImgError"></image>
+						<image class="thumb-img" :src="thThumb(item.imageUrl)" mode="aspectFill" lazy-load></image>
 					</view>
 				</view>
 			</scroll-view>
@@ -261,9 +261,6 @@ export default {
 		this.disableCaptureProtection()
 	},
 	methods: {
-		onImgError(e: any) {
-			console.log('[imgError aiTryOn]', e?.detail?.errMsg ?? e?.errMsg ?? 'unknown')
-		},
 		// 模板作用域调用包装：导入函数需经 methods 暴露
 		tplThumb(url: string): string {
 			return cosThumb(url, 750)

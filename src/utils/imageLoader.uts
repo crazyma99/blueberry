@@ -9,14 +9,8 @@ export function preloadImage(url: string): Promise<boolean> {
   return new Promise((resolve) => {
     uni.getImageInfo({
       src: url,
-      success: () => {
-        console.log('[preloadImage] OK', url.slice(-60))
-        resolve(true)
-      },
-      fail: (err: any) => {
-        console.log('[preloadImage] FAIL', url.slice(-60), JSON.stringify(err ?? {}))
-        resolve(false)
-      }
+      success: () => resolve(true),
+      fail: () => resolve(false)
     })
   })
 }
@@ -33,14 +27,12 @@ export async function preloadImages(urls: string[], timeout: number = 5000): Pro
 }
 
 /**
- * 腾讯云 COS 数据万象缩略图（诊断版：恢复 WebP + 断点日志）。
+ * 腾讯云 COS 数据万象缩略图：按展示宽度出 WebP 缩略图（实测 skyline 真机/工具均正常加载）。
  * 仅处理本站 COS 域名，其他来源原样返回。
  */
 export function cosThumb(url: string, width: number): string {
   if (url === '') return url
   if (!url.includes('lanmei66.cloud')) return url
   const sep = url.includes('?') ? '&' : '?'
-  const out = `${url}${sep}imageMogr2/format/webp/thumbnail/${width}x`
-  console.log('[cosThumb]', 'w=' + width, url.slice(-50), '→', out.slice(-70))
-  return out
+  return `${url}${sep}imageMogr2/format/webp/thumbnail/${width}x`
 }

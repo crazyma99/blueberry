@@ -40,7 +40,6 @@
 						class="photo fade-in"
 						mode="aspectFill"
 						lazy-load
-						@error="onImgError"
 					/>
 					<!-- 状态遮罩：生成中 -->
 					<view v-if="isProcessing(item.status)" class="status-overlay">
@@ -117,9 +116,6 @@ export default {
 	},
 
 	methods: {
-		onImgError(e: any) {
-			console.log('[imgError aiTryOnHistory]', e?.detail?.errMsg ?? e?.errMsg ?? 'unknown')
-		},
 		goBack() {
 			uni.navigateBack()
 		},
