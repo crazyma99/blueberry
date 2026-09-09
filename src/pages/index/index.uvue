@@ -5,12 +5,17 @@
 		<view class="home-btn" :style="{ top: (statusBarHeight + 8) + 'px' }" hover-class="press-dim" @click="goBrandHub">
 			<text class="home-btn-text font-noto-serif">馆</text>
 		</view>
-		<!-- 骨架屏：镜像真实页面结构（hero 通栏 + 标题/副标题 + 店铺卡片） -->
-		<view v-if="loading" class="sk-container">
+		<!-- 骨架屏：与真实页面间距 1:1（hero 通栏 → 客片欣赏标题/副标题 → 店铺卡片区） -->
+		<view v-if="loading" class="sk-container" style="padding: 0;">
 			<SkeletonBlock height="794rpx" radius="0" />
-			<SkeletonBlock width="46%" height="48rpx" radius="8rpx" />
-			<SkeletonBlock width="26%" height="24rpx" radius="6rpx" />
-			<view class="sk-row">
+			<!-- 客片欣赏标题区（与真实 shop-section 同间距） -->
+			<view style="margin: 40rpx var(--spacing-sm) 0;">
+				<SkeletonBlock width="46%" height="48rpx" radius="8rpx" />
+				<view style="height: 16rpx;"></view>
+				<SkeletonBlock width="26%" height="24rpx" radius="6rpx" />
+			</view>
+			<!-- 店铺卡片区（与真实 shop-card 网格同间距） -->
+			<view class="sk-row" style="margin: 28rpx var(--spacing-sm) 0; justify-content: space-between;">
 				<SkeletonBlock width="48%" height="320rpx" radius="12rpx" />
 				<SkeletonBlock width="48%" height="320rpx" radius="12rpx" />
 			</view>
