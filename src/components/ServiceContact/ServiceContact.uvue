@@ -136,22 +136,22 @@ import { getPageConfig } from '../../utils/api.uts'
     align-items: center;
     justify-content: center;
     gap: var(--spacing-md);
-    .divider{
-      width: 150rpx;
-      height: 22rpx;
-    }
-    .demoPhotoTit {
-      display: flex;
-      flex-direction: column;
-      font-size: var(--font-size-display);
-      font-weight: 400;
-      color: var(--color-primary);
-      .icon{
-        width: 143rpx;
-        height: 56rpx;
-        margin-top: -30rpx;
-      }
-    }
+  }
+  .divideTit .divider{
+    width: 150rpx;
+    height: 22rpx;
+  }
+  .divideTit .demoPhotoTit {
+    display: flex;
+    flex-direction: column;
+    font-size: var(--font-size-display);
+    font-weight: 400;
+    color: var(--color-primary);
+  }
+  .divideTit .demoPhotoTit .icon{
+    width: 143rpx;
+    height: 56rpx;
+    margin-top: -30rpx;
   }
   .service-contain{
     margin: 40rpx var(--spacing-sm);
@@ -159,108 +159,104 @@ import { getPageConfig } from '../../utils/api.uts'
     border: 2rpx solid var(--color-border-soft);
     border-radius: var(--radius-container);
     position: relative;
-    .flower {
-      position: absolute;
-      right: 0;
-      top: 40rpx;
-      width: 167rpx;
-      height: 222rpx;
-      z-index: 9;
-    }
-    .tit{
-      margin-bottom: 40rpx;
-      text-align: center;
-      font-weight: 400;
-      font-size: var(--font-size-slogan);
-      color: var(--color-primary);
-    }
-    .main-wrap {
-      padding: 1rpx;
-      border-radius: var(--radius-card);
-      /* 外层渐变：只露出 1rpx 边框线 */
-      background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
-    }
-    .main {
-      border-radius: var(--radius-card);
-      /* 内层必须不透明：半透明会透出外层边框渐变。已把原 var(--color-primary-06)→transparent 合成到 var(--color-bg) 底 */
-      background: linear-gradient(138.87deg, #231A0C 0%, var(--color-bg) 100%);
-      padding: var(--spacing-sm);
-      .item{
-        display: flex;
-        flex-direction: column;
-      }
-      .content{
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        padding: var(--spacing-xs) 14rpx;
-        gap: 26rpx;
-        .item-mark{
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          color: var(--color-primary);
-          font-size: var(--font-size-body-xs);
-          font-weight: 400;
-          .li{
-            width: 44rpx;
-            height: 42rpx;
-          }
-          .number{
-            /* 绝对定位 + 自身 50% 位移：不依赖图标/数字尺寸，几何居中 */
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-          }
-        }
-        .item-text{
-          flex: 1;
-          font-size: var(--font-size-body-lg);
-          color: var(--color-primary);
-          /* 10% 字距（letter-spacing 不支持百分比，用 0.1em 等效） */
-          letter-spacing: 0.1em;
-        }
-      }
-      .line {
-        width: 100%;
-        height: 1rpx;
-        background: linear-gradient(270deg, rgba(241, 205, 145, 0) 0%, var(--color-primary-70) 50.48%, rgba(241, 205, 145, 0) 100%);
-        margin: var(--spacing-xs) 0;
-      }
-    }
-    .contact-main {
-      border-radius: var(--radius-card);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: var(--color-primary);
-      background: linear-gradient(139deg, var(--color-primary-06) 0%, rgba(241, 205, 145, 0.00) 100%);
-      border: 1px solid var(--color-primary-20);
-      position: relative;
-      width: 670rpx;
-      height: 536rpx;
-      .contact-bg{
-        position: absolute;
-        width: 100%;
-        height: 100%;
-      }
-      .code{
-        margin: 30rpx auto;
-        width: 250rpx;
-        height: 248rpx;
-      }
-      .label{
-        font-size: var(--font-size-body-lg);
-        font-weight: 400;
-        margin-bottom: var(--spacing-xs);
-      }
-      .val{
-        font-size: var(--font-size-slogan);
-        font-weight: 400;
-        margin-bottom: var(--spacing-sm);
-      }
-    }
+  }
+  .service-contain .flower {
+    position: absolute;
+    right: 0;
+    top: 40rpx;
+    width: 167rpx;
+    height: 222rpx;
+    z-index: 9;
+  }
+  .service-contain .tit{
+    margin-bottom: 40rpx;
+    text-align: center;
+    font-weight: 400;
+    font-size: var(--font-size-slogan);
+    color: var(--color-primary);
+  }
+  .service-contain .main-wrap {
+    padding: 1rpx;
+    border-radius: var(--radius-card);
+    background: linear-gradient(252.59deg, var(--color-primary-20) 0%, var(--color-primary-70) 33.41%, rgba(241, 205, 145, 0) 62.4%, var(--color-primary-70) 100%);
+  }
+  .service-contain .main {
+    border-radius: var(--radius-card);
+    background: linear-gradient(138.87deg, #231A0C 0%, var(--color-bg) 100%);
+    padding: var(--spacing-sm);
+  }
+  .service-contain .main .item{
+    display: flex;
+    flex-direction: column;
+  }
+  .service-contain .main .content{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--spacing-xs) 14rpx;
+    gap: 26rpx;
+  }
+  .service-contain .main .content .item-mark{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--color-primary);
+    font-size: var(--font-size-body-xs);
+    font-weight: 400;
+  }
+  .service-contain .main .content .item-mark .li{
+    width: 44rpx;
+    height: 42rpx;
+  }
+  .service-contain .main .content .item-mark .number{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .service-contain .main .content .item-text{
+    flex: 1;
+    font-size: var(--font-size-body-lg);
+    color: var(--color-primary);
+    letter-spacing: 0.1em;
+  }
+  .service-contain .main .line {
+    width: 100%;
+    height: 1rpx;
+    background: linear-gradient(270deg, rgba(241, 205, 145, 0) 0%, var(--color-primary-70) 50.48%, rgba(241, 205, 145, 0) 100%);
+    margin: var(--spacing-xs) 0;
+  }
+  .service-contain .contact-main {
+    border-radius: var(--radius-card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--color-primary);
+    background: linear-gradient(139deg, var(--color-primary-06) 0%, rgba(241, 205, 145, 0.00) 100%);
+    border: 1px solid var(--color-primary-20);
+    position: relative;
+    width: 670rpx;
+    height: 536rpx;
+  }
+  .service-contain .contact-main .contact-bg{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+  .service-contain .contact-main .code{
+    margin: 30rpx auto;
+    width: 250rpx;
+    height: 248rpx;
+  }
+  .service-contain .contact-main .label{
+    font-size: var(--font-size-body-lg);
+    font-weight: 400;
+    margin-bottom: var(--spacing-xs);
+  }
+  .service-contain .contact-main .val{
+    font-size: var(--font-size-slogan);
+    font-weight: 400;
+    margin-bottom: var(--spacing-sm);
   }
 </style>

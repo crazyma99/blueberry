@@ -497,19 +497,19 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 	flex-direction: row;
 	justify-content: space-between;
 	align-items: center;
-	.text{
-		font-size: var(--font-size-display-xl);
-		font-weight: 400;
-		background: linear-gradient(180deg, var(--color-primary) 20%, var(--color-primary-deep) 79.81%);
-		/* 文字渐变：背景裁剪到文字区域 + 文字透明，露出渐变 */
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-	}
-	.cloud{
-		width: 122rpx;
-		height: 40rpx;
-	}
+}
+.title-first .text{
+	font-size: var(--font-size-display-xl);
+	font-weight: 400;
+	background: linear-gradient(180deg, var(--color-primary) 20%, var(--color-primary-deep) 79.81%);
+	/* 文字渐变：背景裁剪到文字区域 + 文字透明，露出渐变 */
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+.title-first .cloud{
+	width: 122rpx;
+	height: 40rpx;
 }
 .info-row{
 	display: flex;
@@ -581,17 +581,14 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 	flex-direction: row;
 	align-items: flex-end;
 	justify-content: center;
-	.btn-icon{
-		width: 104rpx;
-		height: 86rpx;
-	}
-	.btn{
-		/* 通用金色按钮规范已收敛至全局 .btn-primary */
-		.text{
-			width: 118rpx;
-			height: 34rpx;
-		}
-	}
+}
+.ai-tryon-btn .btn-icon{
+	width: 104rpx;
+	height: 86rpx;
+}
+.ai-tryon-btn .btn .text{
+	width: 118rpx;
+	height: 34rpx;
 }
 
 /* 底部占位：固定栏高度（按钮组+版权footer，爸爸确认 200rpx） */

@@ -673,11 +673,11 @@
 		position: relative;
 		width: 710rpx;
 		height: 163rpx;
-		.shop-top{
-			width: 100%;
-			height: 100%;
-			position: absolute;
-		}
+	}
+	.shop-header-wrap .shop-top{
+		width: 100%;
+		height: 100%;
+		position: absolute;
 	}
 	.shop-header{
 		position: absolute;

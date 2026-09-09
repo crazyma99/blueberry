@@ -76,20 +76,15 @@ export default {
 	}
 	.shopCard {
 		position: relative;
-		/* 多个店铺时：每行 2 个，gap 为 8rpx，故每个占 (100% - 8rpx) / 2；
-		   奇数时最后一个仍按一半宽度展示，自然左对齐 */
 		width: calc((100% - 8rpx) / 2);
 	}
 	.full-width {
 		width: 100%;
 	}
-	/* 单店铺时由模板加上 .full-width 类，覆盖默认的一半宽度 */
 	.shopCard.full-width {
 		width: 100%;
 	}
 	.demoPhoto{
-		/* 默认填满外层 .shopCard（.shopCard 已为容器一半宽），
-		   单店铺/无店铺 fallback 通过 .full-width 覆盖为 100% */
 		width: 100%;
 		height: 226rpx;
 	}
@@ -109,12 +104,12 @@ export default {
 		color: var(--color-primary);
 		font-weight: 400;
 		background: linear-gradient(0deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3));
-		.enName {
-			margin-top: 4rpx;
-			font-size: 16rpx;
-			font-weight: 400;
-      color: var(--color-primary-70);
-      letter-spacing: 2rpx;
-		}
+	}
+	.shopName .enName {
+		margin-top: 4rpx;
+		font-size: 16rpx;
+		font-weight: 400;
+		color: var(--color-primary-70);
+		letter-spacing: 2rpx;
 	}
 </style>
