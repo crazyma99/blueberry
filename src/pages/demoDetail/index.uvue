@@ -24,8 +24,8 @@
 		<!-- 占位 -->
 		<view :style="{height: (statusBarHeight + 44) + 'px'}"></view>
 
-		<!-- Loading 骨架屏 -->
-		<view v-if="loading" class="sk-container">
+		<!-- 骨架屏悬浮层：主内容常驻渲染，首图 @load 即隐藏骨架 -->
+		<view v-show="loading" class="sk-container sk-overlay" :style="{ top: (statusBarHeight + 44) + 'px' }">
 			<view class="sk-row" style="margin-bottom: 24rpx;">
 				<view v-for="i in 4" :key="i" class="sk-tab sk-animate"></view>
 			</view>
@@ -34,8 +34,8 @@
 			</view>
 		</view>
 
-		<!-- 主内容 -->
-		<view v-else class="main-content">
+		<!-- 主内容（常驻渲染） -->
+		<view class="main-content">
 			<!-- 搜索结果模式 -->
 			<view v-if="isSearching" class="search-results">
 				<view v-if="searchList.length === 0 && searchDone" class="empty-state">
@@ -49,7 +49,7 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="coverThumb(item.coverImageUrl)" class="photo fade-in" mode="aspectFill" lazy-load />
+							<image :src="coverThumb(item.coverImageUrl)" class="photo fade-in" mode="aspectFill" lazy-load @load="onGridImgLoad(index)" />
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
@@ -130,7 +130,7 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="coverThumb(item?.coverImageUrl)" class="photo fade-in" mode="aspectFill" lazy-load />
+							<image :src="coverThumb(item?.coverImageUrl)" class="photo fade-in" mode="aspectFill" lazy-load @load="onGridImgLoad(index)" />
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
@@ -222,7 +222,7 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 				idx: '',
 				from: '',
 				statusBarHeight: 20,
-				loading: true, // 页面加载状态
+				loading: true, // 页面加载状态		skeletonTimer: 0, // 骨架屏兜底定时器
 				selectedTab: {
 					parentIndex: 0,
 					childIndex: 0
@@ -333,6 +333,16 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 			}
 		},
 		methods: {
+			// 骨架屏：首图 @load 即隐藏（更自然；兜底 3s 超时由 initPage 定时器隐藏）
+			onGridImgLoad(index: number) {
+				if (index === 0 && this.loading) {
+					this.loading = false
+					if (this.skeletonTimer !== 0) {
+						clearTimeout(this.skeletonTimer)
+						this.skeletonTimer = 0
+					}
+				}
+			},
 			// 模板作用域调用包装：导入函数需经 methods 暴露（直接调用会 _ctx.xxx is not a function）
 			coverThumb(url: string): string {
 				return cosThumb(url, 600)
@@ -408,8 +418,14 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 				} catch (err) {
 					console.error('初始化页面失败:', err)
 					this.alltabs = []
-				} finally {
 					this.loading = false
+				} finally {
+					// 骨架屏由「首图 @load」隐藏；3s 未触发（网络异常等）定时器兜底隐藏
+					if (this.loading) {
+						this.skeletonTimer = setTimeout(() => {
+							if (this.loading) this.loading = false
+						}, 3000) as unknown as number
+					}
 				}
 			},
 			// ====== 获取客片列表（分类模式） ======
@@ -802,6 +818,15 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 </script>
 
 <style>
+	/* 骨架屏悬浮层：绝对定位盖住内容区（top 由行内 style 定位到导航占位之下） */
+	.sk-overlay {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: var(--color-bg);
+		z-index: 50;
+	}
 	.page {
 		background: var(--color-bg);
 		min-height: 100vh;
