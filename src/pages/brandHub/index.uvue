@@ -11,9 +11,16 @@
       <!-- 顶部氛围光 -->
       <view class="hub-aura"></view>
 
-      <!-- 骨架屏 -->
+      <!-- 骨架屏：与真实品牌卡 1:1 镜像（圆 logo + 名称/描述 + 进入按钮） -->
       <view v-if="loading" class="sk-wrap">
-        <view v-for="i in 4" :key="i" class="sk-card sk-animate"></view>
+        <view v-for="i in 4" :key="i" class="brand-card">
+          <SkeletonBlock width="96rpx" height="96rpx" radius="50%" />
+          <view class="sk-flex-1">
+            <SkeletonBlock width="55%" height="34rpx" radius="8rpx" />
+            <SkeletonBlock width="82%" height="24rpx" radius="6rpx" />
+          </view>
+          <SkeletonBlock width="88rpx" height="44rpx" radius="22rpx" />
+        </view>
       </view>
 
       <!-- 品牌列表 -->
@@ -118,12 +125,15 @@
     background: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(241, 205, 145, 0.14), rgba(241, 205, 145, 0.04) 46%, rgba(22, 15, 4, 0) 78%);
   }
   .sk-wrap {
-    padding: 32rpx;
+    padding: 24rpx 32rpx 40rpx;
   }
-  .sk-card {
-    height: 140rpx;
-    border-radius: var(--radius-md);
-    margin-bottom: 24rpx;
+  /* 骨架屏内品牌信息占位列：与真实 brand-info 对齐 */
+  .sk-flex-1 {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+    margin-right: 24rpx;
   }
   .brand-list {
     padding: 24rpx 32rpx 40rpx;

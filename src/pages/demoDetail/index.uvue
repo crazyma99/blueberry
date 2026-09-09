@@ -24,15 +24,28 @@
 		<!-- 占位 -->
 		<view :style="{height: (statusBarHeight + 44) + 'px'}"></view>
 
-		<!-- 骨架屏悬浮层：镜像真实页面结构（分类胶囊条 + 照片卡片=封面块+标题条），首图 @load 即隐藏 -->
+		<!-- 骨架屏悬浮层：与真实页面 1:1 镜像（AI推荐横幅→分类标题→两级分类胶囊→照片卡=封面+标题+信息行） -->
 		<view v-show="loading" class="sk-container sk-overlay" :style="{ top: (statusBarHeight + 44) + 'px' }">
-			<view class="sk-row" style="margin-bottom: 24rpx;">
-				<SkeletonBlock v-for="i in 4" :key="i" width="22%" height="56rpx" radius="28rpx" />
+			<!-- AI 推荐横幅 -->
+			<SkeletonBlock height="150rpx" radius="16rpx" />
+			<!-- 分类标题行 -->
+			<view class="sk-row" style="margin-top: 24rpx;">
+				<SkeletonBlock width="42%" height="36rpx" radius="8rpx" />
 			</view>
-			<view class="sk-row" style="flex-wrap: wrap; justify-content: space-between;">
-				<view v-for="i in 6" :key="i" class="sk-photo-item">
-					<SkeletonBlock height="260rpx" radius="12rpx" />
-					<SkeletonBlock width="62%" height="28rpx" radius="8rpx" />
+			<!-- 一级分类胶囊 -->
+			<view class="sk-row" style="margin-top: 16rpx;">
+				<SkeletonBlock v-for="i in 4" :key="'p' + i" :width="['20%','26%','24%','22%'][i-1]" height="56rpx" radius="28rpx" />
+			</view>
+			<!-- 二级分类胶囊 -->
+			<view class="sk-row" style="margin-top: 12rpx;">
+				<SkeletonBlock v-for="i in 4" :key="'c' + i" :width="['22%','20%','26%','24%'][i-1]" height="56rpx" radius="28rpx" />
+			</view>
+			<!-- 照片网格：2 列，镜像真实卡片（封面 + 标题 + 信息行） -->
+			<view class="sk-row" style="flex-wrap: wrap; justify-content: space-between; margin-top: 20rpx;">
+				<view v-for="i in 6" :key="'g' + i" class="sk-photo-item">
+					<SkeletonBlock height="300rpx" radius="12rpx" />
+					<SkeletonBlock width="64%" height="28rpx" radius="8rpx" />
+					<SkeletonBlock width="40%" height="22rpx" radius="6rpx" />
 				</view>
 			</view>
 		</view>
