@@ -49,7 +49,7 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="coverThumb(item.coverImageUrl)" class="photo fade-in" mode="aspectFill" />
+							<image :src="coverThumb(item.coverImageUrl)" class="photo fade-in" mode="aspectFill" lazy-load @error="onImgError" />
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
@@ -130,7 +130,7 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="coverThumb(item?.coverImageUrl)" class="photo fade-in" mode="aspectFill" />
+							<image :src="coverThumb(item?.coverImageUrl)" class="photo fade-in" mode="aspectFill" lazy-load @error="onImgError" />
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
@@ -333,6 +333,10 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 			}
 		},
 		methods: {
+			// 诊断断点：图片加载失败打印（定位 webp/lazy-load 问题）
+			onImgError(e: any) {
+				console.log('[imgError demoDetail]', e?.detail?.errMsg ?? e?.errMsg ?? 'unknown')
+			},
 			// 模板作用域调用包装：导入函数需经 methods 暴露（直接调用会 _ctx.xxx is not a function）
 			coverThumb(url: string): string {
 				return cosThumb(url, 600)

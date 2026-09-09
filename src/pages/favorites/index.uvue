@@ -49,7 +49,7 @@
 					@click="handleItemClick(item)"
 				>
 					<view class="photoItem">
-						<image :src="coverThumb(item.coverImageUrl)" class="photo fade-in" mode="aspectFill" />
+						<image :src="coverThumb(item.coverImageUrl)" class="photo fade-in" mode="aspectFill" lazy-load @error="onImgError" />
 						<view class="mask">
 							<view class="desc">
 								<view class="photoName font-noto-serif">{{ item.title }}</view>
@@ -128,6 +128,9 @@ export default {
 	},
 
 	methods: {
+		onImgError(e: any) {
+			console.log('[imgError favorites]', e?.detail?.errMsg ?? e?.errMsg ?? 'unknown')
+		},
 		coverThumb(url: string): string {
 			return cosThumb(url, 600)
 		},

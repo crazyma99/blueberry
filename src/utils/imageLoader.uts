@@ -9,8 +9,14 @@ export function preloadImage(url: string): Promise<boolean> {
   return new Promise((resolve) => {
     uni.getImageInfo({
       src: url,
-      success: () => resolve(true),
-      fail: () => resolve(false)
+      success: () => {
+        console.log('[preloadImage] OK', url.slice(-60))
+        resolve(true)
+      },
+      fail: (err: any) => {
+        console.log('[preloadImage] FAIL', url.slice(-60), JSON.stringify(err ?? {}))
+        resolve(false)
+      }
     })
   })
 }
@@ -27,15 +33,14 @@ export async function preloadImages(urls: string[], timeout: number = 5000): Pro
 }
 
 /**
- * 腾讯云 COS 数据万象缩略图：按展示宽度出缩略图（保留原格式，不转 WebP）。
- * 原因：skyline 渲染对 webp 存在兼容坑（微信社区置顶帖「[skyline] 不支持 webp」），
- * 部分基础库/机型解码失败导致 image @load 不触发、fade-in 图片永远透明（页面看似卡骨架屏）。
- * 仅尺寸缩放（JPEG 原样），大幅减小下载体积且全环境兼容。
+ * 腾讯云 COS 数据万象缩略图（诊断版：恢复 WebP + 断点日志）。
  * 仅处理本站 COS 域名，其他来源原样返回。
  */
 export function cosThumb(url: string, width: number): string {
   if (url === '') return url
   if (!url.includes('lanmei66.cloud')) return url
   const sep = url.includes('?') ? '&' : '?'
-  return `${url}${sep}imageMogr2/thumbnail/${width}x`
+  const out = `${url}${sep}imageMogr2/format/webp/thumbnail/${width}x`
+  console.log('[cosThumb]', 'w=' + width, url.slice(-50), '→', out.slice(-70))
+  return out
 }
