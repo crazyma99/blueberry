@@ -5,14 +5,14 @@
 		<view class="home-btn" :style="{ top: (statusBarHeight + 8) + 'px' }" hover-class="press-dim" @click="goBrandHub">
 			<text class="home-btn-text font-noto-serif">馆</text>
 		</view>
-		<!-- 骨架屏 -->
+		<!-- 骨架屏：镜像真实页面结构（hero 通栏 + 标题/副标题 + 店铺卡片） -->
 		<view v-if="loading" class="sk-container">
-			<view class="sk-banner sk-animate" style="height: 794rpx;"></view>
-			<view class="sk-title sk-animate"></view>
-			<view class="sk-subtitle sk-animate"></view>
+			<SkeletonBlock height="794rpx" radius="0" />
+			<SkeletonBlock width="46%" height="48rpx" radius="8rpx" />
+			<SkeletonBlock width="26%" height="24rpx" radius="6rpx" />
 			<view class="sk-row">
-				<view class="sk-photo-card sk-animate"></view>
-				<view class="sk-photo-card sk-animate"></view>
+				<SkeletonBlock width="48%" height="320rpx" radius="12rpx" />
+				<SkeletonBlock width="48%" height="320rpx" radius="12rpx" />
 			</view>
 		</view>
 

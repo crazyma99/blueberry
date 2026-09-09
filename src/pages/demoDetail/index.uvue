@@ -24,13 +24,16 @@
 		<!-- 占位 -->
 		<view :style="{height: (statusBarHeight + 44) + 'px'}"></view>
 
-		<!-- 骨架屏悬浮层：主内容常驻渲染，首图 @load 即隐藏骨架 -->
+		<!-- 骨架屏悬浮层：镜像真实页面结构（分类胶囊条 + 照片卡片=封面块+标题条），首图 @load 即隐藏 -->
 		<view v-show="loading" class="sk-container sk-overlay" :style="{ top: (statusBarHeight + 44) + 'px' }">
 			<view class="sk-row" style="margin-bottom: 24rpx;">
-				<view v-for="i in 4" :key="i" class="sk-tab sk-animate"></view>
+				<SkeletonBlock v-for="i in 4" :key="i" width="22%" height="56rpx" radius="28rpx" />
 			</view>
-			<view class="sk-row" style="flex-wrap: wrap;">
-				<view v-for="i in 6" :key="i" class="sk-photo-item sk-animate"></view>
+			<view class="sk-row" style="flex-wrap: wrap; justify-content: space-between;">
+				<view v-for="i in 6" :key="i" class="sk-photo-item">
+					<SkeletonBlock height="260rpx" radius="12rpx" />
+					<SkeletonBlock width="62%" height="28rpx" radius="8rpx" />
+				</view>
 			</view>
 		</view>
 

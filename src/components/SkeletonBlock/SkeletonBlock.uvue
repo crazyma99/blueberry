@@ -1,0 +1,25 @@
+<template>
+	<view class="sk-block-root sk-animate" :style="blockStyle"></view>
+</template>
+
+<script lang="uts">
+export default {
+	name: 'SkeletonBlock',
+	props: {
+		width: { type: String, default: '100%' },   // 宽度（rpx/px/%）
+		height: { type: String, default: '32rpx' },  // 高度
+		radius: { type: String, default: '8rpx' }    // 圆角
+	},
+	computed: {
+		blockStyle(): string {
+			return 'width:' + this.width + '; height:' + this.height + '; border-radius:' + this.radius + '; background: rgba(255, 255, 255, 0.08);'
+		}
+	}
+}
+</script>
+
+<style>
+.sk-block-root {
+	display: block;
+}
+</style>
