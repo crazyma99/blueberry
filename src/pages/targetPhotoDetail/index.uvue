@@ -64,7 +64,7 @@
 				<image
 					v-for="(item, index) in (detail?.images || [])"
 					class="photo fade-in"
-					:src="index === 0 ? item.imageUrl : cosThumb(item.imageUrl, 750)"
+					:src="photoSrc(item.imageUrl, index)"
 					mode="widthFix"
 					:key="index"
 				></image>
@@ -190,6 +190,10 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 			uni.$off('login-required')
 		},
 		methods: {
+			// 详情图渐进加载：首图原图，其余 750 缩略（模板作用域需 methods 包装）
+			photoSrc(url: string, idx: number): string {
+				return idx === 0 ? url : cosThumb(url, 750)
+			},
 			// 标题栏返回按钮
 			goBack() {
 				uni.navigateBack()

@@ -15,7 +15,7 @@
 				@change="onSwiperChange"
 			>
 				<swiper-item v-for="(item, index) in templates" :key="index">
-					<image class="template-img fade-in" :src="cosThumb(item.imageUrl, 750)" mode="aspectFill"></image>
+					<image class="template-img fade-in" :src="tplThumb(item.imageUrl)" mode="aspectFill"></image>
 				</swiper-item>
 			</swiper>
 		</view>
@@ -31,7 +31,7 @@
 					<view v-for="(item, index) in templates" :key="index"
 						class="thumb-item" :class="index === currentTemplateIndex ? 'thumb-item-active' : ''"
 						@click="selectTemplate(index)">
-						<image class="thumb-img" :src="cosThumb(item.imageUrl, 200)" mode="aspectFill"></image>
+						<image class="thumb-img" :src="thThumb(item.imageUrl)" mode="aspectFill"></image>
 					</view>
 				</view>
 			</scroll-view>
@@ -261,6 +261,13 @@ export default {
 		this.disableCaptureProtection()
 	},
 	methods: {
+		// 模板作用域调用包装：导入函数需经 methods 暴露
+		tplThumb(url: string): string {
+			return cosThumb(url, 750)
+		},
+		thThumb(url: string): string {
+			return cosThumb(url, 200)
+		},
 		// 防截屏防御：调用微信原生 wx.setVisualEffectOnCapture（基础库 ≥2.13.0，安卓/iOS 真机均支持；
 		// hidden=截屏/录屏时页面内容隐藏）。纯前端条件编译，仅打包进微信小程序端；异常静默兜底不阻塞业务。
 		enableCaptureProtection() {

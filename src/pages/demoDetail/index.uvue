@@ -49,7 +49,7 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="cosThumb(item.coverImageUrl, 600)" class="photo fade-in" mode="aspectFill" />
+							<image :src="coverThumb(item.coverImageUrl)" class="photo fade-in" mode="aspectFill" />
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
@@ -130,7 +130,7 @@
 						class="photoItem-wrap"
 					>
 						<view class="photoItem">
-							<image :src="cosThumb(item?.coverImageUrl, 600)" class="photo fade-in" mode="aspectFill" />
+							<image :src="coverThumb(item?.coverImageUrl)" class="photo fade-in" mode="aspectFill" />
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
@@ -333,6 +333,10 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 			}
 		},
 		methods: {
+			// 模板作用域调用包装：导入函数需经 methods 暴露（直接调用会 _ctx.xxx is not a function）
+			coverThumb(url: string): string {
+				return cosThumb(url, 600)
+			},
 			// 分享卡片解析：品牌配置 > 中台全局 > 代码默认（{brand} 占位符自动替换品牌名）
 			async loadShareCard() {
 				try {
