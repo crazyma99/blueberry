@@ -12,6 +12,9 @@
 				global: true,
 				family: 'NotoSerifSC-Bold',
 				source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/NotoSerifSC-Bold-subset.woff")',
+				success: () => {
+					console.log('[font] NotoSerifSC-Bold 加载成功')
+				},
 				fail: (err) => {
 					console.warn('NotoSerifSC-Bold 字体加载失败', err)
 				}
@@ -20,6 +23,9 @@
 				global: true,
 				family: 'HarmonyOS-Sans-SC',
 				source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/HarmonyOS_Sans_SC-subset.woff")',
+				success: () => {
+					console.log('[font] HarmonyOS-Sans-SC 加载成功')
+				},
 				fail: (err) => {
 					console.warn('HarmonyOS-Sans-SC 字体加载失败', err)
 				}
