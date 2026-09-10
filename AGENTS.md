@@ -22,6 +22,7 @@
 ### 4. 涉及 skyline / 平台兼容的新写法：先调研再动手
 - skyline 下 `lazy-load`、webp、部分字体/CORS 均有坑，**先 websearch 调研 → 列证据 → 再改**，不要凭经验想当然（曾有教训）。
 - uvue 禁止嵌套 CSS（.parent{ .child{...} }）——依赖编译器展开，缓存损坏会原样输出，微信 wcsc 报 unexpected {（2026-09-10 白屏教训）；一律写平铺后代选择器 .parent .child { ... }。
+- **新增 .uts/.uvue 文件后必须重启 dev watcher 或全量构建**：增量编译不刷新新文件的模块注册表，真机/工具报 module is not defined 页面无法渲染（2026-09-10 photoCheck 教训）。
 
 ### 5. 数据库 / 服务端操作红线（见服务端仓库）
 - 本仓库只做纯前端；如需改服务端契约，走服务端仓库 SOP。
