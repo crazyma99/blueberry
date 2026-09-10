@@ -42,7 +42,9 @@
 					</view>
 				</view>
 				<button class="share-btn btn-secondary" open-type="share" hover-class="press-dim">分享</button>
-				<button class="share-btn btn-secondary" @click="shareToMoments" hover-class="press-dim">朋友圈</button>
+				<button class="share-btn btn-secondary" @click="guideShareTimeline" hover-class="press-dim">
+					<image class="moments-icon" src="/static/friend_circle.svg" mode="aspectFit"></image>
+				</button>
 			</view>
 		</view>
 
@@ -359,34 +361,14 @@ export default {
 			}
 		},
 
-		// 分享到朋友圈：调起微信官方图片分享弹窗（发送给朋友/朋友圈/收藏/下载；本地临时卡片图）
-		async shareToMoments() {
-			try {
-				await this.ensureShareCard()
-			} catch (e) {
-				console.error('[share-debug] shareToMoments ensure 异常=', e)
-			}
-			const path = this.shareCardImage
-			if (path === '') {
-				uni.showToast({ title: '分享图片准备中，请稍后再试', icon: 'none' })
-				return
-			}
-			// #ifdef MP-WEIXIN
-			if (typeof wx !== 'undefined' && (wx as any).showShareImageMenu != null) {
-				try {
-					(wx as any).showShareImageMenu({ path, needShowEntrance: true })
-					console.log('[share-debug] showShareImageMenu 已调起 path=' + path.substring(0, 40))
-				} catch (e) {
-					console.error('[share-debug] showShareImageMenu 异常=', e)
-					uni.showToast({ title: '请点击右上角菜单分享到朋友圈', icon: 'none' })
-				}
-			} else {
-				uni.showToast({ title: '请点击右上角菜单分享到朋友圈', icon: 'none' })
-			}
-			// #endif
-			// #ifndef MP-WEIXIN
-			uni.showToast({ title: '请点击右上角菜单分享到朋友圈', icon: 'none' })
-			// #endif
+		// 朋友圈按钮：微信单页模式只能由右上角菜单触发，按钮改为引导（主人指示）
+		guideShareTimeline() {
+			uni.showModal({
+				title: '分享到朋友圈',
+				content: '请点击右上角「···」，选择「分享到朋友圈」',
+				showCancel: false,
+				confirmText: '知道了'
+			})
 		},
 
 		handleRetry() {
@@ -797,6 +779,10 @@ export default {
 }
 .share-btn::after {
 	border: none;
+}
+.moments-icon {
+	width: 36rpx;
+	height: 36rpx;
 }
 
 /* 失败态 */
