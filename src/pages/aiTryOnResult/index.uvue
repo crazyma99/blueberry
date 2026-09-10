@@ -145,6 +145,14 @@ export default {
 	onShow() {
 		// 防截屏：进页开启（微信原生 API，仅小程序端生效）
 		this.enableCaptureProtection()
+		// 右上角菜单开放「分享到朋友圈」（单页模式卡片：标题+图，最接近网页链接卡的效果）
+		// #ifdef MP-WEIXIN
+		if (typeof wx !== 'undefined' && (wx as any).showShareMenu != null) {
+			try {
+				(wx as any).showShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
+			} catch (e) {}
+		}
+		// #endif
 		// 查询下载次数余额（需登录；未登录时保持原按钮，避免进页即拉起登录）
 		if (isLoggedIn()) {
 			this.loadCreditInfo()
@@ -166,7 +174,13 @@ export default {
 		return this.ensureShareCard()
 	},
 	onShareTimeline() : any {
-		return this.ensureShareCard()
+		// 朋友圈单页模式卡片：标题 + 1:1 图（5:4 卡居中裁切人脸仍在中心）+ query 落地参数
+		const img = this.shareCardReady && this.shareCardImage !== '' ? this.shareCardImage : cosThumb(this.resultImageUrl, 400)
+		return {
+			title: this.buildShareTitle(),
+			query: this.buildShareQuery(),
+			imageUrl: img
+		}
 	},
 	methods: {
 		// 防截屏防御：wx.setVisualEffectOnCapture(hidden)，基础库 ≥2.13.0 安卓/iOS 真机生效；条件编译仅打包微信端
@@ -275,6 +289,13 @@ export default {
 				return `我也在蓝梅旅拍「${this.shopName}」AI 换装，试一下你「${style}」的样子`
 			}
 			return `我也在蓝梅旅拍 AI 换装，试一下你「${style}」的样子`
+		},
+
+		// 朋友圈单页模式 query（onShareTimeline 用）
+		buildShareQuery() : string {
+			const p = this.buildSharePath()
+			const i = p.indexOf('?')
+			return i >= 0 ? p.substring(i + 1) : ''
 		},
 
 		// 分享落地路径：直达试衣页并预选该套系模板 + 品牌/门店完整上下文（行业方案：带参直达业务页）
