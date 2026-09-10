@@ -710,6 +710,7 @@ export default {
 }
 .save-btn-wrap {
 	position: relative;
+	padding-top: var(--spacing-sm);
 }
 /* 限免角标（整体落在容器 padding 预留空间内，不用负偏移，避免被裁剪） */
 .save-btn-badge {
@@ -736,7 +737,7 @@ export default {
 	line-height: 1.2;
 }
 .share-btn {
-	margin: 0 0 0 24rpx;
+	margin: var(--spacing-sm) 0 0 var(--spacing-lg);
 	min-width: 160rpx;
 	height: 92rpx;
 	line-height: 1;
