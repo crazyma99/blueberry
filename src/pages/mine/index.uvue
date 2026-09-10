@@ -243,7 +243,8 @@ export default {
           this.menuItems = this.getDefaultMenuItems()
         }
       } catch (err) {
-        console.error('加载数据失败:', err)
+        console.error('[mine] 加载数据失败:', err)
+        uni.showToast({ title: '部分内容加载失败，请下拉刷新', icon: 'none' })
         // 拉取失败，使用默认金刚区
         this.menuItems = this.getDefaultMenuItems()
       } finally {
@@ -345,7 +346,7 @@ export default {
 
         if (!result.ok) {
           if (result.errorKind === 'login') {
-            uni.showToast({ title: '获取登录凭证失败', icon: 'none' })
+            uni.showToast({ title: '获取登录凭证失败，请重试', icon: 'none' })
           } else {
             uni.showToast({ title: result.errorMsg || '登录失败', icon: 'none' })
           }

@@ -86,6 +86,8 @@
           const list = (res.code === 200 || res.code === 0) ? (res.data ?? []) : []
           this.brands = list.filter((b: BrandBrief) => b.brandId !== 'PLATFORM')
         } catch (e) {
+          console.error('[brandHub] 加载品牌列表失败:', e)
+          uni.showToast({ title: '品牌加载失败，请重试', icon: 'none' })
           this.brands = []
         } finally {
           this.loading = false

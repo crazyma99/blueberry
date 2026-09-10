@@ -418,7 +418,7 @@ export default {
 
 				if (!result.ok) {
 					if (result.errorKind === 'login') {
-						uni.showToast({ title: '获取登录凭证失败', icon: 'none' })
+						uni.showToast({ title: '获取登录凭证失败，请重试', icon: 'none' })
 					} else {
 						uni.showToast({ title: result.errorMsg || '登录失败', icon: 'none' })
 					}

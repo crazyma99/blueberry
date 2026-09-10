@@ -427,7 +427,8 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 						.filter(Boolean)
 					await this.preloadImages(coverUrls, 2000)
 				} catch (err) {
-					console.error('初始化页面失败:', err)
+					console.error('[demoDetail] 初始化页面失败:', err)
+					uni.showToast({ title: '内容加载失败，请下拉刷新重试', icon: 'none' })
 					this.alltabs = []
 					this.loading = false
 				} finally {
@@ -477,8 +478,11 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 						this.albumNoMore = true
 					}
 				} catch (err) {
-					console.error('获取客片列表失败:', err)
-					if (page === 1) this.albumList = []
+					console.error('[demoDetail] 获取客片列表失败:', err)
+					if (page === 1) {
+						uni.showToast({ title: '内容加载失败，请下拉刷新重试', icon: 'none' })
+						this.albumList = []
+					}
 					this.albumNoMore = true
 				}
 			},
@@ -546,8 +550,8 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 						this.searchNoMore = true
 					}
 				} catch (err) {
-					console.error('搜索失败:', err)
-					uni.showToast({ title: '搜索失败', icon: 'none' })
+					console.error('[demoDetail] 搜索失败:', err)
+					uni.showToast({ title: '搜索出错了，请稍后再试', icon: 'none' })
 				} finally {
 					this.searchLoading = false
 				}
@@ -567,8 +571,8 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 				try {
 					await this.fetchAlbumList(nextPage)
 				} catch (err) {
-					console.error('加载更多客片失败:', err)
-					uni.showToast({ title: '加载失败', icon: 'none' })
+					console.error('[demoDetail] 加载更多客片失败:', err)
+					uni.showToast({ title: '加载更多失败，请重试', icon: 'none' })
 				} finally {
 					this.albumLoading = false
 				}
@@ -634,8 +638,8 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 						item.likeCount = res.data.likeCount
 					}
 				} catch (err) {
-					console.error('点赞失败:', err)
-					uni.showToast({ title: '操作失败', icon: 'none' })
+					console.error('[demoDetail] 点赞失败:', err)
+					uni.showToast({ title: '操作失败，请重试', icon: 'none' })
 				}
 			},
 			async doLogin() {
@@ -738,7 +742,7 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 
 					if (!result.ok) {
 						if (result.errorKind === 'login') {
-							uni.showToast({ title: '获取登录凭证失败', icon: 'none' })
+							uni.showToast({ title: '获取登录凭证失败，请重试', icon: 'none' })
 						} else {
 							uni.showToast({ title: result.errorMsg || '登录失败', icon: 'none' })
 						}

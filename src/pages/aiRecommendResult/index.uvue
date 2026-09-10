@@ -100,8 +100,8 @@ export default {
 					this.gender = 'female'
 				}
 			} catch (e) {
-				console.error('解析推荐结果失败:', e)
-				uni.showToast({ title: '结果解析失败', icon: 'none' })
+				console.error('[aiRecommendResult] 解析推荐结果失败:', e)
+				uni.showToast({ title: '结果解析失败，请重试', icon: 'none' })
 			}
 		}
 	},

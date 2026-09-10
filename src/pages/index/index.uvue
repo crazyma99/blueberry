@@ -320,7 +320,8 @@
 					})
 				}
 			} catch (err) {
-				console.warn('加载首页数据失败', err)
+				console.error('[index] 加载首页数据失败', err)
+				uni.showToast({ title: '首页加载失败，请下拉刷新', icon: 'none' })
 			} finally {
 				this.loading = false
 			}

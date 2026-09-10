@@ -46,7 +46,8 @@
 					})
 				}
 			} catch (err) {
-				console.warn('加载店铺列表失败', err)
+				console.error('[priceHomePage] 加载店铺列表失败', err)
+				uni.showToast({ title: '门店加载失败，请重试', icon: 'none' })
 			} finally {
 				this.loading = false
 			}
