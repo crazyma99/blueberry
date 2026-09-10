@@ -153,6 +153,9 @@ export default {
 			subCategory: '',
 			style: '',
 			gender: '',
+			// 分享落地：share_from 来源标记 + 预选模板 ID
+			shareFrom: '',
+			shareTemplateId: 0,
 			templates: [] as any[],
 			currentTemplateIndex: 0,		thumbCollapsed: false,   // 模板缩略图条折叠态（默认展开）
 			bodyType: 'slim',
@@ -228,6 +231,13 @@ export default {
 		}
 		if (options && options.gender) {
 			this.gender = String(options.gender)
+		}
+		// 分享落地：来源标记 + 预选模板（loadTemplates 完成后按 ID 定位）
+		if (options && options.share_from) {
+			this.shareFrom = String(options.share_from)
+		}
+		if (options && options.templateId) {
+			this.shareTemplateId = parseInt(String(options.templateId)) || 0
 		}
 		this.loadTemplates()
 	},
@@ -317,6 +327,16 @@ export default {
 				const res = await getAiTemplates(params)
 				if ((res.code === 0 || res.code === 200) && res.data) {
 					this.templates = res.data
+					// 分享落地：按 templateId 预选该套系模板（找不到则静默忽略，保持默认第一套）
+					if (this.shareTemplateId > 0) {
+						for (let i = 0; i < this.templates.length; i++) {
+							const t = this.templates[i]
+							if (t != null && t.id === this.shareTemplateId) {
+								this.currentTemplateIndex = i
+								break
+							}
+						}
+					}
 				}
 			} catch (err) {
 				console.error('加载模板失败:', err)

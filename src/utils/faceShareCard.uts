@@ -1,0 +1,200 @@
+/**
+ * 分享封面生成：端侧人脸检测 → 人脸居中 5:4 卡片（仅 MP-WEIXIN）
+ * 链路：wx.getImageInfo(本地路径+原图尺寸) → 离屏 2D canvas 取 RGBA 像素
+ *       → wx.createVKSession(face mode 2) + detectFace 取人脸框
+ *       → 按 5:4 算裁剪窗（人脸中心对齐 + 边界 clamp）
+ *       → 新离屏 canvas 750x600 裁剪出图 → canvasToTempFilePath 得本地临时图
+ * 降级链：人脸居中 → 中心裁剪 → resolve(null)（调用方回退 cosThumb 网络图）
+ * 注意：DevTools 模拟器不支持 VisionKit → 自动走中心裁剪；人脸效果须真机验证。
+ * 全部 wx 调用走 (wx as any)，任何异常静默降级，绝不让分享功能崩溃。
+ */
+
+export type FaceCardResult = {
+	imagePath: string
+}
+
+// #ifdef MP-WEIXIN
+
+const CARD_W = 750
+const CARD_H = 600
+const DETECT_MAX_DIM = 1024
+const VK_TIMEOUT_MS = 3000
+const MIN_FACE_RATIO = 0.02 // 人脸框面积占全图 <2% 视为噪声
+
+function getImageInfo(src: string): Promise<any> {
+	return new Promise<any>((resolve, reject) => {
+		;(wx as any).getImageInfo({
+			src,
+			success: (res: any) => resolve(res),
+			fail: (err: any) => reject(err)
+		})
+	})
+}
+
+function loadCanvasImage(canvas: any, src: string): Promise<any> {
+	return new Promise<any>((resolve, reject) => {
+		const img = (canvas as any).createImage()
+		;(img as any).onload = () => resolve(img)
+		;(img as any).onerror = (err: any) => reject(err)
+		;(img as any).src = src
+	})
+}
+
+function canvasToTempFilePath(canvas: any): Promise<any> {
+	return new Promise<any>((resolve, reject) => {
+		;(wx as any).canvasToTempFilePath({
+			canvas,
+			x: 0,
+			y: 0,
+			width: CARD_W,
+			height: CARD_H,
+			destWidth: CARD_W,
+			destHeight: CARD_H,
+			fileType: 'jpg',
+			quality: 0.85,
+			success: (res: any) => resolve(res),
+			fail: (err: any) => reject(err)
+		})
+	})
+}
+
+/**
+ * VKSession 静态图人脸检测：返回最大人脸 anchor（origin/size 归一化），
+ * 不可用/超时/未检出 → resolve(null)。
+ */
+function detectLargestFace(frameBuffer: ArrayBuffer, width: number, height: number): Promise<any> {
+	return new Promise<any>((resolve) => {
+		try {
+			if (typeof wx === 'undefined') { resolve(null); return }
+			let vkOk = (wx as any).canIUse != null ? (wx as any).canIUse('createVKSession') === true : false
+			if (vkOk && (wx as any).isVKSupport != null) {
+				try { vkOk = (wx as any).isVKSupport('v1') === true } catch (e) { vkOk = false }
+			}
+			if (!vkOk) { resolve(null); return }
+			const session = (wx as any).createVKSession({ track: { face: { mode: 2 } }, version: 'v1' })
+			if (session == null) { resolve(null); return }
+			let settled = false
+			let bestFace: any = null
+			const finish = (f: any) => {
+				if (settled) return
+				settled = true
+				resolve(f)
+			}
+			const handleAnchors = (anchors: any) => {
+				if (anchors == null || !Array.isArray(anchors)) return
+				let best: any = null
+				let bestArea = 0.0
+				for (let i = 0; i < anchors.length; i++) {
+					const a = anchors[i]
+					if (a == null) continue
+					if (a.type != null && a.type !== 3) continue
+					const ow = a.origin != null ? (a.origin.x as number) : 0
+					const oh = a.origin != null ? (a.origin.y as number) : 0
+					const sw = a.size != null ? (a.size.width as number) : 0
+					const sh = a.size != null ? (a.size.height as number) : 0
+					const area = sw * sh
+					if (area > bestArea) { bestArea = area; best = a }
+				}
+				if (best != null) finish(best)
+			}
+			try { session.on('updateAnchors', handleAnchors) } catch (e) {}
+			try { session.on('addAnchors', handleAnchors) } catch (e) {}
+			setTimeout(() => finish(null), VK_TIMEOUT_MS)
+			session.start((err: any) => {
+				if (err != null) { finish(null); return }
+				try {
+					session.detectFace({ frameBuffer, width, height, scoreThreshold: 0.8, sourceType: 1, modelModel: 1 })
+				} catch (e) {
+					finish(null)
+				}
+			})
+		} catch (e) {
+			resolve(null)
+		}
+	})
+}
+
+/** 5:4 裁剪窗：人脸中心对齐 + clamp；face=null 时中心裁剪。返回 [sx, sy, cropW, cropH] */
+function computeCrop(imgW: number, imgH: number, face: any): number[] {
+	let cropW = imgW
+	let cropH = imgW * 0.8
+	if (imgH * 1.25 < imgW) {
+		cropW = imgH * 1.25
+		cropH = imgH
+	}
+	let sx = 0.0
+	let sy = 0.0
+	if (face != null) {
+		const fx = (face.origin.x as number + (face.size.width as number) / 2) * imgW
+		const fy = (face.origin.y as number + (face.size.height as number) / 2) * imgH
+		sx = fx - cropW / 2
+		sy = fy - cropH / 2
+	} else {
+		sx = (imgW - cropW) / 2
+		sy = (imgH - cropH) / 2
+	}
+	if (sx < 0) sx = 0
+	if (sy < 0) sy = 0
+	if (sx + cropW > imgW) sx = imgW - cropW
+	if (sy + cropH > imgH) sy = imgH - cropH
+	return [Math.round(sx), Math.round(sy), Math.round(cropW), Math.round(cropH)]
+}
+
+/**
+ * 生成人脸居中 5:4 分享封面。成功返回 { imagePath }（本地临时图），任何失败返回 null。
+ */
+export function generateFaceCenteredCard(imageUrl: string): Promise<FaceCardResult | null> {
+	return new Promise<FaceCardResult | null>((resolve) => {
+		const run = async () => {
+			try {
+				if (typeof wx === 'undefined' || imageUrl === '') { resolve(null); return }
+				const info = await getImageInfo(imageUrl)
+				const imgW = info.width as number
+				const imgH = info.height as number
+				const localPath = info.path as string
+				if (imgW <= 0 || imgH <= 0 || localPath === '') { resolve(null); return }
+				// 检测降采样（与原服务端 DETECT_MAX_DIM=1024 同口径）
+				const scale = Math.min(1, DETECT_MAX_DIM / Math.max(imgW, imgH))
+				const dw = Math.round(imgW * scale)
+				const dh = Math.round(imgH * scale)
+				// 取 RGBA 像素
+				const detCanvas = (wx as any).createOffscreenCanvas({ type: '2d', width: dw, height: dh })
+				const detCtx = detCanvas.getContext('2d')
+				const detImg = await loadCanvasImage(detCanvas, localPath)
+				detCtx.drawImage(detImg, 0, 0, dw, dh)
+				const imgData = detCtx.getImageData(0, 0, dw, dh)
+				const frameBuffer = (imgData as any).data.buffer as ArrayBuffer
+				// 端侧人脸检测（不可用/未检出 → null → 中心裁剪）
+				let face: any = null
+				const anchor = await detectLargestFace(frameBuffer, dw, dh)
+				if (anchor != null) {
+					const sw = anchor.size != null ? (anchor.size.width as number) : 0
+					const sh = anchor.size != null ? (anchor.size.height as number) : 0
+					if (sw * sh >= MIN_FACE_RATIO) face = anchor
+				}
+				// 裁剪出 750x600 卡片
+				const crop = computeCrop(imgW, imgH, face)
+				const outCanvas = (wx as any).createOffscreenCanvas({ type: '2d', width: CARD_W, height: CARD_H })
+				const outCtx = outCanvas.getContext('2d')
+				const outImg = await loadCanvasImage(outCanvas, localPath)
+				outCtx.drawImage(outImg, crop[0], crop[1], crop[2], crop[3], 0, 0, CARD_W, CARD_H)
+				const tmp = await canvasToTempFilePath(outCanvas)
+				const p = tmp.tempFilePath as string
+				resolve(p !== '' ? { imagePath: p } : null)
+			} catch (e) {
+				resolve(null)
+			}
+		}
+		run()
+	})
+}
+
+// #endif
+
+// #ifndef MP-WEIXIN
+// 非微信端：无 VisionKit/离屏 canvas，直接返回空（调用方回退网络图）
+export function generateFaceCenteredCard(imageUrl: string): Promise<FaceCardResult | null> {
+	return new Promise<FaceCardResult | null>((resolve) => { resolve(null) })
+}
+// #endif
+

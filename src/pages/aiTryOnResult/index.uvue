@@ -41,6 +41,7 @@
 						<text class="save-btn-badge-text">{{ taskBought ? '已解锁 · 永久保存' : '限时免费 ' + creditBalance + ' 次' }}</text>
 					</view>
 				</view>
+				<button class="share-btn" open-type="share" hover-class="press-dim">分享</button>
 			</view>
 		</view>
 
@@ -71,6 +72,8 @@
 <script lang="uts">
 import { getAiTryOnResult, downloadAiTryOnResult, createCreditRecharge, getCreditRechargeStatus, getCreditBalance, getShops } from '../../utils/api.uts'
 import { isLoggedIn } from '../../utils/auth.uts'
+import { generateFaceCenteredCard } from '../../utils/faceShareCard.uts'
+import { cosThumb } from '../../utils/imageLoader.uts'
 
 export default {
 	data() {
@@ -93,7 +96,12 @@ export default {
 			creditLoaded: false,      // 是否已成功查询到余额
 			// 下载次数不足（4001）时的充值支付
 			isPaying: false,
-			payPollToken: 0      // 到账轮询会话标记，自增即失效
+			payPollToken: 0,      // 到账轮询会话标记，自增即失效
+			// 分享（人脸居中 5:4 封面卡片）
+			shareCardImage: '',
+			shareCardReady: false,
+			styleName: '',
+			templateId: 0
 		}
 	},
 	computed: {
@@ -136,6 +144,27 @@ export default {
 		this.payPollToken = this.payPollToken + 1
 		// 防截屏：离页恢复
 		this.disableCaptureProtection()
+	},
+	onShareAppMessage() : any {
+		// 分享卡片：相册名文案 + 人脸居中 5:4 合成图（未就绪回退网络图）+ 直达试衣页预选模板
+		const img = this.shareCardReady && this.shareCardImage !== '' ? this.shareCardImage : cosThumb(this.resultImageUrl, 400)
+		const style = this.styleName !== '' ? this.styleName : '新中式'
+		let path = '/pages/aiTryOn/index?share_from=tryon_result'
+		if (this.templateId > 0) path += `&templateId=${this.templateId}`
+		if (this.shopId !== '') path += `&shopId=${this.shopId}`
+		return {
+			title: `我也在蓝梅旅拍 AI 换装，试一下你「${style}」的样子`,
+			path,
+			imageUrl: img
+		}
+	},
+	onShareTimeline() : any {
+		const img = this.shareCardReady && this.shareCardImage !== '' ? this.shareCardImage : cosThumb(this.resultImageUrl, 400)
+		const style = this.styleName !== '' ? this.styleName : '新中式'
+		return {
+			title: `我也在蓝梅旅拍 AI 换装，试一下你「${style}」的样子`,
+			imageUrl: img
+		}
 	},
 	methods: {
 		// 防截屏防御：wx.setVisualEffectOnCapture(hidden)，基础库 ≥2.13.0 安卓/iOS 真机生效；条件编译仅打包微信端
@@ -205,6 +234,10 @@ export default {
 						this.status = 'completed'
 						// 更新导航栏标题（自定义导航栏）
 						this.navTitle = 'AI试衣结果'
+						this.styleName = res.data.style_name ?? ''
+						this.templateId = res.data.template_id != null ? (res.data.template_id as number) : 0
+						// 预生成分享封面（人脸居中 5:4；异步，未就绪时分享回退网络图）
+						this.prepareShareCard()
 					} else if (taskStatus === 'failed') {
 						this.stopPolling()
 						this.status = 'failed'
@@ -225,6 +258,28 @@ export default {
 				clearInterval(this.countdownTimer)
 				this.countdownTimer = null
 			}
+		},
+
+		// 分享封面预生成：端侧人脸检测 → 人脸居中 5:4 卡片；失败回退中心裁剪，再失败回退网络图
+		prepareShareCard() {
+			if (this.resultImageUrl === '' || this.shareCardReady) return
+			// #ifdef MP-WEIXIN
+			generateFaceCenteredCard(this.resultImageUrl).then((card) => {
+				if (card != null && card.imagePath !== '') {
+					this.shareCardImage = card.imagePath
+				} else {
+					this.shareCardImage = cosThumb(this.resultImageUrl, 400)
+				}
+				this.shareCardReady = true
+			}).catch(() => {
+				this.shareCardImage = cosThumb(this.resultImageUrl, 400)
+				this.shareCardReady = true
+			})
+			// #endif
+			// #ifndef MP-WEIXIN
+			this.shareCardImage = cosThumb(this.resultImageUrl, 400)
+			this.shareCardReady = true
+			// #endif
 		},
 
 		handleRetry() {
@@ -635,6 +690,24 @@ export default {
 	font-size: var(--font-size-body-plus);
 	color: #F3D9AC;
 	font-weight: 400;
+}
+/* 分享按钮（与保存按钮同规格，右邻排列） */
+.share-btn {
+	margin-left: 24rpx;
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: var(--radius-2xl);
+	padding: 24rpx 48rpx;
+	box-shadow: 0px 6px 20px 0px rgba(0, 0, 0, 0.16);
+	font-size: var(--font-size-body-plus);
+	color: #fff;
+	font-weight: 400;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+}
+.share-btn::after {
+	border: none;
 }
 
 /* 失败态 */
