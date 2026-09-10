@@ -18,7 +18,7 @@ export type FaceCardResult = {
 const CARD_W = 750
 const CARD_H = 600
 const DETECT_MAX_DIM = 1024
-const VK_TIMEOUT_MS = 3000
+const VK_TIMEOUT_MS = 10000 // 真机首次 VK 模型初始化较慢，3s 太短（2026-09-10 真机联调）
 const MIN_FACE_RATIO = 0.02 // 人脸框面积占全图 <2% 视为噪声
 
 function getImageInfo(src: string): Promise<any> {
@@ -101,13 +101,22 @@ function detectLargestFace(frameBuffer: ArrayBuffer, width: number, height: numb
 			console.log('[share-debug] anchors 事件 anchors.length=' + anchors.length)
 			try { session.on('updateAnchors', handleAnchors) } catch (e) {}
 			try { session.on('addAnchors', handleAnchors) } catch (e) {}
-			setTimeout(() => finish(null), VK_TIMEOUT_MS)
+			try { session.on('error', (err: any) => { console.log('[share-debug] VK error 事件=', JSON.stringify(err)) }) } catch (e) {}
+			setTimeout(() => {
+				if (!settled) {
+					console.log('[share-debug] VK 检测超时(' + VK_TIMEOUT_MS + 'ms) → 中心裁剪')
+					try { if ((session as any).destroy != null) (session as any).destroy() } catch (e) {}
+					finish(null)
+				}
+			}, VK_TIMEOUT_MS)
 			session.start((err: any) => {
 				if (err != null) { console.log('[share-debug] session.start 失败 err=' + JSON.stringify(err)); finish(null); return }
 				console.log('[share-debug] session.start ok → detectFace')
 				try {
 					session.detectFace({ frameBuffer, width, height, scoreThreshold: 0.8, sourceType: 1, modelModel: 1 })
+					console.log('[share-debug] detectFace 已调用，等待 updateAnchors...')
 				} catch (e) {
+					console.error('[share-debug] detectFace 调用异常=', e)
 					finish(null)
 				}
 			})
@@ -172,8 +181,9 @@ export function generateFaceCenteredCard(imageUrl: string): Promise<FaceCardResu
 				console.log('[share-debug] 像素就绪 dw=' + dw + ' dh=' + dh)
 				// 端侧人脸检测（不可用/未检出 → null → 中心裁剪）
 				let face: any = null
+				const t0 = Date.now()
 				const anchor = await detectLargestFace(frameBuffer, dw, dh)
-				console.log('[share-debug] 检测返回 anchor=' + (anchor != null))
+				console.log('[share-debug] 检测返回 anchor=' + (anchor != null) + ' 耗时ms=' + (Date.now() - t0))
 				if (anchor != null) {
 					const sw = anchor.size != null ? (anchor.size.width as number) : 0
 					const sh = anchor.size != null ? (anchor.size.height as number) : 0
