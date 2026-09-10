@@ -42,6 +42,7 @@
 					</view>
 				</view>
 				<button class="share-btn btn-secondary" open-type="share" hover-class="press-dim">分享</button>
+				<button class="share-btn btn-secondary" @click="shareToMoments" hover-class="press-dim">朋友圈</button>
 			</view>
 		</view>
 
@@ -335,6 +336,36 @@ export default {
 				path: this.buildSharePath(),
 				imageUrl: img
 			}
+		},
+
+		// 分享到朋友圈：调起微信官方图片分享弹窗（发送给朋友/朋友圈/收藏/下载；本地临时卡片图）
+		async shareToMoments() {
+			try {
+				await this.ensureShareCard()
+			} catch (e) {
+				console.error('[share-debug] shareToMoments ensure 异常=', e)
+			}
+			const path = this.shareCardImage
+			if (path === '') {
+				uni.showToast({ title: '分享图片准备中，请稍后再试', icon: 'none' })
+				return
+			}
+			// #ifdef MP-WEIXIN
+			if (typeof wx !== 'undefined' && (wx as any).showShareImageMenu != null) {
+				try {
+					(wx as any).showShareImageMenu({ path, needShowEntrance: true })
+					console.log('[share-debug] showShareImageMenu 已调起 path=' + path.substring(0, 40))
+				} catch (e) {
+					console.error('[share-debug] showShareImageMenu 异常=', e)
+					uni.showToast({ title: '请点击右上角菜单分享到朋友圈', icon: 'none' })
+				}
+			} else {
+				uni.showToast({ title: '请点击右上角菜单分享到朋友圈', icon: 'none' })
+			}
+			// #endif
+			// #ifndef MP-WEIXIN
+			uni.showToast({ title: '请点击右上角菜单分享到朋友圈', icon: 'none' })
+			// #endif
 		},
 
 		handleRetry() {
