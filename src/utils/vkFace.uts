@@ -1,6 +1,8 @@
 /**
  * vkFace — 微信 VisionKit 静态图人脸检测（共享模块）
- * 供 faceShareCard（分享封面）与 photoCheck（上传质量拦截）复用，避免 VK 代码三份拷贝。
+ * 供 faceShareCard（分享封面）与 photoCheck（上传质量拦截）复用。
+ * detectFaces：返回全部人脸 anchor 列表（静态图一次 detectFace 一次 updateAnchors）；
+ * detectLargestFace：返回面积最大的人脸 anchor；不可用/超时/未检出 → null / 空数组。
  */
 
 // #ifdef MP-WEIXIN
@@ -14,39 +16,33 @@ export function vkAvailable(): boolean {
 	return vkOk
 }
 
-/**
- * VKSession 静态图人脸检测：返回最大人脸 anchor（origin/size 归一化），
- * 不可用/超时/未检出 → resolve(null)。
- */
-export function detectLargestFace(frameBuffer: ArrayBuffer, width: number, height: number, timeoutMs: number = 10000): Promise<any> {
-	return new Promise<any>((resolve) => {
+/** 检测全部人脸：返回 face anchor 数组（origin/size 归一化）；不可用/超时 → [] */
+export function detectFaces(frameBuffer: ArrayBuffer, width: number, height: number, timeoutMs: number = 8000): Promise<any[]> {
+	return new Promise<any[]>((resolve) => {
 		try {
-			if (typeof wx === 'undefined') { resolve(null); return }
-			if (!vkAvailable()) { console.log('[vkFace] VK 不可用(旧微信/模拟器) → 返回 null'); resolve(null); return }
+			if (typeof wx === 'undefined') { resolve([]); return }
+			if (!vkAvailable()) { console.log('[vkFace] VK 不可用(旧微信/模拟器) → 返回 []'); resolve([]); return }
 			const session = (wx as any).createVKSession({ track: { face: { mode: 2 } }, version: 'v1' })
 			console.log('[vkFace] VKSession 已创建')
-			if (session == null) { console.log('[vkFace] createVKSession 返回 null'); resolve(null); return }
+			if (session == null) { console.log('[vkFace] createVKSession 返回 null'); resolve([]); return }
 			let settled = false
-			const finish = (f: any) => {
+			const finish = (faces: any[]) => {
 				if (settled) return
 				settled = true
-				resolve(f)
+				resolve(faces)
 			}
 			const handleAnchors = (anchors: any) => {
 				if (anchors == null || !Array.isArray(anchors)) return
 				console.log('[vkFace] anchors 事件 anchors.length=' + anchors.length)
-				let best: any = null
-				let bestArea = 0.0
+				const faces: any[] = []
 				for (let i = 0; i < anchors.length; i++) {
 					const a = anchors[i]
 					if (a == null) continue
 					if (a.type != null && a.type !== 3) continue
-					const sw = a.size != null ? (a.size.width as number) : 0
-					const sh = a.size != null ? (a.size.height as number) : 0
-					const area = sw * sh
-					if (area > bestArea) { bestArea = area; best = a }
+					faces.push(a)
 				}
-				if (best != null) finish(best)
+				// 静态图模式：一次 detectFace 触发一次 updateAnchors，拿到即结（含 0 张）
+				finish(faces)
 			}
 			try { session.on('updateAnchors', handleAnchors) } catch (e) { console.error('[vkFace] on(updateAnchors) 异常=', e) }
 			try { session.on('addAnchors', handleAnchors) } catch (e) { console.error('[vkFace] on(addAnchors) 异常=', e) }
@@ -55,31 +51,49 @@ export function detectLargestFace(frameBuffer: ArrayBuffer, width: number, heigh
 				if (!settled) {
 					console.log('[vkFace] VK 检测超时(' + timeoutMs + 'ms)')
 					try { if ((session as any).destroy != null) (session as any).destroy() } catch (e) {}
-					finish(null)
+					finish([])
 				}
 			}, timeoutMs)
 			session.start((err: any) => {
-				if (err != null) { console.log('[vkFace] session.start 失败 err=' + JSON.stringify(err)); finish(null); return }
+				if (err != null) { console.log('[vkFace] session.start 失败 err=' + JSON.stringify(err)); finish([]); return }
 				try {
 					session.detectFace({ frameBuffer, width, height, scoreThreshold: 0.8, sourceType: 1, modelModel: 1 })
 					console.log('[vkFace] detectFace 已调用，等待 updateAnchors...')
 				} catch (e) {
 					console.error('[vkFace] detectFace 调用异常=', e)
-					finish(null)
+					finish([])
 				}
 			})
 		} catch (e) {
-			console.error('[vkFace] detectLargestFace 整体异常=', e)
-			resolve(null)
+			console.error('[vkFace] detectFaces 整体异常=', e)
+			resolve([])
 		}
 	})
+}
+
+/** 面积最大的人脸 anchor；无 → null */
+export async function detectLargestFace(frameBuffer: ArrayBuffer, width: number, height: number, timeoutMs: number = 8000): Promise<any> {
+	const faces = await detectFaces(frameBuffer, width, height, timeoutMs)
+	let best: any = null
+	let bestArea = 0.0
+	for (let i = 0; i < faces.length; i++) {
+		const a = faces[i]
+		const sw = a.size != null ? (a.size.width as number) : 0
+		const sh = a.size != null ? (a.size.height as number) : 0
+		const area = sw * sh
+		if (area > bestArea) { bestArea = area; best = a }
+	}
+	return best
 }
 
 // #endif
 
 // #ifndef MP-WEIXIN
 export function vkAvailable(): boolean { return false }
-export function detectLargestFace(frameBuffer: ArrayBuffer, width: number, height: number, timeoutMs: number = 10000): Promise<any> {
+export function detectFaces(frameBuffer: ArrayBuffer, width: number, height: number, timeoutMs: number = 8000): Promise<any[]> {
+	return new Promise<any[]>((resolve) => { resolve([]) })
+}
+export function detectLargestFace(frameBuffer: ArrayBuffer, width: number, height: number, timeoutMs: number = 8000): Promise<any> {
 	return new Promise<any>((resolve) => { resolve(null) })
 }
 // #endif

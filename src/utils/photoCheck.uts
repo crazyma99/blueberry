@@ -9,7 +9,7 @@
  *   检测代码自身异常也放行上传，保证老用户/弱环境不受阻。
  */
 
-import { detectLargestFace, vkAvailable } from './vkFace'
+import { detectFaces, vkAvailable } from './vkFace'
 
 export type PhotoCheckResult = {
 	ok: boolean
@@ -105,14 +105,20 @@ export function checkUploadPhoto(filePath: string): Promise<PhotoCheckResult> {
 					rejectPhoto('照片有点模糊，请重新拍摄清晰的照片')
 					return
 				}
-				// ③ 人脸检出 + ④ 人脸占比
+				// ③ 人脸检出 ③b 人数==1 ④ 人脸占比（VK 超时 5s，实测正常 84ms）
 				if (vkAvailable()) {
 					const frameBuffer = (imgData as any).data.buffer as ArrayBuffer
-					const anchor = await detectLargestFace(frameBuffer, dw, dh, 8000)
-					if (anchor == null) {
+					const faces = await detectFaces(frameBuffer, dw, dh, 5000)
+					console.log('[photoCheck] 检出人脸个数=', faces.length)
+					if (faces.length === 0) {
 						rejectPhoto('未检测到人脸，请上传清晰的正面照片')
 						return
 					}
+					if (faces.length > 1) {
+						rejectPhoto('检测到多张人脸，请上传单人照片')
+						return
+					}
+					const anchor = faces[0]
 					const sw = anchor.size != null ? (anchor.size.width as number) : 0
 					const sh = anchor.size != null ? (anchor.size.height as number) : 0
 					const area = sw * sh
