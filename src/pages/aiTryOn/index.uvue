@@ -132,6 +132,7 @@
 
 <script lang="uts">
 import { getAiTemplates, uploadPhoto, submitAiTryOn, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
+import { setBrandId } from '../../utils/brand.uts'
 import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
@@ -238,6 +239,10 @@ export default {
 		}
 		if (options && options.templateId) {
 			this.shareTemplateId = parseInt(String(options.templateId)) || 0
+		}
+		// 分享落地：恢复品牌上下文（setBrandId 持久化 storage，后续请求自动带 X-Brand-Id）
+		if (options && options.brandId) {
+			setBrandId(String(options.brandId))
 		}
 		this.loadTemplates()
 	},
@@ -831,11 +836,14 @@ export default {
 }
 .thumb-scroll {
 	width: 100%;
-	white-space: nowrap;
+	height: 132rpx;
+	flex-direction: row;
 }
 .thumb-list {
+	flex-shrink: 0;
 	display: flex;
 	flex-direction: row;
+	align-items: center;
 	gap: var(--spacing-sm);
 	padding: var(--spacing-2xs) var(--spacing-sm) var(--spacing-sm);
 }

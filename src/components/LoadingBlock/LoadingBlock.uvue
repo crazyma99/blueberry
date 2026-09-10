@@ -1,0 +1,51 @@
+<!--
+  LoadingBlock — 通用加载组件（Design Token 驱动，品牌一致性）
+  视觉：金色旋转圈（--color-primary）+ 浅金文字（--color-primary-70）+ 圆角/字号全走 token
+  用法：<LoadingBlock text="正在准备分享…" />；text 为空串则不显示文字
+  easycom：components/LoadingBlock/LoadingBlock.uvue 自动注册，无需 import
+-->
+<template>
+	<view class="loading-block">
+		<view class="loading-spinner"></view>
+		<text v-if="text !== ''" class="loading-text">{{ text }}</text>
+	</view>
+</template>
+
+<script lang="uts">
+	export default {
+		name: 'LoadingBlock',
+		props: {
+			text: {
+				type: String,
+				default: '加载中…'
+			}
+		}
+	}
+</script>
+
+<style>
+.loading-block {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+.loading-spinner {
+	width: 80rpx;
+	height: 80rpx;
+	border: 6rpx solid var(--color-primary-20);
+	border-top-color: var(--color-primary);
+	border-radius: var(--radius-full);
+	animation: spin 1s linear infinite;
+}
+.loading-text {
+	margin-top: var(--spacing-md);
+	font-size: var(--font-size-body);
+	color: var(--color-primary-70);
+	font-weight: 400;
+}
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+</style>

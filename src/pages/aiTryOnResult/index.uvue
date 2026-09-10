@@ -70,8 +70,7 @@
 		<!-- 分享准备中 loading（点击分享后生成封面期间展示） -->
 		<view v-if="sharePreparing" class="share-preparing-mask">
 			<view class="share-preparing-card">
-				<view class="loading-spinner"></view>
-				<text class="share-preparing-text">正在准备分享…</text>
+				<LoadingBlock text="正在准备分享…" />
 			</view>
 		</view>
 	</view>
@@ -80,6 +79,7 @@
 <script lang="uts">
 import { getAiTryOnResult, downloadAiTryOnResult, createCreditRecharge, getCreditRechargeStatus, getCreditBalance, getShops } from '../../utils/api.uts'
 import { isLoggedIn } from '../../utils/auth.uts'
+import { getBrandId } from '../../utils/brand.uts'
 import { generateFaceCenteredCard } from '../../utils/faceShareCard.uts'
 import { cosThumb } from '../../utils/imageLoader.uts'
 
@@ -237,6 +237,9 @@ export default {
 						this.navTitle = 'AI试衣结果'
 						this.styleName = res.data.style_name ?? ''
 						this.shopName = res.data.shop_name ?? ''
+						if (this.shopId === '' && res.data.shop_id > 0) {
+							this.shopId = String(res.data.shop_id)
+						}
 						this.templateId = res.data.template_id != null ? (res.data.template_id as number) : 0
 					} else if (taskStatus === 'failed') {
 						this.stopPolling()
@@ -269,11 +272,13 @@ export default {
 			return `我也在蓝梅旅拍 AI 换装，试一下你「${style}」的样子`
 		},
 
-		// 分享落地路径：直达试衣页并预选该套系模板
+		// 分享落地路径：直达试衣页并预选该套系模板 + 品牌/门店完整上下文（行业方案：带参直达业务页）
 		buildSharePath() : string {
 			let path = '/pages/aiTryOn/index?share_from=tryon_result'
 			if (this.templateId > 0) path += `&templateId=${this.templateId}`
 			if (this.shopId !== '') path += `&shopId=${this.shopId}`
+			const brandId = getBrandId()
+			if (brandId !== '') path += `&brandId=${brandId}`
 			return path
 		},
 
