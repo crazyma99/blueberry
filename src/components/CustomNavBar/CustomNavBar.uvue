@@ -43,14 +43,18 @@ export default {
 	},
 	data() {
 		return {
-			statusBarHeight: 20,
-			showBack: false
+			statusBarHeight: 20
+		}
+	},
+	computed: {
+		// prop 晚到也响应：历史栈>1 或指定了返回兜底路由
+		showBack() : boolean {
+			return getCurrentPages().length > 1 || this.backFallbackUrl !== ''
 		}
 	},
 	created() {
 		const systemInfo = uni.getSystemInfoSync()
 		this.statusBarHeight = systemInfo.statusBarHeight != null ? systemInfo.statusBarHeight : 20
-		this.showBack = getCurrentPages().length > 1 || this.backFallbackUrl !== ''
 	},
 	methods: {
 		goBack() {

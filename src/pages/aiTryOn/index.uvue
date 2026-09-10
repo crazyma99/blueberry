@@ -249,12 +249,14 @@ export default {
 		// 分享落地：标题改为「相册探索更多AI试衣」，返回路由至该品牌+门店的相册list页
 		if (this.shareFrom !== '') {
 			this.navTitle = '相册探索更多AI试衣'
-			if (this.albumId !== '' && this.shopId !== '') {
-				let back = '/pages/demoDetail/index?idx=' + this.albumId + '&type=' + this.shopId
-				const brandId = getBrandId()
-				if (brandId !== '') back += '&brandId=' + brandId
-				this.backFallbackUrl = back
-			}
+			let back = '/pages/demoDetail/index'
+			const parts: string[] = []
+			if (this.albumId !== '') parts.push('idx=' + this.albumId)
+			if (this.shopId !== '') parts.push('type=' + this.shopId)
+			const brandId = getBrandId()
+			if (brandId !== '') parts.push('brandId=' + brandId)
+			if (parts.length > 0) back += '?' + parts.join('&')
+			this.backFallbackUrl = back
 		}
 		this.loadTemplates()
 	},
