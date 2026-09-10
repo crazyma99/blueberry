@@ -382,7 +382,12 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 					this.albumList = []
 					this.fetchAlbumList(1)
 				} else {
-					uni.navigateBack()
+					// 分享冷启动经 reLaunch 落地时本页是根页面（栈深=1），navigateBack 必失败 → 回首页
+					if (getCurrentPages().length > 1) {
+						uni.navigateBack()
+					} else {
+						uni.reLaunch({ url: '/pages/index/index' })
+					}
 				}
 			},
 			// ====== 图片预加载工具方法（转发至 utils/imageLoader） ======
