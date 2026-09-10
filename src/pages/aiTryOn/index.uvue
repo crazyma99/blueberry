@@ -132,7 +132,7 @@
 
 <script lang="uts">
 import { getAiTemplates, uploadPhoto, submitAiTryOn, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
-import { setBrandId, getBrandId } from '../../utils/brand.uts'
+import { setBrandId } from '../../utils/brand.uts'
 import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
@@ -247,16 +247,14 @@ export default {
 			setBrandId(String(options.brandId))
 		}
 		// 分享落地：标题改为「相册探索更多AI试衣」，返回路由至该品牌+门店的相册list页
+		// 注意：demoDetail 的 idx 参数 = 门店ID（首页/品牌馆入口同口径 ?from=banner&idx=shopId）；品牌上下文已由 setBrandId 持久化
 		if (this.shareFrom !== '') {
 			this.navTitle = '相册探索更多AI试衣'
-			let back = '/pages/demoDetail/index'
-			const parts: string[] = []
-			if (this.albumId !== '') parts.push('idx=' + this.albumId)
-			if (this.shopId !== '') parts.push('type=' + this.shopId)
-			const brandId = getBrandId()
-			if (brandId !== '') parts.push('brandId=' + brandId)
-			if (parts.length > 0) back += '?' + parts.join('&')
-			this.backFallbackUrl = back
+			if (this.shopId !== '') {
+				this.backFallbackUrl = '/pages/demoDetail/index?idx=' + this.shopId
+			} else {
+				this.backFallbackUrl = '/pages/demoDetail/index'
+			}
 		}
 		this.loadTemplates()
 	},
