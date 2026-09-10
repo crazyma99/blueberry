@@ -7,6 +7,7 @@ node_modules/
 # IDE 配置
 .vscode/
 .idea/
+platformConfig.json
 *.swp
 *.swo
 *~
