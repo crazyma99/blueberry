@@ -726,10 +726,22 @@ export default {
 	font-size: var(--font-size-body-xs);
 	color: #fff;
 }
-/* 分享按钮：全局 .btn-secondary 统一视觉，仅保留右邻间距/保底宽度与 button 默认边框消除 */
+/* 操作栏按钮：view 与 button 原生差异抹平——统一高度 92rpx（button 原生表单组件自带默认样式，不能只靠类名对齐） */
+.action-bar .btn-primary {
+	height: 92rpx;
+	box-sizing: border-box;
+}
+.action-bar .btn-primary text {
+	color: var(--color-bg);
+	font-size: 32rpx;
+	line-height: 1.2;
+}
 .share-btn {
 	margin: 0 0 0 24rpx;
 	min-width: 160rpx;
+	height: 92rpx;
+	line-height: 1;
+	box-sizing: border-box;
 }
 .share-btn::after {
 	border: none;
