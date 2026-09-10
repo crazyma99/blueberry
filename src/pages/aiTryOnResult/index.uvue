@@ -41,7 +41,7 @@
 						<text class="save-btn-badge-text">{{ taskBought ? '已解锁 · 永久保存' : '限时免费 ' + creditBalance + ' 次' }}</text>
 					</view>
 				</view>
-				<button class="share-btn btn-primary" open-type="share" hover-class="press-dim">分享</button>
+				<button class="share-btn btn-secondary" open-type="share" hover-class="press-dim">分享</button>
 			</view>
 		</view>
 
@@ -726,9 +726,10 @@ export default {
 	font-size: var(--font-size-body-xs);
 	color: #fff;
 }
-/* 分享按钮：全局 .btn-primary 统一视觉，仅保留右邻间距与 button 默认边框消除 */
+/* 分享按钮：全局 .btn-secondary 统一视觉，仅保留右邻间距/保底宽度与 button 默认边框消除 */
 .share-btn {
 	margin-left: 24rpx;
+	min-width: 160rpx;
 }
 .share-btn::after {
 	border: none;

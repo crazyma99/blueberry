@@ -159,6 +159,23 @@ page {
   transition: opacity 0.15s ease-out;
 }
 
+/* 金色次要按钮统一类（Phase4）：与 btn-primary 同尺寸，金描边+金文字+微底，操作栏次按钮用 */
+.btn-secondary {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 26rpx 40rpx;
+  font-size: 32rpx;
+  font-weight: 400;
+  color: var(--color-primary);
+  background: var(--color-primary-10);
+  border: 1rpx solid var(--color-primary-50);
+  border-radius: var(--radius-full);
+  transition: opacity 0.15s ease-out;
+}
+
 /* 全局过渡规范（Phase3）：快速反馈 150ms / 常规过渡 250ms / 图片渐显 */
 .transition-fast {
   transition: opacity 0.15s ease-out;
