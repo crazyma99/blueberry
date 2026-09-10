@@ -1,0 +1,85 @@
+/**
+ * vkFace — 微信 VisionKit 静态图人脸检测（共享模块）
+ * 供 faceShareCard（分享封面）与 photoCheck（上传质量拦截）复用，避免 VK 代码三份拷贝。
+ */
+
+// #ifdef MP-WEIXIN
+
+export function vkAvailable(): boolean {
+	if (typeof wx === 'undefined') return false
+	let vkOk = (wx as any).canIUse != null ? (wx as any).canIUse('createVKSession') === true : false
+	if (vkOk && (wx as any).isVKSupport != null) {
+		try { vkOk = (wx as any).isVKSupport('v1') === true } catch (e) { vkOk = false }
+	}
+	return vkOk
+}
+
+/**
+ * VKSession 静态图人脸检测：返回最大人脸 anchor（origin/size 归一化），
+ * 不可用/超时/未检出 → resolve(null)。
+ */
+export function detectLargestFace(frameBuffer: ArrayBuffer, width: number, height: number, timeoutMs: number = 10000): Promise<any> {
+	return new Promise<any>((resolve) => {
+		try {
+			if (typeof wx === 'undefined') { resolve(null); return }
+			if (!vkAvailable()) { console.log('[vkFace] VK 不可用(旧微信/模拟器) → 返回 null'); resolve(null); return }
+			const session = (wx as any).createVKSession({ track: { face: { mode: 2 } }, version: 'v1' })
+			console.log('[vkFace] VKSession 已创建')
+			if (session == null) { console.log('[vkFace] createVKSession 返回 null'); resolve(null); return }
+			let settled = false
+			const finish = (f: any) => {
+				if (settled) return
+				settled = true
+				resolve(f)
+			}
+			const handleAnchors = (anchors: any) => {
+				if (anchors == null || !Array.isArray(anchors)) return
+				console.log('[vkFace] anchors 事件 anchors.length=' + anchors.length)
+				let best: any = null
+				let bestArea = 0.0
+				for (let i = 0; i < anchors.length; i++) {
+					const a = anchors[i]
+					if (a == null) continue
+					if (a.type != null && a.type !== 3) continue
+					const sw = a.size != null ? (a.size.width as number) : 0
+					const sh = a.size != null ? (a.size.height as number) : 0
+					const area = sw * sh
+					if (area > bestArea) { bestArea = area; best = a }
+				}
+				if (best != null) finish(best)
+			}
+			try { session.on('updateAnchors', handleAnchors) } catch (e) { console.error('[vkFace] on(updateAnchors) 异常=', e) }
+			try { session.on('addAnchors', handleAnchors) } catch (e) { console.error('[vkFace] on(addAnchors) 异常=', e) }
+			try { session.on('error', (err: any) => { console.log('[vkFace] VK error 事件=', JSON.stringify(err)) }) } catch (e) { console.error('[vkFace] on(error) 异常=', e) }
+			setTimeout(() => {
+				if (!settled) {
+					console.log('[vkFace] VK 检测超时(' + timeoutMs + 'ms)')
+					try { if ((session as any).destroy != null) (session as any).destroy() } catch (e) {}
+					finish(null)
+				}
+			}, timeoutMs)
+			session.start((err: any) => {
+				if (err != null) { console.log('[vkFace] session.start 失败 err=' + JSON.stringify(err)); finish(null); return }
+				try {
+					session.detectFace({ frameBuffer, width, height, scoreThreshold: 0.8, sourceType: 1, modelModel: 1 })
+					console.log('[vkFace] detectFace 已调用，等待 updateAnchors...')
+				} catch (e) {
+					console.error('[vkFace] detectFace 调用异常=', e)
+					finish(null)
+				}
+			})
+		} catch (e) {
+			console.error('[vkFace] detectLargestFace 整体异常=', e)
+			resolve(null)
+		}
+	})
+}
+
+// #endif
+
+// #ifndef MP-WEIXIN
+export function vkAvailable(): boolean { return false }
+export function detectLargestFace(frameBuffer: ArrayBuffer, width: number, height: number, timeoutMs: number = 10000): Promise<any> {
+	return new Promise<any>((resolve) => { resolve(null) })
+}
+// #endif

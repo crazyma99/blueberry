@@ -1,0 +1,147 @@
+/**
+ * photoCheck — 上传照片质量拦截（前端级，wx VK 人脸检测）
+ * 检查顺序（短路）:
+ *   ① 分辨率：短边 ≥ PHOTO_MIN_SIDE(480px)
+ *   ② 模糊：降采样 ≤256px 灰度图拉普拉斯方差 < PHOTO_BLUR_THRESHOLD(100) 判模糊
+ *   ③ 人脸检出：VK detectLargestFace 无 anchor 判未检出
+ *   ④ 人脸占比：anchor 面积 ∈ [2%, 65%]（过小=离太远，过大=离太近）
+ * 失败策略（fail-open）：VK 不可用（模拟器/旧微信）跳过③④仅打日志；
+ *   检测代码自身异常也放行上传，保证老用户/弱环境不受阻。
+ */
+
+import { detectLargestFace, vkAvailable } from './vkFace'
+
+export type PhotoCheckResult = {
+	ok: boolean
+	reason: string
+}
+
+export const PHOTO_MIN_SIDE = 480
+export const PHOTO_BLUR_THRESHOLD = 100
+export const PHOTO_FACE_AREA_MIN = 0.02
+export const PHOTO_FACE_AREA_MAX = 0.65
+
+// #ifdef MP-WEIXIN
+
+function getImageInfo(src: string): Promise<any> {
+	return new Promise<any>((resolve, reject) => {
+		;(wx as any).getImageInfo({
+			src,
+			success: (res: any) => resolve(res),
+			fail: (err: any) => reject(err)
+		})
+	})
+}
+
+function loadCanvasImage(canvas: any, src: string): Promise<any> {
+	return new Promise<any>((resolve, reject) => {
+		const img = (canvas as any).createImage()
+		;(img as any).onload = () => resolve(img)
+		;(img as any).onerror = (err: any) => reject(err)
+		;(img as any).src = src
+	})
+}
+
+/** 灰度图拉普拉斯方差：经典清晰度指标，方差小=边缘弱=模糊 */
+function laplacianVariance(gray: number[], w: number, h: number): number {
+	let sum = 0.0
+	let sumSq = 0.0
+	let n = 0
+	for (let y = 1; y < h - 1; y++) {
+		for (let x = 1; x < w - 1; x++) {
+			const i = y * w + x
+			const lap = 4 * gray[i] - gray[i - 1] - gray[i + 1] - gray[i - w] - gray[i + w]
+			sum += lap
+			sumSq += lap * lap
+			n++
+		}
+	}
+	if (n === 0) return 0
+	const mean = sum / n
+	return sumSq / n - mean * mean
+}
+
+/**
+ * 上传照片质量拦截：通过 {ok:true}；不通过 {ok:false, reason: 人性化原因}。
+ */
+export function checkUploadPhoto(filePath: string): Promise<PhotoCheckResult> {
+	return new Promise<PhotoCheckResult>((resolve) => {
+		const rejectPhoto = (reason: string) => {
+			console.log('[photoCheck] 拦截：' + reason)
+			resolve({ ok: false, reason })
+		}
+		const run = async () => {
+			try {
+				if (typeof wx === 'undefined') { resolve({ ok: true, reason: '' }); return }
+				// ① 分辨率
+				const info = await getImageInfo(filePath)
+				const w = info.width as number
+				const h = info.height as number
+				console.log('[photoCheck] 图片尺寸 w=' + w + ' h=' + h)
+				if (w > 0 && h > 0 && (w < PHOTO_MIN_SIDE || h < PHOTO_MIN_SIDE)) {
+					rejectPhoto('照片分辨率过低，请上传更清晰的照片（最短边不低于 ' + PHOTO_MIN_SIDE + ' 像素）')
+					return
+				}
+				// ② 模糊
+				const scale = Math.min(1, 256 / Math.max(w, h))
+				const dw = Math.max(64, Math.round(w * scale))
+				const dh = Math.max(64, Math.round(h * scale))
+				const canvas = (wx as any).createOffscreenCanvas({ type: '2d', width: dw, height: dh })
+				const ctx = canvas.getContext('2d')
+				const img = await loadCanvasImage(canvas, filePath)
+				ctx.drawImage(img, 0, 0, dw, dh)
+				const imgData = ctx.getImageData(0, 0, dw, dh)
+				const px = imgData.data as any
+				const gray: number[] = []
+				for (let i = 0; i < dw * dh; i++) {
+					const r = px[i * 4] as number
+					const g = px[i * 4 + 1] as number
+					const b = px[i * 4 + 2] as number
+					gray.push(0.299 * r + 0.587 * g + 0.114 * b)
+				}
+				const variance = laplacianVariance(gray, dw, dh)
+				console.log('[photoCheck] 拉普拉斯方差=', variance)
+				if (variance < PHOTO_BLUR_THRESHOLD) {
+					rejectPhoto('照片有点模糊，请重新拍摄清晰的照片')
+					return
+				}
+				// ③ 人脸检出 + ④ 人脸占比
+				if (vkAvailable()) {
+					const frameBuffer = (imgData as any).data.buffer as ArrayBuffer
+					const anchor = await detectLargestFace(frameBuffer, dw, dh, 8000)
+					if (anchor == null) {
+						rejectPhoto('未检测到人脸，请上传清晰的正面照片')
+						return
+					}
+					const sw = anchor.size != null ? (anchor.size.width as number) : 0
+					const sh = anchor.size != null ? (anchor.size.height as number) : 0
+					const area = sw * sh
+					console.log('[photoCheck] 人脸占比=', area)
+					if (area < PHOTO_FACE_AREA_MIN) {
+						rejectPhoto('人脸在照片中占比太小，请靠近一些或裁剪后上传')
+						return
+					}
+					if (area > PHOTO_FACE_AREA_MAX) {
+						rejectPhoto('人脸占照片比例过大，请适当拉远距离后拍摄')
+						return
+					}
+				} else {
+					console.log('[photoCheck] VK 不可用（模拟器/旧微信）→ 跳过人脸检查')
+				}
+				resolve({ ok: true, reason: '' })
+			} catch (e) {
+				console.error('[photoCheck] 检测异常，放行上传:', e)
+				resolve({ ok: true, reason: '' })
+			}
+		}
+		run()
+	})
+}
+
+// #endif
+
+// #ifndef MP-WEIXIN
+export function checkUploadPhoto(filePath: string): Promise<PhotoCheckResult> {
+	return new Promise<PhotoCheckResult>((resolve) => { resolve({ ok: true, reason: '' }) })
+}
+// #endif

@@ -9,6 +9,8 @@
  * 全部 wx 调用走 (wx as any)，任何异常静默降级，绝不让分享功能崩溃。
  */
 
+import { detectLargestFace } from './vkFace'
+
 export type FaceCardResult = {
 	imagePath: string
 }
@@ -55,75 +57,6 @@ function canvasToTempFilePath(canvas: any): Promise<any> {
 			success: (res: any) => resolve(res),
 			fail: (err: any) => reject(err)
 		})
-	})
-}
-
-/**
- * VKSession 静态图人脸检测：返回最大人脸 anchor（origin/size 归一化），
- * 不可用/超时/未检出 → resolve(null)。
- */
-function detectLargestFace(frameBuffer: ArrayBuffer, width: number, height: number): Promise<any> {
-	return new Promise<any>((resolve) => {
-		try {
-			if (typeof wx === 'undefined') { resolve(null); return }
-			let vkOk = (wx as any).canIUse != null ? (wx as any).canIUse('createVKSession') === true : false
-			if (vkOk && (wx as any).isVKSupport != null) {
-				try { vkOk = (wx as any).isVKSupport('v1') === true } catch (e) { vkOk = false }
-			}
-			if (!vkOk) { console.log('[share-debug] VK 不可用(旧微信/模拟器) → 中心裁剪'); resolve(null); return }
-			const session = (wx as any).createVKSession({ track: { face: { mode: 2 } }, version: 'v1' })
-			console.log('[share-debug] VKSession 已创建')
-			if (session == null) { console.log('[share-debug] createVKSession 返回 null → 中心裁剪'); resolve(null); return }
-			let settled = false
-			let bestFace: any = null
-			const finish = (f: any) => {
-				if (settled) return
-				settled = true
-				resolve(f)
-			}
-			const handleAnchors = (anchors: any) => {
-				if (anchors == null || !Array.isArray(anchors)) return
-				console.log('[share-debug] anchors 事件 anchors.length=' + anchors.length)
-				let best: any = null
-				let bestArea = 0.0
-				for (let i = 0; i < anchors.length; i++) {
-					const a = anchors[i]
-					if (a == null) continue
-					if (a.type != null && a.type !== 3) continue
-					const ow = a.origin != null ? (a.origin.x as number) : 0
-					const oh = a.origin != null ? (a.origin.y as number) : 0
-					const sw = a.size != null ? (a.size.width as number) : 0
-					const sh = a.size != null ? (a.size.height as number) : 0
-					const area = sw * sh
-					if (area > bestArea) { bestArea = area; best = a }
-				}
-				if (best != null) finish(best)
-			}
-			try { session.on('updateAnchors', handleAnchors) } catch (e) { console.error('[share-debug] on(updateAnchors) 异常=', e) }
-			try { session.on('addAnchors', handleAnchors) } catch (e) { console.error('[share-debug] on(addAnchors) 异常=', e) }
-			try { session.on('error', (err: any) => { console.log('[share-debug] VK error 事件=', JSON.stringify(err)) }) } catch (e) { console.error('[share-debug] on(error) 异常=', e) }
-			setTimeout(() => {
-				if (!settled) {
-					console.log('[share-debug] VK 检测超时(' + VK_TIMEOUT_MS + 'ms) → 中心裁剪')
-					try { if ((session as any).destroy != null) (session as any).destroy() } catch (e) {}
-					finish(null)
-				}
-			}, VK_TIMEOUT_MS)
-			session.start((err: any) => {
-				if (err != null) { console.log('[share-debug] session.start 失败 err=' + JSON.stringify(err)); finish(null); return }
-				console.log('[share-debug] session.start ok → detectFace')
-				try {
-					session.detectFace({ frameBuffer, width, height, scoreThreshold: 0.8, sourceType: 1, modelModel: 1 })
-					console.log('[share-debug] detectFace 已调用，等待 updateAnchors...')
-				} catch (e) {
-					console.error('[share-debug] detectFace 调用异常=', e)
-					finish(null)
-				}
-			})
-		} catch (e) {
-			console.error('[share-debug] detectLargestFace 整体异常=', e)
-			resolve(null)
-		}
 	})
 }
 
@@ -183,7 +116,7 @@ export function generateFaceCenteredCard(imageUrl: string): Promise<FaceCardResu
 				// 端侧人脸检测（不可用/未检出 → null → 中心裁剪）
 				let face: any = null
 				const t0 = Date.now()
-				const anchor = await detectLargestFace(frameBuffer, dw, dh)
+				const anchor = await detectLargestFace(frameBuffer, dw, dh, VK_TIMEOUT_MS)
 				console.log('[share-debug] 检测返回 anchor=' + (anchor != null) + ' 耗时ms=' + (Date.now() - t0))
 				if (anchor != null) {
 					const sw = anchor.size != null ? (anchor.size.width as number) : 0

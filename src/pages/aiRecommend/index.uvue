@@ -75,6 +75,7 @@
 
 <script lang="uts">
 import { uploadPhoto, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus, getShops } from '../../utils/api.uts'
+import { checkUploadPhoto } from '../../utils/photoCheck.uts'
 import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
@@ -187,11 +188,34 @@ export default {
 						uni.showToast({ title: '照片大小不能超过10MB', icon: 'none' })
 						return
 					}
-					this.photoPath = res.tempFilePaths[0]
-					this.photoPreviewUrl = res.tempFilePaths[0]
-					this.uploadedFilename = ''
+					// 前端质量拦截（分辨率/模糊/VK人脸/人脸占比）
+					this.checkAndAcceptPhoto(res.tempFilePaths[0])
 				}
 			})
+		},
+
+		// 照片质量拦截：未通过时弹窗告知重新上传
+		async checkAndAcceptPhoto(filePath: string) {
+			uni.showLoading({ title: '照片检测中...', mask: true })
+			let chk = { ok: true, reason: '' }
+			try {
+				chk = await checkUploadPhoto(filePath)
+			} catch (e) {
+				console.error('[aiRecommend] 照片检测异常（放行）:', e)
+			}
+			uni.hideLoading()
+			if (!chk.ok) {
+				uni.showModal({
+					title: '照片未通过检测',
+					content: chk.reason + '，请重新上传',
+					showCancel: false,
+					confirmText: '知道了'
+				})
+				return
+			}
+			this.photoPath = filePath
+			this.photoPreviewUrl = filePath
+			this.uploadedFilename = ''
 		},
 
 		async handleStartAnalysis() {
