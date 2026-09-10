@@ -111,6 +111,7 @@ export default {
 			sharePreparing: false,   // 点击分享后生成封面中（UI 展示 loading+正在准备分享）
 			styleName: '',
 			shopName: '',
+			albumId: '',
 			templateId: 0
 		}
 	},
@@ -240,6 +241,9 @@ export default {
 						if (this.shopId === '' && res.data.shop_id > 0) {
 							this.shopId = String(res.data.shop_id)
 						}
+						if (res.data.album_id > 0) {
+							this.albumId = String(res.data.album_id)
+						}
 						this.templateId = res.data.template_id != null ? (res.data.template_id as number) : 0
 					} else if (taskStatus === 'failed') {
 						this.stopPolling()
@@ -277,6 +281,7 @@ export default {
 			let path = '/pages/aiTryOn/index?share_from=tryon_result'
 			if (this.templateId > 0) path += `&templateId=${this.templateId}`
 			if (this.shopId !== '') path += `&shopId=${this.shopId}`
+			if (this.albumId !== '') path += `&albumId=${this.albumId}`
 			const brandId = getBrandId()
 			if (brandId !== '') path += `&brandId=${brandId}`
 			return path

@@ -565,9 +565,10 @@ export const getAiTryOnResult = async (taskId: string) => {
       error_message: string
       template_image_url: string
       style_name: string
-      // 分享落地所需：任务所属门店（门店名写入分享文案，2026-09-10）
+      // 分享落地所需：任务所属门店 + 来源相册（2026-09-10）
       shop_id: number
       shop_name: string
+      album_id: number
       category: string
       created_at: string
       updated_at: string

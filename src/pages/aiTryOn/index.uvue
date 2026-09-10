@@ -1,6 +1,6 @@
 <template>
 	<view class="page">
-		<CustomNavBar title="AI试衣" />
+		<CustomNavBar :title="navTitle" :back-fallback-url="backFallbackUrl" />
 		<!-- 提示文案 -->
 		<view class="tip-bar">
 			<text class="tip-text">左右横向滑动支持切换模板</text>
@@ -132,7 +132,7 @@
 
 <script lang="uts">
 import { getAiTemplates, uploadPhoto, submitAiTryOn, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
-import { setBrandId } from '../../utils/brand.uts'
+import { setBrandId, getBrandId } from '../../utils/brand.uts'
 import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
@@ -154,9 +154,11 @@ export default {
 			subCategory: '',
 			style: '',
 			gender: '',
-			// 分享落地：share_from 来源标记 + 预选模板 ID
+			// 分享落地：share_from 来源标记 + 预选模板 ID + 落地标题/返回路由
 			shareFrom: '',
 			shareTemplateId: 0,
+			navTitle: 'AI试衣',
+			backFallbackUrl: '',
 			templates: [] as any[],
 			currentTemplateIndex: 0,		thumbCollapsed: false,   // 模板缩略图条折叠态（默认展开）
 			bodyType: 'slim',
@@ -243,6 +245,16 @@ export default {
 		// 分享落地：恢复品牌上下文（setBrandId 持久化 storage，后续请求自动带 X-Brand-Id）
 		if (options && options.brandId) {
 			setBrandId(String(options.brandId))
+		}
+		// 分享落地：标题改为「相册探索更多AI试衣」，返回路由至该品牌+门店的相册list页
+		if (this.shareFrom !== '') {
+			this.navTitle = '相册探索更多AI试衣'
+			if (this.albumId !== '' && this.shopId !== '') {
+				let back = '/pages/demoDetail/index?idx=' + this.albumId + '&type=' + this.shopId
+				const brandId = getBrandId()
+				if (brandId !== '') back += '&brandId=' + brandId
+				this.backFallbackUrl = back
+			}
 		}
 		this.loadTemplates()
 	},

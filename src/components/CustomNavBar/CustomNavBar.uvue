@@ -34,6 +34,11 @@ export default {
 		transparent: {
 			type: Boolean,
 			default: false
+		},
+		// 无历史栈（如分享冷启动）时也显示返回按钮；点击回该 URL（缺省回首页）
+		backFallbackUrl: {
+			type: String,
+			default: ''
 		}
 	},
 	data() {
@@ -45,11 +50,17 @@ export default {
 	created() {
 		const systemInfo = uni.getSystemInfoSync()
 		this.statusBarHeight = systemInfo.statusBarHeight != null ? systemInfo.statusBarHeight : 20
-		this.showBack = getCurrentPages().length > 1
+		this.showBack = getCurrentPages().length > 1 || this.backFallbackUrl !== ''
 	},
 	methods: {
 		goBack() {
-			uni.navigateBack()
+			if (getCurrentPages().length > 1) {
+				uni.navigateBack()
+			} else if (this.backFallbackUrl !== '') {
+				uni.reLaunch({ url: this.backFallbackUrl })
+			} else {
+				uni.reLaunch({ url: '/pages/index/index' })
+			}
 		}
 	}
 }
