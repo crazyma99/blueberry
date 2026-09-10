@@ -6,8 +6,9 @@
 		<view v-if="status === 'processing'" class="center-content">
 			<view class="loading-wrapper">
 				<view class="loading-spinner"></view>
-				<text class="loading-tip">正在生成中，生成需要3分钟左右，您可以在历史记录页查看哦</text>
+				<text class="loading-tip">正在后台为你生成，完成后会通过微信服务通知提醒你</text>
 				<text class="elapsed-text" v-if="elapsedSeconds > 0">已等待 {{ elapsedSeconds }} 秒</text>
+				<view class="browse-btn btn-secondary" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他相册</view>
 			</view>
 		</view>
 
@@ -278,6 +279,15 @@ export default {
 			if (this.countdownTimer != null) {
 				clearInterval(this.countdownTimer)
 				this.countdownTimer = null
+			}
+		},
+
+		// 生成等待中：逛逛其他相册 → 跳到该门店相册列表页
+		goBrowseAlbums() {
+			if (this.shopId !== '') {
+				uni.navigateTo({ url: '/pages/demoDetail/index?idx=' + this.shopId })
+			} else {
+				uni.navigateTo({ url: '/pages/demoDetail/index' })
 			}
 		},
 
@@ -698,6 +708,9 @@ export default {
 	font-size: var(--font-size-body);
 	color: rgba(255, 255, 255, 0.4);
 	margin-top: 24rpx;
+}
+.browse-btn {
+	margin-top: 48rpx;
 }
 
 /* 成功态 */

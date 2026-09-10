@@ -418,7 +418,8 @@ export default {
 		},
 
 		// 订阅消息授权（一次性订阅：授权一次可推一条；须在点击事件内直接调用）
-		requestTaskNotify() {
+		// onDone：授权弹窗关闭后回调（接受/拒绝/异常都继续，不影响试衣）
+		requestTaskNotify(onDone: () => void) {
 			// #ifdef MP-WEIXIN
 			if (typeof wx !== 'undefined' && (wx as any).requestSubscribeMessage != null) {
 				try {
@@ -429,13 +430,18 @@ export default {
 						},
 						fail: (err: any) => {
 							console.log('[aiTryOn] 订阅授权失败(忽略，不影响试衣)=', JSON.stringify(err))
+						},
+						complete: () => {
+							onDone()
 						}
 					})
+					return
 				} catch (e) {
 					console.error('[aiTryOn] 订阅授权异常=', e)
 				}
 			}
 			// #endif
+			onDone()
 		},
 
 		// 照片质量拦截：未通过时弹窗告知重新上传；通过后入库并立即上传
@@ -488,10 +494,15 @@ export default {
 		},
 
 
-		async handleGenerate() {
-			console.log('[aiTryOn] handleGenerate 点击 | isSubmitting=', this.isSubmitting, '| isUploading=', this.isUploading, '| uploadedFilename=', this.uploadedFilename, '| shopId=', this.shopId, '| templates=', this.templates.length, '| creditLoaded=', this.creditLoaded, '| creditBalance=', this.creditBalance, '| priceFen=', this.priceFenPerCredit)
-			// 订阅消息授权：生成完成后微信主动推送「生成成功」（拒绝授权不影响试衣）
-			this.requestTaskNotify()
+		handleGenerate() {
+			// 订阅授权先弹、等其关闭后再继续提交流程（与支付弹窗串行，避免两个弹窗重叠）
+			this.requestTaskNotify(() => {
+				this.runSubmitFlow()
+			})
+		},
+
+		async runSubmitFlow() {
+			console.log('[aiTryOn] runSubmitFlow | isSubmitting=', this.isSubmitting, '| isUploading=', this.isUploading, '| uploadedFilename=', this.uploadedFilename, '| shopId=', this.shopId, '| templates=', this.templates.length, '| creditLoaded=', this.creditLoaded, '| creditBalance=', this.creditBalance, '| priceFen=', this.priceFenPerCredit)
 			if (this.isSubmitting) return
 
 			// 检查登录态
