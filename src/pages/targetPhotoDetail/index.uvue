@@ -1,21 +1,15 @@
 <template>
 	<view class="page">
-		<!-- 自定义导航栏：返回按钮 + 客片欣赏/DETAILS + 装饰线 -->
-		<view class="custom-nav">
-			<view :style="{height: statusBarHeight + 'px'}"></view>
-			<view class="nav-content">
-				<image class="back-btn" src="/static/back-arrow.svg" mode="aspectFit" @click="goBack"></image>
-				<view class="nav-center">
-					<view class="title-group">
-						<view class="cn font-noto-serif">客片欣赏</view>
-						<view class="en">DETAILS</view>
-					</view>
-					<image src="/static/category-title-line.png" class="line" mode="aspectFill"/>
+		<!-- 顶栏：统一 CustomNavBar（slot 放标题组） -->
+		<CustomNavBar>
+			<view class="nav-center">
+				<view class="title-group">
+					<view class="cn font-noto-serif">客片欣赏</view>
+					<view class="en">DETAILS</view>
 				</view>
+				<image src="/static/category-title-line.png" class="line" mode="aspectFill"/>
 			</view>
-		</view>
-		<!-- 状态栏+导航栏占位 -->
-		<view :style="{height: (statusBarHeight + 44) + 'px'}"></view>
+		</CustomNavBar>
 		<!-- 骨架屏：与真实页面 1:1 镜像（标题卡=标题+云朵/价格行/套餐行/收藏 复用真实容器；详情图区同 padding 同图间距） -->
 		<view v-if="loading" class="sk-container" style="padding: 0;">
 			<view class="title">
@@ -143,7 +137,6 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 		data() {
 			return {
 				loading: true,
-				statusBarHeight: 20,
 				liked: false,
 				likeCount: 0,
 				detail: null,
@@ -172,8 +165,6 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 			}
 		},
 		onLoad(query) {
-			const systemInfo = uni.getSystemInfoSync()
-			this.statusBarHeight = systemInfo.statusBarHeight || 20
 			const id = query?.idx ?? ''
 			const type = query?.type ?? ''
 			this.albumId = id
@@ -205,9 +196,6 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 				return idx === 0 ? url : cosThumb(url, 750)
 			},
 			// 标题栏返回按钮
-			goBack() {
-				uni.navigateBack()
-			},
 			// 分享卡片解析：品牌配置 > 中台全局 > 代码默认（{brand} 占位符自动替换品牌名）
 			async loadShareCard() {
 				try {
@@ -442,26 +430,6 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 	flex-direction: column;
 }
 /* 自定义导航栏 */
-.custom-nav {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	background: var(--color-bg);
-	z-index: 100;
-}
-.nav-content {
-	height: 44px;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	padding: 0 18rpx;
-}
-.back-btn {
-	width: 48rpx;
-	height: 48rpx;
-	padding: var(--spacing-xs);
-}
 .nav-center {
 	flex: 1;
 	display: flex;

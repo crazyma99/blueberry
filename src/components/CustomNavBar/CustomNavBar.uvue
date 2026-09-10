@@ -13,10 +13,14 @@
 	<view :class="transparent ? 'custom-navbar custom-navbar-transparent' : 'custom-navbar'">
 		<view :style="{ height: statusBarHeight + 'px' }"></view>
 		<view class="custom-navbar-content">
-			<view v-if="showBack" class="custom-navbar-back" @click="goBack">
+			<view v-if="showBack" class="custom-navbar-back" @click="onBackTap">
 				<image class="custom-navbar-back-icon" src="/static/back-arrow.svg" mode="aspectFit"></image>
 			</view>
-			<text v-if="!transparent" class="custom-navbar-title">{{ title }}</text>
+			<text v-if="title !== ''" class="custom-navbar-title">{{ title }}</text>
+			<!-- 默认插槽：页面自定顶栏内容（搜索框/标题组等），统一顶栏实现收敛于此 -->
+			<view class="custom-navbar-slot">
+				<slot />
+			</view>
 		</view>
 	</view>
 	<!-- 占位：撑开被 fixed 导航栏遮住的高度（transparent 模式同样保留，避免内容顶到状态栏） -->
@@ -39,6 +43,11 @@ export default {
 		backFallbackUrl: {
 			type: String,
 			default: ''
+		},
+		// 返回点击改由页面处理（组件只 emit back，如搜索框清空逻辑）
+		manualBack: {
+			type: Boolean,
+			default: false
 		}
 	},
 	data() {
@@ -57,6 +66,13 @@ export default {
 		this.statusBarHeight = systemInfo.statusBarHeight != null ? systemInfo.statusBarHeight : 20
 	},
 	methods: {
+		onBackTap() {
+			if (this.manualBack) {
+				this.$emit('back')
+				return
+			}
+			this.goBack()
+		},
 		goBack() {
 			if (getCurrentPages().length > 1) {
 				uni.navigateBack()
@@ -99,6 +115,14 @@ export default {
 .custom-navbar-back-icon {
 	width: 24px;
 	height: 24px;
+}
+.custom-navbar-slot {
+	flex: 1;
+	height: 100%;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	min-width: 0;
 }
 .custom-navbar-title {
 	position: absolute;

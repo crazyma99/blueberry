@@ -1,15 +1,7 @@
 <template>
 	<view class="container">
-		<!-- 自定义导航栏（与 favorites 一致：fixed + 返回按钮 + 标题） -->
-		<view class="custom-nav">
-			<view :style="{height: statusBarHeight + 'px'}"></view>
-			<view class="nav-content">
-				<image class="back-btn" src="/static/back-arrow.svg" mode="aspectFit" @click="goBack"></image>
-				<view class="nav-title">AI试衣记录</view>
-			</view>
-		</view>
-		<!-- 占位 -->
-		<view :style="{height: (statusBarHeight + 44) + 'px'}"></view>
+		<!-- 顶栏：统一 CustomNavBar -->
+		<CustomNavBar title="AI试衣记录" />
 
 		<!-- 骨架屏 -->
 		<view v-if="loading" class="sk-container main-content">
@@ -91,7 +83,6 @@ type AiTaskItem = {
 export default {
 	data() {
 		return {
-			statusBarHeight: 20,
 			loading: true,
 			taskList: [] as AiTaskItem[],
 			isEmpty: false,
@@ -101,8 +92,6 @@ export default {
 	},
 
 	onLoad() {
-		const systemInfo = uni.getSystemInfoSync()
-		this.statusBarHeight = systemInfo.statusBarHeight || 20
 		this.loadData()
 	},
 
@@ -116,9 +105,6 @@ export default {
 	},
 
 	methods: {
-		goBack() {
-			uni.navigateBack()
-		},
 
 		async loadData() {
 			try {
@@ -220,37 +206,6 @@ export default {
 	background: rgba(255, 255, 255, 0.15);
 }
 
-/* 自定义导航栏 */
-.custom-nav {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	background: var(--color-bg);
-	z-index: 100;
-}
-.nav-content {
-	height: 44px;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	padding: 0 16rpx;
-}
-.back-btn {
-	width: 48rpx;
-	height: 48rpx;
-	padding: var(--spacing-xs);
-}
-.nav-title {
-	flex: 1;
-	text-align: center;
-	font-size: var(--font-size-slogan);
-	font-weight: 400;
-	font-family: var(--font-display);
-	color: var(--color-primary);
-	/* 视觉补偿返回按钮宽度，使标题真正居中 */
-	margin-right: 64rpx;
-}
 
 .content {
 	padding: 0 8rpx var(--spacing-lg);

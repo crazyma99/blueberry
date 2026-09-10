@@ -1,28 +1,22 @@
 <template>
 	<view class="container">
-		<!-- 自定义导航栏：搜索栏在标题栏位置 -->
-		<view class="custom-nav">
-			<view :style="{height: statusBarHeight + 'px'}"></view>
-			<view class="nav-content">
-				<image class="back-btn" src="/static/back-arrow.svg" mode="aspectFit" @click="goBack"></image>
-				<view class="search-bar-wrap">
-					<view class="search-bar-nav">
-						<image class="search-icon-small" src="/static/search.png" mode="aspectFit"></image>
-						<input
-							class="search-input-nav"
-							type="text"
-							placeholder="搜索收藏内容"
-							placeholder-style="color: var(--color-primary-70)"
-							v-model="searchKeyword"
-							confirm-type="search"
-							@confirm="handleSearch"
-						/>
-					</view>
+		<!-- 顶栏：统一 CustomNavBar（slot 放搜索框；返回由页面处理搜索清空逻辑） -->
+		<CustomNavBar :manual-back="true" @back="goBack">
+			<view class="search-bar-wrap">
+				<view class="search-bar-nav">
+					<image class="search-icon-small" src="/static/search.png" mode="aspectFit"></image>
+					<input
+						class="search-input-nav"
+						type="text"
+						placeholder="搜索收藏内容"
+						placeholder-style="color: var(--color-primary-70)"
+						v-model="searchKeyword"
+						confirm-type="search"
+						@confirm="handleSearch"
+					/>
 				</view>
 			</view>
-		</view>
-		<!-- 占位 -->
-		<view :style="{height: (statusBarHeight + 44) + 'px'}"></view>
+		</CustomNavBar>
 
 		<!-- 骨架屏 -->
 		<view v-if="loading" class="sk-container main-content">
@@ -91,7 +85,6 @@ import { formatCount as _formatCount } from '../../utils/format.uts'
 export default {
 	data() {
 		return {
-			statusBarHeight: 20,
 			loading: true,
 			loadingMore: false,
 			searchKeyword: '',
@@ -108,8 +101,6 @@ export default {
 	},
 
 	onLoad() {
-		const systemInfo = uni.getSystemInfoSync()
-		this.statusBarHeight = systemInfo.statusBarHeight || 20
 		this.loadData()
 	},
 
@@ -277,26 +268,6 @@ export default {
 }
 
 /* 自定义导航栏 */
-.custom-nav {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	background: var(--color-bg);
-	z-index: 100;
-}
-.nav-content {
-	height: 44px;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	padding: 0 16rpx;
-}
-.back-btn {
-	width: 48rpx;
-	height: 48rpx;
-	padding: var(--spacing-xs);
-}
 .search-bar-wrap {
 	width: 65%;
 	margin-left: 12rpx;

@@ -1,11 +1,8 @@
 <template>
 	<view class="page">
-		<!-- 自定义导航栏：搜索框常驻标题栏位置 -->
-		<view class="custom-nav">
-			<view :style="{height: statusBarHeight + 'px'}"></view>
-			<view class="nav-content">
-				<image class="back-btn" src="/static/back-arrow.svg" mode="aspectFit" @click="goBack"></image>
-				<view class="search-bar-wrap">
+		<!-- 顶栏：统一 CustomNavBar（slot 放搜索框；返回由页面处理搜索清空逻辑） -->
+		<CustomNavBar :manual-back="true" @back="goBack">
+			<view class="search-bar-wrap">
 				<view class="search-bar-nav">
 					<image class="search-icon-small" src="/static/search.png" mode="aspectFit"></image>
 					<input
@@ -18,11 +15,8 @@
 						@confirm="handleSearch"
 					/>
 				</view>
-				</view>
 			</view>
-		</view>
-		<!-- 占位 -->
-		<view :style="{height: (statusBarHeight + 44) + 'px'}"></view>
+		</CustomNavBar>
 
 		<!-- 骨架屏悬浮层：与真实页面 1:1 镜像（AI推荐横幅→分类标题→两级分类胶囊→照片卡=封面+标题+信息行） -->
 		<view v-show="loading" class="sk-container sk-overlay" :style="{ top: (statusBarHeight + 44) + 'px' }">
@@ -860,26 +854,6 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 		margin-top: auto;
 	}
 	/* 自定义导航栏 */
-	.custom-nav {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		background: var(--color-bg);
-		z-index: 100;
-	}
-	.nav-content {
-		height: 44px;
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		padding: 0 16rpx;
-	}
-	.back-btn {
-		width: 48rpx;
-		height: 48rpx;
-		padding: var(--spacing-xs);
-	}
 	/* 纯色描边搜索框：外层 1rpx 描边圆环 + 内层填充。
 	   内层填充 = 半透明金渐变 + 页面底色 var(--color-bg) 合成（下层实色挡住描边透出） */
 	.search-bar-wrap {
