@@ -132,7 +132,6 @@ export default {
 		}
 	},
 	onLoad(options : any) {
-		console.log('[share-debug] aiTryOnResult onLoad options=' + JSON.stringify(options))
 		this.taskId = options?.taskId ?? ''
 		this.shopId = options?.shopId ?? ''
 		if (this.taskId !== '') {
@@ -142,7 +141,6 @@ export default {
 		}
 	},
 	onReady() {
-		console.log('[share-debug] aiTryOnResult onReady 页面已挂载')
 	},
 	onShow() {
 		// 防截屏：进页开启（微信原生 API，仅小程序端生效）
@@ -242,7 +240,6 @@ export default {
 		async pollResult() {
 			try {
 				const res = await getAiTryOnResult(this.taskId)
-				console.log('[share-debug] pollResult code=' + res.code + ' status=' + (res.data != null ? res.data.status : 'null'))
 				// aiface 接口 code === 0 或 200 表示成功
 				if ((res.code === 0 || res.code === 200) && res.data) {
 					const taskStatus = res.data.status
@@ -319,20 +316,16 @@ export default {
 					resolve()
 				}
 				if (this.resultImageUrl === '' || this.shareCardReady) { done(); return }
-				console.log('[share-debug] prepareShareCard 开始 urlLen=' + this.resultImageUrl.length)
 				// #ifdef MP-WEIXIN
 				generateFaceCenteredCard(this.resultImageUrl).then((card) => {
 					if (card != null && card.imagePath !== '') {
 						this.shareCardImage = card.imagePath
-						console.log('[share-debug] 人脸居中卡片就绪 path=' + card.imagePath.substring(0, 40))
 					} else {
 						this.shareCardImage = cosThumb(this.resultImageUrl, 400)
-						console.log('[share-debug] 卡片生成返回空 → 回退网络图')
 					}
 					this.shareCardReady = true
 					done()
 				}).catch(() => {
-					console.log('[share-debug] 生成异常 → 回退网络图')
 					this.shareCardImage = cosThumb(this.resultImageUrl, 400)
 					this.shareCardReady = true
 					done()
@@ -350,7 +343,6 @@ export default {
 		async ensureShareCard() : Promise<any> {
 			if (!this.shareCardReady && !this.sharePreparing) {
 				this.sharePreparing = true
-				console.log('[share-debug] 点击分享 → 开始准备封面(生成中)')
 				await this.prepareShareCard()
 			}
 			const img = this.shareCardImage !== '' ? this.shareCardImage : cosThumb(this.resultImageUrl, 400)
@@ -385,7 +377,6 @@ export default {
 
 		onImageLoad() {
 			this.imageLoaded = true
-			console.log('[share-debug] 结果图加载完成 @load')
 		},
 
 		async saveToAlbum() {

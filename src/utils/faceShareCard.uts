@@ -93,14 +93,10 @@ export function generateFaceCenteredCard(imageUrl: string): Promise<FaceCardResu
 	return new Promise<FaceCardResult | null>((resolve) => {
 		const run = async () => {
 			try {
-				if (typeof wx === 'undefined' || imageUrl === '') { console.log('[share-debug] generateFaceCenteredCard exit: wx/imageUrl 不可用'); resolve(null); return }
-				console.log('[share-debug] generateFaceCenteredCard start urlLen=' + imageUrl.length)
 				const info = await getImageInfo(imageUrl)
 				const imgW = info.width as number
 				const imgH = info.height as number
 				const localPath = info.path as string
-				if (imgW <= 0 || imgH <= 0 || localPath === '') { console.log('[share-debug] getImageInfo 异常 w=' + imgW + ' h=' + imgH); resolve(null); return }
-				console.log('[share-debug] getImageInfo ok w=' + imgW + ' h=' + imgH + ' localPath=' + localPath.substring(0, 40))
 				// 检测降采样（与原服务端 DETECT_MAX_DIM=1024 同口径）
 				const scale = Math.min(1, DETECT_MAX_DIM / Math.max(imgW, imgH))
 				const dw = Math.round(imgW * scale)
@@ -112,31 +108,25 @@ export function generateFaceCenteredCard(imageUrl: string): Promise<FaceCardResu
 				detCtx.drawImage(detImg, 0, 0, dw, dh)
 				const imgData = detCtx.getImageData(0, 0, dw, dh)
 				const frameBuffer = (imgData as any).data.buffer as ArrayBuffer
-				console.log('[share-debug] 像素就绪 dw=' + dw + ' dh=' + dh)
 				// 端侧人脸检测（不可用/未检出 → null → 中心裁剪）
 				let face: any = null
-				const t0 = Date.now()
 				const anchor = await detectLargestFace(frameBuffer, dw, dh, VK_TIMEOUT_MS)
-				console.log('[share-debug] 检测返回 anchor=' + (anchor != null) + ' 耗时ms=' + (Date.now() - t0))
 				if (anchor != null) {
 					const sw = anchor.size != null ? (anchor.size.width as number) : 0
 					const sh = anchor.size != null ? (anchor.size.height as number) : 0
 					if (sw * sh >= MIN_FACE_RATIO) face = anchor
 				}
 				// 裁剪出 750x600 卡片
-				console.log('[share-debug] face 采用=' + (face != null))
 				const crop = computeCrop(imgW, imgH, face)
-				console.log('[share-debug] 裁剪窗 sx=' + crop[0] + ' sy=' + crop[1] + ' sw=' + crop[2] + ' sh=' + crop[3])
 				const outCanvas = (wx as any).createOffscreenCanvas({ type: '2d', width: CARD_W, height: CARD_H })
 				const outCtx = outCanvas.getContext('2d')
 				const outImg = await loadCanvasImage(outCanvas, localPath)
 				outCtx.drawImage(outImg, crop[0], crop[1], crop[2], crop[3], 0, 0, CARD_W, CARD_H)
 				const tmp = await canvasToTempFilePath(outCanvas)
 				const p = tmp.tempFilePath as string
-				console.log('[share-debug] 卡片生成 p=' + p.substring(0, 40))
 				resolve(p !== '' ? { imagePath: p } : null)
 			} catch (e) {
-				console.error('[share-debug] generateFaceCenteredCard 异常=', e)
+				console.error('[faceShareCard] 生成分享封面异常，回退:', e)
 				resolve(null)
 			}
 		}
