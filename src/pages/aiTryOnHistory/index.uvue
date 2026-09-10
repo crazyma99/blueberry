@@ -237,14 +237,14 @@ export default {
 	padding: 0 16rpx;
 }
 .back-btn {
-	width: 44rpx;
-	height: 44rpx;
+	width: 48rpx;
+	height: 48rpx;
 	padding: var(--spacing-xs);
 }
 .nav-title {
 	flex: 1;
 	text-align: center;
-	font-size: 32rpx;
+	font-size: var(--font-size-slogan);
 	font-weight: 400;
 	font-family: var(--font-display);
 	color: var(--color-primary);

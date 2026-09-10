@@ -476,7 +476,7 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 	align-items: center;
 }
 .cn{
-	font-size: var(--font-size-display);
+	font-size: var(--font-size-slogan);
 	font-weight: 400;
 	color: var(--color-primary);
 }
