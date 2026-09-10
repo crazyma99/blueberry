@@ -417,6 +417,27 @@ export default {
 			})
 		},
 
+		// 订阅消息授权（一次性订阅：授权一次可推一条；须在点击事件内直接调用）
+		requestTaskNotify() {
+			// #ifdef MP-WEIXIN
+			if (typeof wx !== 'undefined' && (wx as any).requestSubscribeMessage != null) {
+				try {
+					(wx as any).requestSubscribeMessage({
+						tmplIds: ['a-9CzBoRFvtp9mZbhsJ08opS4f_Owt1bdwQDouVkPs0'],
+						success: (res: any) => {
+							console.log('[aiTryOn] 订阅授权结果=', JSON.stringify(res))
+						},
+						fail: (err: any) => {
+							console.log('[aiTryOn] 订阅授权失败(忽略，不影响试衣)=', JSON.stringify(err))
+						}
+					})
+				} catch (e) {
+					console.error('[aiTryOn] 订阅授权异常=', e)
+				}
+			}
+			// #endif
+		},
+
 		// 照片质量拦截：未通过时弹窗告知重新上传；通过后入库并立即上传
 		async checkAndAcceptPhoto(filePath: string) {
 			uni.showLoading({ title: '照片检测中...', mask: true })
@@ -469,6 +490,8 @@ export default {
 
 		async handleGenerate() {
 			console.log('[aiTryOn] handleGenerate 点击 | isSubmitting=', this.isSubmitting, '| isUploading=', this.isUploading, '| uploadedFilename=', this.uploadedFilename, '| shopId=', this.shopId, '| templates=', this.templates.length, '| creditLoaded=', this.creditLoaded, '| creditBalance=', this.creditBalance, '| priceFen=', this.priceFenPerCredit)
+			// 订阅消息授权：生成完成后微信主动推送「生成成功」（拒绝授权不影响试衣）
+			this.requestTaskNotify()
 			if (this.isSubmitting) return
 
 			// 检查登录态
