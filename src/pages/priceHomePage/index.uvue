@@ -26,37 +26,51 @@
 
 <script>
 	import { getShops } from '../../utils/api.uts'
+	import { getBrandId } from '../../utils/brand.uts'
 	import { syncTabBarSelected } from '../../utils/tabbar.uts'
 	import { cosThumb } from '../../utils/imageLoader.uts'
 	export default {
 		data() {
 			return {
 				loading: true,
-				shopList: []
+				shopList: [],
+				// 品牌基线：onShow 检测到品牌变化时重载门店（价目 tab 常驻内存，onLoad 只跑一次）
+				lastBrandId: ''
 			}
 		},
-		async onLoad() {
-			try {
-				const res = await getShops()
-				if (res.code === 200 && res.data) {
-					// 网格封面图出 600px WebP 缩略图，降低内存占用
-					this.shopList = res.data.map(item => {
-						item.homeImage = cosThumb(item.homeImage, 600)
-						return item
-					})
-				}
-			} catch (err) {
-				console.error('[priceHomePage] 加载店铺列表失败', err)
-				uni.showToast({ title: '门店加载失败，请重试', icon: 'none' })
-			} finally {
-				this.loading = false
-			}
+		onLoad() {
+			this.loadShops()
+			this.lastBrandId = getBrandId()
 		},
 		onShow() {
 			// 同步自定义底部 tabbar 选中态（本页下标 1）
 			syncTabBarSelected(1)
+			// 品牌切换后重载：否则仍显示上一品牌门店
+			const brandId = getBrandId()
+			if (brandId !== this.lastBrandId) {
+				this.lastBrandId = brandId
+				this.loading = true
+				this.loadShops()
+			}
 		},
 		methods: {
+			async loadShops() {
+				try {
+					const res = await getShops()
+					if (res.code === 200 && res.data) {
+						// 网格封面图出 600px WebP 缩略图，降低内存占用
+						this.shopList = res.data.map(item => {
+							item.homeImage = cosThumb(item.homeImage, 600)
+							return item
+						})
+					}
+				} catch (err) {
+					console.error('[priceHomePage] 加载店铺列表失败', err)
+					uni.showToast({ title: '门店加载失败，请重试', icon: 'none' })
+				} finally {
+					this.loading = false
+				}
+			},
 			onShopClick(shop) {
 				uni.navigateTo({
 					url: `/pages/priceList/index?from=banner&idx=${shop.id}&shopName=${shop.shopName}&priceImage=${shop.priceImage}`

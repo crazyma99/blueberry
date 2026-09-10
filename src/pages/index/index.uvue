@@ -296,6 +296,9 @@
 			},
 			// 首页数据加载（onLoad 与品牌切换 onShow 共用）
 		async reloadHomeData() {
+			// 品牌切换/刷新后按新首图重算轮播高度（否则沿用上一品牌高度不刷新）
+			this.heroHeightReady = false
+			this.heroHeight = '794rpx'
 			try {
 				// 并行加载轮播图和店铺列表（X-Brand-Id 由 http 层自动携带）
 				const [bannerRes, shopRes] = await Promise.all([
