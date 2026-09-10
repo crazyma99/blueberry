@@ -66,6 +66,14 @@
 			<view class="divide"></view>
 			<view class="bottomdesc"><AppFooter /></view>
 		</view>
+
+		<!-- 分享准备中 loading（点击分享后生成封面期间展示） -->
+		<view v-if="sharePreparing" class="share-preparing-mask">
+			<view class="share-preparing-card">
+				<view class="loading-spinner"></view>
+				<text class="share-preparing-text">正在准备分享…</text>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -100,6 +108,7 @@ export default {
 			// 分享（人脸居中 5:4 封面卡片）
 			shareCardImage: '',
 			shareCardReady: false,
+			sharePreparing: false,   // 点击分享后生成封面中（UI 展示 loading+正在准备分享）
 			styleName: '',
 			shopName: '',
 			templateId: 0
@@ -151,23 +160,11 @@ export default {
 		this.disableCaptureProtection()
 	},
 	onShareAppMessage() : any {
-		// 分享卡片：店铺名+相册名文案 + 人脸居中 5:4 合成图（未就绪回退网络图）+ 直达试衣页预选模板
-		const img = this.shareCardReady && this.shareCardImage !== '' ? this.shareCardImage : cosThumb(this.resultImageUrl, 400)
-		let path = '/pages/aiTryOn/index?share_from=tryon_result'
-		if (this.templateId > 0) path += `&templateId=${this.templateId}`
-		if (this.shopId !== '') path += `&shopId=${this.shopId}`
-		return {
-			title: this.buildShareTitle(),
-			path,
-			imageUrl: img
-		}
+		// 点分享才准备封面：返回 Promise，微信客户端等待 resolve（官方 onShareAppMessage 支持 Promise 返回）
+		return this.ensureShareCard()
 	},
 	onShareTimeline() : any {
-		const img = this.shareCardReady && this.shareCardImage !== '' ? this.shareCardImage : cosThumb(this.resultImageUrl, 400)
-		return {
-			title: this.buildShareTitle(),
-			imageUrl: img
-		}
+		return this.ensureShareCard()
 	},
 	methods: {
 		// 防截屏防御：wx.setVisualEffectOnCapture(hidden)，基础库 ≥2.13.0 安卓/iOS 真机生效；条件编译仅打包微信端
@@ -241,8 +238,6 @@ export default {
 						this.styleName = res.data.style_name ?? ''
 						this.shopName = res.data.shop_name ?? ''
 						this.templateId = res.data.template_id != null ? (res.data.template_id as number) : 0
-						// 预生成分享封面（人脸居中 5:4；异步，未就绪时分享回退网络图）
-						try { this.prepareShareCard() } catch (e) { console.error('[share-debug] prepareShareCard 同步异常=', e) }
 					} else if (taskStatus === 'failed') {
 						this.stopPolling()
 						this.status = 'failed'
@@ -274,30 +269,62 @@ export default {
 			return `我也在蓝梅旅拍 AI 换装，试一下你「${style}」的样子`
 		},
 
-		// 分享封面预生成：端侧人脸检测 → 人脸居中 5:4 卡片；失败回退中心裁剪，再失败回退网络图
-		prepareShareCard() {
-			console.log('[share-debug] prepareShareCard 开始 urlLen=' + this.resultImageUrl.length)
-			if (this.resultImageUrl === '' || this.shareCardReady) return
-			// #ifdef MP-WEIXIN
-			generateFaceCenteredCard(this.resultImageUrl).then((card) => {
-				if (card != null && card.imagePath !== '') {
-					this.shareCardImage = card.imagePath
-					console.log('[share-debug] 人脸居中卡片就绪 path=' + card.imagePath.substring(0, 40))
-				} else {
-					this.shareCardImage = cosThumb(this.resultImageUrl, 400)
-					console.log('[share-debug] 卡片生成返回空 → 回退网络图')
+		// 分享落地路径：直达试衣页并预选该套系模板
+		buildSharePath() : string {
+			let path = '/pages/aiTryOn/index?share_from=tryon_result'
+			if (this.templateId > 0) path += `&templateId=${this.templateId}`
+			if (this.shopId !== '') path += `&shopId=${this.shopId}`
+			return path
+		},
+
+		// 分享封面生成（点击分享后才调用）：端侧人脸检测 → 人脸居中 5:4 卡片；失败回退中心裁剪，再失败回退网络图
+		prepareShareCard() : Promise<void> {
+			return new Promise<void>((resolve) => {
+				const done = () => {
+					this.sharePreparing = false
+					resolve()
 				}
-				this.shareCardReady = true
-			}).catch(() => {
-				console.log('[share-debug] 生成异常 → 回退网络图')
+				if (this.resultImageUrl === '' || this.shareCardReady) { done(); return }
+				console.log('[share-debug] prepareShareCard 开始 urlLen=' + this.resultImageUrl.length)
+				// #ifdef MP-WEIXIN
+				generateFaceCenteredCard(this.resultImageUrl).then((card) => {
+					if (card != null && card.imagePath !== '') {
+						this.shareCardImage = card.imagePath
+						console.log('[share-debug] 人脸居中卡片就绪 path=' + card.imagePath.substring(0, 40))
+					} else {
+						this.shareCardImage = cosThumb(this.resultImageUrl, 400)
+						console.log('[share-debug] 卡片生成返回空 → 回退网络图')
+					}
+					this.shareCardReady = true
+					done()
+				}).catch(() => {
+					console.log('[share-debug] 生成异常 → 回退网络图')
+					this.shareCardImage = cosThumb(this.resultImageUrl, 400)
+					this.shareCardReady = true
+					done()
+				})
+				// #endif
+				// #ifndef MP-WEIXIN
 				this.shareCardImage = cosThumb(this.resultImageUrl, 400)
 				this.shareCardReady = true
+				done()
+				// #endif
 			})
-			// #endif
-			// #ifndef MP-WEIXIN
-			this.shareCardImage = cosThumb(this.resultImageUrl, 400)
-			this.shareCardReady = true
-			// #endif
+		},
+
+		// 点击分享才准备封面：返回 Promise，微信客户端等待 resolve 后再拉起分享（官方支持 Promise 返回）
+		async ensureShareCard() : Promise<any> {
+			if (!this.shareCardReady && !this.sharePreparing) {
+				this.sharePreparing = true
+				console.log('[share-debug] 点击分享 → 开始准备封面(生成中)')
+				await this.prepareShareCard()
+			}
+			const img = this.shareCardImage !== '' ? this.shareCardImage : cosThumb(this.resultImageUrl, 400)
+			return {
+				title: this.buildShareTitle(),
+				path: this.buildSharePath(),
+				imageUrl: img
+			}
 		},
 
 		handleRetry() {
@@ -773,6 +800,35 @@ export default {
 	margin: var(--spacing-lg) auto;
 	font-size: var(--font-size-caption-md);
 	color: var(--color-primary-50);
+	font-weight: 400;
+}
+
+/* 分享准备中 loading 遮罩 */
+.share-preparing-mask {
+	position: fixed;
+	left: 0;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.55);
+	z-index: 999;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.share-preparing-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 48rpx 64rpx;
+	background: rgba(22, 15, 4, 0.92);
+	border-radius: var(--radius-card);
+}
+.share-preparing-text {
+	margin-top: 32rpx;
+	font-size: var(--font-size-body);
+	color: #fff;
 	font-weight: 400;
 }
 </style>
