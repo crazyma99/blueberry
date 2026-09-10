@@ -728,7 +728,7 @@ export default {
 }
 /* 分享按钮：全局 .btn-secondary 统一视觉，仅保留右邻间距/保底宽度与 button 默认边框消除 */
 .share-btn {
-	margin-left: 24rpx;
+	margin: 0 0 0 24rpx;
 	min-width: 160rpx;
 }
 .share-btn::after {

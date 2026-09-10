@@ -151,6 +151,7 @@ page {
   gap: 12rpx;
   padding: 26rpx 40rpx;
   font-size: 32rpx;
+  line-height: 1.2;
   font-weight: 400;
   color: var(--color-bg);
   background: var(--gradient-btn-primary);
@@ -168,6 +169,7 @@ page {
   gap: 12rpx;
   padding: 26rpx 40rpx;
   font-size: 32rpx;
+  line-height: 1.2;
   font-weight: 400;
   color: var(--color-primary);
   background: var(--color-primary-10);
