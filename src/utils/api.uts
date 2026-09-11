@@ -365,6 +365,32 @@ export const getShops = async () => {
   return res as { code: number, data: ShopInfo[] }
 }
 
+// ============ 门店套餐（价目表二级页展示，仅启用按 sortOrder 升序） ============
+
+export interface ShopPackageInfo {
+  id: number
+  shopId: number
+  name: string
+  detail: string
+  photoDetail: string
+  price: number
+  imageUrl: string
+  sortOrder: number
+}
+
+/**
+ * 获取门店套餐列表（公开，无需登录）
+ */
+export const getPackages = async (shopId: string | number) => {
+  const res = await request({
+    url: '/wechat/packages',
+    method: 'GET',
+    data: { shopId },
+    showLoading: false,
+  })
+  return res as { code: number, data: ShopPackageInfo[] }
+}
+
 // ============ 中台页配置 ============
 
 /**
