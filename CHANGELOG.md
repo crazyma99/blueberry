@@ -2,6 +2,11 @@
 
 > 记录小程序 C 端每次实质性改动，最新在上。多人合作提交前先补本文件（与代码同一提交）。
 
+## 2026-09-10 · 我的页 banner 位废弃（主人指示）
+
+- **我的页移除轮播 banner**：`pages/mine/index.uvue` 删除「AI试衣」下方 banner 位（swiper 区块、骨架屏 sk-banner、`banners` 数据、`handleBannerClick`、banner 系列 CSS 与 `cosThumb` 导入）；金刚区 icon_grid 配置照常保留。
+- **联动后端**：`/api/page-config` 不再下发 `banner` 组件；OPS「我的页配置」不再提供 banner 类型（admin-web 同批移除 BannerPanel）；后端禁止再创建 banner 组件。
+
 ## 2026-09-04 · 品牌馆中台 + banner 跳转 + 版权第二行（6 项，PR #2）
 
 - **品牌馆中台页面**：新增 `pages/brandHub/index`，首页左上角圆形「馆」按钮进入；品牌列表复用后端 `GET /api/brands`（后端零改动）；点品牌卡 → 写入品牌上下文并切回首页（首页按品牌维度加载）；记住上次品牌（`utils/brand.uts` storage 持久化）。

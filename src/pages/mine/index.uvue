@@ -10,7 +10,6 @@
         <view class="sk-text sk-animate" style="width: 200rpx; margin-left: 24rpx;"></view>
       </view>
       <view class="sk-menu sk-animate"></view>
-      <view class="sk-banner sk-animate" style="border-radius: var(--radius-sm);"></view>
     </view>
 
     <!-- 主内容：list 布局（高性能列表） -->
@@ -54,28 +53,6 @@
             <view class="menu-arrow">›</view>
           </view>
         </view>
-
-        <list-item>
-          <!-- 轮播图 Banner -->
-          <view class="banner-section">
-            <swiper
-              class="banner-swiper"
-              autoplay
-              circular
-              :interval="5000"
-              :duration="500"
-            >
-              <swiper-item v-for="(banner, index) in banners" :key="index">
-                <image
-                  class="banner-image fade-in"
-                  :src="banner.imageUrl"
-                  mode="aspectFill"
-                  @click="handleBannerClick(banner)"
-                ></image>
-              </swiper-item>
-            </swiper>
-          </view>
-        </list-item>
 
         <!-- 退出登录占位（按钮已移入底部固定栏） -->
         <list-item v-if="isLoggedIn">
@@ -132,7 +109,6 @@ import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
 import { rejectAllPending } from '../../utils/http.uts'
 import { syncTabBarSelected } from '../../utils/tabbar.uts'
-import { cosThumb } from '../../utils/imageLoader.uts'
 import {
   USER_AGREEMENT_NAME,
   PRIVACY_POLICY_NAME,
@@ -149,7 +125,6 @@ export default {
       userAvatarUrl: '',
       userNickname: '',
       isLoggedIn: false,
-      banners: [] as any[],
       menuItems: [] as any[],
       // 仅供 profile 弹窗里 chooseAvatar 占位使用，user-section 不再用兜底图
       defaultAvatar: '/static/mine.svg',
@@ -227,16 +202,11 @@ export default {
         // 更新登录状态
         this.updateLoginState()
 
-        // 获取中台页配置（金刚区 + Banner）
+        // 获取中台页配置（金刚区；我的页 banner 已废弃 2026-09-11）
         const configRes = await getPageConfig()
         if (configRes.code === 200 && configRes.data) {
           const configMenus = configRes.data.filter(item => item.type === 'icon_grid')[0].items || []
           this.menuItems = [...this.getDefaultMenuItems(), ...configMenus]
-          // banner 出 750px WebP 缩略图，降低内存占用
-          this.banners = (configRes.data.filter(item => item.type === 'banner')[0].items || []).map(item => {
-            item.imageUrl = cosThumb(item.imageUrl, 750)
-            return item
-          })
         }
         // 金刚区为空时，设置默认入口
         if (this.menuItems.length === 0) {
@@ -502,13 +472,6 @@ export default {
           icon: 'none'
         })
       }
-    },
-
-    // 处理 Banner 点击
-    handleBannerClick(banner: any) {
-      if (banner.link) {
-        this.navigateToUrl(banner.link)
-      }
     }
   }
 }
@@ -651,24 +614,6 @@ export default {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-fill-color: transparent;
-}
-
-/* 轮播图 Banner */
-.banner-section {
-  margin: var(--spacing-lg) var(--spacing-lg) 0;
-}
-
-.banner-swiper {
-  width: 100%;
-  height: 320rpx;
-  overflow: hidden;
-  border-radius: var(--radius-container);
-  border: 2rpx solid rgba(255, 255, 255, 0.12);
-}
-
-.banner-image {
-  width: 100%;
-  height: 100%;
 }
 
 .logout-spacer {
