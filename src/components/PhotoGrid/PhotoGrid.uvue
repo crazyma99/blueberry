@@ -103,9 +103,9 @@ export default {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border: 2rpx dashed rgba(243, 217, 172, 0.55);
+		border: 2rpx dashed rgba(243, 217, 172, 0.35);
 		border-radius: var(--radius-card);
-		background: rgba(255, 255, 255, 0.04);
+		background: rgba(255, 255, 255, 0.02);
 	}
 	.shopCard-placeholder .placeholderContent {
 		display: flex;
