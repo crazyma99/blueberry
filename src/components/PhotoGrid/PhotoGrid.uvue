@@ -33,6 +33,13 @@
 				<view class="enName">{{ shop.displayNameEn }}</view>
 			</view>
 		</view>
+		<!-- 占位卡：店铺数为奇数(≥3)时补全网格——统一尺寸「敬请期待」，不可点击 -->
+		<view v-if="shopList.length > 1 && shopList.length % 2 === 1" class="shopCard shopCard-placeholder">
+			<view class="placeholderContent">
+				<view class="placeholderTitle font-noto-serif">敬请期待</view>
+				<view class="placeholderSub">COMING SOON</view>
+			</view>
+		</view>
 		<!-- 无店铺时 fallback：复用 shopCard 布局，自动按 2 列展示 -->
 		<view v-if="shopList.length === 0" class="shopCard" @click="onDemoClick(1)">
 			<image class="demoPhoto" src="/static/demo1.png" mode="aspectFill"></image>
@@ -83,6 +90,32 @@ export default {
 	}
 	.shopCard.full-width {
 		width: 100%;
+	}
+	.shopCard-placeholder {
+		height: 226rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: 2rpx dashed rgba(243, 217, 172, 0.35);
+		border-radius: var(--radius-card);
+		background: rgba(255, 255, 255, 0.02);
+	}
+	.shopCard-placeholder .placeholderContent {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	.shopCard-placeholder .placeholderTitle {
+		font-size: var(--font-size-slogan);
+		font-weight: 400;
+		color: var(--color-primary-50);
+		letter-spacing: 2rpx;
+	}
+	.shopCard-placeholder .placeholderSub {
+		margin-top: 4rpx;
+		font-size: 16rpx;
+		color: var(--color-primary-30);
+		letter-spacing: 2rpx;
 	}
 	.demoPhoto{
 		width: 100%;

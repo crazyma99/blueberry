@@ -77,11 +77,19 @@
 								hover-class="press-dim"
 								@click="onShopClick(shop)"
 							>
+								<!-- 单门店卡片：固定 16:9 比例（宽度撑满父容器、高度=宽×9/16），图片 aspectFill 居中裁切不拉伸 -->
 								<image class="photo-card-img fade-in" :src="shop.homeImage" mode="aspectFill"></image>
 								<view class="photo-card-mask"></view>
 								<view class="photo-card-info">
 									<text class="photo-card-name font-noto-serif">{{ shop.displayName }}</text>
 									<text class="photo-card-sub">{{ shop.displayNameEn }}</text>
+								</view>
+							</view>
+							<!-- 占位卡：店铺数为奇数(≥3)时补全网格——统一尺寸「敬请期待」，不可点击（补全 dangler 空位） -->
+							<view v-if="shopList.length > 1 && shopList.length % 2 === 1" class="photo-card photo-card-placeholder">
+								<view class="placeholder-content">
+									<text class="placeholder-title font-noto-serif">敬请期待</text>
+									<text class="placeholder-sub">COMING SOON</text>
 								</view>
 							</view>
 							<!-- 无店铺时 fallback：demo 图，同 2 列布局 -->
@@ -746,6 +754,32 @@
 	}
 	.photo-card-full{
 		width: 100%;
+		/* 固定 16:9：750×9/16≈422rpx；图片 aspectFill 居中裁切不拉伸 */
+		height: 422rpx;
+	}
+	.photo-card-placeholder{
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: 2rpx dashed rgba(243, 217, 172, 0.35);
+		background: rgba(255, 255, 255, 0.02);
+	}
+	.photo-card-placeholder .placeholder-content{
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	.photo-card-placeholder .placeholder-title{
+		font-size: var(--font-size-body-lg);
+		font-weight: 400;
+		color: var(--color-primary-50);
+		letter-spacing: 2rpx;
+	}
+	.photo-card-placeholder .placeholder-sub{
+		margin-top: 4rpx;
+		font-size: var(--font-size-caption);
+		color: var(--color-primary-30);
+		letter-spacing: 2rpx;
 	}
 	.photo-card-img{
 		width: 100%;
