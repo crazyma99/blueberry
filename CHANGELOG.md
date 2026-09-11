@@ -7,6 +7,7 @@
 - **我的页移除轮播 banner**：`pages/mine/index.uvue` 删除「AI试衣」下方 banner 位（swiper 区块、骨架屏 sk-banner、`banners` 数据、`handleBannerClick`、banner 系列 CSS 与 `cosThumb` 导入）；金刚区 icon_grid 配置照常保留。
 - **联动后端**：`/api/page-config` 不再下发 `banner` 组件；OPS「我的页配置」不再提供 banner 类型（admin-web 同批移除 BannerPanel）；后端禁止再创建 banner 组件。
 - **修复我的页崩溃（主人真机发现）**：品牌未配置金刚区 icon_grid 时 `filter(...)[0].items` 取 undefined 崩溃——前端防御式兜底（缺失用默认菜单），后端品牌缺金刚区时回退全局（与 share_card 同策略）。
+- **金刚区 icon_grid 全面废除（主人指示 2026-09-11）**：我的页不再拉取中台页配置，菜单仅保留代码默认入口（我的喜欢 / AI试衣）；后端 /api/page-config 停止下发 icon_grid 并禁止再创建；OPS「我的页配置」页面与菜单项整页移除（admin-web）。
 
 ## 2026-09-04 · 品牌馆中台 + banner 跳转 + 版权第二行（6 项，PR #2）
 

@@ -103,7 +103,7 @@
 
 <script lang="uts">
 import { isLoggedIn, getUserInfo, loginSuccess, logout, setUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
-import { wxLogin, wxBindPhone, wxGetUserInfo, wxUpdateUserInfo, getPageConfig, rejectAllPendingUploads } from '../../utils/api.uts'
+import { wxLogin, wxBindPhone, wxGetUserInfo, wxUpdateUserInfo, rejectAllPendingUploads } from '../../utils/api.uts'
 import { hapticTap } from '../../utils/haptics.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
@@ -194,7 +194,7 @@ export default {
   },
 
   methods: {
-    // 加载页面数据
+    // 加载页面数据（金刚区与我的页 banner 均已废弃 2026-09-11：菜单仅保留代码默认入口）
     async loadData() {
       try {
         this.loading = true
@@ -202,29 +202,16 @@ export default {
         // 更新登录状态
         this.updateLoginState()
 
-        // 获取中台页配置（金刚区；我的页 banner 已废弃 2026-09-11）
-        const configRes = await getPageConfig()
-        if (configRes.code === 200 && configRes.data) {
-          // 金刚区兜底：品牌未配置 icon_grid 时后端会回退全局，此处再防御一次（缺失时用默认菜单，绝不因 items 未定义崩溃）
-          const iconGrid = configRes.data.filter(item => item.type === 'icon_grid')[0]
-          const configMenus = (iconGrid && iconGrid.items) ? iconGrid.items : []
-          this.menuItems = [...this.getDefaultMenuItems(), ...configMenus]
-        }
-        // 金刚区为空时，设置默认入口
-        if (this.menuItems.length === 0) {
-          this.menuItems = this.getDefaultMenuItems()
-        }
+        this.menuItems = this.getDefaultMenuItems()
       } catch (err) {
         console.error('[mine] 加载数据失败:', err)
-        uni.showToast({ title: '部分内容加载失败，请下拉刷新', icon: 'none' })
-        // 拉取失败，使用默认金刚区
         this.menuItems = this.getDefaultMenuItems()
       } finally {
         this.loading = false
       }
     },
 
-    // 默认金刚区入口
+    // 默认菜单入口（我的喜欢 / AI试衣）
     getDefaultMenuItems() {
       return [
         { title: '我的喜欢', imageUrl: '/static/liked.svg', linkUrl: '/pages/favorites/index', needLogin: true },
