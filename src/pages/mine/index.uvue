@@ -205,7 +205,9 @@ export default {
         // 获取中台页配置（金刚区；我的页 banner 已废弃 2026-09-11）
         const configRes = await getPageConfig()
         if (configRes.code === 200 && configRes.data) {
-          const configMenus = configRes.data.filter(item => item.type === 'icon_grid')[0].items || []
+          // 金刚区兜底：品牌未配置 icon_grid 时后端会回退全局，此处再防御一次（缺失时用默认菜单，绝不因 items 未定义崩溃）
+          const iconGrid = configRes.data.filter(item => item.type === 'icon_grid')[0]
+          const configMenus = (iconGrid && iconGrid.items) ? iconGrid.items : []
           this.menuItems = [...this.getDefaultMenuItems(), ...configMenus]
         }
         // 金刚区为空时，设置默认入口
