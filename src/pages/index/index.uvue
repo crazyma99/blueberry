@@ -86,7 +86,7 @@
 								</view>
 							</view>
 							<!-- 占位卡：店铺数为奇数(≥3)时补全网格——统一尺寸「敬请期待」，不可点击（补全 dangler 空位） -->
-							<view v-if="shopList.length > 1 && shopList.length % 2 === 1" class="photo-card photo-card-placeholder">
+							<view v-if="showPlaceholder" class="photo-card photo-card-placeholder">
 								<view class="placeholder-content">
 									<text class="placeholder-title font-noto-serif">敬请期待</text>
 									<text class="placeholder-sub">COMING SOON</text>
@@ -174,6 +174,8 @@
 				// 轮播高度：随首张 banner 图宽高比自适应（兜底 794rpx ≈ 设计稿比例）
 				heroHeight: '794rpx',
 				heroHeightReady: false,
+				// 占位卡开关：JS 预计算，避免真机模板表达式求值差异
+				showPlaceholder: false,
 				// 双层视差：当前轮播索引 / 动效重播 tick（每次切换必递增） / 渐隐标记 / 前景层当前项
 				currentIndex: 0,
 				fgTick: 0,
@@ -330,6 +332,9 @@
 						item.homeImage = cosThumb(item.homeImage, 600)
 						return item
 					})
+					// 占位卡开关：奇数(≥3)补 1 张
+					this.showPlaceholder = this.shopList.length > 1 && this.shopList.length % 2 === 1
+					console.log('[index] shops=', this.shopList.length, 'showPlaceholder=', this.showPlaceholder)
 				}
 			} catch (err) {
 				console.error('[index] 加载首页数据失败', err)
@@ -761,8 +766,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border: 2rpx dashed rgba(243, 217, 172, 0.35);
-		background: rgba(255, 255, 255, 0.02);
+		border: 2rpx dashed rgba(243, 217, 172, 0.55);
+		background: rgba(255, 255, 255, 0.04);
 	}
 	.photo-card-placeholder .placeholder-content{
 		display: flex;

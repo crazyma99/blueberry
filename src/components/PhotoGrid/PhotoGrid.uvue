@@ -34,7 +34,7 @@
 			</view>
 		</view>
 		<!-- 占位卡：店铺数为奇数(≥3)时补全网格——统一尺寸「敬请期待」，不可点击 -->
-		<view v-if="shopList.length > 1 && shopList.length % 2 === 1" class="shopCard shopCard-placeholder">
+		<view v-if="showPlaceholder" class="shopCard shopCard-placeholder">
 			<view class="placeholderContent">
 				<view class="placeholderTitle font-noto-serif">敬请期待</view>
 				<view class="placeholderSub">COMING SOON</view>
@@ -60,6 +60,13 @@ export default {
 		}
 	},
 	emits: ['shop-click', 'demo-click'],
+	computed: {
+		// 占位卡开关：JS 预计算，避免真机模板表达式求值差异
+		showPlaceholder(): boolean {
+			const n = this.shopList != null ? this.shopList.length : 0
+			return n > 1 && n % 2 === 1
+		}
+	},
 	methods: {
 		onShopClick(shop) {
 			this.$emit('shop-click', shop)
@@ -96,9 +103,9 @@ export default {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border: 2rpx dashed rgba(243, 217, 172, 0.35);
+		border: 2rpx dashed rgba(243, 217, 172, 0.55);
 		border-radius: var(--radius-card);
-		background: rgba(255, 255, 255, 0.02);
+		background: rgba(255, 255, 255, 0.04);
 	}
 	.shopCard-placeholder .placeholderContent {
 		display: flex;
