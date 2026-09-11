@@ -7,16 +7,8 @@
 			<view class="sk-block sk-animate" style="width: 100%; height: 600rpx;"></view>
 		</view>
 
-		<!-- 主内容 -->
+		<!-- 主内容（店铺级 banner 已废弃 2026-09-11 主人指示） -->
 		<view v-else>
-			<!-- 顶部轮播图 -->
-			<view v-if="banners.length">
-				<swiper class="banner" autoplay circular :interval="3000" :duration="500">
-					<swiper-item v-for="(item, idx) in banners" :key="idx">
-						<image class="banner-image fade-in" :src="item.imageUrl" mode="aspectFill"></image>
-					</swiper-item>
-				</swiper>
-			</view>
 			<image class="price" :src="priceImage" mode="widthFix"></image>
 
 			<!-- 套餐条目（仅展示：1:1 头图 / 名称 / 内容 / 售价） -->
@@ -52,7 +44,7 @@
 </template>
 
 <script>
-	import { getImage, getPackages as fetchPackages } from '../../utils/api.uts'
+	import { getPackages as fetchPackages } from '../../utils/api.uts'
 	export default {
 		data() {
 			return {
@@ -60,8 +52,6 @@
 				loading: true,
 				// 自定义导航栏标题（onLoad 中按店铺名动态设置）
 				navTitle: '',
-				// 轮播图图片列表
-				banners: [],
 				priceImage: '',
 				// 套餐条目（仅展示）
 				packages: []
@@ -73,7 +63,6 @@
 			const shopName = this.decodeRouteValue(query.shopName ?? '')
 			this.id = id
 			this.navTitle = shopName ? `${shopName}价目表` : '蓝梅价目表'
-			this.getBanner(id)
 			this.getPackages(id)
 			this.priceImage = priceImage || this.getFallbackPriceImage(id)
 		},
@@ -89,23 +78,7 @@
 			getFallbackPriceImage(id) {
 				return id === '1' ? '/static/honghe-price.png' : '/static/price.png'
 			},
-			async getBanner (id: string) {
-				try {
-					this.loading = true
-					const res = await getImage('get', {
-						type: id,
-					})
-					console.log('carousel api result:', res)
-					const { code, data } = res
-					if (code !== 200) return
-					if (data?.length) this.banners = data
-				} catch (err) {
-					console.error('[priceList] 获取轮播图失败', err)
-				} finally {
-					this.loading = false
-				}
-			},
-			// 套餐条目：仅展示（2026-09-11 主人指示：价目表二级页渲染）
+			// 套餐条目：仅展示（2026-09-11 主人指示：价目表二级页渲染；店铺级 banner 同批废弃）
 			async getPackages(id: string) {
 				try {
 					const res = await fetchPackages(id)
@@ -114,6 +87,8 @@
 					}
 				} catch (err) {
 					console.error('[priceList] 获取套餐列表失败', err)
+				} finally {
+					this.loading = false
 				}
 			}
 		}
@@ -126,17 +101,6 @@
 	height: 100%;
 	background: var(--color-bg);
 	overflow-y: scroll;
-}
-.banner{
-	margin: 24rpx 0 8rpx;
-	width: 100%;
-	height: 384rpx;
-	overflow: hidden;
-}
-.banner-image{
-	width: 100%;
-	height: 100%;
-	display: block;
 }
 .price{
 	width: 734rpx;
