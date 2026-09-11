@@ -374,6 +374,14 @@ export default {
 				}
 				const res = await getAiTemplates(params)
 				if ((res.code === 0 || res.code === 200) && res.data) {
+					// 相册级匹配兜底（2026-09-11）：只有部分相册的部分照片支持 AI 试衣，
+					// 该相册试衣过滤后无可用照片 → 回退本店全部模板并提示，避免空模板页
+					if (this.albumId !== '' && (!Array.isArray(res.data) || res.data.length === 0)) {
+						this.albumId = ''
+						uni.showToast({ title: '该相册暂无可试衣客片，已展示本店全部模板', icon: 'none' })
+						this.loadTemplates()
+						return
+					}
 					this.templates = res.data
 					// 分享落地：按 templateId 预选该套系模板（找不到则静默忽略，保持默认第一套）
 					if (this.shareTemplateId > 0) {
