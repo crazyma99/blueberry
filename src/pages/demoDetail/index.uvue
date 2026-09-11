@@ -221,6 +221,7 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 	import { formatCount as _formatCount } from '../../utils/format.uts'
 	import { preloadImage as _preloadImage, preloadImages as _preloadImages } from '../../utils/imageLoader.uts'
 	import { resolveShareCard } from '../../utils/share.uts'
+import { resolveDefaultShopId } from '../../utils/navigate.uts'
 
 	export default {
 		data() {
@@ -299,7 +300,17 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 			this.loadShareCard()
 			this.idx = idx
 			this.from = query?.from ?? ''
-			this.initPage(idx)
+			if (idx === '') {
+				// 兜底：入口未带门店上下文（banner 直达等）时解析品牌默认门店，避免白页
+				resolveDefaultShopId().then((sid) => {
+					this.idx = sid
+					this.initPage(sid)
+				}).catch(() => {
+					this.initPage('')
+				})
+			} else {
+				this.initPage(idx)
+			}
 		},
 		onShow() {
 			// 监听 401 登录过期事件，自动拉起登录弹窗

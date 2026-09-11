@@ -150,6 +150,7 @@
 		openPrivacyPolicy
 	} from '../../utils/legal.uts'
 	import { resolveShareCard } from '../../utils/share.uts'
+	import { jumpWithContext } from '../../utils/navigate.uts'
 
 	export default {
 		data() {
@@ -502,16 +503,10 @@
 			if (now - this.lastBannerClickAt < 300) return
 			this.lastBannerClickAt = now
 			hapticTap()
-			// 前端白名单兜底：仅 /pages/ 或 http(s) 允许跳转
-			if (linkUrl.startsWith('/pages/')) {
-				if (linkUrl.startsWith('/pages/index/index') || linkUrl.startsWith('/pages/priceHomePage/index') || linkUrl.startsWith('/pages/mine/index')) {
-					uni.switchTab({ url: linkUrl })
-				} else {
-					uni.navigateTo({ url: linkUrl })
-				}
-			} else if (linkUrl.startsWith('http://') || linkUrl.startsWith('https://')) {
-				uni.navigateTo({ url: '/pages/webview/index?url=' + encodeURIComponent(linkUrl) })
-			}
+			// 统一跳转：白名单校验 + 上下文补齐（品牌默认门店 / brandId）
+			jumpWithContext(linkUrl).catch((err) => {
+				console.error('[index] banner 跳转失败', err)
+			})
 		},
 		onShopClick(shop) {
 				// 触感反馈：客片卡片点击轻振动

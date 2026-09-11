@@ -1,0 +1,113 @@
+// utils/navigate.uts — 统一跳转上下文兜底（2026-09-11 主人指示）
+// banner / 运营位跳「按店页面」时自动补齐 品牌默认门店 + brandId，
+// 避免自由填写的跳转路径缺上下文导致白页 / 跳错店。
+
+import { getShops } from './api.uts'
+import { getBrandId } from './brand.uts'
+
+interface DefaultShopCache {
+	brand: string
+	shopId: string
+	at: number
+}
+
+// 品牌默认门店缓存（getShops 按品牌下发，首个即品牌默认展示门店；60s TTL）
+let _defaultShopCache: DefaultShopCache = { brand: '', shopId: '', at: 0 }
+const DEFAULT_SHOP_TTL = 60 * 1000
+
+/** 解析当前品牌的默认门店 ID（无门店时返回空串，由页面自身兜底） */
+export async function resolveDefaultShopId(): Promise<string> {
+	const brand = getBrandId()
+	const now = Date.now()
+	if (_defaultShopCache.brand === brand && _defaultShopCache.shopId !== '' && now - _defaultShopCache.at < DEFAULT_SHOP_TTL) {
+		return _defaultShopCache.shopId
+	}
+	try {
+		const res = await getShops()
+		if (res.code === 200 && Array.isArray(res.data) && res.data.length > 0 && res.data[0] != null && res.data[0].id != null) {
+			_defaultShopCache = { brand: brand, shopId: String(res.data[0].id), at: now }
+			return _defaultShopCache.shopId
+		}
+	} catch (e) {
+		// 解析失败返回空，不阻塞跳转
+	}
+	return ''
+}
+
+// 需要门店上下文的页面 → 门店参数名
+const SHOP_PARAM_PAGES: any = {
+	'/pages/demoDetail/index': 'idx',
+	'/pages/aiTryOn/index': 'shopId',
+	'/pages/aiRecommend/index': 'shopId',
+	'/pages/priceList/index': 'idx',
+}
+
+// tab 页（switchTab 不能带 query）
+const TAB_PAGES: string[] = ['/pages/index/index', '/pages/priceHomePage/index', '/pages/mine/index']
+
+/**
+ * 统一跳转入口：白名单校验 + 上下文补齐。
+ * - 外链 → webview 页
+ * - 相册详情缺 albumId → 改跳相册列表（带门店）
+ * - 按店页面缺门店参数 → 补品牌默认门店
+ * - 附带 brandId（与分享落地同口径）
+ */
+export async function jumpWithContext(url: string): Promise<void> {
+	let target = (url != null ? url : '').trim()
+	if (target === '') return
+	if (target.startsWith('http://') || target.startsWith('https://')) {
+		uni.navigateTo({ url: '/pages/webview/index?url=' + encodeURIComponent(target) })
+		return
+	}
+	if (!target.startsWith('/pages/')) return
+
+	const qi = target.indexOf('?')
+	const base = qi >= 0 ? target.slice(0, qi) : target
+	const params: any = {}
+	if (qi >= 0) {
+		const pairs = target.slice(qi + 1).split('&')
+		for (let i = 0; i < pairs.length; i++) {
+			const kv = pairs[i].split('=')
+			if (kv.length === 2 && kv[0] !== '') {
+				try {
+					params[kv[0]] = decodeURIComponent(kv[1])
+				} catch (e) {
+					params[kv[0]] = kv[1]
+				}
+			}
+		}
+	}
+
+	// 相册详情缺相册 ID → 落到相册列表（带门店）
+	if (base === '/pages/targetPhotoDetail/index' && (params['idx'] == null || params['idx'] === '')) {
+		const shopId = params['type'] != null ? params['type'] : ''
+		target = '/pages/demoDetail/index' + (shopId !== '' ? '?idx=' + shopId : '')
+		uni.navigateTo({ url: target })
+		return
+	}
+
+	// 按店页面缺门店参数 → 补品牌默认门店
+	const shopParam = SHOP_PARAM_PAGES[base]
+	if (shopParam != null && (params[shopParam] == null || params[shopParam] === '')) {
+		const shopId = await resolveDefaultShopId()
+		if (shopId !== '') params[shopParam] = shopId
+	}
+
+	// 附带品牌上下文
+	const brandId = getBrandId()
+	if (brandId !== '' && (params['brandId'] == null || params['brandId'] === '')) params['brandId'] = brandId
+
+	const outParts: string[] = []
+	const keys = Object.keys(params)
+	for (let i = 0; i < keys.length; i++) {
+		const k = keys[i]
+		if (params[k] !== '') outParts.push(k + '=' + encodeURIComponent(params[k]))
+	}
+	target = outParts.length > 0 ? base + '?' + outParts.join('&') : base
+
+	if (TAB_PAGES.indexOf(base) >= 0) {
+		uni.switchTab({ url: base })
+	} else {
+		uni.navigateTo({ url: target })
+	}
+}

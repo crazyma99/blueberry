@@ -10,6 +10,7 @@
 - **金刚区 icon_grid 全面废除（主人指示 2026-09-11）**：我的页不再拉取中台页配置，菜单仅保留代码默认入口（我的喜欢 / AI试衣）；后端 /api/page-config 停止下发 icon_grid 并禁止再创建；OPS「我的页配置」页面与菜单项整页移除（admin-web）。
 - **价目表二级页渲染套餐条目（主人指示 2026-09-11，仅展示）**：`pages/priceList` 在价目图下新增「套餐」区——1:1 头图（无图占位）/ 名称 / 内容 / 售价，数据复用公开接口 `GET /wechat/packages`（仅启用、按 sortOrder 升序，后端零改动）；后台套餐页继续配置这些字段。
 - **价目表页店铺级 banner 下线（主人指示 2026-09-11）**：`pages/priceList` 移除顶部轮播（模板/数据/请求/CSS），页面只剩 价目图 + 套餐区 + 页脚；后端 `/wechat/carousels` 店铺维度停发（旧客户端拿到空列表不渲染）。
+- **banner 跳转上下文补齐（主人指示 2026-09-11）**：新增 `utils/navigate.uts` 统一跳转——按店页面（相册列表/AI试衣/AI推荐/价目表）缺门店参数时自动补「品牌默认门店」，相册详情缺相册 ID 改跳相册列表，外链走 webview，tab 页走 switchTab；`index.onBannerClick` 改走统一跳转；`demoDetail` 无 idx 时兜底解析品牌默认门店（不再白页）；`aiTryOn` 支持 `albumId=random`——banner 配置「随机相册」时进页随机解析该门店可试衣相册（tryonDisabled 排除）。
 
 ## 2026-09-04 · 品牌馆中台 + banner 跳转 + 版权第二行（6 项，PR #2）
 

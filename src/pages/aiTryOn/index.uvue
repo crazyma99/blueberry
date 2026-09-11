@@ -131,7 +131,7 @@
 </template>
 
 <script lang="uts">
-import { getAiTemplates, uploadPhoto, submitAiTryOn, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
+import { getAiTemplates, getAlbumList, uploadPhoto, submitAiTryOn, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
 import { checkUploadPhoto } from '../../utils/photoCheck.uts'
 import { setBrandId } from '../../utils/brand.uts'
 import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
@@ -151,6 +151,8 @@ export default {
 		return {
 			shopId: '',
 			albumId: '',
+			// 跳转配置 albumId=random：进页随机解析该门店相册
+			needRandomAlbum: false,
 			category: '',
 			subCategory: '',
 			style: '',
@@ -219,8 +221,13 @@ export default {
 			this.shopId = String(options.shopId)
 		}
 		// 相册入口传入的相册 ID：模板列表按该相册过滤（只展示该相册的客片图作试衣模板）
+		// albumId=random：跳转配置「随机相册」，进页时解析该门店随机相册
 		if (options && options.albumId) {
-			this.albumId = String(options.albumId)
+			if (options.albumId === 'random') {
+				this.needRandomAlbum = true
+			} else {
+				this.albumId = String(options.albumId)
+			}
 		}
 		if (options && options.category) {
 			this.category = String(options.category)
@@ -257,7 +264,13 @@ export default {
 				this.backFallbackUrl = '/pages/demoDetail/index'
 			}
 		}
-		this.loadTemplates()
+		if (this.needRandomAlbum) {
+			this.resolveRandomAlbum().then(() => {
+				this.loadTemplates()
+			})
+		} else {
+			this.loadTemplates()
+		}
 	},
 	onShow() {
 		// 防截屏：进页开启（微信原生 API，仅小程序端生效）
@@ -328,6 +341,23 @@ export default {
 			}
 			// #endif
 		},
+		// 随机相册解析：取该门店可试衣相册随机一个（tryonDisabled 排除）
+		async resolveRandomAlbum() {
+			if (this.shopId === '') return
+			try {
+				const res = await getAlbumList({ shopId: this.shopId, page: 1, size: 50 })
+				if ((res.code === 0 || res.code === 200) && res.data && Array.isArray(res.data.albums)) {
+					const pool = res.data.albums.filter(a => a != null && a.tryonDisabled !== true)
+					if (pool.length > 0) {
+						const pick = pool[Math.floor(Math.random() * pool.length)]
+						this.albumId = String(pick.id)
+					}
+				}
+			} catch (e) {
+				console.error('[aiTryOn] 随机相册解析失败', e)
+			}
+		},
+
 		async loadTemplates() {
 			try {
 				// 相册入口：按 shop_id + album_id 精确取该相册的客片图作模板（不再叠加 style/category，防止滤空）
