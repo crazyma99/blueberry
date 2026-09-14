@@ -53,7 +53,6 @@
 					</view>
 					<text class="rec-reason">{{ rec.reason }}</text>
 					<view class="rec-footer">
-						<text class="rec-gender-tag" v-if="!rec.genderMatched">暂无同性样例</text>
 						<text class="rec-action" @click="onViewTemplateClick(rec)">查看模板</text>
 					</view>
 				</view>
@@ -261,10 +260,6 @@ export default {
 	align-items: center;
 	justify-content: space-between;
 	margin-top: 12rpx;
-}
-.rec-gender-tag {
-	font-size: var(--font-size-body-sm);
-	color: rgba(255, 200, 100, 0.7);
 }
 .rec-action {
 	font-size: var(--font-size-body);
