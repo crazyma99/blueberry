@@ -36,12 +36,16 @@
 		<!-- 成功态 -->
 		<view v-if="status === 'completed'" class="result-content">
 			<view class="result-image-wrapper">
+				<!-- 骨架图（主人指示时序：进度渲染到 100% → 展示图片骨架图 → 完全渲染结果图）：
+				     图片 onload 前占位，onload 后真图淡入并替换 -->
+				<view v-if="!imageLoaded && !imageErrored" class="result-skeleton"></view>
 				<image
 					class="result-image image-fade fade-in"
 					:class="{ 'image-visible': imageLoaded }"
-					:src="resultImageUrl"
+					:src="resultDisplayUrl"
 					mode="widthFix"
 					@load="onImageLoad"
+					@error="onImageError"
 				></image>
 				<!-- 图片区全屏水印（小程序内部/只读/单页模式统一，2026-09-14 主人指示）：
 				     仅视觉覆盖，付费保存下载的是原图 URL，绝不含水印 -->
@@ -106,8 +110,11 @@
 		<!-- 底部 footer：第一行 AI 生成提示，第二行版权文字（复用版权 footer，跟随 OPS copyright 配置） -->
 		<view class="page-footer">
 			<view class="divide"></view>
-			<view v-if="status === 'processing' && !initializing" class="footer-ai-tip">内容由 AI 生成，相关图片、文字结果均为 AI 创作，仅供参考</view>
-			<view class="bottomdesc"><AppFooter /></view>
+			<view class="bottomdesc">
+				<!-- 等待态（主人更正口径）：第一行 AI 生成提示、第二行技术支持；其余状态保持版权行 + 技术支持 -->
+				<AppFooter v-if="status === 'processing' && !initializing" main-text="内容由 AI 生成，相关图片、文字结果均为 AI 创作，仅供参考" support-text="小程序与AI技术能力由 蓝梅网络 提供支持" />
+				<AppFooter v-else />
+			</view>
 		</view>
 
 		<!-- 分享准备中 loading（点击分享后生成封面期间展示） -->
@@ -125,7 +132,7 @@ import { isLoggedIn } from '../../utils/auth.uts'
 import { getBrandId, setBrandId } from '../../utils/brand.uts'
 import { generateFaceCenteredCard } from '../../utils/faceShareCard.uts'
 import GenerationProgress from '../../components/GenerationProgress/GenerationProgress.uvue'
-import { cosThumb, cosThumbJpg } from '../../utils/imageLoader.uts'
+import { cosThumb, cosThumbJpg, preloadImage } from '../../utils/imageLoader.uts'
 
 export default {
 	components: { GenerationProgress },
@@ -149,6 +156,8 @@ export default {
 			elapsedSeconds: 0,
 			countdownTimer: null as any,
 			imageLoaded: false,
+			imageUseOriginal: false,   // 缩略图异常时回退原图（防白屏）
+			imageErrored: false,       // 图片彻底失败：骨架图不再无限转圈
 			shopId: '',
 			isSaving: false,     // 保存流程防重入（扣费+下载保存期间拦截重复点击）
 			creditBalance: -1,        // 下载池剩余次数，-1 = 未查询到
@@ -169,6 +178,12 @@ export default {
 		}
 	},
 	computed: {
+		// 展示用图片：原图是 Ark 全尺寸 JPEG（数 MB，移动网首屏十几秒），
+		// 统一走 COS 数据万象缩略图（全仓列表/详情同款做法）；原图 URL 仅用于保存/下载/分享
+		resultDisplayUrl(): string {
+			if (this.imageUseOriginal) return this.resultImageUrl
+			return cosThumb(this.resultImageUrl, 1080)
+		},
 		// 付费模式：已查询到余额且商户配置了单次价格
 		isPaidMode(): boolean {
 			return this.creditLoaded && this.priceFenPerCredit > 0
@@ -366,7 +381,11 @@ export default {
 		// 完成态赋值（首查直达 + 轮询完成共用）
 		applyCompleted(data: any) {
 			this.imageLoaded = false
+			this.imageUseOriginal = false
+			this.imageErrored = false
 			this.resultImageUrl = data.result_image_url || ''
+			// 预热：进度 100% / 骨架图期间并行下载缩略图，真图渲染时直接命中缓存
+			this.warmResultImage()
 			this.status = 'completed'
 			// 更新导航栏标题（自定义导航栏）
 			this.navTitle = 'AI试衣结果'
@@ -601,6 +620,9 @@ export default {
 						this.resultImageUrl = res.data.result_image_url
 						this.status = 'completed'
 						this.imageLoaded = false
+						this.imageUseOriginal = false
+						this.imageErrored = false
+						this.warmResultImage()
 					} else if (res.data.status === 'failed') {
 						this.status = 'failed'
 						this.taskErrorMessage = res.data.error_message ?? ''
@@ -659,6 +681,21 @@ export default {
 
 		onImageLoad() {
 			this.imageLoaded = true
+		},
+		// 缩略图失败：回退原图重试一次；原图也不可用则收掉骨架图（避免无限转圈）
+		onImageError() {
+			if (!this.imageUseOriginal && this.resultImageUrl !== '') {
+				this.imageUseOriginal = true
+				return
+			}
+			this.imageErrored = true
+		},
+		// 预热结果图（缩略图）；失败静默，不阻塞任何流程
+		warmResultImage() {
+			if (this.resultImageUrl === '') return
+			const url = cosThumb(this.resultImageUrl, 1080)
+			if (url === '') return
+			preloadImage(url).then((_ok: boolean) => {})
 		},
 
 		async saveToAlbum() {
@@ -997,7 +1034,7 @@ export default {
 		flex-direction: row;
 		justify-content: center;
 		/* 双按钮改在文档流内（页脚之上，与结果落地页同构），不再固定定位 */
-		padding: 0 var(--spacing-24) var(--spacing-sm);
+		padding: 0 var(--spacing-24) var(--spacing-24);
 	}
 /* CR 🔴：必须与 .center-content 联用提高特异性，否则被后定义的 .center-content padding 简写覆盖 */
 .center-content.processing-pad {
@@ -1117,6 +1154,25 @@ export default {
 	width: 100%;
 	border-radius: var(--radius-sm);
 }
+/* 结果图骨架图：3:4 占位 + 金色微光呼吸（图片加载完成后由真图淡入替换） */
+.result-skeleton {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	margin: auto;
+	width: 100%;
+	height: 1000rpx;
+	border-radius: var(--radius-sm);
+	background: linear-gradient(135deg, var(--color-primary-10) 0%, var(--color-primary-06) 100%);
+	animation: skPulse 1.4s ease-in-out infinite;
+}
+@keyframes skPulse {
+	0% { opacity: 0.5; }
+	50% { opacity: 1; }
+	100% { opacity: 0.5; }
+}
 .image-fade {
 	opacity: 0;
 	transition: opacity 0.8s ease-in-out;
@@ -1211,14 +1267,6 @@ export default {
 	/* CR 🟡 修复：按钮改文档流后，底部仍需避让手机 Home Indicator（原固定条自带 safe-area） */
 	padding-bottom: env(safe-area-inset-bottom);
 }
-.footer-ai-tip {
-		margin: var(--spacing-lg) auto 0;
-		padding: 0 var(--spacing-lg);
-		text-align: center;
-		font-size: var(--font-size-caption-md);
-		color: var(--color-primary-50);
-		line-height: 1.5;
-	}
 	.divide {
 	height: 2rpx;
 	width: 100%;
