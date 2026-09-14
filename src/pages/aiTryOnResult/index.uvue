@@ -101,7 +101,7 @@
 		</view>
 
 		<!-- 底部 Copyright -->
-		<view class="page-footer">
+		<view v-if="status !== 'processing'" class="page-footer">
 			<view class="divide"></view>
 			<view class="bottomdesc"><AppFooter /></view>
 		</view>
@@ -334,8 +334,8 @@ export default {
 						this.status = 'failed'
 						this.taskErrorMessage = res.data.error_message ?? ''
 					} else {
-						// pending / processing → 进入等待页（伪进度 + 轮询）
-						this.startPolling()
+						// pending / processing → 进入等待页（伪进度 + 轮询；首查刚查过，跳过一次即时轮询）
+						this.startPolling(true)
 					}
 				} else {
 					this.status = 'failed'
@@ -367,7 +367,7 @@ export default {
 			}
 			this.templateId = data.template_id != null ? (data.template_id as number) : 0
 		},
-		startPolling() {
+		startPolling(skipFirstPoll: boolean = false) {
 			this.status = 'processing'
 			this.elapsedSeconds = 0
 			this.pollErrorStreak = 0
@@ -381,8 +381,10 @@ export default {
 				}
 			}, 1000)
 
-			// 立即查询一次
-			this.pollResult()
+			// 立即查询一次（首查已刚查询过则跳过，避免背靠背双请求——CR 🟡）
+			if (!skipFirstPoll) {
+				this.pollResult()
+			}
 
 			// bug #12：自适应轮询（替代固定 20s——通知已到但页面最坏再等 20s 才跳转）
 			this.schedulePoll()
@@ -970,7 +972,8 @@ export default {
 	background: linear-gradient(to top, var(--color-bg) 62%, rgba(22, 15, 4, 0));
 	z-index: 10;
 }
-.processing-pad {
+/* CR 🔴：必须与 .center-content 联用提高特异性，否则被后定义的 .center-content padding 简写覆盖 */
+.center-content.processing-pad {
 	padding-bottom: 180rpx;
 }
 /* 双按钮（button 组件，主人指示）：重置原生样式，视觉与 btn-secondary 一致 */
