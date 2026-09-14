@@ -38,7 +38,14 @@
 			<view class="result-image-wrapper">
 				<!-- 骨架图（主人指示时序：进度渲染到 100% → 展示图片骨架图 → 完全渲染结果图）：
 				     图片 onload 前占位，onload 后真图淡入并替换 -->
-				<view v-if="!imageLoaded && !imageErrored" class="result-skeleton"></view>
+				<view
+					v-if="!imageLoaded"
+					class="result-skeleton"
+					:class="{ 'result-skeleton-error': imageErrored }"
+					@click="retryImage"
+				>
+					<text v-if="imageErrored" class="result-skeleton-hint">图片加载失败，点按重试</text>
+				</view>
 				<image
 					class="result-image image-fade fade-in"
 					:class="{ 'image-visible': imageLoaded }"
@@ -111,9 +118,9 @@
 		<view class="page-footer">
 			<view class="divide"></view>
 			<view class="bottomdesc">
-				<!-- 等待态（主人更正口径）：第一行 AI 生成提示、第二行技术支持；其余状态保持版权行 + 技术支持 -->
-				<AppFooter v-if="status === 'processing' && !initializing" main-text="内容由 AI 生成，相关图片、文字结果均为 AI 创作，仅供参考" support-text="小程序与AI技术能力由 蓝梅网络 提供支持" />
-				<AppFooter v-else />
+				<!-- 等待态（主人更正口径）：第一行 AI 生成提示、第二行技术支持；其余状态保持版权行 + 技术支持。
+				     单实例 + 动态 props（CR 🟡：避免 v-if/v-else 重建组件、重复拉取 OPS 版权配置） -->
+				<AppFooter :main-text="footerMainText" :support-text="footerSupportText" />
 			</view>
 		</view>
 
@@ -178,6 +185,13 @@ export default {
 		}
 	},
 	computed: {
+		// 等待态 footer 文案（非等待态返回空串 → AppFooter 回落到 OPS copyright 配置/默认版权）
+		footerMainText(): string {
+			return this.status === 'processing' && !this.initializing ? '内容由 AI 生成，相关图片、文字结果均为 AI 创作，仅供参考' : ''
+		},
+		footerSupportText(): string {
+			return this.status === 'processing' && !this.initializing ? '小程序与AI技术能力由 蓝梅网络 提供支持' : ''
+		},
 		// 展示用图片：原图是 Ark 全尺寸 JPEG（数 MB，移动网首屏十几秒），
 		// 统一走 COS 数据万象缩略图（全仓列表/详情同款做法）；原图 URL 仅用于保存/下载/分享
 		resultDisplayUrl(): string {
@@ -682,13 +696,22 @@ export default {
 		onImageLoad() {
 			this.imageLoaded = true
 		},
-		// 缩略图失败：回退原图重试一次；原图也不可用则收掉骨架图（避免无限转圈）
+		// 图片失败：优先换一条 URL（缩略图 → 原图）重试；非本站域时 cosThumb 原样返回、
+		// 换 URL 不生效，此时直接判失败（CR 🟡：否则骨架图会无限呼吸且不再触发 error）
 		onImageError() {
-			if (!this.imageUseOriginal && this.resultImageUrl !== '') {
+			const thumb = cosThumb(this.resultImageUrl, 1080)
+			if (!this.imageUseOriginal && this.resultImageUrl !== '' && thumb !== this.resultImageUrl) {
 				this.imageUseOriginal = true
 				return
 			}
 			this.imageErrored = true
+		},
+		// 点按骨架图重试：换一条 URL 重新加载（同一 src 不会再触发 load）
+		retryImage() {
+			if (!this.imageErrored) return
+			this.imageErrored = false
+			this.imageLoaded = false
+			this.imageUseOriginal = !this.imageUseOriginal
 		},
 		// 预热结果图（缩略图）；失败静默，不阻塞任何流程
 		warmResultImage() {
@@ -1034,7 +1057,8 @@ export default {
 		flex-direction: row;
 		justify-content: center;
 		/* 双按钮改在文档流内（页脚之上，与结果落地页同构），不再固定定位 */
-		padding: 0 var(--spacing-24) var(--spacing-24);
+		/* CR 🟡：结果页按钮底距＝action-bar 24rpx ＋ result-content 8rpx = 32rpx，此处对齐 32rpx */
+		padding: 0 var(--spacing-24) var(--spacing-lg);
 	}
 /* CR 🔴：必须与 .center-content 联用提高特异性，否则被后定义的 .center-content padding 简写覆盖 */
 .center-content.processing-pad {
@@ -1164,9 +1188,23 @@ export default {
 	margin: auto;
 	width: 100%;
 	height: 1000rpx;
+	/* CR 🟡：小屏（如 320×568）下 1000rpx 会溢出容器压到按钮，故以容器高度封顶 */
+	max-height: 100%;
 	border-radius: var(--radius-sm);
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
 	background: linear-gradient(135deg, var(--color-primary-10) 0%, var(--color-primary-06) 100%);
 	animation: skPulse 1.4s ease-in-out infinite;
+}
+.result-skeleton-error {
+	animation: none;
+	opacity: 1;
+}
+.result-skeleton-hint {
+	font-size: var(--font-size-body-sm);
+	color: var(--color-primary-50);
 }
 @keyframes skPulse {
 	0% { opacity: 0.5; }

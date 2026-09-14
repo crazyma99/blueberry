@@ -96,11 +96,13 @@ export default {
 				const parsed = JSON.parse(decodeURIComponent(raw))
 				this.analysis = parsed.analysis
 				const recs: any[] = parsed.recommendations ?? []
-			// 骨架图标记（图片 onload 后置真）
-			for (let i = 0; i < recs.length; i++) {
-				recs[i].previewLoaded = false
-			}
+			// 先落列表再打骨架标记（CR 🟡：脏数据异常不应导致整列丢失）
 			this.recommendations = recs
+			for (let i = 0; i < recs.length; i++) {
+				if (recs[i] != null) {
+					recs[i].previewLoaded = false
+				}
+			}
 				// 记录用户性别用于后续模板筛选
 				const g = (this.analysis?.gender ?? '').toLowerCase()
 				if (g === '男' || g === 'male') {
