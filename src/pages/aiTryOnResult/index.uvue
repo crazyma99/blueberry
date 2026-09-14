@@ -27,8 +27,8 @@
 			</view>
 		</view>
 
-		<!-- 底部双按钮（固定底部，参考结果落地页按钮位置，主人指示） -->
-		<view v-if="status === 'processing' && !initializing && !shareReadOnly" class="gen-actions gen-actions-fixed">
+		<!-- 底部双按钮（与结果落地页同构：页脚之上、文档流内居中，主人指示） -->
+		<view v-if="status === 'processing' && !initializing && !shareReadOnly" class="gen-actions">
 			<button class="gen-btn btn-secondary" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
 			<button class="gen-btn btn-secondary" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
 		</view>
@@ -103,9 +103,10 @@
 			</view>
 		</view>
 
-		<!-- 底部 Copyright -->
-		<view v-if="status !== 'processing'" class="page-footer">
+		<!-- 底部 footer：第一行 AI 生成提示，第二行版权文字（复用版权 footer，跟随 OPS copyright 配置） -->
+		<view class="page-footer">
 			<view class="divide"></view>
+			<view v-if="status === 'processing' && !initializing" class="footer-ai-tip">内容由 AI 生成，相关图片、文字结果均为 AI 创作，仅供参考</view>
 			<view class="bottomdesc"><AppFooter /></view>
 		</view>
 
@@ -974,6 +975,8 @@ export default {
 		align-items: center;
 		/* 面板改 stretch 后，胶囊自身按内容收窄并居中 */
 		align-self: center;
+		/* 距标题栏（titlebar）24rpx（主人指示，用 token） */
+		margin-top: var(--spacing-24);
 		padding: 14rpx 28rpx;
 		border: 1rpx solid var(--color-primary-50);
 		border-radius: var(--radius-full);
@@ -990,24 +993,20 @@ export default {
 		color: var(--color-primary);
 	}
 .gen-actions {
-	display: flex;
-	flex-direction: row;
-	justify-content: center;
-}
-/* 等待页双按钮固定底部（参考结果落地页底部按钮位置，主人指示） */
-.gen-actions-fixed {
-	position: fixed;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	padding: 20rpx 0 calc(env(safe-area-inset-bottom) + 24rpx);
-	background: linear-gradient(to top, var(--color-bg) 62%, rgba(22, 15, 4, 0));
-	z-index: 10;
-}
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		/* 双按钮改在文档流内（页脚之上，与结果落地页同构），不再固定定位 */
+		padding: 0 var(--spacing-24) var(--spacing-sm);
+	}
 /* CR 🔴：必须与 .center-content 联用提高特异性，否则被后定义的 .center-content padding 简写覆盖 */
 .center-content.processing-pad {
-	padding-bottom: 220rpx;
-}
+		/* 等待态：内容自顶部排布（Tips 紧贴标题栏下 24rpx），左右留白收窄让进度模块更宽（主人指示） */
+		justify-content: flex-start;
+		padding-left: var(--spacing-24);
+		padding-right: var(--spacing-24);
+		padding-bottom: var(--spacing-lg);
+	}
 /* 双按钮（button 组件，主人指示）：尺寸对齐结果落地页操作栏按钮（92rpx 高 / 32rpx 字 / 40rpx 内边距）；
    视觉（金描边+金字+金底、pill 圆角）由全局 .btn-secondary 提供，此处只做尺寸覆盖 */
 .gen-actions .gen-btn {
@@ -1210,7 +1209,15 @@ export default {
 .page-footer {
 	margin-top: auto;
 }
-.divide {
+.footer-ai-tip {
+		margin: var(--spacing-lg) auto 0;
+		padding: 0 var(--spacing-lg);
+		text-align: center;
+		font-size: var(--font-size-caption-md);
+		color: var(--color-primary-50);
+		line-height: 1.5;
+	}
+	.divide {
 	height: 2rpx;
 	width: 100%;
 	background: rgba(255, 255, 255, 0.15);
