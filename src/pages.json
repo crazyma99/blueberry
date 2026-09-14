@@ -79,20 +79,20 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "iconPath": "static/home-bar.png",
-        "selectedIconPath": "static/home-bar.png",
+        "iconPath": "static/iconpark/home.svg",
+        "selectedIconPath": "static/iconpark/home.svg",
         "text": "首页"
       },
       {
         "pagePath": "pages/priceHomePage/index",
-        "iconPath": "static/price-bar.png",
-        "selectedIconPath": "static/price-bar.png",
+        "iconPath": "static/iconpark/price.svg",
+        "selectedIconPath": "static/iconpark/price.svg",
         "text": "价目表"
       },
       {
         "pagePath": "pages/mine/index",
-        "iconPath": "static/my-bar.png",
-        "selectedIconPath": "static/my-bar.png",
+        "iconPath": "static/iconpark/mine.svg",
+        "selectedIconPath": "static/iconpark/mine.svg",
         "text": "我的"
       }
     ]

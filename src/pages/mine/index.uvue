@@ -38,7 +38,7 @@
                 {{ isLoggedIn ? (userNickname === '' ? '完善头像昵称，获得完整体验' : '欢迎回来，蓝梅旅拍') : '登录后可收藏与体验AI试衣' }}
               </view>
             </view>
-            <image class="user-arrow" src="/static/chevron-right.svg" mode="aspectFit"></image>
+            <image class="user-arrow" src="/static/iconpark/right.svg" mode="aspectFit"></image>
           </view>
 
           <!-- 功能列表项：紧凑合成一块 -->
@@ -50,7 +50,7 @@
             @click="handleMenuClick(item)"
           >
             <view class="menu-title font-noto-serif">{{ item.title }}</view>
-            <image class="menu-arrow" src="/static/chevron-right.svg" mode="aspectFit"></image>
+            <image class="menu-arrow" src="/static/iconpark/right.svg" mode="aspectFit"></image>
           </view>
         </view>
 
@@ -128,7 +128,7 @@ export default {
       isLoggedIn: false,
       menuItems: [] as any[],
       // 仅供 profile 弹窗里 chooseAvatar 占位使用，user-section 不再用兜底图
-      defaultAvatar: '/static/mine.svg',
+      defaultAvatar: '/static/iconpark/mine.svg',
       showLoginPopup: false,
       loginAgreementChecked: false,
       userAgreementName: USER_AGREEMENT_NAME,
@@ -215,8 +215,8 @@ export default {
     // 默认菜单入口（我的喜欢 / AI试衣）
     getDefaultMenuItems() {
       return [
-        { title: '我的喜欢', imageUrl: '/static/liked.svg', linkUrl: '/pages/favorites/index', needLogin: true },
-        { title: 'AI试衣', imageUrl: '/static/starred.svg', linkUrl: '/pages/aiTryOnHistory/index', needLogin: true, specialFont: true }
+        { title: '我的喜欢', imageUrl: '/static/iconpark/like-filled.svg', linkUrl: '/pages/favorites/index', needLogin: true },
+        { title: 'AI试衣', imageUrl: '/static/iconpark/star.svg', linkUrl: '/pages/aiTryOnHistory/index', needLogin: true, specialFont: true }
       ]
     },
 

@@ -49,7 +49,7 @@
           </view>
           <view class="brand-enter">
             <text class="brand-enter-text">进入</text>
-            <image class="brand-arrow" src="/static/chevron-right.svg" mode="aspectFit"></image>
+            <image class="brand-arrow" src="/static/iconpark/right.svg" mode="aspectFit"></image>
           </view>
         </view>
 

@@ -16,7 +16,7 @@
 
       <!-- 头像选择 -->
       <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="emit('choose-avatar', $event)">
-        <image class="avatar-img" :src="avatarUrl || '/static/mine.svg'" mode="aspectFill"></image>
+        <image class="avatar-img" :src="avatarUrl || '/static/iconpark/mine.svg'" mode="aspectFill"></image>
         <view class="avatar-badge">+</view>
         <text class="avatar-tip">点击选择头像</text>
       </button>

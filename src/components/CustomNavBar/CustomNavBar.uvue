@@ -14,7 +14,7 @@
 		<view :style="{ height: statusBarHeight + 'px' }"></view>
 		<view class="custom-navbar-content">
 			<view v-if="showBack" class="custom-navbar-back" @click="onBackTap">
-				<image class="custom-navbar-back-icon" src="/static/back-arrow.svg" mode="aspectFit"></image>
+				<image class="custom-navbar-back-icon" src="/static/iconpark/back.svg" mode="aspectFit"></image>
 			</view>
 			<text v-if="title !== ''" class="custom-navbar-title">{{ title }}</text>
 			<!-- 默认插槽：页面自定顶栏内容（搜索框/标题组等），统一顶栏实现收敛于此 -->

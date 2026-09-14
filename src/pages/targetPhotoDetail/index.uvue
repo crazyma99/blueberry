@@ -56,7 +56,7 @@
 					<view class="collect" hover-class="press-dim"
 					@click="handleLike">
 						<image
-							:src="liked ? '/static/liked.svg' : '/static/like.svg'"
+							:src="liked ? '/static/iconpark/like-filled.svg' : '/static/iconpark/like.svg'"
 							class="heart"
 						></image>
 						<text class="like-num">{{ formatCount(likeCount) }}</text>

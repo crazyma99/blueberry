@@ -23,7 +23,7 @@
 		<!-- 模板缩略图横滑条：展示当前相册全部模板，点击直达；箭头折叠/展开（默认展开），位于主图下方不遮挡 -->
 		<view class="thumb-strip">
 			<view class="thumb-strip-head" @click="toggleThumbStrip">
-				<image class="thumb-strip-arrow" :class="thumbCollapsed ? '' : 'thumb-strip-arrow-up'" src="/static/chevron-down.svg" mode="aspectFit"></image>
+				<image class="thumb-strip-arrow" :class="thumbCollapsed ? '' : 'thumb-strip-arrow-up'" src="/static/iconpark/down.svg" mode="aspectFit"></image>
 				<text class="thumb-strip-label">模板快速选择（{{ templates.length }}）</text>
 			</view>
 			<scroll-view v-if="!thumbCollapsed" class="thumb-scroll" scroll-x :show-scrollbar="false">

@@ -4,7 +4,7 @@
 		<CustomNavBar :manual-back="true" :back-fallback-url="'/pages/index/index'" @back="goBack">
 			<view class="search-bar-wrap">
 				<view class="search-bar-nav">
-					<image class="search-icon-small" src="/static/search.png" mode="aspectFit"></image>
+					<image class="search-icon-small" src="/static/iconpark/search.svg" mode="aspectFit"></image>
 					<input
 						class="search-input-nav"
 						type="text"
@@ -65,7 +65,7 @@
 											<image
 												class="heart"
 												mode="aspectFit"
-												:src="item.liked ? '/static/liked.svg' : '/static/like.svg'"
+												:src="item.liked ? '/static/iconpark/like-filled.svg' : '/static/iconpark/like.svg'"
 											>
 												<view class="clickArea" hover-class="press-dim"
 					@click.stop="handleLike(item)"></view>
@@ -146,7 +146,7 @@
 											<image
 												class="heart"
 												mode="aspectFit"
-												:src="item.liked ? '/static/liked.svg' : '/static/like.svg'"
+												:src="item.liked ? '/static/iconpark/like-filled.svg' : '/static/iconpark/like.svg'"
 											>
 												<view class="clickArea" hover-class="press-dim"
 					@click.stop="handleLike(item)"></view>

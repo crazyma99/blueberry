@@ -73,7 +73,7 @@
 				</view>
 				<button class="share-btn btn-secondary" open-type="share" hover-class="press-dim">分享</button>
 				<button class="share-btn btn-secondary" @click="guideShareTimeline" hover-class="press-dim">
-					<image class="moments-icon" src="/static/friend_circle.svg" mode="aspectFit"></image>
+					<image class="moments-icon" src="/static/iconpark/share-three.svg" mode="aspectFit"></image>
 				</button>
 			</view>
 		</view>
