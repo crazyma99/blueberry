@@ -70,7 +70,8 @@ export default {
 		// 生成等待伪进度：百分比封顶 99%，完成时 progressDone → 100
 		progressPercent(): number {
 			if (this.progressDone) return 100
-			const p = Math.floor(this.elapsedSeconds / 45 * 100)
+			// 主人定稿：10s 走满 99%（推荐较试衣更快到顶，完成时置 100）
+			const p = Math.floor(this.elapsedSeconds / 10 * 100)
 			return p > 99 ? 99 : p
 		},
 		currentProgressStep(): number {
