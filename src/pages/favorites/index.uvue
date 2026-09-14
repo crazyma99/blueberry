@@ -4,7 +4,7 @@
 		<CustomNavBar :manual-back="true" @back="goBack">
 			<view class="search-bar-wrap">
 				<view class="search-bar-nav">
-					<image class="search-icon-small" src="/static/search.png" mode="aspectFit"></image>
+					<image class="search-icon-small" src="/static/iconpark/search.svg" mode="aspectFit"></image>
 					<input
 						class="search-input-nav"
 						type="text"
@@ -49,7 +49,7 @@
 								<view class="photoName font-noto-serif">{{ item.title }}</view>
 								<view class="desc-row">
 									<view class="collect">
-										<image class="heart" mode="aspectFit" src="/static/liked.svg"></image>
+										<image class="heart" mode="aspectFit" src="/static/iconpark/like-filled.svg"></image>
 										<text class="stat-count">{{ formatCount(item.likeCount) }}</text>
 									</view>
 								</view>

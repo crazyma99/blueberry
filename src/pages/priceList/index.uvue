@@ -76,7 +76,7 @@
 				}
 			},
 			getFallbackPriceImage(id) {
-				return id === '1' ? '/static/honghe-price.png' : '/static/price.png'
+				return id === '1' ? '/static/honghe-price.png' : '/static/iconpark/price.svg'
 			},
 			// 套餐条目：仅展示（2026-09-11 主人指示：价目表二级页渲染；店铺级 banner 同批废弃）
 			async getPackages(id: string) {

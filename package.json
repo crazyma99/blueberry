@@ -39,6 +39,7 @@
     "@dcloudio/uni-stacktracey": "3.0.0-alpha-5000820260508001",
     "@dcloudio/uni-uts-v1": "^3.0.0-alpha-5000720260327001",
     "@dcloudio/vite-plugin-uni": "3.0.0-alpha-5000820260508001",
+    "@icon-park/svg": "^1.4.2",
     "@vue/runtime-core": "3.5.34",
     "@vue/tsconfig": "^0.1.3",
     "typescript": "^5.0.0",

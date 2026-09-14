@@ -10,17 +10,17 @@ Component({
     list: [
       {
         pagePath: 'pages/index/index',
-        icon: '/static/home-bar.png',
+        icon: '/static/iconpark/home.svg',
         text: '首页',
       },
       {
         pagePath: 'pages/priceHomePage/index',
-        icon: '/static/price-bar.png',
+        icon: '/static/iconpark/price.svg',
         text: '价目表',
       },
       {
         pagePath: 'pages/mine/index',
-        icon: '/static/my-bar.png',
+        icon: '/static/iconpark/mine.svg',
         text: '我的',
       },
     ],
