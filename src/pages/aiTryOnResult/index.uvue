@@ -1208,6 +1208,8 @@ export default {
 /* 底部 */
 .page-footer {
 	margin-top: auto;
+	/* CR 🟡 修复：按钮改文档流后，底部仍需避让手机 Home Indicator（原固定条自带 safe-area） */
+	padding-bottom: env(safe-area-inset-bottom);
 }
 .footer-ai-tip {
 		margin: var(--spacing-lg) auto 0;

@@ -66,21 +66,23 @@
 
 <style>
 	.gp {
+		/* 节点尺寸唯一来源：轨道高度、节点宽高均由它推导（改这里即可，连线两处常量需同步） */
+		--gp-node-size: 64rpx;
 		width: 100%;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		overflow: visible;
-		margin: var(--spacing-md) 0 8rpx;
+		margin: var(--spacing-2xs) 0 8rpx;
 	}
-	/* 步骤条：四等分格子；上下留 20rpx 给当前节点的辉光绘制空间（避免被父级/宿主盒裁到） */
+	/* 步骤条：四等分格子；上下各 24rpx 给当前节点的辉光绘制空间（辉光 blur 20rpx，实测绘制外扩约 18rpx） */
 	.gp-steps {
 		width: 100%;
 		display: flex;
 		flex-direction: row;
 		align-items: flex-start;
 		overflow: visible;
-		padding: 24rpx 0;
+		padding: var(--spacing-24) 0;
 	}
 	.gp-step {
 		flex: 1;
@@ -96,16 +98,15 @@
 		left: 50%;
 		top: 0;
 		width: 100%;
-		height: 64rpx;
+		height: var(--gp-node-size);
 		display: flex;
 		flex-direction: row;
 		align-items: center;
 	}
 	.gp-line {
 		height: 6rpx;
-		/* 节点半径 32rpx + 与节点的间距 6rpx */
+		/* 与 --gp-node-size 强耦合：38rpx = 节点半径 32rpx + 间距 6rpx；改节点尺寸必须同步改这两个常量 */
 		margin-left: 38rpx;
-		/* 左右各让出 38rpx ⇒ 线只落在两个节点之间 */
 		width: calc(100% - 76rpx);
 		border-radius: var(--radius-full);
 	}
@@ -120,8 +121,8 @@
 		background: rgba(255, 255, 255, 0.1);
 	}
 	.gp-node {
-		width: 64rpx;
-		height: 64rpx;
+		width: var(--gp-node-size);
+		height: var(--gp-node-size);
 		border-radius: 50%;
 		box-sizing: border-box;
 		display: flex;
