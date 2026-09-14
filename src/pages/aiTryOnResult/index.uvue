@@ -5,10 +5,20 @@
 		<!-- 加载态 -->
 		<view v-if="status === 'processing'" class="center-content">
 			<view class="loading-wrapper">
-				<view class="loading-spinner"></view>
-				<text class="loading-tip">{{ shareReadOnly ? '作品正在生成中，请稍后再来' : '正在后台为你生成，完成后会通过微信服务通知提醒你' }}</text>
-				<text class="elapsed-text" v-if="elapsedSeconds > 0">已等待 {{ elapsedSeconds }} 秒</text>
-				<view v-if="!shareReadOnly" class="browse-btn btn-secondary" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他相册</view>
+				<!-- 生成等待体验优化（2026-09-14 主人指示）：伪进度三步条替代倒计时 + Tips + 底部双按钮 -->
+				<view v-if="!shareReadOnly" class="gen-panel">
+					<view class="gen-tips">离开当前页也会继续生成，完成后将会通知您</view>
+					<GenerationProgress :steps="progressSteps" :active-index="currentProgressStep" />
+					<view class="gen-actions">
+						<view class="gen-btn btn-secondary" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</view>
+						<view class="gen-btn btn-secondary" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</view>
+					</view>
+				</view>
+				<!-- 只读分享落地：他人作品生成中，保持轻提示 -->
+				<view v-else class="gen-panel">
+					<view class="loading-spinner"></view>
+					<text class="loading-tip">作品正在生成中，请稍后再来</text>
+				</view>
 			</view>
 		</view>
 
@@ -102,9 +112,11 @@ import { getAiTryOnResult, getSharedAiTryOnResult, downloadAiTryOnResult, create
 import { isLoggedIn } from '../../utils/auth.uts'
 import { getBrandId, setBrandId } from '../../utils/brand.uts'
 import { generateFaceCenteredCard } from '../../utils/faceShareCard.uts'
+import GenerationProgress from '../../components/GenerationProgress/GenerationProgress.uvue'
 import { cosThumb } from '../../utils/imageLoader.uts'
 
 export default {
+	components: { GenerationProgress },
 	data() {
 		return {
 			taskId: '',
@@ -153,6 +165,23 @@ export default {
 				return `蓝梅AI · ${this.shopName} · AI试衣效果 仅供预览`
 			}
 			return '蓝梅AI · AI试衣效果 仅供预览'
+		},
+		// 生成等待伪进度：按已等待时间推进步骤（替代秒数倒计时展示）
+		currentProgressStep(): number {
+			if (this.elapsedSeconds < 25) return 0
+			if (this.elapsedSeconds < 75) return 1
+			return 2
+		},
+		// 三步动态文案（试衣版）：已完成显示「完毕」文案，当前/未到显示「正在」文案
+		progressSteps(): string[] {
+			const base = ['正在分析五官', '正在深度思考', '正在拟合人像数据']
+			const done = ['五官妆容分析完毕', '深度思考完成', '图像生成完成']
+			const cur = this.currentProgressStep()
+			const list: string[] = []
+			for (let i = 0; i < 3; i++) {
+				list.push(i < cur ? done[i] : base[i])
+			}
+			return list
 		},
 		// 单次价格文案（分 → 元，整元去小数）
 		priceText(): string {
@@ -359,6 +388,11 @@ export default {
 			} else {
 				uni.navigateTo({ url: '/pages/demoDetail/index' })
 			}
+		},
+
+		// 生成队列：跳转 我-AI试衣 记录页（等待体验底部第二个按钮，2026-09-14 主人指示）
+		goGenerationQueue() {
+			uni.navigateTo({ url: '/pages/aiTryOnHistory/index' })
 		},
 
 		// 分享标题：带店铺名称（主人 2026-09-10 指示）；无店铺名时退化为品牌+相册名
@@ -824,6 +858,38 @@ export default {
 }
 
 /* 居中内容区域（加载态/失败态） */
+.center-content {
+	position: relative;
+}
+/* 生成等待体验：Tips / 进度面板 / 双按钮 */
+.gen-panel {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+.gen-tips {
+	font-size: var(--font-size-body-sm);
+	color: rgba(255, 255, 255, 0.45);
+	text-align: center;
+	padding: 12rpx 24rpx;
+	margin-bottom: 8rpx;
+}
+.gen-actions {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	margin-top: 28rpx;
+}
+.gen-btn {
+	padding: 16rpx 36rpx;
+	border-radius: var(--radius-lg);
+	margin: 0 12rpx;
+	font-size: var(--font-size-body);
+}
+.gen-panel .loading-spinner {
+	margin-bottom: 16rpx;
+}
 .center-content {
 	flex: 1;
 	display: flex;

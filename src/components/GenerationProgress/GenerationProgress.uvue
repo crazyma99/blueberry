@@ -1,0 +1,91 @@
+<template>
+	<view class="gp">
+		<view
+			v-for="(s, i) in steps"
+			:key="i"
+			class="gp-row"
+			:class="i === activeIndex ? 'gp-row-active' : (i < activeIndex ? 'gp-row-done' : 'gp-row-pending')"
+		>
+			<view class="gp-icon">
+				<text v-if="i < activeIndex" class="gp-check">✓</text>
+				<view v-else-if="i === activeIndex" class="gp-dot gp-dot-active"></view>
+				<view v-else class="gp-dot"></view>
+			</view>
+			<text class="gp-label">{{ s }}</text>
+		</view>
+	</view>
+</template>
+
+<script lang="uts">
+	export default {
+		name: 'GenerationProgress',
+		props: {
+			// 各步骤当前展示文案（父级已按状态计算好：已完成=完毕文案、其余=正在进行文案）
+			steps: {
+				type: Array<string>,
+				default: () => [] as string[]
+			},
+			// 当前进行中的步骤下标（0 起）
+			activeIndex: {
+				type: Number,
+				default: 0
+			}
+		}
+	}
+</script>
+
+<style>
+	.gp {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		margin: 24rpx 0;
+	}
+	.gp-row {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		padding: 18rpx 0;
+	}
+	.gp-icon {
+		width: 44rpx;
+		height: 44rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-right: 20rpx;
+	}
+	.gp-check {
+		font-size: 30rpx;
+		color: var(--color-primary);
+		font-weight: 600;
+	}
+	.gp-dot {
+		width: 16rpx;
+		height: 16rpx;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.25);
+	}
+	.gp-dot-active {
+		width: 18rpx;
+		height: 18rpx;
+		background: var(--color-primary);
+		animation: gpPulse 1.1s ease-in-out infinite;
+	}
+	.gp-label {
+		font-size: var(--font-size-body);
+		color: rgba(255, 255, 255, 0.35);
+	}
+	.gp-row-active .gp-label {
+		color: var(--color-primary);
+		font-weight: 500;
+	}
+	.gp-row-done .gp-label {
+		color: rgba(255, 255, 255, 0.72);
+	}
+	@keyframes gpPulse {
+		0% { opacity: 0.35; transform: scale(0.85); }
+		50% { opacity: 1; transform: scale(1.15); }
+		100% { opacity: 0.35; transform: scale(0.85); }
+	}
+</style>
