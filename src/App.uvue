@@ -112,6 +112,8 @@ page {
 	--spacing-2xs: 6rpx;
 	--spacing-xs: 10rpx;
 	--spacing-sm: 20rpx;
+	/* 设计 token 4.1 间距刻度（t-shirt 档位之外的 24rpx，等待页 Tips 距标题栏 / 页面左右留白用） */
+	--spacing-24: 24rpx;
 	--spacing-md: 28rpx;
 	--spacing-lg: 32rpx;
 	/* 字体族（由 App onLaunch loadFontFace 全局加载） */
