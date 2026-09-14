@@ -1,9 +1,9 @@
 <template>
 	<view class="gp">
-		<!-- 横向步骤条（2026-09-14 主人定稿：按设计图改版——圆形节点 + 渐变连线，图标一律 IconPark） -->
+		<!-- 横向步骤条（2026-09-14 主人定稿：圆形节点 + 语义图标 + 节点之间的渐变连线，图标一律 IconPark） -->
 		<view class="gp-steps">
 			<view v-for="(s, i) in steps" :key="i" class="gp-step">
-				<!-- 连线：绝对定位于节点圆心高度，向右延伸正好一格（= 下一节点圆心），末节点不画 -->
+				<!-- 连线：只画在两个节点之间（左右各让出「节点半径 + 间距」），末节点不画 -->
 				<view
 					v-if="i < steps.length - 1"
 					class="gp-line"
@@ -13,9 +13,15 @@
 					class="gp-node"
 					:class="i < activeIndex ? 'gp-node-done' : (i === activeIndex ? 'gp-node-active' : 'gp-node-pending')"
 				>
-					<!-- 已完成：金底白勾（金色勾落在金圆上不可见，故单列 check-white 变体）；当前/未完成：步骤序号 -->
+					<!-- 已完成：金底白勾（金色勾落在金圆上不可见，故单列 check-white 变体）；当前/未完成：该步语义图标 -->
 					<image v-if="i < activeIndex" class="gp-check" src="/static/iconpark/check-white.svg" mode="aspectFit"></image>
-					<text v-else class="gp-index" :class="i === activeIndex ? 'gp-index-active' : ''">{{ i + 1 }}</text>
+					<image
+						v-else
+						class="gp-step-icon"
+						:class="i === activeIndex ? 'gp-step-icon-active' : 'gp-step-icon-pending'"
+						:src="iconPaths[i]"
+						mode="aspectFit"
+					></image>
 				</view>
 				<text
 					class="gp-label"
@@ -34,6 +40,11 @@
 		props: {
 			// 各步骤当前展示文案（父级已按状态计算好：已完成=完毕文案、其余=进行中文案）
 			steps: {
+				type: Array<string>,
+				default: () => [] as string[]
+			},
+			// 各步骤节点图标（静态 SVG 路径数组，长度须与 steps 一致；已完成节点统一显示白勾）
+			iconPaths: {
 				type: Array<string>,
 				default: () => [] as string[]
 			},
@@ -73,12 +84,12 @@
 		align-items: center;
 		position: relative;
 	}
-	/* 连线：top = 节点半径 - 线高一半（节点 88rpx / 线 6rpx） */
+	/* 连线：top = 节点半径 - 线高一半（节点 88rpx / 线 6rpx）；只画在节点之间——左右各让出 44rpx（节点半径）+ 6rpx（与节点的间距） */
 	.gp-line {
 		position: absolute;
-		left: 50%;
+		left: calc(50% + 50rpx);
 		top: 41rpx;
-		width: 100%;
+		width: calc(100% - 100rpx);
 		height: 6rpx;
 		border-radius: var(--radius-full);
 	}
@@ -118,16 +129,20 @@
 		animation: gpGlow 1.6s ease-in-out infinite;
 	}
 	.gp-node-pending {
-		/* 不透明底色：连线从节点圆心穿过，半透明会让线透出来 */
+		/* 不透明底色：与页面底色区分，同时避免连线透出 */
 		background: var(--color-surface);
 		border: 2rpx solid rgba(255, 255, 255, 0.12);
 	}
-	.gp-index {
-		font-size: 32rpx;
-		color: rgba(255, 255, 255, 0.35);
+	/* 节点内的语义图标（IconPark 金色 SVG）：当前步高亮、未到步骤压暗 */
+	.gp-step-icon {
+		width: 46rpx;
+		height: 46rpx;
 	}
-	.gp-index-active {
-		color: var(--color-primary);
+	.gp-step-icon-active {
+		opacity: 1;
+	}
+	.gp-step-icon-pending {
+		opacity: 0.32;
 	}
 	/* 步骤文案：预留两行高度，避免步骤「进行中 → 完毕」换文案时整块跳动 */
 	.gp-label {
