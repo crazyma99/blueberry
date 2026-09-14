@@ -13,7 +13,10 @@
 		<view v-if="status === 'processing' && !initializing" class="center-content processing-pad">
 			<view class="loading-wrapper">
 				<view v-if="!shareReadOnly" class="gen-panel">
-					<view class="gen-tips">离开当前页也会继续生成，完成后将会通知您</view>
+					<view class="gen-tips">
+						<image class="gen-tips-icon" src="/static/iconpark/protect.svg" mode="aspectFit"></image>
+						<text class="gen-tips-text">离开当前页也会继续生成，完成后将会通知您</text>
+					</view>
 					<GenerationProgress :steps="progressSteps" :active-index="currentProgressStep" :percent="progressPercent" />
 				</view>
 				<!-- 只读分享落地：他人作品生成中，保持轻提示 -->
@@ -26,8 +29,8 @@
 
 		<!-- 底部双按钮（固定底部，参考结果落地页按钮位置，主人指示） -->
 		<view v-if="status === 'processing' && !initializing && !shareReadOnly" class="gen-actions gen-actions-fixed">
-			<button class="gen-btn" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
-			<button class="gen-btn" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
+			<button class="gen-btn btn-secondary" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
+			<button class="gen-btn btn-secondary" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
 		</view>
 
 		<!-- 成功态 -->
@@ -955,12 +958,24 @@ export default {
 	align-items: center;
 }
 .gen-tips {
-	font-size: var(--font-size-body-sm);
-	color: rgba(255, 255, 255, 0.45);
-	text-align: center;
-	padding: 12rpx 24rpx;
-	margin-bottom: 8rpx;
-}
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		padding: 14rpx 28rpx;
+		border: 1rpx solid var(--color-primary-50);
+		border-radius: var(--radius-full);
+		background: var(--color-primary-06);
+		margin-bottom: 32rpx;
+	}
+	.gen-tips-icon {
+		width: 30rpx;
+		height: 30rpx;
+		margin-right: 12rpx;
+	}
+	.gen-tips-text {
+		font-size: var(--font-size-body-sm);
+		color: var(--color-primary);
+	}
 .gen-actions {
 	display: flex;
 	flex-direction: row;
@@ -978,19 +993,18 @@ export default {
 }
 /* CR 🔴：必须与 .center-content 联用提高特异性，否则被后定义的 .center-content padding 简写覆盖 */
 .center-content.processing-pad {
-	padding-bottom: 180rpx;
+	padding-bottom: 220rpx;
 }
 /* 双按钮（button 组件，主人指示）：重置原生样式，视觉与 btn-secondary 一致 */
-.gen-btn {
-	padding: 16rpx 36rpx;
-	border-radius: var(--radius-lg);
-	margin: 0 12rpx;
-	font-size: var(--font-size-body);
-	line-height: 1.4;
-	background: var(--color-primary-10);
-	border: 1rpx solid var(--color-primary-50);
-	color: var(--color-primary);
-}
+.gen-actions .gen-btn {
+		height: 92rpx;
+		min-width: 240rpx;
+		padding: 0 32rpx;
+		margin: 0 var(--spacing-xs);
+		box-sizing: border-box;
+		font-size: 32rpx;
+		line-height: 1;
+	}
 .gen-btn::after {
 	border: none;
 }

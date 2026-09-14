@@ -5,7 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Home, User, Left, Right, Down, Check, Like, Star, Search, ShareThree, TagOne } from '@icon-park/svg';
+import { Home, User, Left, Right, Down, Check, Like, Star, Search, ShareThree, TagOne, Protect } from '@icon-park/svg';
 const outDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/static/iconpark');
 fs.mkdirSync(outDir, { recursive: true });
 const GOLD = '#F1CD91';
@@ -14,9 +14,14 @@ const files = {
   'home.svg': gold(Home), 'price.svg': gold(TagOne), 'mine.svg': gold(User),
   'back.svg': gold(Left), 'down.svg': gold(Down), 'right.svg': gold(Right),
   'check.svg': gold(Check), 'like.svg': gold(Like), 'star.svg': gold(Star),
-  'search.svg': gold(Search), 'share-three.svg': gold(ShareThree)
+  'search.svg': gold(Search), 'share-three.svg': gold(ShareThree),
+  // 等待页 Tips 胶囊：盾牌+勾（安全提示语义）
+  'protect.svg': gold(Protect)
 };
 for (const [name, svg] of Object.entries(files)) { fs.writeFileSync(path.join(outDir, name), svg); }
 const filled = Like({ theme: 'filled', size: 48, fill: [GOLD, '#FFFFFF'] });
 fs.writeFileSync(path.join(outDir, 'like-filled.svg'), filled);
+// 等待页步骤条「已完成」节点：金底上的白勾（金色勾在金色圆上不可见，故单列一个白色变体）
+const checkWhite = Check({ theme: 'outline', size: 48, strokeWidth: 5, strokeLinecap: 'round', strokeLinejoin: 'round', fill: ['#FFFFFF'] });
+fs.writeFileSync(path.join(outDir, 'check-white.svg'), checkWhite);
 console.log('IconPark SVGs generated to', outDir);
