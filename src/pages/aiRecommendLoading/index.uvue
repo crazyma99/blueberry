@@ -45,6 +45,8 @@ export default {
 			shopId: '',
 			status: 'processing' as string,  // 'processing' | 'failed'
 			elapsedSeconds: 0,
+			progressDone: false,    // 任务完成时置真 → 伪进度走满 100%
+			redirectTimer: null as any,  // 成功转场定时器（onUnload 清除，防离页仍被强拉）
 			countdownTimer: null as any,
 			// 推荐次数不足（4001）时的充值支付
 			payGuard: new PayGuard(), // 统一支付门闩：防连点/防到账竞态下二次拉起支付
@@ -124,7 +126,8 @@ export default {
 					this.progressDone = true
 					const resultData = JSON.stringify(res.data)
 					const shopId = this.shopId
-					setTimeout(() => {
+					// CR 🟡：转场定时器入账，onUnload/stopAll 清除，防「成功后 260ms 内离页仍被强拉」
+					this.redirectTimer = setTimeout(() => {
 						uni.redirectTo({
 							url: `/pages/aiRecommendResult/index?shopId=${shopId}&data=${encodeURIComponent(resultData)}`
 						})
@@ -155,6 +158,11 @@ export default {
 			if (this.countdownTimer != null) {
 				clearInterval(this.countdownTimer)
 				this.countdownTimer = null
+			}
+			// CR 🟡：清除成功转场定时器（防离页仍被 redirectTo 强拉）
+			if (this.redirectTimer != null) {
+				clearTimeout(this.redirectTimer)
+				this.redirectTimer = null
 			}
 			// 页面卸载/停止时终止可能进行中的到账轮询
 			this.payPollToken = this.payPollToken + 1
