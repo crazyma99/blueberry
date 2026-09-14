@@ -38,7 +38,7 @@
                 {{ isLoggedIn ? (userNickname === '' ? '完善头像昵称，获得完整体验' : '欢迎回来，蓝梅旅拍') : '登录后可收藏与体验AI试衣' }}
               </view>
             </view>
-            <view class="user-arrow">›</view>
+            <image class="user-arrow" src="/static/chevron-right.svg" mode="aspectFit"></image>
           </view>
 
           <!-- 功能列表项：紧凑合成一块 -->
@@ -50,7 +50,7 @@
             @click="handleMenuClick(item)"
           >
             <view class="menu-title font-noto-serif">{{ item.title }}</view>
-            <view class="menu-arrow">›</view>
+            <image class="menu-arrow" src="/static/chevron-right.svg" mode="aspectFit"></image>
           </view>
         </view>
 

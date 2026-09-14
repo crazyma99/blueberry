@@ -14,7 +14,8 @@
 			:class="i === activeIndex ? 'gp-row-active' : (i < activeIndex ? 'gp-row-done' : 'gp-row-pending')"
 		>
 			<view class="gp-icon">
-				<text v-if="i < activeIndex" class="gp-check">✓</text>
+				<!-- 禁止文字图标/emoji（主人指示）：完成勾引用 icon 包静态 SVG -->
+				<image v-if="i < activeIndex" class="gp-check" src="/static/check-gold.svg" mode="aspectFit"></image>
 				<view v-else-if="i === activeIndex" class="gp-dot gp-dot-active"></view>
 				<view v-else class="gp-dot"></view>
 			</view>
@@ -93,9 +94,8 @@
 		margin-right: 20rpx;
 	}
 	.gp-check {
-		font-size: 30rpx;
-		color: var(--color-primary);
-		font-weight: 600;
+		width: 30rpx;
+		height: 30rpx;
 	}
 	.gp-dot {
 		width: 16rpx;
