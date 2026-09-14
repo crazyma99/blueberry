@@ -1,23 +1,13 @@
 <template>
 	<view class="page">
 		<CustomNavBar title="AI分析中" />
-		<!-- 加载态：与 AI试衣等待页同款样式（主人指示两页保持一致）——Tips + 伪进度 + 固定底部双按钮 -->
+		<!-- 加载态（2026-09-14 主人指示：AI推荐等待页**不要**标题栏下的 Tips、**不要**底部双按钮，只保留步骤条进度 + 百分比 + footer） -->
 		<view v-if="status === 'processing'" class="center-content processing-pad">
 			<view class="loading-wrapper">
 				<view class="gen-panel">
-					<view class="gen-tips">
-						<image class="gen-tips-icon" src="/static/iconpark/protect.svg" mode="aspectFit"></image>
-						<text class="gen-tips-text">离开当前页也会继续生成，完成后将会通知您</text>
-					</view>
 					<GenerationProgress :steps="progressSteps" :icon-paths="progressIcons" :active-index="currentProgressStep" :percent="progressPercent" />
 				</view>
 			</view>
-		</view>
-
-		<!-- 底部双按钮（与结果落地页同构：页脚之上、文档流内居中，主人指示） -->
-		<view v-if="status === 'processing'" class="gen-actions">
-			<button class="gen-btn btn-secondary" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
-			<button class="gen-btn btn-secondary" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
 		</view>
 
 		<!-- 失败态 -->
@@ -307,19 +297,6 @@ export default {
 			uni.navigateBack()
 		},
 
-		// 逛逛其他客片：相册列表（与试衣等待页同款底部按钮）
-		goBrowseAlbums() {
-			if (this.shopId !== '') {
-				uni.navigateTo({ url: '/pages/demoDetail/index?idx=' + this.shopId })
-			} else {
-				uni.navigateTo({ url: '/pages/demoDetail/index' })
-			}
-		},
-
-		// 查看生成队列：我-AI试衣记录页
-		goGenerationQueue() {
-			uni.navigateTo({ url: '/pages/aiTryOnHistory/index' })
-		},
 	}
 }
 </script>
@@ -343,13 +320,13 @@ export default {
 	padding: 0 64rpx;
 }
 .center-content.processing-pad {
-		/* 等待态：内容自顶部排布（Tips 紧贴标题栏下 24rpx），左右留白收窄让进度模块更宽（主人指示） */
+		/* 等待态：内容自顶部排布（无 Tips，进度条距标题栏 24rpx），左右留白收窄让进度模块更宽（主人指示） */
 		justify-content: flex-start;
+		padding-top: var(--spacing-24);
 		padding-left: var(--spacing-24);
 		padding-right: var(--spacing-24);
 		padding-bottom: var(--spacing-lg);
 	}
-/* 等待页统一样式（与 AI试衣等待页一致）：Tips / 进度面板 / 固定底部双按钮 */
 .gen-panel {
 		width: 100%;
 		display: flex;
@@ -358,49 +335,6 @@ export default {
 		   步骤条宽度会被「最长步骤文案」决定（只剩 2rpx 余量，改短文案就连线塌陷） */
 		align-items: stretch;
 	}
-.gen-tips {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		/* 面板改 stretch 后，胶囊自身按内容收窄并居中 */
-		align-self: center;
-		/* 距标题栏（titlebar）24rpx（主人指示，用 token） */
-		margin-top: var(--spacing-24);
-		padding: 14rpx 28rpx;
-		border: 1rpx solid var(--color-primary-50);
-		border-radius: var(--radius-full);
-		background: var(--color-primary-06);
-		margin-bottom: var(--spacing-lg);
-	}
-	.gen-tips-icon {
-		width: 30rpx;
-		height: 30rpx;
-		margin-right: 12rpx;
-	}
-	.gen-tips-text {
-		font-size: var(--font-size-body-sm);
-		color: var(--color-primary);
-	}
-.gen-actions {
-		display: flex;
-		flex-direction: row;
-		justify-content: center;
-		/* 双按钮改在文档流内（页脚之上，与结果落地页同构），不再固定定位 */
-		/* CR 🟡：结果页按钮底距＝action-bar 24rpx ＋ result-content 8rpx = 32rpx，此处对齐 32rpx */
-		padding: 0 var(--spacing-24) var(--spacing-lg);
-	}
-.gen-actions .gen-btn {
-		height: 92rpx;
-		min-width: 240rpx;
-		padding: 0 40rpx;
-		margin: 0 var(--spacing-xs);
-		box-sizing: border-box;
-		font-size: 32rpx;
-		line-height: 1;
-	}
-.gen-btn::after {
-	border: none;
-}
 
 /* 加载态 */
 .loading-wrapper {
