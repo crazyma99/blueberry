@@ -5,16 +5,19 @@
 		<view v-if="status === 'processing'" class="center-content processing-pad">
 			<view class="loading-wrapper">
 				<view class="gen-panel">
-					<view class="gen-tips">离开当前页也会继续生成，完成后将会通知您</view>
-					<GenerationProgress :steps="progressSteps" :active-index="currentProgressStep" :percent="progressPercent" />
+					<view class="gen-tips">
+						<image class="gen-tips-icon" src="/static/iconpark/protect.svg" mode="aspectFit"></image>
+						<text class="gen-tips-text">离开当前页也会继续生成，完成后将会通知您</text>
+					</view>
+					<GenerationProgress :steps="progressSteps" :icon-paths="progressIcons" :active-index="currentProgressStep" :percent="progressPercent" />
 				</view>
 			</view>
 		</view>
 
 		<!-- 底部双按钮（固定底部，与 AI试衣等待页同款，主人指示） -->
 		<view v-if="status === 'processing'" class="gen-actions gen-actions-fixed">
-			<button class="gen-btn" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
-			<button class="gen-btn" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
+			<button class="gen-btn btn-secondary" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
+			<button class="gen-btn btn-secondary" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
 		</view>
 
 		<!-- 失败态 -->
@@ -89,6 +92,15 @@ export default {
 			if (p < 45) return 1
 			if (p < 75) return 2
 			return 3
+		},
+		// 四步节点图标（IconPark 语义图标，主人指示：序号一律换成语义图标；已完成节点由组件统一显示白勾）
+		progressIcons(): string[] {
+			return [
+				'/static/iconpark/face-scan.svg',
+				'/static/iconpark/eyes.svg',
+				'/static/iconpark/plan.svg',
+				'/static/iconpark/list-success.svg'
+			]
 		},
 		// 四步动态文案（推荐版 · 主人定稿）
 		progressSteps(): string[] {
@@ -320,22 +332,38 @@ export default {
 	padding: 0 64rpx;
 }
 .center-content.processing-pad {
-	padding-bottom: 180rpx;
+	padding-bottom: 220rpx;
 }
 /* 等待页统一样式（与 AI试衣等待页一致）：Tips / 进度面板 / 固定底部双按钮 */
 .gen-panel {
-	width: 100%;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-}
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		/* CR 🟡 修复：必须 stretch，否则 GenerationProgress 组件宿主宽度是 fit-content，
+		   步骤条宽度会被「最长步骤文案」决定（只剩 2rpx 余量，改短文案就连线塌陷） */
+		align-items: stretch;
+	}
 .gen-tips {
-	font-size: var(--font-size-body-sm);
-	color: rgba(255, 255, 255, 0.45);
-	text-align: center;
-	padding: 12rpx 24rpx;
-	margin-bottom: 8rpx;
-}
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		/* 面板改 stretch 后，胶囊自身按内容收窄并居中 */
+		align-self: center;
+		padding: 14rpx 28rpx;
+		border: 1rpx solid var(--color-primary-50);
+		border-radius: var(--radius-full);
+		background: var(--color-primary-06);
+		margin-bottom: var(--spacing-lg);
+	}
+	.gen-tips-icon {
+		width: 30rpx;
+		height: 30rpx;
+		margin-right: 12rpx;
+	}
+	.gen-tips-text {
+		font-size: var(--font-size-body-sm);
+		color: var(--color-primary);
+	}
 .gen-actions {
 	display: flex;
 	flex-direction: row;
@@ -350,35 +378,38 @@ export default {
 	background: linear-gradient(to top, var(--color-bg) 62%, rgba(22, 15, 4, 0));
 	z-index: 10;
 }
-.gen-btn {
-	padding: 16rpx 36rpx;
-	border-radius: var(--radius-lg);
-	margin: 0 12rpx;
-	font-size: var(--font-size-body);
-	line-height: 1.4;
-	background: var(--color-primary-10);
-	border: 1rpx solid var(--color-primary-50);
-	color: var(--color-primary);
-}
+.gen-actions .gen-btn {
+		height: 92rpx;
+		min-width: 240rpx;
+		padding: 0 40rpx;
+		margin: 0 var(--spacing-xs);
+		box-sizing: border-box;
+		font-size: 32rpx;
+		line-height: 1;
+	}
 .gen-btn::after {
 	border: none;
 }
 
 /* 加载态 */
 .loading-wrapper {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-}
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		/* CR 🟡 修复：打断百分比宽度循环依赖，让内层面板宽度确定 */
+		width: 100%;
+	}
 .loading-spinner {
-	width: 80rpx;
-	height: 80rpx;
-	border: 6rpx solid rgba(255, 255, 255, 0.2);
-	border-top-color: rgba(255, 255, 255, 0.8);
-	border-radius: 50%;
-	margin-bottom: 48rpx;
-	animation: spin 1s linear infinite;
-}
+		width: 80rpx;
+		height: 80rpx;
+		border: 6rpx solid rgba(255, 255, 255, 0.2);
+		border-top-color: rgba(255, 255, 255, 0.8);
+		border-radius: 50%;
+		margin-bottom: 48rpx;
+		/* 面板改 stretch 后，固定尺寸的 spinner 仍需自身居中 */
+		align-self: center;
+		animation: spin 1s linear infinite;
+	}
 @keyframes spin {
 	from { transform: rotate(0deg); }
 	to { transform: rotate(360deg); }
