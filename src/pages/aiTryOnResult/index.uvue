@@ -170,8 +170,8 @@ export default {
 		// 生成等待伪进度：百分比封顶 99%，完成时 progressDone → 100（主人指示：可卡 99 但不得任务结束仍停中间步骤）
 		progressPercent(): number {
 			if (this.progressDone) return 100
-			// 异步任务约 30–60s：按 45s 走满 99%
-			const p = Math.floor(this.elapsedSeconds / 45 * 100)
+			// 主人定稿：28s 走满 99%（异步任务 30–60s，前端伪进度提前到顶，完成时置 100）
+			const p = Math.floor(this.elapsedSeconds / 28 * 100)
 			return p > 99 ? 99 : p
 		},
 		// 当前步骤下标：按百分比推进（4 步：分析照片面部细节/分析五官类型/正在面部匹配/生成图像）
