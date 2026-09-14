@@ -1,8 +1,8 @@
 <template>
 	<view class="page">
 		<CustomNavBar title="AI分析中" />
-		<!-- 加载态：伪进度三步条（推荐版文案，替代秒数倒计时，2026-09-14 主人指示） -->
-		<view class="center-content">
+		<!-- 加载态：伪进度三步条（推荐版文案，替代秒数倒计时，2026-09-14 主人指示）；CR 🟡：与失败态互斥 -->
+		<view v-if="status === 'processing'" class="center-content">
 			<view class="loading-wrapper">
 				<GenerationProgress :steps="progressSteps" :active-index="currentProgressStep" />
 			</view>
@@ -74,7 +74,8 @@ export default {
 		progressSteps(): string[] {
 			const base = ['正在分析五官', '正在深度思考', '正在为您推荐匹配套系']
 			const done = ['五官妆容分析完毕', '深度思考完成', '套系匹配完成']
-			const cur = this.currentProgressStep()
+			// CR 🔴：computed 是属性不是函数，必须属性访问（否则运行期 TypeError）
+			const cur = this.currentProgressStep
 			const list: string[] = []
 			for (let i = 0; i < 3; i++) {
 				list.push(i < cur ? done[i] : base[i])

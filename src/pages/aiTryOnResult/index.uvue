@@ -176,7 +176,8 @@ export default {
 		progressSteps(): string[] {
 			const base = ['正在分析五官', '正在深度思考', '正在拟合人像数据']
 			const done = ['五官妆容分析完毕', '深度思考完成', '图像生成完成']
-			const cur = this.currentProgressStep()
+			// CR 🔴：computed 是属性不是函数，必须属性访问（否则运行期 TypeError）
+			const cur = this.currentProgressStep
 			const list: string[] = []
 			for (let i = 0; i < 3; i++) {
 				list.push(i < cur ? done[i] : base[i])
