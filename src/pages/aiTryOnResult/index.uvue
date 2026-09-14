@@ -2,17 +2,19 @@
 	<view class="page">
 		<CustomNavBar :title="navTitle" :back-fallback-url="'/pages/index/index'" />
 
-		<!-- 加载态 -->
-		<view v-if="status === 'processing'" class="center-content">
+		<!-- 首查中：从 AI试衣列表进入已完成任务时不展示伪进度（主人指示），仅短暂轻加载 -->
+		<view v-if="initializing" class="center-content">
 			<view class="loading-wrapper">
-				<!-- 生成等待体验优化（2026-09-14 主人指示）：伪进度三步条替代倒计时 + Tips + 底部双按钮 -->
+				<view class="loading-spinner"></view>
+			</view>
+		</view>
+
+		<!-- 加载态（伪进度三步条 + Tips；底部双按钮固定于结果落地页同款位置） -->
+		<view v-if="status === 'processing' && !initializing" class="center-content processing-pad">
+			<view class="loading-wrapper">
 				<view v-if="!shareReadOnly" class="gen-panel">
 					<view class="gen-tips">离开当前页也会继续生成，完成后将会通知您</view>
 					<GenerationProgress :steps="progressSteps" :active-index="currentProgressStep" :percent="progressPercent" />
-					<view class="gen-actions">
-						<button class="gen-btn" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
-						<button class="gen-btn" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
-					</view>
 				</view>
 				<!-- 只读分享落地：他人作品生成中，保持轻提示 -->
 				<view v-else class="gen-panel">
@@ -20,6 +22,12 @@
 					<text class="loading-tip">作品正在生成中，请稍后再来</text>
 				</view>
 			</view>
+		</view>
+
+		<!-- 底部双按钮（固定底部，参考结果落地页按钮位置，主人指示） -->
+		<view v-if="status === 'processing' && !initializing && !shareReadOnly" class="gen-actions gen-actions-fixed">
+			<button class="gen-btn" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
+			<button class="gen-btn" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
 		</view>
 
 		<!-- 成功态 -->
@@ -128,6 +136,7 @@ export default {
 			// 自定义导航栏标题：生成完成后由“正在生成”切换为“AI试衣结果”
 			navTitle: '正在生成',
 			status: 'processing' as string,  // 'pending' | 'processing' | 'completed' | 'failed'
+			initializing: false,  // 首查中（列表→结果页不闪伪进度，主人指示）
 			resultImageUrl: '',
 			failCount: 0,
 			pollErrorStreak: 0,   // 连续网络异常计数（容忍 3 次抖动，避免单次闪断即打断等待）
@@ -226,7 +235,9 @@ export default {
 			this.navTitle = 'AI试衣作品'
 			this.loadSharedTask()
 		} else if (this.taskId !== '') {
-			this.startPolling()
+			// 首查：静默查询一次，已完成任务直达结果（不闪伪进度），进行中才进等待页
+			this.initializing = true
+			this.queryInitialTask()
 		} else {
 			this.status = 'failed'
 		}
@@ -307,6 +318,55 @@ export default {
 			}
 			// #endif
 		},
+		// 首查：静默查询一次——已完成任务直达结果（不闪伪进度，主人指示），进行中才进等待页
+		async queryInitialTask() {
+			if (this.taskId === '') {
+				this.initializing = false
+				this.status = 'failed'
+				return
+			}
+			try {
+				const res = await getAiTryOnResult(this.taskId)
+				if ((res.code === 0 || res.code === 200) && res.data) {
+					if (res.data.status === 'completed') {
+						this.applyCompleted(res.data)
+					} else if (res.data.status === 'failed') {
+						this.status = 'failed'
+						this.taskErrorMessage = res.data.error_message ?? ''
+					} else {
+						// pending / processing → 进入等待页（伪进度 + 轮询）
+						this.startPolling()
+					}
+				} else {
+					this.status = 'failed'
+					this.taskErrorMessage = res.message || '任务查询失败'
+				}
+			} catch (err) {
+				console.error('[aiTryOnResult] 首查失败:', err)
+				this.status = 'failed'
+			} finally {
+				this.initializing = false
+			}
+		},
+
+		// 完成态赋值（首查直达 + 轮询完成共用）
+		applyCompleted(data: any) {
+			this.imageLoaded = false
+			this.resultImageUrl = data.result_image_url || ''
+			this.status = 'completed'
+			// 更新导航栏标题（自定义导航栏）
+			this.navTitle = 'AI试衣结果'
+			this.styleName = data.style_name ?? ''
+			this.shopName = data.shop_name ?? ''
+			this.shareToken = data.share_token ?? ''
+			if (this.shopId === '' && data.shop_id > 0) {
+				this.shopId = String(data.shop_id)
+			}
+			if (data.album_id > 0) {
+				this.albumId = String(data.album_id)
+			}
+			this.templateId = data.template_id != null ? (data.template_id as number) : 0
+		},
 		startPolling() {
 			this.status = 'processing'
 			this.elapsedSeconds = 0
@@ -364,21 +424,7 @@ export default {
 						this.progressDone = true
 						const r = res.data
 						setTimeout(() => {
-							this.imageLoaded = false
-							this.resultImageUrl = r.result_image_url || ''
-							this.status = 'completed'
-							// 更新导航栏标题（自定义导航栏）
-							this.navTitle = 'AI试衣结果'
-							this.styleName = r.style_name ?? ''
-							this.shopName = r.shop_name ?? ''
-							this.shareToken = r.share_token ?? ''
-							if (this.shopId === '' && r.shop_id > 0) {
-								this.shopId = String(r.shop_id)
-							}
-							if (r.album_id > 0) {
-								this.albumId = String(r.album_id)
-							}
-							this.templateId = r.template_id != null ? (r.template_id as number) : 0
+							this.applyCompleted(r)
 						}, 260)
 					} else if (taskStatus === 'failed') {
 						this.stopPolling()
@@ -913,7 +959,19 @@ export default {
 	display: flex;
 	flex-direction: row;
 	justify-content: center;
-	margin-top: 28rpx;
+}
+/* 等待页双按钮固定底部（参考结果落地页底部按钮位置，主人指示） */
+.gen-actions-fixed {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	padding: 20rpx 0 calc(env(safe-area-inset-bottom) + 24rpx);
+	background: linear-gradient(to top, var(--color-bg) 62%, rgba(22, 15, 4, 0));
+	z-index: 10;
+}
+.processing-pad {
+	padding-bottom: 180rpx;
 }
 /* 双按钮（button 组件，主人指示）：重置原生样式，视觉与 btn-secondary 一致 */
 .gen-btn {
