@@ -30,9 +30,29 @@ export async function preloadImages(urls: string[], timeout: number = 5000): Pro
  * 腾讯云 COS 数据万象缩略图：按展示宽度出 WebP 缩略图（实测 skyline 真机/工具均正常加载）。
  * 仅处理本站 COS 域名，其他来源原样返回。
  */
+// 是否为自家 COS 自定义域：仅精确主域匹配（防 `xx-lanmei66.cloud.yy` 子串误命中，CR 🟡）
+function isCosHost(url: string): boolean {
+  const m = url.match(/^https?:\/\/([^\/?#]+)/)
+  if (m == null) return false
+  const host = m[1]
+  return host === 'lanmei66.cloud' || host.endsWith('.lanmei66.cloud')
+}
+
 export function cosThumb(url: string, width: number): string {
   if (url === '') return url
-  if (!url.includes('lanmei66.cloud')) return url
+  if (!isCosHost(url)) return url
   const sep = url.includes('?') ? '&' : '?'
   return `${url}${sep}imageMogr2/format/webp/thumbnail/${width}x`
+}
+
+/**
+ * 腾讯云 COS 数据万象 JPG 缩略图：供微信分享卡片使用。
+ * 朋友圈卡片对 WebP/本地临时文件兼容性差，偶发不显示图（测试 bug #11）→ 固定出 JPG。
+ * 非白名单域原样返回（不追加万象参数）。
+ */
+export function cosThumbJpg(url: string, width: number): string {
+  if (url === '') return url
+  if (!isCosHost(url)) return url
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}imageMogr2/thumbnail/${width}x/format/jpg`
 }

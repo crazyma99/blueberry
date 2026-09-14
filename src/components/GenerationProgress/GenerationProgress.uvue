@@ -1,5 +1,12 @@
 <template>
 	<view class="gp">
+		<!-- 动态进度条（design token；封顶 99%，任务完成时由父级置 100） -->
+		<view class="gp-track">
+			<view class="gp-fill" :style="'width: ' + percent + '%;'"></view>
+		</view>
+		<view class="gp-meta">
+			<text class="gp-percent">{{ percent }}%</text>
+		</view>
 		<view
 			v-for="(s, i) in steps"
 			:key="i"
@@ -20,13 +27,18 @@
 	export default {
 		name: 'GenerationProgress',
 		props: {
-			// 各步骤当前展示文案（父级已按状态计算好：已完成=完毕文案、其余=正在进行文案）
+			// 各步骤当前展示文案（父级已按状态计算好：已完成=完毕文案、其余=进行中文案）
 			steps: {
 				type: Array<string>,
 				default: () => [] as string[]
 			},
 			// 当前进行中的步骤下标（0 起）
 			activeIndex: {
+				type: Number,
+				default: 0
+			},
+			// 伪进度百分比（0-100；父级封顶 99，完成时置 100）
+			percent: {
 				type: Number,
 				default: 0
 			}
@@ -39,13 +51,38 @@
 		width: 100%;
 		display: flex;
 		flex-direction: column;
-		margin: 24rpx 0;
+		margin: 20rpx 0 12rpx;
+	}
+	/* 进度条轨道 + 品牌金渐变填充（design token） */
+	.gp-track {
+		width: 100%;
+		height: 10rpx;
+		border-radius: var(--radius-full);
+		background: var(--color-primary-10);
+		overflow: hidden;
+	}
+	.gp-fill {
+		height: 100%;
+		border-radius: var(--radius-full);
+		background: var(--gradient-btn-primary);
+		transition: width 0.6s ease-out;
+	}
+	.gp-meta {
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		justify-content: flex-end;
+		margin: 10rpx 0 6rpx;
+	}
+	.gp-percent {
+		font-size: var(--font-size-body-sm);
+		color: var(--color-primary);
 	}
 	.gp-row {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		padding: 18rpx 0;
+		padding: 16rpx 0;
 	}
 	.gp-icon {
 		width: 44rpx;
