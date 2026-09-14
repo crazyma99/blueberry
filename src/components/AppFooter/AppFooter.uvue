@@ -6,11 +6,14 @@
     / priceHomePage / targetPhotoDetail）收敛到本组件的 default props，由 profile 注入脚本
     （scripts/lib/apply-profile.mjs）一处替换。
   - 渲染为行内 <text>，外层包裹由各页保留（.copyright / .bottomdesc / .beian），保证视觉零变化。
+  - 2026-09-14 主人更正口径：等待页 footer 复用本组件样式与间距，改为
+    「第一行 AI 生成提示、第二行技术支持文案」，故新增 mainText / supportText 覆盖 props
+    （留空则维持 OPS copyright 配置与既有默认文案不变）。
 -->
 <template>
   <view class="app-footer">
-    <text class="footer-main">{{ remoteText || copyrightText }}</text>
-    <text class="footer-support">{{ supportText }}</text>
+    <text class="footer-main">{{ mainLine }}</text>
+    <text class="footer-support">{{ supportLine }}</text>
   </view>
 </template>
 
@@ -23,6 +26,16 @@ export default {
     copyrightText: {
       type: String,
       default: 'Copyright 2025 蓝梅旗袍·汉服·民族服体验馆 - 版权所有'
+    },
+    // 主行覆盖文案（等待页传「内容由 AI 生成…」）；留空则用 OPS copyright 配置，再退回上面默认
+    mainText: {
+      type: String,
+      default: ''
+    },
+    // 支持行覆盖文案（等待页传「小程序与AI技术能力由 蓝梅网络 提供支持」）；留空则用配置/默认
+    supportText: {
+      type: String,
+      default: ''
     }
   },
   data() {
@@ -30,7 +43,18 @@ export default {
       // OPS 页面配置（copyright 组件的 config.text）下发值；为空时回退 props/default。
       remoteText: '' as string,
       // 第二行支持文案：默认固定，OPS copyright 配置 supportText 可覆盖
-      supportText: '小程序及AI技术能力由 蓝梅网络 提供支持' as string
+      remoteSupportText: '小程序及AI技术能力由 蓝梅网络 提供支持' as string
+    }
+  },
+  computed: {
+    // 主行：props.mainText 优先（等待页 AI 生成提示）→ OPS 配置 → 默认版权
+    mainLine(): string {
+      if (this.mainText !== '') return this.mainText
+      return this.remoteText !== '' ? this.remoteText : this.copyrightText
+    },
+    // 支持行：props.supportText 优先 → OPS 配置 → 默认
+    supportLine(): string {
+      return this.supportText !== '' ? this.supportText : this.remoteSupportText
     }
   },
   mounted() {
@@ -47,7 +71,7 @@ export default {
           if (cfg.text != null && cfg.text.length > 0) this.remoteText = cfg.text as string
           // 第二行支持文案可配置覆盖（默认保留前端固定文案）
           if (cfg.supportText != null && (cfg.supportText as string).length > 0) {
-            this.supportText = cfg.supportText as string
+            this.remoteSupportText = cfg.supportText as string
           }
         }
       } catch (e) {
