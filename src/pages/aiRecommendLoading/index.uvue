@@ -4,7 +4,7 @@
 		<!-- 加载态：伪进度三步条（推荐版文案，替代秒数倒计时，2026-09-14 主人指示）；CR 🟡：与失败态互斥 -->
 		<view v-if="status === 'processing'" class="center-content">
 			<view class="loading-wrapper">
-				<GenerationProgress :steps="progressSteps" :active-index="currentProgressStep" />
+				<GenerationProgress :steps="progressSteps" :active-index="currentProgressStep" :percent="progressPercent" />
 			</view>
 		</view>
 
@@ -65,19 +65,27 @@ export default {
 	},
 	computed: {
 		// 生成等待伪进度：按已等待时间推进步骤（替代秒数倒计时展示）
-		currentProgressStep(): number {
-			if (this.elapsedSeconds < 25) return 0
-			if (this.elapsedSeconds < 75) return 1
-			return 2
+		// 生成等待伪进度：百分比封顶 99%，完成时 progressDone → 100
+		progressPercent(): number {
+			if (this.progressDone) return 100
+			const p = Math.floor(this.elapsedSeconds / 45 * 100)
+			return p > 99 ? 99 : p
 		},
-		// 三步动态文案（推荐版）：已完成显示「完毕」文案，当前/未到显示「正在」文案
+		currentProgressStep(): number {
+			const p = this.progressPercent
+			if (p < 20) return 0
+			if (p < 45) return 1
+			if (p < 75) return 2
+			return 3
+		},
+		// 四步动态文案（推荐版）：前两步与试衣一致，后两步贴合推荐流程
 		progressSteps(): string[] {
-			const base = ['正在分析五官', '正在深度思考', '正在为您推荐匹配套系']
-			const done = ['五官妆容分析完毕', '深度思考完成', '套系匹配完成']
+			const base = ['分析照片面部细节', '分析五官类型', '正在匹配套系', '生成推荐方案']
+			const done = ['照片面部细节分析完毕', '五官类型分析完毕', '套系匹配完成', '推荐方案生成完毕']
 			// CR 🔴：computed 是属性不是函数，必须属性访问（否则运行期 TypeError）
 			const cur = this.currentProgressStep
 			const list: string[] = []
-			for (let i = 0; i < 3; i++) {
+			for (let i = 0; i < 4; i++) {
 				list.push(i < cur ? done[i] : base[i])
 			}
 			return list
@@ -87,6 +95,7 @@ export default {
 		startAnalysis() {
 			this.status = 'processing'
 			this.elapsedSeconds = 0
+			this.progressDone = false
 
 			// 计时器：每秒更新已等待时间
 			this.countdownTimer = setInterval(() => {
@@ -111,11 +120,15 @@ export default {
 				// aiface 接口 code === 0 或 200 表示成功
 				if ((res.code === 0 || res.code === 200) && res.data) {
 					this.stopAll()
-					// 跳转结果页，通过全局事件传递数据（shopId 供详情页 type 参数使用）
+					// 主人指示：任务结束不得仍停中间步骤 → 进度走满 100% 再跳结果页
+					this.progressDone = true
 					const resultData = JSON.stringify(res.data)
-					uni.redirectTo({
-						url: `/pages/aiRecommendResult/index?shopId=${this.shopId}&data=${encodeURIComponent(resultData)}`
-					})
+					const shopId = this.shopId
+					setTimeout(() => {
+						uni.redirectTo({
+							url: `/pages/aiRecommendResult/index?shopId=${shopId}&data=${encodeURIComponent(resultData)}`
+						})
+					}, 260)
 					return
 				}
 				// 4001 = 推荐次数不足：拉起充值支付，到账后自动重新分析

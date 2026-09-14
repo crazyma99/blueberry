@@ -92,7 +92,8 @@
 />
 
     <!-- 退出登录底部固定栏（secondary 款，上移避开 tabbar） -->
-    <BottomActionBarSecondary v-if="isLoggedIn" bottomOffset="116rpx">
+    <!-- #10 修复：底部偏移 = 底Tab高度(116rpx) + 安全区(env) + 与导航栏间距，不再硬编码 116rpx -->
+    <BottomActionBarSecondary v-if="isLoggedIn" bottomOffset="calc(116rpx + env(safe-area-inset-bottom) + 24rpx)">
       <view class="logout-btn" hover-class="press-dim" @click.stop="confirmLogout">退出登录</view>
     </BottomActionBarSecondary>
 

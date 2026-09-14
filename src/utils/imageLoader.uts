@@ -36,3 +36,14 @@ export function cosThumb(url: string, width: number): string {
   const sep = url.includes('?') ? '&' : '?'
   return `${url}${sep}imageMogr2/format/webp/thumbnail/${width}x`
 }
+
+/**
+ * 腾讯云 COS 数据万象 JPG 缩略图：供微信分享卡片使用。
+ * 朋友圈卡片对 WebP/本地临时文件兼容性差，偶发不显示图（测试 bug #11）→ 固定出 JPG。
+ */
+export function cosThumbJpg(url: string, width: number): string {
+  if (url === '') return url
+  if (!url.includes('lanmei66.cloud')) return url
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}imageMogr2/thumbnail/${width}x/format/jpg`
+}

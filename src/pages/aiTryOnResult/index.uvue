@@ -8,10 +8,10 @@
 				<!-- 生成等待体验优化（2026-09-14 主人指示）：伪进度三步条替代倒计时 + Tips + 底部双按钮 -->
 				<view v-if="!shareReadOnly" class="gen-panel">
 					<view class="gen-tips">离开当前页也会继续生成，完成后将会通知您</view>
-					<GenerationProgress :steps="progressSteps" :active-index="currentProgressStep" />
+					<GenerationProgress :steps="progressSteps" :active-index="currentProgressStep" :percent="progressPercent" />
 					<view class="gen-actions">
-						<view class="gen-btn btn-secondary" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</view>
-						<view class="gen-btn btn-secondary" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</view>
+						<button class="gen-btn" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
+						<button class="gen-btn" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
 					</view>
 				</view>
 				<!-- 只读分享落地：他人作品生成中，保持轻提示 -->
@@ -113,7 +113,7 @@ import { isLoggedIn } from '../../utils/auth.uts'
 import { getBrandId, setBrandId } from '../../utils/brand.uts'
 import { generateFaceCenteredCard } from '../../utils/faceShareCard.uts'
 import GenerationProgress from '../../components/GenerationProgress/GenerationProgress.uvue'
-import { cosThumb } from '../../utils/imageLoader.uts'
+import { cosThumb, cosThumbJpg } from '../../utils/imageLoader.uts'
 
 export default {
 	components: { GenerationProgress },
@@ -131,6 +131,7 @@ export default {
 			resultImageUrl: '',
 			failCount: 0,
 			pollErrorStreak: 0,   // 连续网络异常计数（容忍 3 次抖动，避免单次闪断即打断等待）
+			progressDone: false,    // 任务完成时置真 → 伪进度走满 100%（主人指示：不得任务结束仍停在中间步骤）
 			pollingTimer: null as any,
 			elapsedSeconds: 0,
 			countdownTimer: null as any,
@@ -166,20 +167,29 @@ export default {
 			}
 			return '蓝梅AI · AI试衣效果 仅供预览'
 		},
-		// 生成等待伪进度：按已等待时间推进步骤（替代秒数倒计时展示）
-		currentProgressStep(): number {
-			if (this.elapsedSeconds < 25) return 0
-			if (this.elapsedSeconds < 75) return 1
-			return 2
+		// 生成等待伪进度：百分比封顶 99%，完成时 progressDone → 100（主人指示：可卡 99 但不得任务结束仍停中间步骤）
+		progressPercent(): number {
+			if (this.progressDone) return 100
+			// 异步任务约 30–60s：按 45s 走满 99%
+			const p = Math.floor(this.elapsedSeconds / 45 * 100)
+			return p > 99 ? 99 : p
 		},
-		// 三步动态文案（试衣版）：已完成显示「完毕」文案，当前/未到显示「正在」文案
+		// 当前步骤下标：按百分比推进（4 步：分析照片面部细节/分析五官类型/正在面部匹配/生成图像）
+		currentProgressStep(): number {
+			const p = this.progressPercent
+			if (p < 20) return 0
+			if (p < 45) return 1
+			if (p < 75) return 2
+			return 3
+		},
+		// 四步动态文案（试衣版）：已完成显示「完毕」文案，当前/未到显示进行中文案
 		progressSteps(): string[] {
-			const base = ['正在分析五官', '正在深度思考', '正在拟合人像数据']
-			const done = ['五官妆容分析完毕', '深度思考完成', '图像生成完成']
+			const base = ['分析照片面部细节', '分析五官类型', '正在面部匹配', '生成图像']
+			const done = ['照片面部细节分析完毕', '五官类型分析完毕', '面部匹配完成', '图像生成完成']
 			// CR 🔴：computed 是属性不是函数，必须属性访问（否则运行期 TypeError）
 			const cur = this.currentProgressStep
 			const list: string[] = []
-			for (let i = 0; i < 3; i++) {
+			for (let i = 0; i < 4; i++) {
 				list.push(i < cur ? done[i] : base[i])
 			}
 			return list
@@ -255,8 +265,10 @@ export default {
 		return this.ensureShareCard()
 	},
 	onShareTimeline() : any {
-		// 朋友圈单页模式卡片：标题 + 1:1 图（5:4 卡居中裁切人脸仍在中心）+ query 落地参数
-		const img = this.shareCardReady && this.shareCardImage !== '' ? this.shareCardImage : cosThumb(this.resultImageUrl, 400)
+		// bug #11：朋友圈卡片固定用「网络可达 JPG」缩略图——WebP / 本地临时文件偶发卡片不显示图
+		const img = this.resultImageUrl !== ''
+			? cosThumbJpg(this.resultImageUrl, 500)
+			: (this.shareCardReady && this.shareCardImage !== '' ? this.shareCardImage : '')
 		return {
 			title: this.buildShareTitle(),
 			query: this.buildShareQuery(),
@@ -299,6 +311,7 @@ export default {
 			this.status = 'processing'
 			this.elapsedSeconds = 0
 			this.pollErrorStreak = 0
+			this.progressDone = false
 			this.countdownTimer = setInterval(() => {
 				this.elapsedSeconds += 1
 				// 超时 180 秒（3分钟），停止轮询，展示失败
@@ -311,10 +324,25 @@ export default {
 			// 立即查询一次
 			this.pollResult()
 
-			// 每 20 秒轮询
-			this.pollingTimer = setInterval(() => {
+			// bug #12：自适应轮询（替代固定 20s——通知已到但页面最坏再等 20s 才跳转）
+			this.schedulePoll()
+		},
+
+		// 轮询调度：每次按当前等待时长选择间隔，任务 30–60s 场景下把跳转延迟压到 ≤3s
+		schedulePoll() {
+			this.pollingTimer = setTimeout(() => {
 				this.pollResult()
-			}, 20000)
+				if (this.status === 'processing') {
+					this.schedulePoll()
+				}
+			}, this.nextPollDelay())
+		},
+
+		nextPollDelay(): number {
+			const e = this.elapsedSeconds
+			if (e < 20) return 8000
+			if (e < 45) return 3000
+			return 2500
 		},
 
 		async pollResult() {
@@ -332,21 +360,26 @@ export default {
 					const taskStatus = res.data.status
 					if (taskStatus === 'completed') {
 						this.stopPolling()
-						this.imageLoaded = false
-						this.resultImageUrl = res.data.result_image_url || ''
-						this.status = 'completed'
-						// 更新导航栏标题（自定义导航栏）
-						this.navTitle = 'AI试衣结果'
-						this.styleName = res.data.style_name ?? ''
-						this.shopName = res.data.shop_name ?? ''
-						this.shareToken = res.data.share_token ?? ''
-						if (this.shopId === '' && res.data.shop_id > 0) {
-							this.shopId = String(res.data.shop_id)
-						}
-						if (res.data.album_id > 0) {
-							this.albumId = String(res.data.album_id)
-						}
-						this.templateId = res.data.template_id != null ? (res.data.template_id as number) : 0
+						// 主人指示：任务已结束不得仍停中间步骤 → 进度走满 100% 再切结果页
+						this.progressDone = true
+						const r = res.data
+						setTimeout(() => {
+							this.imageLoaded = false
+							this.resultImageUrl = r.result_image_url || ''
+							this.status = 'completed'
+							// 更新导航栏标题（自定义导航栏）
+							this.navTitle = 'AI试衣结果'
+							this.styleName = r.style_name ?? ''
+							this.shopName = r.shop_name ?? ''
+							this.shareToken = r.share_token ?? ''
+							if (this.shopId === '' && r.shop_id > 0) {
+								this.shopId = String(r.shop_id)
+							}
+							if (r.album_id > 0) {
+								this.albumId = String(r.album_id)
+							}
+							this.templateId = r.template_id != null ? (r.template_id as number) : 0
+						}, 260)
 					} else if (taskStatus === 'failed') {
 						this.stopPolling()
 						this.status = 'failed'
@@ -373,7 +406,7 @@ export default {
 		},
 		stopPolling() {
 			if (this.pollingTimer != null) {
-				clearInterval(this.pollingTimer)
+				clearTimeout(this.pollingTimer)
 				this.pollingTimer = null
 			}
 			if (this.countdownTimer != null) {
@@ -882,11 +915,19 @@ export default {
 	justify-content: center;
 	margin-top: 28rpx;
 }
+/* 双按钮（button 组件，主人指示）：重置原生样式，视觉与 btn-secondary 一致 */
 .gen-btn {
 	padding: 16rpx 36rpx;
 	border-radius: var(--radius-lg);
 	margin: 0 12rpx;
 	font-size: var(--font-size-body);
+	line-height: 1.4;
+	background: var(--color-primary-10);
+	border: 1rpx solid var(--color-primary-50);
+	color: var(--color-primary);
+}
+.gen-btn::after {
+	border: none;
 }
 .gen-panel .loading-spinner {
 	margin-bottom: 16rpx;
