@@ -1,12 +1,10 @@
 <template>
 	<view class="page">
 		<CustomNavBar title="AI分析中" />
-		<!-- 加载态 -->
-		<view class="center-content">
+		<!-- 加载态：伪进度三步条（推荐版文案，替代秒数倒计时，2026-09-14 主人指示）；CR 🟡：与失败态互斥 -->
+		<view v-if="status === 'processing'" class="center-content">
 			<view class="loading-wrapper">
-				<view class="loading-spinner"></view>
-				<text class="loading-tip">正在为您分析推荐，请稍候...</text>
-				<text class="elapsed-text" v-if="elapsedSeconds > 0">已等待 {{ elapsedSeconds }} 秒</text>
+				<GenerationProgress :steps="progressSteps" :active-index="currentProgressStep" />
 			</view>
 		</view>
 
@@ -35,11 +33,12 @@
 
 <script lang="uts">
 import AppFooter from '../../components/AppFooter/AppFooter.uvue'
+import GenerationProgress from '../../components/GenerationProgress/GenerationProgress.uvue'
 import { getAiRecommend, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
 import { PayGuard } from '../../utils/payGuard.uts'
 
 export default {
-	components: { AppFooter },
+	components: { AppFooter, GenerationProgress },
 	data() {
 		return {
 			filename: '',
@@ -63,6 +62,26 @@ export default {
 	},
 	onUnload() {
 		this.stopAll()
+	},
+	computed: {
+		// 生成等待伪进度：按已等待时间推进步骤（替代秒数倒计时展示）
+		currentProgressStep(): number {
+			if (this.elapsedSeconds < 25) return 0
+			if (this.elapsedSeconds < 75) return 1
+			return 2
+		},
+		// 三步动态文案（推荐版）：已完成显示「完毕」文案，当前/未到显示「正在」文案
+		progressSteps(): string[] {
+			const base = ['正在分析五官', '正在深度思考', '正在为您推荐匹配套系']
+			const done = ['五官妆容分析完毕', '深度思考完成', '套系匹配完成']
+			// CR 🔴：computed 是属性不是函数，必须属性访问（否则运行期 TypeError）
+			const cur = this.currentProgressStep
+			const list: string[] = []
+			for (let i = 0; i < 3; i++) {
+				list.push(i < cur ? done[i] : base[i])
+			}
+			return list
+		},
 	},
 	methods: {
 		startAnalysis() {
