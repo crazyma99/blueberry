@@ -78,10 +78,10 @@ export default {
 			if (p < 75) return 2
 			return 3
 		},
-		// 四步动态文案（推荐版）：前两步与试衣一致，后两步贴合推荐流程
+		// 四步动态文案（推荐版 · 主人定稿）
 		progressSteps(): string[] {
-			const base = ['分析照片面部细节', '分析五官类型', '正在匹配套系', '生成推荐方案']
-			const done = ['照片面部细节分析完毕', '五官类型分析完毕', '套系匹配完成', '推荐方案生成完毕']
+			const base = ['分析照片面部细节', '分析五官类型', '生成推荐方案', '生成推荐结果']
+			const done = ['照片面部细节分析完毕', '五官类型分析完毕', '推荐方案生成完毕', '推荐结果生成完毕']
 			// CR 🔴：computed 是属性不是函数，必须属性访问（否则运行期 TypeError）
 			const cur = this.currentProgressStep
 			const list: string[] = []

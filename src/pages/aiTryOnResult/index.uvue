@@ -184,8 +184,8 @@ export default {
 		},
 		// 四步动态文案（试衣版）：已完成显示「完毕」文案，当前/未到显示进行中文案
 		progressSteps(): string[] {
-			const base = ['分析照片面部细节', '分析五官类型', '正在面部匹配', '生成图像']
-			const done = ['照片面部细节分析完毕', '五官类型分析完毕', '面部匹配完成', '图像生成完成']
+			const base = ['分析照片面部细节', '分析五官类型', '正在匹配面部', '生成试衣图像']
+			const done = ['照片面部细节分析完毕', '五官类型分析完毕', '面部匹配完成', '试衣图像生成完毕']
 			// CR 🔴：computed 是属性不是函数，必须属性访问（否则运行期 TypeError）
 			const cur = this.currentProgressStep
 			const list: string[] = []
