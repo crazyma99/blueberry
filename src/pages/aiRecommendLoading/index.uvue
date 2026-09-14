@@ -336,20 +336,24 @@ export default {
 }
 /* 等待页统一样式（与 AI试衣等待页一致）：Tips / 进度面板 / 固定底部双按钮 */
 .gen-panel {
-	width: 100%;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-}
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		/* CR 🟡 修复：必须 stretch，否则 GenerationProgress 组件宿主宽度是 fit-content，
+		   步骤条宽度会被「最长步骤文案」决定（只剩 2rpx 余量，改短文案就连线塌陷） */
+		align-items: stretch;
+	}
 .gen-tips {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
+		/* 面板改 stretch 后，胶囊自身按内容收窄并居中 */
+		align-self: center;
 		padding: 14rpx 28rpx;
 		border: 1rpx solid var(--color-primary-50);
 		border-radius: var(--radius-full);
 		background: var(--color-primary-06);
-		margin-bottom: 32rpx;
+		margin-bottom: var(--spacing-lg);
 	}
 	.gen-tips-icon {
 		width: 30rpx;
@@ -377,7 +381,7 @@ export default {
 .gen-actions .gen-btn {
 		height: 92rpx;
 		min-width: 240rpx;
-		padding: 0 32rpx;
+		padding: 0 40rpx;
 		margin: 0 var(--spacing-xs);
 		box-sizing: border-box;
 		font-size: 32rpx;
@@ -389,19 +393,23 @@ export default {
 
 /* 加载态 */
 .loading-wrapper {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-}
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		/* CR 🟡 修复：打断百分比宽度循环依赖，让内层面板宽度确定 */
+		width: 100%;
+	}
 .loading-spinner {
-	width: 80rpx;
-	height: 80rpx;
-	border: 6rpx solid rgba(255, 255, 255, 0.2);
-	border-top-color: rgba(255, 255, 255, 0.8);
-	border-radius: 50%;
-	margin-bottom: 48rpx;
-	animation: spin 1s linear infinite;
-}
+		width: 80rpx;
+		height: 80rpx;
+		border: 6rpx solid rgba(255, 255, 255, 0.2);
+		border-top-color: rgba(255, 255, 255, 0.8);
+		border-radius: 50%;
+		margin-bottom: 48rpx;
+		/* 面板改 stretch 后，固定尺寸的 spinner 仍需自身居中 */
+		align-self: center;
+		animation: spin 1s linear infinite;
+	}
 @keyframes spin {
 	from { transform: rotate(0deg); }
 	to { transform: rotate(360deg); }
