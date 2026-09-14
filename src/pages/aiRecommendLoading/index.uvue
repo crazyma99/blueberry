@@ -336,7 +336,6 @@ export default {
 		align-items: stretch;
 	}
 
-/* 加载态 */
 .loading-wrapper {
 		display: flex;
 		flex-direction: column;
@@ -344,32 +343,6 @@ export default {
 		/* CR 🟡 修复：打断百分比宽度循环依赖，让内层面板宽度确定 */
 		width: 100%;
 	}
-.loading-spinner {
-		width: 80rpx;
-		height: 80rpx;
-		border: 6rpx solid rgba(255, 255, 255, 0.2);
-		border-top-color: rgba(255, 255, 255, 0.8);
-		border-radius: 50%;
-		margin-bottom: 48rpx;
-		/* 面板改 stretch 后，固定尺寸的 spinner 仍需自身居中 */
-		align-self: center;
-		animation: spin 1s linear infinite;
-	}
-@keyframes spin {
-	from { transform: rotate(0deg); }
-	to { transform: rotate(360deg); }
-}
-.loading-tip {
-	font-size: var(--font-size-body-plus);
-	color: rgba(255, 255, 255, 0.7);
-	text-align: center;
-	line-height: 44rpx;
-}
-.elapsed-text {
-	font-size: var(--font-size-body);
-	color: rgba(255, 255, 255, 0.4);
-	margin-top: 24rpx;
-}
 
 /* 失败态 */
 .fail-wrapper {
