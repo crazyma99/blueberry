@@ -567,8 +567,9 @@ export default {
 }
 
 .user-arrow {
-  font-size: 40rpx;
-  color: rgba(241, 205, 145, 0.45);
+  width: 40rpx;
+  height: 40rpx;
+  opacity: 0.45;
   padding: 0 4rpx;
 }
 
@@ -593,8 +594,9 @@ export default {
 }
 
 .menu-arrow {
-  color: rgba(255, 255, 255, 0.35);
-  font-size: 36rpx;
+  width: 36rpx;
+  height: 36rpx;
+  opacity: 0.35;
   padding: 0 4rpx;
 }
 

@@ -231,8 +231,9 @@ export default {
 			this.isTimelinePage = false
 		}
 		if (this.shareReadOnly) {
-			// 只读模式：拉取一次即止，不轮询、不重试、不要求登录
+			// 只读模式：拉取一次即止，不轮询、不重试、不要求登录（initializing 防首帧闪伪提示）
 			this.navTitle = 'AI试衣作品'
+			this.initializing = true
 			this.loadSharedTask()
 		} else if (this.taskId !== '') {
 			// 首查：静默查询一次，已完成任务直达结果（不闪伪进度），进行中才进等待页
@@ -571,6 +572,7 @@ export default {
 		async loadSharedTask() {
 			if (this.shareToken === '') {
 				this.status = 'failed'
+				this.initializing = false
 				return
 			}
 			try {
@@ -600,6 +602,8 @@ export default {
 			} catch (err) {
 				console.error('[aiTryOnResult] 分享落地只读查询失败:', err)
 				this.status = 'failed'
+			} finally {
+				this.initializing = false
 			}
 		},
 
