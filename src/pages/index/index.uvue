@@ -554,8 +554,8 @@
 		transition: opacity 0.15s ease-out;
 	}
 	.home-btn-icon {
-		width: 34rpx;
-		height: 34rpx;
+		width: 36rpx;
+		height: 36rpx;
 	}
 	.container{
 		background: var(--color-bg);

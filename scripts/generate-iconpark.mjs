@@ -31,10 +31,15 @@ for (const [name, svg] of Object.entries(files)) { fs.writeFileSync(path.join(ou
 const filled = Like({ theme: 'filled', size: 48, fill: [GOLD, '#FFFFFF'] });
 fs.writeFileSync(path.join(outDir, 'like-filled.svg'), filled);
 // 底部 Tab：激活态用「面性」同款图标（默认态为上面的 outline 版；2026-09-15 主人指示）
-const filledGold = (fn) => fn({ theme: 'filled', size: 48, fill: [GOLD, '#FFFFFF'] });
-fs.writeFileSync(path.join(outDir, 'home-filled.svg'), filledGold(Home));
-fs.writeFileSync(path.join(outDir, 'price-filled.svg'), filledGold(TagOne));
-fs.writeFileSync(path.join(outDir, 'mine-filled.svg'), filledGold(User));
+// 第二个填充位用底栏底色 #160F04（= 页面底色）而不是白色 —— 否则 Home 的「门」、Tag 的「孔」
+// 会渲染成白块（CR 🟡），深色底上应是「镂空」观感
+const filledGold = (fn) => fn({ theme: 'filled', size: 48, fill: [GOLD, '#160F04'] });
+// ⚠️ IconPark filled 变体把第二个填充位硬编码为 #FFF（不吃 fill[1]），
+// 深色底栏上会渲染成白块 ⇒ 生成后统一把 #FFF 换成底色 #160F04，得到「镂空」观感（CR 🟡）
+const tabFilled = (fn) => filledGold(fn).replace(/#FFF/g, '#160F04');
+fs.writeFileSync(path.join(outDir, 'home-filled.svg'), tabFilled(Home));
+fs.writeFileSync(path.join(outDir, 'price-filled.svg'), tabFilled(TagOne));
+fs.writeFileSync(path.join(outDir, 'mine-filled.svg'), tabFilled(User));
 // 等待页步骤条「已完成」节点：金底上的白勾（金色勾在金色圆上不可见，故单列一个白色变体）
 const checkWhite = Check({ theme: 'outline', size: 48, strokeWidth: 5, strokeLinecap: 'round', strokeLinejoin: 'round', fill: ['#FFFFFF'] });
 fs.writeFileSync(path.join(outDir, 'check-white.svg'), checkWhite);

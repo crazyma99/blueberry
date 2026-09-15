@@ -38,24 +38,24 @@ Component({
   },
   lifetimes: {
     attached() {
-      const target = this.resolveSelected(true);
-      const prev = sharedPrevSelected;
-      if (prev > -1 && prev !== target) {
-        // 先落在上一个选中位（无动画），下一帧再位移到目标位 —— 这样才有"滑动"效果
-        this.setData({ selected: prev, slideReady: false });
-        wx.nextTick(() => {
-          this.setData({ selected: target, slideReady: true });
-        });
-      } else {
-        this.setData({ selected: target, slideReady: false });
-      }
-      // custom-tab-bar 渲染时机早于 App onLaunch 中全局字体加载完成，
-      // 组件内再注册一次（字体加载有缓存），确保底栏文字也能应用自定义字体
+      // 字体尽早注册（CR 🟡：原先排在 nextTick 之后，一旦 nextTick 异常会连带跳过）
       wx.loadFontFace({
         global: true,
         family: 'NotoSerifSC-Bold',
         source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/NotoSerifSC-Bold-subset.woff")',
       });
+      const target = this.resolveSelected(true);
+      const prev = sharedPrevSelected;
+      if (prev > -1 && prev !== target) {
+        // 先落在上一个选中位（无动画），下一帧再位移到目标位 —— 这样才有"滑动"效果
+        this.setData({ selected: prev, slideReady: false });
+        const nextTick = typeof wx.nextTick === 'function' ? wx.nextTick : (fn) => setTimeout(fn, 0);
+        nextTick(() => {
+          this.setData({ selected: target, slideReady: true });
+        });
+      } else {
+        this.setData({ selected: target, slideReady: false });
+      }
     },
   },
   pageLifetimes: {
@@ -84,7 +84,8 @@ Component({
       return sharedSelected > -1 ? sharedSelected : 0;
     },
     onTap(e) {
-      const index = e.currentTarget.dataset.index;
+      // CR 🟡：dataset 在不同渲染器下可能是字符串，统一归一为数字（否则 === 全 false、高亮全灭）
+      const index = Number(e.currentTarget.dataset.index);
       // 触感反馈：tab 切换用轻振动（Selection 语义），失败静默
       try {
         wx.vibrateShort({ type: 'light' });

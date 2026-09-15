@@ -48,6 +48,12 @@
 .tabbar-icon {
   width: 38rpx;
   height: 38rpx;
+  /* 未选中：图标同样压暗（与 55% 的文字一致，主人 2026-09-15 选定口径） */
+  opacity: 0.55;
+}
+
+.tabbar-item--active .tabbar-icon {
+  opacity: 1;
 }
 
 .tabbar-text {
