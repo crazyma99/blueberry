@@ -143,7 +143,8 @@
 </template>
 
 <script>
-	import { getImage, getShops, wxLogin, wxBindPhone, wxUpdateUserInfo, rejectAllPendingUploads, getPageConfig } from '../../utils/api.uts'
+	import { getImage, getShops, wxLogin, wxBindPhone, wxUpdateUserInfo, rejectAllPendingUploads } from '../../utils/api.uts'
+import { parseBrandHubEnabled, isBrandHubEnabled } from '../../utils/pageConfig.uts'
 	import { hapticTap } from '../../utils/haptics.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
 	import { loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
@@ -220,6 +221,9 @@
 			const brandId = getBrandId()
 			if (brandId !== this.lastBrandId) {
 				this.lastBrandId = brandId
+				// 品牌切换：入口先按「关闭」处理，等新品牌配置回来再决定是否渲染
+				// （CR 🟡：否则上一个品牌开着时，新品牌首页在整个请求窗口内仍显示入口）
+				this.brandHubEnabled = false
 				this.loading = true
 				this.reloadHomeData()
 				this.loadShareCard()
@@ -315,12 +319,13 @@
 			this.heroHeight = '794rpx'
 			try {
 				// 并行加载轮播图和店铺列表（X-Brand-Id 由 http 层自动携带）
-				const [bannerRes, shopRes, pageCfgRes] = await Promise.all([
+				const [bannerRes, shopRes, brandHubOn] = await Promise.all([
 					// t 时间戳防缓存：下拉刷新时 banner 配置必定重新拉取
 					getImage('get', { type: 0, t: Date.now() }).catch(() => null),
 					getShops().catch(() => null),
-					// 页面组件配置（品牌馆展示入口开关等），失败静默（保持默认关闭）
-					getPageConfig().catch(() => null)
+					// 品牌馆展示入口开关（OPS 首页配置，按商户生效）：force=true 跳过 60s 缓存，
+					// 保证「OPS 改开关 → 用户下拉刷新」立即生效（CR 🟡）；失败静默（保持默认关闭）
+					isBrandHubEnabled(true).catch(() => false)
 				])
 				if (bannerRes && bannerRes.code === 200) {
 					// banner 出 750px WebP 缩略图，降低内存占用
@@ -342,7 +347,7 @@
 					console.log('[index] shops=', this.shopList.length, 'showPlaceholder=', this.showPlaceholder)
 				}
 				// 品牌馆展示入口：按商户配置决定是否渲染左上角入口
-				this.brandHubEnabled = this.resolveBrandHubEnabled(pageCfgRes)
+				this.brandHubEnabled = brandHubOn === true
 			} catch (err) {
 				console.error('[index] 加载首页数据失败', err)
 				uni.showToast({ title: '首页加载失败，请下拉刷新', icon: 'none' })
@@ -350,27 +355,6 @@
 				this.loading = false
 			}
 		},
-			// 解析「品牌馆展示入口」开关：取 type=brand_hub 组件的 config.enabled
-			// 缺组件/字段缺失/JSON 异常一律视为关闭（安全默认）
-			resolveBrandHubEnabled(res: any): boolean {
-				if (res == null || res.code !== 200 || !Array.isArray(res.data)) return false
-				const list = res.data as any[]
-				for (let i = 0; i < list.length; i++) {
-					const c = list[i]
-					if (c != null && c.type === 'brand_hub') {
-						const raw = c.config
-						if (raw == null || (raw as string).length === 0) return false
-						try {
-							const cfg = JSON.parse(raw as string)
-							return cfg.enabled === true
-						} catch (e) {
-							console.error('[index] 品牌馆开关配置解析失败', e)
-							return false
-						}
-					}
-				}
-				return false
-			},
 			// 关闭登录弹窗
 			closeLoginPopup() {
 				this.showLoginPopup = false
