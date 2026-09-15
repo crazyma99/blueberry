@@ -9,23 +9,9 @@
 }
 
 .tabbar-inner {
-  position: relative;
   display: flex;
   flex-direction: row;
   height: 116rpx;
-}
-
-/* 选中背景：单一高亮块（宽度＝1/3）；位移动效由 index.js 的 this.animate() 播放，
-   这里不使用 CSS transition（视图层动画不依赖过渡与渲染帧对齐） */
-.tabbar-highlight {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 33.3333%;
-  background: linear-gradient(180deg, rgba(241, 205, 145, 0.1) 0%, rgba(241, 205, 145, 0) 100%);
-  z-index: 0;
-  pointer-events: none;
 }
 
 .tabbar-item {
@@ -35,8 +21,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: relative;
-  z-index: 1;
+}
+
+/* 选中背景：每个 tab 各自的静态淡金渐变（2026-09-15 回滚位移动效后恢复此形态） */
+.tabbar-item--active {
+  background: linear-gradient(180deg, rgba(241, 205, 145, 0.1) 0%, rgba(241, 205, 145, 0) 100%);
 }
 
 .tabbar-icon {

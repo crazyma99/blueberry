@@ -2,17 +2,12 @@
   自定义底部 tabbar（对应 pages.json tabBar.custom = true）
   - 图标：未选中＝线性（outline，压暗），选中＝面性（filled，品牌金）
   - 文字：未选中 rgba(241,205,145,.55)，选中 #F1CD91
-  - 选中背景：**单一高亮块**，位置由 highlightIndex 驱动；切换 Tab 时的位移动效由组件
-    methods.slideTo() 用 this.animate()（视图层动画）播放，入口＝页面 onShow → getTabBar().slideTo()
+  - 选中背景：**每个 tab 各自的静态淡金渐变**（2026-09-15 主人指示回滚位移动效，恢复 v1.0.43 形态）
   - 所有 tab 均分宽度，高度 116rpx（另加底部安全区）
   当前选中项由 index.js 按页面路由 + 模块级共享下标自动判定，页面侧无需额外代码。
 -->
 <view class="tabbar">
   <view class="tabbar-inner">
-    <view
-      class="tabbar-highlight"
-      style="transform: translateX({{highlightIndex * 100}}%);"
-    ></view>
     <view
       wx:for="{{list}}"
       wx:key="pagePath"

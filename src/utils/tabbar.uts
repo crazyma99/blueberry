@@ -1,24 +1,21 @@
-// 同步自定义底部 tabbar 的选中态 + 触发选中背景位移动效
+// 同步自定义底部 tabbar 的选中态
 // 微信官方模式：tab 页 onShow 中通过 getTabBar() 拿到本页的 tabBar 实例。
-// 背景（2026-09-15 三次迭代结论）：
-//   组件实例按 tab 页各自独立；且 webview 渲染器下自定义 tabbar 位于**独立元素树**（挂在
-//   document.documentElement，不在页面组件树内），很可能收不到 pageLifetimes.show
-//   ⇒ **页面 onShow 是唯一必然触发的入口**，位移动效必须在页面侧发起：
-//   优先调用组件的 slideTo()（组件内部用 this.animate 播放视图层动画），
-//   旧版组件不支持 slideTo 时退化为裸 setData（仅切图标态、无位移）。
+// 背景（2026-09-15）：组件实例按 tab 页各自独立，且 webview 渲染器下自定义 tabbar 位于
+// **独立元素树**（挂 document.documentElement、不在页面组件树内），很可能收不到 pageLifetimes.show
+// ⇒ **页面 onShow 是唯一必然触发的入口**，选中态必须由页面侧同步（与是否有动画无关）。
 export function syncTabBarSelected(index : number) : void {
 	const pages = getCurrentPages()
 	if (pages.length == 0) return
 	const currentPage = pages[pages.length - 1] as any
 	const tabBar: any = currentPage.getTabBar()
 	if (tabBar == null) return
-	if (typeof tabBar.slideTo === 'function') {
-		tabBar.slideTo(index)
+	// 新组件提供 setSelected（带越界守卫与幂等），旧组件退化为裸 setData
+	if (typeof tabBar.setSelected === 'function') {
+		tabBar.setSelected(index)
 		return
 	}
 	// 值相同则不 setData，避免每次切换都触发一次无谓的重绘（闪烁来源之一）
-	// 兼容旧版组件：无 slideTo 时至少把「选中态 + 高亮位」一起对齐（CR 🟡S5，避免半新半旧脏状态）
-	if (tabBar.data != null && (tabBar.data.selected != index || tabBar.data.highlightIndex != index)) {
-		tabBar.setData({ selected: index, highlightIndex: index })
+	if (tabBar.data != null && tabBar.data.selected != index) {
+		tabBar.setData({ selected: index })
 	}
 }
