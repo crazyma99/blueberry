@@ -64,6 +64,7 @@
 										<view class="collect">
 											<image
 												class="heart"
+												:class="likeAnimId === item.id ? (likeAnimKind === 'in' ? 'heart-pop' : 'heart-shrink') : ''"
 												mode="aspectFit"
 												:src="item.liked ? '/static/iconpark/like-filled.svg' : '/static/iconpark/like.svg'"
 											>
@@ -145,6 +146,7 @@
 										<view class="collect">
 											<image
 												class="heart"
+												:class="likeAnimId === item.id ? (likeAnimKind === 'in' ? 'heart-pop' : 'heart-shrink') : ''"
 												mode="aspectFit"
 												:src="item.liked ? '/static/iconpark/like-filled.svg' : '/static/iconpark/like.svg'"
 											>
@@ -226,6 +228,9 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 	export default {
 		data() {
 			return {
+				// 点赞动效：likeAnimId = 正在播放动效的相册 id（-1 表示无），likeAnimKind = in/out
+				likeAnimId: -1 as number,
+				likeAnimKind: '' as string,
 				idx: '',
 				from: '',
 				statusBarHeight: 20,
@@ -647,11 +652,24 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 					if (res.code === 200 && res.data) {
 						item.liked = res.data.liked
 						item.likeCount = res.data.likeCount
+						// 播放心跳动效：点赞为放大回弹、取消为缩小回弹
+						this.playLikeAnim(item.id, item.liked === true)
 					}
 				} catch (err) {
 					console.error('[demoDetail] 点赞失败:', err)
 					uni.showToast({ title: '操作失败，请重试', icon: 'none' })
 				}
+			},
+			// 点赞动效：重置后再落标记（连点同一张也会重放），260ms 动画 + 100ms 余量
+			playLikeAnim(id: any, likedNow: boolean) {
+				this.likeAnimId = -1
+				this.likeAnimKind = likedNow ? 'in' : 'out'
+				this.likeAnimId = id
+				setTimeout(() => {
+					if (this.likeAnimId === id) {
+						this.likeAnimId = -1
+					}
+				}, 360)
 			},
 			async doLogin() {
 				try {
@@ -1053,16 +1071,35 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 		color: var(--color-primary);
 	}
 	.heart{
-		width: 48rpx;
-		height: 40rpx;
+		/* 2026-09-15 主人指示：图标视觉缩小，点击热区保持不变 */
+		width: 36rpx;
+		height: 30rpx;
 		position: relative;
 	}
+	/* 点击热区仍为 60×60rpx 不变，仅重新居中到缩小后的图标（左右 -12rpx、上下 -15rpx） */
 	.clickArea{
 		position: absolute;
 		width: 60rpx;
 		height: 60rpx;
-		left: 0;
-		top: 0;
+		left: -12rpx;
+		top: -15rpx;
+	}
+	/* 点赞/取消点赞心跳动效（2026-09-15 主人指示） */
+	.heart-pop{
+		animation: heartPop 0.26s ease-out;
+	}
+	.heart-shrink{
+		animation: heartShrink 0.26s ease-out;
+	}
+	@keyframes heartPop{
+		0% { transform: scale(1); }
+		45% { transform: scale(1.28); }
+		100% { transform: scale(1); }
+	}
+	@keyframes heartShrink{
+		0% { transform: scale(1); }
+		45% { transform: scale(0.88); }
+		100% { transform: scale(1); }
 	}
 	.divide{
 		height: 2rpx;

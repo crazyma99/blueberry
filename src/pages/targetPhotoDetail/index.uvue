@@ -58,6 +58,7 @@
 						<image
 							:src="liked ? '/static/iconpark/like-filled.svg' : '/static/iconpark/like.svg'"
 							class="heart"
+							:class="heartAnim"
 						></image>
 						<text class="like-num">{{ formatCount(likeCount) }}</text>
 					</view>
@@ -137,6 +138,8 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 		data() {
 			return {
 				loading: true,
+				// 点赞动效类（heart-pop / heart-shrink，播完清空）
+				heartAnim: '' as string,
 				liked: false,
 				likeCount: 0,
 				detail: null,
@@ -264,11 +267,21 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 					if (res.code === 200 && res.data) {
 						this.liked = res.data.liked
 						this.likeCount = res.data.likeCount
+						// 播放心跳动效：点赞为放大回弹、取消为缩小回弹
+						this.playHeartAnim(this.liked === true)
 					}
 				} catch (err) {
 					console.error('点赞失败:', err)
 					uni.showToast({ title: '操作失败', icon: 'none' })
 				}
+			},
+			// 点赞动效：清空再赋值以支持连续点击重放
+			playHeartAnim(likedNow: boolean) {
+				this.heartAnim = ''
+				this.heartAnim = likedNow ? 'heart-pop' : 'heart-shrink'
+				setTimeout(() => {
+					this.heartAnim = ''
+				}, 360)
 			},
 			// 关闭登录弹窗
 			closeLoginPopup() {
@@ -528,8 +541,26 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 	align-items: center;
 }
 .heart{
-	width: 48rpx;
-	height: 40rpx;
+	/* 2026-09-15 主人指示：图标视觉缩小，点击热区（.collect 整块）不变 */
+	width: 36rpx;
+	height: 30rpx;
+}
+/* 点赞/取消点赞心跳动效（2026-09-15 主人指示） */
+.heart-pop{
+	animation: heartPop 0.26s ease-out;
+}
+.heart-shrink{
+	animation: heartShrink 0.26s ease-out;
+}
+@keyframes heartPop{
+	0% { transform: scale(1); }
+	45% { transform: scale(1.28); }
+	100% { transform: scale(1); }
+}
+@keyframes heartShrink{
+	0% { transform: scale(1); }
+	45% { transform: scale(0.88); }
+	100% { transform: scale(1); }
 }
 .like-num {
 	font-size: var(--font-size-body-xs);

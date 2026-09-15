@@ -5,7 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Home, User, Left, Right, Down, Check, Like, Star, Search, ShareThree, TagOne, Protect, FaceRecognition, Eyes, Puzzle, Picture, Plan, ListSuccess } from '@icon-park/svg';
+import { Home, User, Left, Right, Down, Check, Like, Star, Search, ShareThree, TagOne, Protect, FaceRecognition, Eyes, Puzzle, Picture, Plan, ListSuccess, Shop } from '@icon-park/svg';
 const outDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/static/iconpark');
 fs.mkdirSync(outDir, { recursive: true });
 const GOLD = '#F1CD91';
@@ -23,11 +23,18 @@ const files = {
   'puzzle.svg': gold(Puzzle),               // 3 试衣：正在匹配面部
   'picture.svg': gold(Picture),             // 4 试衣：生成试衣图像
   'plan.svg': gold(Plan),                   // 3 推荐：生成推荐方案
-  'list-success.svg': gold(ListSuccess)     // 4 推荐：生成推荐结果
+  'list-success.svg': gold(ListSuccess),    // 4 推荐：生成推荐结果
+  // 首页左上角「品牌馆」入口按钮（2026-09-15 主人指示：原文字「馆」改 IconPark 图标）
+  'shop.svg': gold(Shop)
 };
 for (const [name, svg] of Object.entries(files)) { fs.writeFileSync(path.join(outDir, name), svg); }
 const filled = Like({ theme: 'filled', size: 48, fill: [GOLD, '#FFFFFF'] });
 fs.writeFileSync(path.join(outDir, 'like-filled.svg'), filled);
+// 底部 Tab：激活态用「面性」同款图标（默认态为上面的 outline 版；2026-09-15 主人指示）
+const filledGold = (fn) => fn({ theme: 'filled', size: 48, fill: [GOLD, '#FFFFFF'] });
+fs.writeFileSync(path.join(outDir, 'home-filled.svg'), filledGold(Home));
+fs.writeFileSync(path.join(outDir, 'price-filled.svg'), filledGold(TagOne));
+fs.writeFileSync(path.join(outDir, 'mine-filled.svg'), filledGold(User));
 // 等待页步骤条「已完成」节点：金底上的白勾（金色勾在金色圆上不可见，故单列一个白色变体）
 const checkWhite = Check({ theme: 'outline', size: 48, strokeWidth: 5, strokeLinecap: 'round', strokeLinejoin: 'round', fill: ['#FFFFFF'] });
 fs.writeFileSync(path.join(outDir, 'check-white.svg'), checkWhite);

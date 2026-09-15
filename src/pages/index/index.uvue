@@ -1,9 +1,9 @@
 <template>
 	<view class="container">
 		<!-- 首页无导航栏：Banner 沉浸式延伸到状态栏顶部 -->
-		<!-- 品牌馆入口（home 按钮）：圆形悬浮左上角，点击进入中台切换品牌 -->
+		<!-- 品牌馆入口：圆形悬浮左上角，点击进入中台切换品牌（2026-09-15 主人指示：文字「馆」改 IconPark Shop 图标） -->
 		<view class="home-btn" :style="{ top: (statusBarHeight + 8) + 'px' }" hover-class="press-dim" @click="goBrandHub">
-			<text class="home-btn-text font-noto-serif">馆</text>
+			<image class="home-btn-icon" src="/static/iconpark/shop.svg" mode="aspectFit"></image>
 		</view>
 		<!-- 骨架屏：与真实页面间距 1:1（hero 通栏 → 客片欣赏标题/副标题 → 店铺卡片区） -->
 		<view v-if="loading" class="sk-container" style="padding: 0;">
@@ -553,10 +553,9 @@
 		z-index: 50;
 		transition: opacity 0.15s ease-out;
 	}
-	.home-btn-text {
-		font-size: 28rpx;
-		color: var(--color-primary);
-		font-weight: 700;
+	.home-btn-icon {
+		width: 34rpx;
+		height: 34rpx;
 	}
 	.container{
 		background: var(--color-bg);
