@@ -20,9 +20,9 @@ const check = (label, ok, extra = '') => {
 };
 
 console.log('[① 对齐：标题+点赞 与 右侧 AI 试衣按钮 垂直居中]');
-check('.desc 改为横排 + align-items:center', /\.desc\{[\s\S]{0,300}flex-direction: row;[\s\S]{0,160}align-items: center;/.test(DD));
-check('左列 .desc-main 存在（flex:1 + min-width:0）', /\.desc-main\{[\s\S]{0,200}flex: 1;/.test(DD) && DD.includes('min-width: 0;'));
-check('右列 .desc-tryon 存在（flex-shrink:0）', /\.desc-tryon\{[\s\S]{0,160}flex-shrink: 0;/.test(DD));
+check('.desc 左侧竖排（不依赖 flex 行布局）', /\.desc\{[\s\S]{0,400}flex-direction: column;/.test(DD));
+check('左列 .desc-main 给右侧按钮留占位（padding-right）', /\.desc-main\{[\s\S]{0,200}padding-right: 140rpx;/.test(DD));
+check('右列 .desc-tryon 绝对定位锚右 + translateY(-50%) 垂直居中', /\.desc-tryon\{[\s\S]{0,220}position: absolute;[\s\S]{0,160}top: 50%;[\s\S]{0,120}transform: translateY\(-50%\);/.test(DD));
 check('AI 试衣标签已移出 .desc-row（成为 .desc 的直接子节点）', DD.includes('class="desc-tryon"') && !/desc-row[\s\S]{0,400}ai-tryon-tag/.test(DD));
 check('两处网格均已完成该结构（desc-main 出现 ≥2 次）', (DD.match(/class="desc-main"/g) || []).length >= 2);
 
