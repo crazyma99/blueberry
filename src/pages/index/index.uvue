@@ -1,9 +1,10 @@
 <template>
 	<view class="container">
 		<!-- 首页无导航栏：Banner 沉浸式延伸到状态栏顶部 -->
-		<!-- 品牌馆入口（home 按钮）：圆形悬浮左上角，点击进入中台切换品牌 -->
-		<view class="home-btn" :style="{ top: (statusBarHeight + 8) + 'px' }" hover-class="press-dim" @click="goBrandHub">
-			<text class="home-btn-text font-noto-serif">馆</text>
+		<!-- 品牌馆入口：圆形悬浮左上角，点击进入中台切换品牌（2026-09-15 主人指示：文字「馆」改 IconPark Shop 图标）
+		     展示开关：仅当该商户在 OPS「首页配置 → 品牌馆展示入口」开启时展示（默认关闭，关闭时整块不渲染） -->
+		<view v-if="brandHubEnabled" class="home-btn" :style="{ top: (statusBarHeight + 8) + 'px' }" hover-class="press-dim" @click="goBrandHub">
+			<image class="home-btn-icon" src="/static/iconpark/shop.svg" mode="aspectFit"></image>
 		</view>
 		<!-- 骨架屏：与真实页面间距 1:1（hero 通栏 → 客片欣赏标题/副标题 → 店铺卡片区） -->
 		<view v-if="loading" class="sk-container" style="padding: 0;">
@@ -143,6 +144,7 @@
 
 <script>
 	import { getImage, getShops, wxLogin, wxBindPhone, wxUpdateUserInfo, rejectAllPendingUploads } from '../../utils/api.uts'
+import { parseBrandHubEnabled, isBrandHubEnabled } from '../../utils/pageConfig.uts'
 	import { hapticTap } from '../../utils/haptics.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
 	import { loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
@@ -192,7 +194,9 @@
 				// profile 弹窗是否由登录流程拉起（仅登录流程关闭弹窗时才弹"登录成功"toast）
 				profileFromLogin: false,
 				// 分享卡片（品牌配置 > 中台全局 > 代码默认），onLoad 异步解析后覆盖
-				shareCard: { title: '一键解锁AI推荐｜AI试衣｜客片展示', imageUrl: '/static/share-home.jpg' }
+				shareCard: { title: '一键解锁AI推荐｜AI试衣｜客片展示', imageUrl: '/static/share-home.jpg' },
+				// 品牌馆展示入口开关（OPS 首页配置，按商户生效；默认关闭）
+				brandHubEnabled: false
 			}
 		},
 		async onLoad(options : any) {
@@ -217,6 +221,9 @@
 			const brandId = getBrandId()
 			if (brandId !== this.lastBrandId) {
 				this.lastBrandId = brandId
+				// 品牌切换：入口先按「关闭」处理，等新品牌配置回来再决定是否渲染
+				// （CR 🟡：否则上一个品牌开着时，新品牌首页在整个请求窗口内仍显示入口）
+				this.brandHubEnabled = false
 				this.loading = true
 				this.reloadHomeData()
 				this.loadShareCard()
@@ -312,10 +319,13 @@
 			this.heroHeight = '794rpx'
 			try {
 				// 并行加载轮播图和店铺列表（X-Brand-Id 由 http 层自动携带）
-				const [bannerRes, shopRes] = await Promise.all([
+				const [bannerRes, shopRes, brandHubOn] = await Promise.all([
 					// t 时间戳防缓存：下拉刷新时 banner 配置必定重新拉取
 					getImage('get', { type: 0, t: Date.now() }).catch(() => null),
-					getShops().catch(() => null)
+					getShops().catch(() => null),
+					// 品牌馆展示入口开关（OPS 首页配置，按商户生效）：force=true 跳过 60s 缓存，
+					// 保证「OPS 改开关 → 用户下拉刷新」立即生效（CR 🟡）；失败静默（保持默认关闭）
+					isBrandHubEnabled(true).catch(() => false)
 				])
 				if (bannerRes && bannerRes.code === 200) {
 					// banner 出 750px WebP 缩略图，降低内存占用
@@ -336,6 +346,8 @@
 					this.showPlaceholder = this.shopList.length > 1 && this.shopList.length % 2 === 1
 					console.log('[index] shops=', this.shopList.length, 'showPlaceholder=', this.showPlaceholder)
 				}
+				// 品牌馆展示入口：按商户配置决定是否渲染左上角入口
+				this.brandHubEnabled = brandHubOn === true
 			} catch (err) {
 				console.error('[index] 加载首页数据失败', err)
 				uni.showToast({ title: '首页加载失败，请下拉刷新', icon: 'none' })
@@ -553,10 +565,9 @@
 		z-index: 50;
 		transition: opacity 0.15s ease-out;
 	}
-	.home-btn-text {
-		font-size: 28rpx;
-		color: var(--color-primary);
-		font-weight: 700;
+	.home-btn-icon {
+		width: 36rpx;
+		height: 36rpx;
 	}
 	.container{
 		background: var(--color-bg);

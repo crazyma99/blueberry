@@ -23,6 +23,7 @@
   justify-content: center;
 }
 
+/* 选中背景：每个 tab 各自的静态淡金渐变（2026-09-15 回滚位移动效后恢复此形态） */
 .tabbar-item--active {
   background: linear-gradient(180deg, rgba(241, 205, 145, 0.1) 0%, rgba(241, 205, 145, 0) 100%);
 }
@@ -30,6 +31,12 @@
 .tabbar-icon {
   width: 38rpx;
   height: 38rpx;
+  /* 未选中：图标同样压暗（与 55% 的文字一致，主人 2026-09-15 选定口径） */
+  opacity: 0.55;
+}
+
+.tabbar-item--active .tabbar-icon {
+  opacity: 1;
 }
 
 .tabbar-text {
@@ -37,6 +44,11 @@
   font-size: 24rpx;
   font-weight: 700;
   /* 字体由全局类控制（如 font-noto-serif），此处不再写死 font-family */
+  /* 未选中：压暗（2026-09-15 主人指示） */
+  color: rgba(241, 205, 145, 0.55);
+}
+
+.tabbar-item--active .tabbar-text {
   color: #f1cd91;
 }
 

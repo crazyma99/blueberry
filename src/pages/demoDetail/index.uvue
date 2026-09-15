@@ -59,20 +59,24 @@
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
-									<view class="photoName font-noto-serif">{{ item.title }}</view>
+									<!-- 左列：标题 + 点赞（右侧 AI 试衣按钮为兄弟节点，整块垂直居中——主人 2026-09-15 指示） -->
+									<view class="desc-main">
+									<view class="photoName font-noto-serif">{{ formatAlbumTitle(item.title) }}</view>
 									<view class="desc-row">
 										<view class="collect">
 											<image
 												class="heart"
+												:class="likeAnimId === item.id ? (likeAnimKind === 'in' ? 'heart-pop' : 'heart-shrink') : ''"
 												mode="aspectFit"
 												:src="item.liked ? '/static/iconpark/like-filled.svg' : '/static/iconpark/like.svg'"
-											>
-												<view class="clickArea" hover-class="press-dim"
+											></image>
+											<!-- 点击热区：60×60rpx 不变，作为 .collect 的兄弟节点（移出 <image> 以免被图片盒裁剪） -->
+											<view class="clickArea" hover-class="press-dim"
 					@click.stop="handleLike(item)"></view>
-											</image>
 											<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 										</view>
-										<view v-if="item.tryonDisabled !== true" hover-class="press-dim"
+									</view>
+										<view class="desc-tryon" v-if="item.tryonDisabled !== true" hover-class="press-dim"
 					@click.stop="goToAiTryOn(item)">
 											<image mode="aspectFit" class="ai-tryon-tag" src="/static/aitry-btn.png"/>
 										</view>
@@ -140,20 +144,24 @@
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
-									<view class="photoName font-noto-serif">{{ item?.title }}</view>
+									<!-- 左列：标题 + 点赞（右侧 AI 试衣按钮为兄弟节点，整块垂直居中——主人 2026-09-15 指示） -->
+									<view class="desc-main">
+									<view class="photoName font-noto-serif">{{ formatAlbumTitle(item?.title) }}</view>
 									<view class="desc-row">
 										<view class="collect">
 											<image
 												class="heart"
+												:class="likeAnimId === item.id ? (likeAnimKind === 'in' ? 'heart-pop' : 'heart-shrink') : ''"
 												mode="aspectFit"
 												:src="item.liked ? '/static/iconpark/like-filled.svg' : '/static/iconpark/like.svg'"
-											>
-												<view class="clickArea" hover-class="press-dim"
+											></image>
+											<!-- 点击热区：60×60rpx 不变，作为 .collect 的兄弟节点（移出 <image> 以免被图片盒裁剪） -->
+											<view class="clickArea" hover-class="press-dim"
 					@click.stop="handleLike(item)"></view>
-											</image>
 											<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 										</view>
-										<view v-if="item?.tryonDisabled !== true" hover-class="press-dim"
+									</view>
+										<view class="desc-tryon" v-if="item?.tryonDisabled !== true" hover-class="press-dim"
 					@click.stop="goToAiTryOn(item)">
 											<image mode="aspectFit" class="ai-tryon-tag" src="/static/aitry-btn.png"/>
 										</view>
@@ -212,6 +220,8 @@
 	import { submitUserProfile } from '../../utils/profileSubmit.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
 import { cosThumb } from '../../utils/imageLoader.uts'
+import { hapticTap } from '../../utils/haptics.uts'
+import { formatAlbumTitle as formatAlbumTitleUtil } from '../../utils/text.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -226,6 +236,10 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 	export default {
 		data() {
 			return {
+				// 点赞动效：likeAnimId = 正在播放动效的相册 id（-1 表示无），likeAnimKind = in/out
+				likeAnimId: -1 as number,
+				likeAnimKind: '' as string,
+				likeAnimTimer: null as any,
 				idx: '',
 				from: '',
 				statusBarHeight: 20,
@@ -642,16 +656,59 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 			},
 			// 执行点赞切换
 			async doToggleLike(item) {
+				// 主人 2026-09-15 指示：按下即反馈——先本地乐观更新（状态/计数/动效/触感），再发请求，失败回滚
+				const prevLiked = item.liked === true
+				const prevCount = item.likeCount == null ? 0 : item.likeCount
+				// CR 🟡：并发守卫——每次点击递增序号，只有最后一次请求的响应才会被采纳（防乱序覆盖）
+				const seq = (item.likeSeq == null ? 0 : item.likeSeq) + 1
+				item.likeSeq = seq
+				const nextLiked = !prevLiked
+				item.liked = nextLiked
+				item.likeCount = nextLiked ? prevCount + 1 : (prevCount > 0 ? prevCount - 1 : 0)
+				hapticTap()
+				this.playLikeAnim(item.id, nextLiked)
 				try {
 					const res = await toggleLike(item.id)
+					if (item.likeSeq !== seq) {
+						// 期间用户又点过（更新的请求已在途）⇒ 丢弃本次旧响应
+						return
+					}
 					if (res.code === 200 && res.data) {
+						// 以服务端返回为准（避免并发点击导致计数漂移）
 						item.liked = res.data.liked
 						item.likeCount = res.data.likeCount
+					} else {
+						// CR 🟡：非 200 同样回滚并给出反馈（原先静默回滚）
+						item.liked = prevLiked
+						item.likeCount = prevCount
+						uni.showToast({ title: '操作失败，请重试', icon: 'none' })
 					}
 				} catch (err) {
 					console.error('[demoDetail] 点赞失败:', err)
+					item.liked = prevLiked
+					item.likeCount = prevCount
 					uni.showToast({ title: '操作失败，请重试', icon: 'none' })
 				}
+			},
+			// 相册标题：长度 ≥7 字时显示前 6 字 + ...（主人 2026-09-15 指示）
+			// 标题截断：≥7 字符显示前 6 字符 + ...（实现见 utils/text.uts，按码点计数、emoji 安全）
+			formatAlbumTitle(title : any) : string {
+				return formatAlbumTitleUtil(title)
+			},
+			// 点赞动效：重置后再落标记（连点同一张也会重放），260ms 动画 + 100ms 余量
+			playLikeAnim(id: any, likedNow: boolean) {
+				// CR 🟡 修复：先清掉上一支计时器，否则 350ms 内的二次点击会被上一支提前掐断
+				if (this.likeAnimTimer != null) {
+					clearTimeout(this.likeAnimTimer)
+					this.likeAnimTimer = null
+				}
+				this.likeAnimId = -1
+				this.likeAnimKind = likedNow ? 'in' : 'out'
+				this.likeAnimId = id
+				this.likeAnimTimer = setTimeout(() => {
+					this.likeAnimId = -1
+					this.likeAnimTimer = null
+				}, 360)
 			},
 			async doLogin() {
 				try {
@@ -1031,10 +1088,39 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 		left: 20rpx;
 		right: 20rpx;
 		bottom: 20rpx;
+		/* 主人 2026-09-15 指示：标题+点赞模块 与 右侧 AI 试衣按钮 垂直居中
+		   实现说明：真机上 flex 行布局会把 AI 按钮挤到下一行 ⇒ 改为「左侧正常竖排 + 右侧绝对定位锚定」，
+		   几何上不可能换行；AI 按钮 top:50% + translateY(-50%) 即与左侧整块垂直居中 */
 		display: flex;
 		flex-direction: column;
 	}
+	.desc-main{
+		/* 右侧给 AI 按钮留出固定占位（124rpx 按钮 + 16rpx 间隙），避免文字压到按钮上 */
+		padding-right: 140rpx;
+		box-sizing: border-box;
+		min-width: 0;
+	}
+	.desc-tryon{
+		position: absolute;
+		right: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		display: flex;
+		align-items: center;
+	}
+	/* 长标题单行省略，避免顶到右侧 AI 试衣标签 */
+	.desc .photoName{
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	/* 主人 2026-09-15 指示：点赞图标与数量之间加间距（用 margin 而非 flex gap，兼容旧 WebView） */
+	.stat-count {
+		margin-left: 10rpx;
+	}
 	.desc-row {
+		/* 主人 2026-09-15 指示：标题与点赞模块之间加间距 */
+		margin-top: 10rpx;
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
@@ -1046,6 +1132,7 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 		color: var(--color-primary);
 	}
 	.collect{
+		position: relative;
 		display: flex;
 		flex-direction: row;
 		align-items: center;
@@ -1053,16 +1140,37 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 		color: var(--color-primary);
 	}
 	.heart{
-		width: 48rpx;
-		height: 40rpx;
+		/* 2026-09-15 主人指示：图标视觉缩小，点击热区保持不变 */
+		width: 36rpx;
+		height: 30rpx;
 		position: relative;
 	}
+	/* 点击热区仍为 60×60rpx 不变，重新居中到缩小后的图标（左右 -12rpx、上下 -15rpx）；
+	   热区挂在 .collect 上（不再嵌在 <image> 内），彻底避免被图片盒裁剪 */
 	.clickArea{
 		position: absolute;
 		width: 60rpx;
 		height: 60rpx;
-		left: 0;
-		top: 0;
+		left: -12rpx;
+		top: -15rpx;
+		z-index: 1;
+	}
+	/* 点赞/取消点赞心跳动效（2026-09-15 主人指示） */
+	.heart-pop{
+		animation: heartPop 0.26s ease-out;
+	}
+	.heart-shrink{
+		animation: heartShrink 0.26s ease-out;
+	}
+	@keyframes heartPop{
+		0% { transform: scale(1); }
+		45% { transform: scale(1.28); }
+		100% { transform: scale(1); }
+	}
+	@keyframes heartShrink{
+		0% { transform: scale(1); }
+		45% { transform: scale(0.88); }
+		100% { transform: scale(1); }
 	}
 	.divide{
 		height: 2rpx;
