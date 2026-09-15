@@ -15,7 +15,8 @@
   height: 116rpx;
 }
 
-/* 选中背景：单一高亮块（宽度＝1/3），靠 translateX 在 tab 之间位移 */
+/* 选中背景：单一高亮块（宽度＝1/3）；位移动效由 index.js 的 this.animate() 播放，
+   这里不使用 CSS transition（视图层动画不依赖过渡与渲染帧对齐） */
 .tabbar-highlight {
   position: absolute;
   left: 0;
@@ -23,15 +24,8 @@
   bottom: 0;
   width: 33.3333%;
   background: linear-gradient(180deg, rgba(241, 205, 145, 0.1) 0%, rgba(241, 205, 145, 0) 100%);
-  /* 首帧 / 直达页面时不做动画，避免"从 0 号位滑过来"的假动效 */
-  transition: none;
   z-index: 0;
   pointer-events: none;
-}
-
-/* 切换 Tab 时启用位移动效（由 index.js 在位移前打开） */
-.tabbar-highlight--animate {
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tabbar-item {
