@@ -97,12 +97,90 @@ check('两页均无 flex gap 残留于 .collect', !/\.collect\s*\{[^}]*gap:/.tes
 check('favorites 也走标题截断', FAV.includes('formatAlbumTitle(item.title)') && FAV.includes('formatAlbumTitleUtil'));
 check('两页共用公共工具 src/utils/text.uts', read('src/utils/text.uts').includes('export function formatAlbumTitle'));
 
-console.log('\n[标签配平（先剥注释再计数，避免注释里的字面标签干扰）]');
-const stripComments = (s) => s.replace(/<!--[\s\S]*?-->/g, '');
-for (const [name, s] of [['demoDetail', stripComments(DD)], ['favorites', stripComments(FAV)]]) {
-  const vo = (s.match(/<view[\s>]/g) || []).length;
-  const vc = (s.match(/<\/view>/g) || []).length;
-  check(name + ' view 开合配对（剥注释后）', vo === vc, vo + '/' + vc);
+console.log('\n[品牌馆展示入口开关：超管配置 → 刷新/重新进入生效（2026-09-15）]');
+const HOME = read('src/pages/index/index.uvue');
+
+// ① 结构契约：onShow 内做一次「只查开关」的轻量刷新，且带 30s 节流时间戳
+check('data 里有节流时间戳 brandHubCheckedAt', /brandHubCheckedAt:\s*0/.test(HOME));
+const onShowBlock = (() => {
+  const i = HOME.indexOf('onShow() {');
+  return i < 0 ? '' : HOME.slice(i, HOME.indexOf('onLoad', i) > i ? HOME.indexOf('onLoad', i) : i + 3000);
+})();
+const onShowBody = (() => {
+  const i = HOME.indexOf('onShow() {');
+  if (i < 0) return '';
+  const open = HOME.indexOf('{', i);
+  let depth = 0, end = -1;
+  for (let k = open; k < HOME.length; k++) {
+    if (HOME[k] === '{') depth++;
+    else if (HOME[k] === '}') { depth--; if (depth === 0) { end = k; break; } }
+  }
+  return HOME.slice(open + 1, end).replace(/\/\/[^\n]*/g, '');
+})();
+check('onShow 里 refreshBrandHubEntry 是独立语句（CR：防被 if(false) 包裹的死代码）', /^[ \t]*this\.refreshBrandHubEntry\(\)[ \t]*$/m.test(onShowBody));
+const rhStart = HOME.indexOf('async reloadHomeData() {');
+const rhStamp = HOME.indexOf('this.brandHubCheckedAt = Date.now()', rhStart);
+const rhFetch = HOME.indexOf('Promise.all', rhStart);
+check('reloadHomeData 发起即占住节流窗口（早于请求发起）', rhStart >= 0 && rhStamp > rhStart && rhFetch > rhStamp, 'stamp@' + rhStamp + ' fetch@' + rhFetch);
+check('seq 守卫：两个写者分别取号', /const hubSeq = this\.brandHubSeq \+ 1/.test(HOME) && /const seq = this\.brandHubSeq \+ 1/.test(HOME));
+check('seq 守卫：过期响应被丢弃', /this\.brandHubSeq !== seq[\s\S]{0,120}return/.test(HOME) && /this\.brandHubSeq === hubSeq/.test(HOME));
+check('品牌切换先作废在飞查询', /this\.brandHubEnabled = false[\s\S]{0,140}this\.brandHubSeq = this\.brandHubSeq \+ 1/.test(HOME));
+check('开关查询仍走 force（跳 60s 缓存）', /const on = await isBrandHubEnabled\(true\)/.test(HOME));
+check('节流窗口为 30s', /now - this\.brandHubCheckedAt < 30000/.test(HOME));
+
+// ② 行为契约：把真实方法体抽出来执行（真跑，不做字符串匹配）
+const mStart = HOME.indexOf('async refreshBrandHubEntry() {');
+let body = '';
+if (mStart >= 0) {
+  const open = HOME.indexOf('{', mStart);
+  let depth = 0, end = -1;
+  for (let i = open; i < HOME.length; i++) {
+    if (HOME[i] === '{') depth++;
+    else if (HOME[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+  }
+  body = HOME.slice(open + 1, end);
 }
-console.log('\n结果：' + pass + ' 通过 / ' + fail + ' 失败');
-process.exit(fail === 0 ? 0 : 1);
+check('能从源码抽到 refreshBrandHubEntry 方法体', body.includes('brandHubCheckedAt') && body.includes('await isBrandHubEnabled(true)'));
+const makeRefresh = new Function('isBrandHubEnabled', 'return (async function () {' + body + '})');
+
+let queries = 0, nextValue = true;
+const fakeNow = { t: 1000000 };
+const RealDateNow = Date.now;
+Date.now = () => fakeNow.t;
+const ctx = { brandHubCheckedAt: 0, brandHubEnabled: false, brandHubSeq: 0 };
+const refresh = makeRefresh(async () => { queries++; return nextValue; });
+(async () => {
+  await refresh.call(ctx);
+  check('首次调用：发查询并写入开关值', queries === 1 && ctx.brandHubEnabled === true, 'queries=' + queries);
+  await refresh.call(ctx);
+  check('30s 内再次调用：被节流、不重复查询', queries === 1, 'queries=' + queries);
+  fakeNow.t += 29000;
+  await refresh.call(ctx);
+  check('29s 后仍被节流', queries === 1, 'queries=' + queries);
+  fakeNow.t += 2000;
+  nextValue = false;
+  await refresh.call(ctx);
+  check('超过 30s：重新查询并跟随最新值（关→隐藏）', queries === 2 && ctx.brandHubEnabled === false, 'queries=' + queries + ' enabled=' + ctx.brandHubEnabled);
+
+  // 并发守卫（CR 🟡-5）：refresh 在飞时若已有更新的写入，迟到的响应必须被丢弃
+  ctx.brandHubCheckedAt = 0; // 放开节流，制造一次新的 refresh
+  let release = null;
+  const refreshSlow = makeRefresh(() => new Promise((res) => { release = res; }));
+  const inflight = refreshSlow.call(ctx);
+  ctx.brandHubSeq = ctx.brandHubSeq + 1; // 模拟 reloadHomeData 取到更新的序号
+  ctx.brandHubEnabled = true;            // 并已写入新结果
+  release(false);                        // Q1 迟到返回 false
+  await inflight;
+  check('迟到响应不覆盖更新的结果（seq 守卫）', ctx.brandHubEnabled === true, 'enabled=' + ctx.brandHubEnabled);
+  Date.now = RealDateNow;
+
+  console.log('\n[标签配平（先剥注释再计数，避免注释里的字面标签干扰）]');
+  const stripComments = (s) => s.replace(/<!--[\s\S]*?-->/g, '');
+  for (const [name, s] of [['demoDetail', stripComments(DD)], ['favorites', stripComments(FAV)]]) {
+    const vo = (s.match(/<view[\s>]/g) || []).length;
+    const vc = (s.match(/<\/view>/g) || []).length;
+    check(name + ' view 开合配对（剥注释后）', vo === vc, vo + '/' + vc);
+  }
+  console.log('\n结果：' + pass + ' 通过 / ' + fail + ' 失败');
+  process.exit(fail === 0 ? 0 : 1);
+})();
