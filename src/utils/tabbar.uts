@@ -17,7 +17,8 @@ export function syncTabBarSelected(index : number) : void {
 		return
 	}
 	// 值相同则不 setData，避免每次切换都触发一次无谓的重绘（闪烁来源之一）
-	if (tabBar.data != null && tabBar.data.selected != index) {
-		tabBar.setData({ selected: index })
+	// 兼容旧版组件：无 slideTo 时至少把「选中态 + 高亮位」一起对齐（CR 🟡S5，避免半新半旧脏状态）
+	if (tabBar.data != null && (tabBar.data.selected != index || tabBar.data.highlightIndex != index)) {
+		tabBar.setData({ selected: index, highlightIndex: index })
 	}
 }

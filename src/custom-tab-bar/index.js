@@ -61,23 +61,25 @@ Component({
       // 首帧：优先用点击写入的共享值（此时路由可能还是旧页）
       const target = this.resolveSelected(true);
       const prev = consumePrevIndex(target);
-      if (prev > -1) {
-        // 有明确上一跳（用户点了 tab）：先落在旧位再滑过去
-        this.setData({ selected: prev, highlightIndex: prev });
-        this.slideTo(target, prev);
-      } else {
-        // 冷启动 / 直达页面：直接落位，不播"从 0 号位滑过来"的假动画
-        this.setData({ selected: target, highlightIndex: target });
-      }
+      // 只落位、不播动画：位移动效统一由「页面 onShow → slideTo()」单一入口播放
+      // （CR 🟡S1：attached 播一次 + onShow 又播一次 = 同一跳双播/重启动画）。
+      // 图标态直接给目标（不闪旧图标）；高亮块先落在「上一跳」位置，等页面 onShow 播位移过去。
+      this.setData({ selected: target, highlightIndex: prev > -1 ? prev : target });
     },
+  },
+  detached() {
+    // CR 🟡S4：清理兜底定时器，避免实例销毁后回调仍改数据
+    if (this._finishTimer != null) {
+      clearTimeout(this._finishTimer);
+      this._finishTimer = null;
+    }
   },
   pageLifetimes: {
     show() {
-      // 兜底通道：webview 渲染器下自定义 tabbar 很可能收不到 pageLifetimes（见文件头 v2 说明），
-      // 主入口是页面 onShow → getTabBar().slideTo()（src/utils/tabbar.uts）。
-      // 保留同源实现供 exparser 渲染器等场景兜底；slideTo 幂等，重复调用无副作用。
-      // 起点由 slideTo 内部消费（attached/页面 onShow 已消费时自动退化为落位）
-      this.slideTo(this.resolveSelected(false));
+      // 状态兜底（不播动画）：webview 渲染器下自定义 tabbar 很可能收不到 pageLifetimes，
+      // 位移动效的主入口是页面 onShow → getTabBar().slideTo()（src/utils/tabbar.uts）。
+      // 这里只做「选中态/高亮位」对齐，避免与页面 onShow 的同一次切换重复播动画（CR 🟡S1/S3）。
+      this.syncSelection(this.resolveSelected(false));
     },
   },
   methods: {
@@ -95,8 +97,21 @@ Component({
       }
       return sharedSelected > -1 ? sharedSelected : 0;
     },
+    // 仅对齐状态、不播动画（pageLifetimes.show 兜底通道用）
+    syncSelection(index) {
+      const target = Number(index);
+      if (isNaN(target) || target < 0 || target >= this.data.list.length) {
+        return;
+      }
+      if (this.data.selected !== target) {
+        this.setData({ selected: target });
+      }
+      if (this.data.highlightIndex !== target) {
+        this.setData({ highlightIndex: target });
+      }
+    },
     /**
-     * 选中背景位移动效（唯一入口：页面 onShow / 组件 attached / pageLifetimes.show 都走它）
+     * 选中背景位移动效（唯一入口：页面 onShow → getTabBar().slideTo()；attached 只落位不播）
      * @param index 目标 tab 下标
      * @param fromOverride 可选动画起点（不传则用当前高亮块位置）
      */
@@ -144,16 +159,35 @@ Component({
           finish();
           return;
         }
+        if (this._finishTimer != null) {
+          clearTimeout(this._finishTimer);
+          this._finishTimer = null;
+        }
+        // 官方签名 animate(selector, keyframes, duration, callback)：
+        // 缓动必须写在**第一帧关键帧**的 ease 字段上（第 4 参不是 easing，误传会被当成 scrollTimeline）——
+        // 独立 CR 🔴R1。动画写下的内联样式会盖住 wxml 里由 highlightIndex 驱动的 transform，
+        // 故必须 clearAnimation 清除后再对齐数据态（🔴R2）。
+        const done = () => {
+          try {
+            if (typeof this.clearAnimation === 'function') {
+              this.clearAnimation('.tabbar-highlight', {}, finish);
+            } else {
+              finish();
+            }
+          } catch (err) {
+            finish();
+          }
+        };
         try {
           this.animate('.tabbar-highlight', [
-            { transform: 'translateX(' + (from * cell) + 'px)' },
+            { transform: 'translateX(' + (from * cell) + 'px)', ease: 'ease-out' },
             { transform: 'translateX(' + (target * cell) + 'px)' },
-          ], 280, { easing: 'ease-out' }, finish);
+          ], 280, done);
         } catch (err) {
           finish();
         }
         // 兜底：动画回调缺失/被跳过时也要对齐数据态
-        setTimeout(finish, 360);
+        this._finishTimer = setTimeout(finish, 400);
       }).exec();
     },
     onTap(e) {
