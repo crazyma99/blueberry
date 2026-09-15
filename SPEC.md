@@ -1,8 +1,9 @@
 # 蓝梅旅拍小程序 · Uni-App Vue3 迁移 SPEC（迁移指南）
 
-> **版本 v2.0** · 生效 **2026-09-15** · 编制：公司秘书（依马老师指示）
+> **版本 v2.1** · 更新 **2026-09-15** · 编制：公司秘书（依马老师指示）
+> **执行细则**：本轮依据补全149行参考细则完成 [`docs/uniapp-vue3-migration-plan.md`](./docs/uniapp-vue3-migration-plan.md)。其中基线、端口、Profile改造、六阶段测试/发布/回退门禁是重构执行入口；只交付文档，不代表已创建新工程或获准发布。
 > **替代 v1.0**（v1.0 以历史 Vue3 骨架为起点，已按主人 2026-09-15 指示废弃）。
-> ⚠️ **口径（主人 2026-09-15 明确）**：**不使用、也不保留任何历史 Vue3 骨架与备份**（相关分支／标签／目录已全部删除）；本文只**借鉴其「解耦逻辑」**（分层架构 · 平台适配层 · token 双源），代码**从官方模板全新初始化**。
+> ⚠️ **口径（主人 2026-09-15 明确）**：**不使用、也不保留任何历史 Vue3 骨架与备份**（相关分支／标签／目录已全部删除）；本文只**借鉴解耦思路**（分层架构、平台适配、主题隔离；具体以本轮实施方案的依赖向内与Token单源规则为准），代码**从官方模板全新初始化**。
 > 目的：把 C 端小程序从 **uni-app x（uvue/UTS，仅微信）** 迁移到 **uni-app Vue3**，一套代码覆盖 **微信 / 抖音 / 小红书**（预留快手等），为抖音小程序上线让路。
 
 ---
@@ -11,14 +12,14 @@
 
 1. **起点＝全新工程**：用官方 uni-app Vue3 模板（Vue3 + Vite + TS）初始化，**不继承任何历史代码骨架**；旧端代码只作「行为对照物」，逐页复刻。
 2. **唯一事实源＝旧端 uni-app x（`main`）**：17 个页面路径 / 15 个组件 / 20 个 `utils` 工具模块（含接口封装）——迁移清单见 §10。
-3. **UI 组件库定选 Wot UI v2（`@wot-ui/ui` 2.3.2）**：AI 友好度与维护活跃度双优（§6 有硬数据）；备选 uview-plus。
-4. **三层强制解耦**：业务层 → 组件层 → **生态适配层**；业务层禁止 `wx.`/`tt.` 直调、禁止硬编码样式。
-5. **平台差异全部收敛**到 `src/common/platform/adapters/{Weixin,Tt,Xhs}Adapter.ts`（§7 差异矩阵）。
-6. **design token 双源同步**：`src/uni.scss`（SCSS）↔ `src/styles/tokens.ts`（TS），同一次提交（§8）。
-7. **前端不动后端契约**：沿用旧端 26 个接口契约（`src/utils/api.uts` 为对照），后端仅需补抖音域名白名单。
-8. **前置阻塞**：抖音 **AppID / 类目资质 / 支付 / 登录** 未就绪（§3）——需主人本周内推进。
-9. **最大风险**：Wot UI 与 uview-plus 官方文档**均未点名抖音/小红书** ⇒ Day-0 必须 spike 验证，并预备条件编译替换层逃生门（§6.4/§11）。
-10. **可回滚**：旧端 `main` 与体验版 **v1.0.58** 原封不动；抖音上线前微信侧零影响。
+3. **既定首选 Wot UI v2（`@wot-ui/ui`）**：2.3.2 是现有调研候选；经锁版兼容与微信/抖音关键交互验证后再准入，不盲装 latest，备选库也走同一验证。
+4. **依赖向内**：UI/页面调用 application/domain；用例依赖 ports，平台/API仓储实现 ports；业务不经 UI 调 SDK，组件不发请求。
+5. **平台差异收敛**到 `src/platform/`（SDK 与 native UI bridge）；装配层和 manifest/pages 生成保留受控条件编译例外，业务域禁止平台判断。
+6. **Design Token 单源生成**：`tokens/source.json` 生成 CSS/SCSS/TS；`uni.scss` 引用生成物，Wot 映射独立，不再人工同步两份数值。
+7. **微信旧契约不破坏**：当前34个网络封装函数逐项建合同；抖音/小红书另补服务端身份/手机号与支付provider，绝非只加白名单。
+8. **外部前置需确认**：抖音/小红书 AppID、类目资质、支付/登录与账号绑定需实际证据；没有证据不判已就绪，也不把缺证据当作已确认“没有”。
+9. **多端资格先验**：官方平台包、工具能编译与业务可上线不是同一件事；先微信/抖音样页，随后真机/账号/支付验证，小红书逐门禁单独记录。
+10. **回退保留但非零成本**：当前业务基线 `2fe70ac`（体验版1.0.59对应代码）；旧包、兼容后端和用户存储的回退各自演练，不恢复已删除Vue3骨架。
 
 ---
 
@@ -26,14 +27,14 @@
 
 - **主人 2026-09-15 指示**：需上传**抖音小程序** ⇒ 当前 uni-app x 组件生态在抖音不可用 ⇒ 回迁 **uni-app Vue3**（KB 03 分册 §2.17.13／§2.17.12.3）。
 - **主人同日补充口径（本文 v2.0 依据）**：**历史 Vue3 骨架不要、也不用备份**，只借鉴解耦逻辑 ⇒ 已删除：本地与远端分支 `backup/lm-mp-uniapp-vue3_20260914`、`feat/vue3-migration`，以及归档标签 `archive/20260915/backup-lm-mp-uniapp-vue3_20260914`（并执行 `git gc --prune=now`，仓库内已无 `mp-vue3` 引用）。
-- **方向说明（如实登记）**：DCloud 官方只有「uni-app → uni-app x」升级指南，反向回迁属逆官方路线；但**多端（抖音/小红书）是硬需求**，Vue3 生态的组件库可用性与成熟度是当前最优解。
-- **时间窗口**：本周末（2 天），目标「微信不回归、抖音跑起来」。
+- **方向说明**：这是从现有UTS/UVUE业务到标准uni-app Vue3的新工程迁移，不把缺少“一键迁移脚本”理解成官方禁止；需逐层验证契约与平台能力。
+- **工作窗口**：本周末推进；按实施方案G0–G5门禁交付，不承诺两天完成所有多端上线。
 
 ---
 
 ## 2. 迁移起点与现状（2026-09-15 实测）
 
-**旧端（唯一事实源）＝`main`（uni-app x，体验版 v1.0.58 已上线）**
+**旧端事实源＝`main@2fe70acb49c204b468c5492a4a15231e51eab913`（本轮静态核查；体验版1.0.59对应代码）**
 
 | 维度 | 数值 |
 |---|---|
@@ -41,7 +42,7 @@
 | 组件 | **15 个**（`src/components/*`，自研） |
 | 工具/接口 | `src/utils/` **20 个 `.uts`**（含 `api.uts` 接口封装、`http.uts`、`loginFlow.uts`、`payGuard.uts`、`share.uts`、`vkFace.uts` 等） |
 | 源文件规模 | 33 个 `.uvue` + 21 个 `.uts` |
-| 平台耦合 | `wx.` 直调 **9 处**；`#ifdef` **16 处**（几乎全是 `MP-WEIXIN`，另有 `APP-ANDROID/APP-HARMONY`） |
+| 平台耦合 | .uts/.uvue内`wx.`为9个文本命中行（含注释，非调用数）；12个`#ifdef`+4个`#ifndef`，原生Tab另有wx调用；完整债务需按调用者盘点 |
 | 主题 | `App.uvue` 内 **21 个** `--color-*` CSS 变量 + `src/uni.scss` |
 | tabBar | **3 Tab**（首页 / 价目表 / 我的），`custom: true`（`src/custom-tab-bar/*`） |
 | 构建 | `npm run build:mp-weixin`（uni-app x 编译器 5.08）；出包 `./scripts/release-trial.sh` |
@@ -54,9 +55,9 @@
 
 | # | 事项 | 责任 | 状态 |
 |---|---|---|---|
-| P1 | **抖音小程序**：账号主体、**AppID**、类目资质（摄影/旅拍/生活服务）、开发者绑定 | 主人 | ⛔ **未就绪** |
+| P1 | **抖音小程序**：账号主体、AppID、适用类目、开发者绑定的控制台证据 | 主人 | 待确认；本轮未核账号后台 |
 | P2 | 抖音**支付能力**（担保支付/虚拟支付资质）与**登录**（`tt.login` + 手机号）方案 | 主人 + 后端 | ⛔ 未确认 |
-| P3 | 后端**域名白名单**：抖音要求 request/uploadFile/downloadFile 合法域名（测试 `crazyma99.xyz`、生产 `lanmei66.cloud`） | 后端 | ⚠️ 待办 |
+| P3 | 各平台管理台的request/upload/download合法域名；另核H5 CORS、COS和后端身份/支付适配（职责不混淆） | 平台管理员 + 后端 | 门禁待验证 |
 | P4 | 微信侧保持不变（appid `wxb19ad7426dfb8bd4`） | — | ✅ |
 | P5 | **小红书**：AppID 与开放范围（DCloud 提供 `@dcloudio/uni-mp-xhs` 平台包） | 主人 | ⚠️ P2 优先级，可后置 |
 | P6 | 抖音端特有：订阅消息模板、客服/拨号/导航/相册授权差异、分享入口 | 前端 | ⚠️ Day1 处理 |
@@ -65,57 +66,44 @@
 
 ## 4. 目标工程与目录结构（全新初始化）
 
-**初始化（Day 0）**：
+**初始化（未来T1，本轮不执行）**：官方模板与当前项目依赖不是同一组合；官方`vite-ts`模板本轮查到的TypeScript为`^4.9.4`，不能独立强装TS5。先验证并锁定模板commit、DCloud同发行线、Node/pnpm/Vite/Vue/TS/typecheck工具与lockfile，再进入CI。
 ```bash
 # 官方 Vue3 + Vite + TS 模板（新版 HBuilderX 亦可直接建项目）
 npx degit dcloudio/uni-preset-vue#vite-ts miniapp-vue3 && cd miniapp-vue3 && pnpm i
 # 组件库（§6 选型）
-pnpm add @wot-ui/ui
+pnpm add --save-exact @wot-ui/ui@2.3.2
 ```
 
-**目录约定（分层即目录，禁止越层）**：
+**目录以实施方案第4节为准**：
 
-```
-miniapp-vue3/
-├─ src/
-│  ├─ pages/            # 业务层：页面（17 页，对照旧端逐页复刻）
-│  ├─ api/              # 业务层：接口封装（按域拆分：album/search/shops/wx/aiface/brand/interaction/packages/page-config）
-│  ├─ stores/           # 业务层：跨页状态（登录态、门店上下文、AI 任务）
-│  ├─ components/       # 组件层：业务组件（纯展示 + 事件，禁发请求）
-│  │  └─ platform/      #   可选的平台覆盖组件（仅差异无法收敛到适配层时使用）
-│  ├─ common/platform/  # 生态适配层：PlatformAdapter + adapters/{Weixin,Tt,Xhs}Adapter.ts
-│  ├─ styles/tokens.ts  # design token（TS 侧）
-│  ├─ uni.scss          # design token（SCSS 侧）
-│  ├─ pages.json        # 路由 / tabBar(custom) / easycom(wd-*)
-│  └─ manifest.json     # 各端 appid 与配置（mp-weixin / mp-toutiao / mp-xhs）
-└─ docs/parity.md       # 迁移对照清单（§10），每完成一页打勾
-```
+~~~text
+miniapp-vue3/src/
+  app/              配置与端口装配
+  domain/           纯TS规则
+  application/      用例与状态机
+  ports/            身份/支付/http/media/storage/clock接口
+  infrastructure/   transport、仓储、DTO解析
+  platform/         各端SDK与原生UI bridge
+  ui/               Wot供应商门面
+  components/       纯展示业务组件
+  composables/      生命周期与用例绑定
+  stores/           跨页状态
+  pages/            17条兼容路由
+  generated/        Profile/Token生成物
+~~~
+
+路由和Profile输入保持兼容，内部目录不为“只改后缀”而复制旧耦合。
 
 ---
 
 ## 5. 架构分层与解耦（强制）
 
-**依赖方向单向**：业务层 → 组件层 → 生态适配层；**禁止反向/跨层直调**。
-
-| 层 | 目录 | 职责 | 禁止事项 |
-|---|---|---|---|
-| 业务层 | `src/pages/**`、`src/api/**`、`src/stores/**` | 页面组装、业务逻辑、数据请求 | ❌ 直调平台 API（`wx.` / `tt.` / `xhs.`）❌ 硬编码颜色/字号/间距 |
-| 组件层 | `src/components/**` | 基础 UI（Wot 二次封装）+ 业务组件 | ❌ 发请求；❌ 平台判断；❌ 样式硬编码 |
-| 生态适配层 | `src/common/platform/**` | `PlatformAdapter` 接口 + 各端适配器 | ✅ **仅此层**允许条件编译 `#ifdef MP-WEIXIN/MP-TOUTIAO/MP-XHS` |
-
-**PlatformAdapter 能力清单（12 类，接口先冻结、各端按需实现）**：
-客服 · 拨号 · 导航 · 保存相册 · 复制文本 · 分享 · 登录 · 支付 · 防截屏 · 加载字体 · 选图/拍照 · 震动反馈
-
-**旧 → 新 迁移映射**：
-
-| 旧（uni-app x） | 新（uni-app Vue3） |
-|---|---|
-| `src/pages/*/index.uvue` | `src/pages/*/index.vue` |
-| `src/components/X/X.uvue` | `src/components/X.vue`（能换 Wot 组件的先换，再自研） |
-| `src/utils/api.uts` | `src/api/*.ts`（按域拆分，契约字段保持一致） |
-| `src/utils/haptics.uts` | 适配层的 `haptic()` 能力 |
-| `src/custom-tab-bar/*` | `pages.json` tabBar `custom:true` + 自研 `CustomTabBar.vue` |
-| `#ifdef MP-WEIXIN { wx.xxx() }` | `adapters/WeixinAdapter.ts` 内实现，业务层调 `getPlatformAdapter()` |
+- 页面/组合函数调用业务用例，usecase依赖domain与ports；平台/API实现ports，由app层注入。
+- domain不依赖Vue/Pinia/Wot/uni，application不依赖wx/tt/nativeUI；展示组件不发请求、不处理支付签名。
+- 原生授权按钮/canvas/分享等放platform/ui-bridge，输出标准事件；普通API调用放platform adapter。
+- HTTP与上传保留独立的401等待/取消/重放合同，跨品牌/账号的旧请求不得用新身份无脑重发。
+- **微信custom tabBar是独立native组件**：uni-app源码根（本计划src）下的custom-tab-bar四文件按平台复制与验证；普通CustomTabBar.vue不能直接等价替代。
+- 平台/UI/API/Token四种接口与全部旧文件去向见实施方案第4、5、7、11节。
 
 ---
 
@@ -123,92 +111,63 @@ miniapp-vue3/
 
 **选型硬指标（主人指定）**：① **AI 开发友好度** ② **维护更新频率/活跃度** ③ 多端覆盖 ④ 主题/design token ⑤ 体积与生态。
 
-### 6.1 数据对比（npm registry + GitHub API + 官方文档实测）
+### 6.1 历史调研快照（2026-09-15 前序会话数据）
+
+以下数字不是长期活跃保证、也不是多端资格证据。本轮保留溯源，不据“30天0提交/单一路径404”推断停更或无AI；开工复核主分支/发布/维护者公告，并把资格样页结果与数据快照分开。
 
 | 库 | npm 包 | 最新版 | 发布日期 | 版本数 | 近一周下载 | 仓库 | Stars | 最近推送 | 近 30 天提交 | AI 工具链 | `llms.txt` |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | **Wot UI v2** ✅ | `@wot-ui/ui` | **2.3.2** | 2026-08-10 | 33 | 1,883 | `wot-ui/wot-ui` | 358 | **2026-09-15** | 16 | **LLMs.txt + MCP Server + `@wot-ui/cli` + AI Skills** | ✅ 200（6,840 B） |
-| Wot UI v1 | `wot-design-uni` | 1.14.0 | 2026-01-04 | 180 | 2,378 | `Moonofweisheng/wot-design-uni` | 2,294 | 2026-08-13 | **0（v1 冻结）** | 无 | ✖ |
-| uview-plus（备选） | `uview-plus` | 3.8.120 | **2026-09-07** | 293 | **5,096** | `ijry/uview-plus` | 716 | 2026-09-15 | **57** | 无 | ✖ 404 |
-| nutui-uniapp | `nutui-uniapp` | 1.11.2 | 2026-03-11 | 79 | 284 | `nutui-uniapp/nutui-uniapp` | 559 | 2026-06-30 | — | 无 | ✖ |
-| uv-ui | `uv-ui` | 1.0.25 | 2023-11-17 | 32 | 48 | — | — | **停更** | — | 无 | ✖ |
+| Wot UI v1 | `wot-design-uni` | 1.14.0 | 2026-01-04 | 180 | 2,378 | `Moonofweisheng/wot-design-uni` | 2,294 | 2026-08-13 | 0（仅统计窗口，不足以判冻结） | 本轮不作否定断言 | 未核实 |
+| uview-plus（备选） | `uview-plus` | 3.8.120 | **2026-09-07** | 293 | **5,096** | `ijry/uview-plus` | 716 | 2026-09-15 | **57** | 旧抓取不足以判无AI工具 | 旧测试路径404，不证明无能力 |
+| nutui-uniapp | `nutui-uniapp` | 1.11.2 | 2026-03-11 | 79 | 284 | `nutui-uniapp/nutui-uniapp` | 559 | 2026-06-30 | 未复核 | 未核实 | 旧路径检查不足以下结论 |
+| uv-ui | `uv-ui` | 1.0.25 | 2023-11-17 | 32 | 48 | — | — | 该查询快照无更新发布记录，不断言停更 | 未复核 | 未核实 | 未核实 |
 
 ### 6.2 结论：**Wot UI v2（`@wot-ui/ui`）**
 
 1. **AI 友好度（决定性）**：官方专设 AI 支持——**LLMs.txt**（`https://wot-ui.cn/llms.txt` 实测 **200 / 6,840 B**，另有 `llms-full.txt`）、**MCP Server**、**`@wot-ui/cli`**（1.1.0／2026-08-19，含 `wot doctor`、`wot usage`、`wot lint`）、官方 **AI Skills**（`wot-ui-v2`、`create-wot-ui-theme`、`migrate-v1-to-v2`）⇒ AI 可直接查 API、生成页面、做组件用量与空按钮检查，与本仓既有 AI 工作流衔接。
-2. **维护活跃**：v2 线**当日（2026-09-15）仍有推送**、近 30 天 16 次提交、npm 33 个版本、最近发版 2026-08-10；**v1 已冻结（30 天 0 提交）** ⇒ **必须锁 v2 包名 `@wot-ui/ui`**。
-3. **主题/token**：CSS 变量主题 + 官方 `create-wot-ui-theme` 生成**单文件主题 SCSS**（把我们的黑金 token 映射到 Wot 变量），与 §8 双源 token 直接对接。
-4. 其余：Vue3 + TypeScript、80+ 组件、MIT、暗黑模式与国际化。
-5. **AI 能力接入步骤**：见 [`docs/wot-ui-ai-guide.md`](./docs/wot-ui-ai-guide.md)（LLMs.txt / `@wot-ui/cli` / MCP Server / AI Skills 四种接入，含本机实跑验证记录）。
+2. **维护活跃需持续复核**：版本与30/90天提交、issue响应、维护者公告一起看；v1统计窗口无提交不等于已正式冻结。新工程仍沿用既定首选v2包名`@wot-ui/ui`，通过资格门禁后锁版。
+3. **主题/token**：单源Token生成多输出，Wot bridge独立；不把官方主题生成器产物当成第二份手改权威数据。
+4. 其余：Vue3/TypeScript、MIT、主题与国际化等能力按锁定版本文档核查。
+5. **AI接入步骤**：[`docs/wot-ui-ai-guide.md`](./docs/wot-ui-ai-guide.md)，工程实装限定见新实施方案第6.3节。
 
-### 6.3 备选与排除
+### 6.3 资格测试与备选
 
-- **备选（逃生门）＝ uview-plus**：提交最活跃（57/30 天）、周下载最高（5,096）；**代价**：无 AI 工具链（无 llms.txt/MCP/CLI）、基于 uView2 的组合式改造仍在推进。**仅在 Wot UI 多端 spike 失败时启用**。
-- **排除**：nutui-uniapp（活跃度低、周下载 284）、uv-ui（2023 停更）、TMUI4x（仅 uni-app x，与迁移方向冲突）。
+先选Wot v2样页跑微信/抖音编译、工具、真机；组件清单含授权入口、Button/Input/Popup/Picker/Toast/Dialog及失败态。不以star、周下载、文档200或可安装等同业务可用。
 
-### 6.4 ⚠️ 共同风险（必须 Day-0 验证）
-
-**Wot UI 与 uview-plus 官方文档均只笼统声明「多平台」，未点名抖音/小红书** ⇒ 抖音/小红书可用性属**待验证假设**。对策：Day-0 spike（抖音开发者工具跑通 `wd-*` 与首页）→ 失败则 ①启用 `components/platform/{toutiao,xhs}/` 条件编译替换层（最坏自研基础件）②仍不行则切 uview-plus 重跑 spike。
+少量差异做platform/ui-bridge；关键场景广泛失败才让uview-plus跑同一组资格测试，再作ADR决定。不安装两套完整库拼接。未证实兼容性的库先不纳入主路径，不将缺证据写成“永久不支持”。
 
 ---
 
 ## 7. 各生态条件编译层（微信 / 抖音 / 小红书）
 
-- **编译期**：`#ifdef MP-WEIXIN / MP-TOUTIAO / MP-XHS`（uni-app 官方平台包：`@dcloudio/uni-mp-weixin`、`uni-mp-toutiao`、`uni-mp-xhs`、`uni-mp-kuaishou`）；构建 `pnpm build:mp-toutiao` / `build:mp-xhs`。
-- **运行期**：业务层只调 `getPlatformAdapter()`；适配器内部用条件编译或 `uni.getSystemInfoSync().uniPlatform` 分支。
-- **红线**：`#ifdef` **只允许出现在 `src/common/platform/**`**；`src/pages/**`、`src/components/**` 中命中 `#ifdef` 或 `wx.`/`tt.` 即评审退回。
-
-**能力差异矩阵（迁移期逐项实测填写）**
-
-| 能力 | 微信 | 抖音 | 小红书 | 备注 |
-|---|---|---|---|---|
-| 客服（企业微信 kf-url） | ✅ | ⚠️ 无企微 ⇒ 降级（拨号/提示） | ⚠️ | 微信独有 |
-| 拨号 `makePhoneCall` | ✅ | ⚠️ 待验证 | ⚠️ | |
-| 导航 `openLocation` | ✅ | ⚠️ 待验证 | ⚠️ | 坐标系/权限差异 |
-| 保存相册 | ✅ | ⚠️ 授权流程不同 | ⚠️ | |
-| 复制文本 | ✅ | ⚠️ | ⚠️ | |
-| 分享 | ✅ `onShareAppMessage`/`onShareTimeline` | ⚠️ 无朋友圈时间线 | ⚠️ 能力最弱 | 分享卡片需降级方案 |
-| 登录 | ✅ `wx.login` | ⚠️ `tt.login` | ⚠️ | 后端按平台换 code2session |
-| 支付 | ✅ 微信小程序支付 | ⚠️ **抖音担保支付**（资质） | ⚠️ | 高风险项（§11） |
-| 防截屏 | ✅ `setVisualEffectOnCapture` | ❌ 无 | ❌ | 直接跳过 |
-| 加载字体 | ✅ | ⚠️ | ⚠️ | |
-| 选图/拍照 | ✅ | ⚠️ | ⚠️ | |
-| 震动反馈 | ✅ | ⚠️ | ⚠️ | |
+- 官方标识：`mp-weixin / MP-WEIXIN`、`mp-toutiao / MP-TOUTIAO`、`mp-xhs / MP-XHS`；不使用未定义的mp-douyin。
+- 业务域禁止平台判断；受控例外为platform端口与native UI bridge、app装配入口、manifest/pages生成、必要生成样式。`pages.json condition`只是工具启动模式。
+- 包存在≠编译成功≠工具/真机可用≠支付/授权资质齐备；每平台逐关留证。不支持/未验证的能力返回明确结果，不做成功no-op。
+- 微信tabBar原生文件与页面生命周期不变，抖音/小红书采用目标平台支持的方式，不能把H5专用同名组件或微信wxml直接复用。
+- 登录、手机号、支付、分享、订阅、选图/相册、客服/导航、字体、震动、防截屏/人脸的能力矩阵与后端工作见实施方案第8节。
 
 ---
 
 ## 8. Design Token 与主题
 
-- **双源同步（同一提交）**：`src/styles/tokens.ts`（TS 侧，供逻辑/内联样式）↔ `src/uni.scss`（SCSS 侧，供样式）。
-- **黑金体系**：迁移输入＝旧端 `App.uvue` 内 **21 个 `--color-*` 变量** + `src/uni.scss`；主色 `#F1CD91`，深色底 `#160F04` 等（以旧端为准，逐项登记成 token 表）。
-- **Wot 映射**：用官方 `create-wot-ui-theme` 生成**单文件主题 SCSS**，把我们的 token 映射到 Wot CSS 变量；`App.vue` 只做 `@use` 引入。
-- **Layout token**：圆角 4 档 / 间距 8 档（8rpx 基准）/ 字号 6 档 / 组件尺寸 5 项——**新增尺寸先立 token 再使用**。
-- ❌ 页面与组件内**禁止硬编码**颜色、圆角、字号、间距（评审退回项）。
+- `tokens/source.json`唯一手改来源：primitive→semantic→component。
+- 生成`src/generated/tokens.ts`、`theme.css`、`theme.scss`；`uni.scss`只引入生成物。
+- Wot桥接只使用锁版文档/CLI核实的变量名；不得双源手抄TS/SCSS。
+- 旧端颜色、重复间距/字号、动效和safe-area是迁移输入，不按本轮未核准的“4/8/6档”猜测数字；0/100%等布局常量按白名单合理允许。
+- Token生成幂等、无环/悬空引用、重复生成无diff；视觉对照保持品牌而不是顺便重设计。
 
 ---
 
-## 9. 执行计划（本周末 2 天）
+## 9. 执行计划（按门禁，不按日期宣告完成）
 
-**Day 0（周五晚 · 初始化与 spike，最关键）**
-1. 主人确认 **P1/P2**（抖音 AppID、类目资质、支付、登录）。
-2. **初始化工程**（§4）：官方 Vue3 模板 + `pnpm i` + 接入 `@wot-ui/ui` + easycom 规则 + 主题（§8）。
-3. **抖音 spike**：`pnpm build:mp-toutiao` → 抖音开发者工具打开，跑通首页与 `wd-*` 表单/弹层类组件。
-4. **结论分叉**：通过 → 按计划推进；大面积失败 → 启用 §6.4 逃生门（替换层 / 切 uview-plus）。
-5. 抖音域名白名单（P3）与客服/分享替代方案确认。
+完整六阶段/T0–T12任务、文件路径、输入输出、测试命令和退出条件见[实施方案](./docs/uniapp-vue3-migration-plan.md)第10节。
 
-**Day 1（周六 · 骨架与主体页面）**
-6. 建骨架：`pages.json`（17 页路由 + 3 Tab custom）、`PlatformAdapter` 接口 + `WeixinAdapter`、`src/api/**`（对照 `src/utils/api.uts` 逐接口复刻）、token 双源、`CustomNavBar`/`CustomTabBar`。
-7. 逐页迁移（对照 `docs/parity.md`）：首页 → 相册列表/详情 → 门店 → 价目表 → 我的 → 收藏 → 品牌馆 → 政策页/webview。
-8. **实现 `TtAdapter`**：登录 / 分享 / 支付 / 客服 / 相册 / 导航（未支持项按 §7 矩阵降级）。
-9. **微信回归**：`build:mp-weixin` + 真机冒烟，逐项对齐旧端行为。
-
-**Day 2（周日 · AI 链路、多端跑通与出包）**
-10. AI 试衣链路（上传/生成/结果/下载/买断）与 AI 推荐链路（提交/等待/结果）迁移。
-11. 抖音端全链路联调（登录 → 首页/门店 → 相册 → 试衣上传 → 生成 → 结果 → 支付/次数 → 分享）。
-12. `XhsAdapter` 与 `build:mp-xhs` 构建尝试（能构建即达标，功能差异登记）。
-13. 冒烟矩阵 + **独立 CR（🔴 清零）** + 修 🟡。
-14. 出包：微信体验版（`./scripts/release-trial.sh <版本> "描述"`）+ 抖音体验版（抖音开发者工具上传）。
-15. 落库：KB 03 分册 + CHANGELOG + `data/source-anchors.yaml` + 索引「最后更新」。
+- 周五先固化基线/协议/Profile与版本资格，T1/T4做最小样页。
+- 周六工程与Profile隔离、端口/Token、HTTP/认证打底；第一条“首页→相册→详情→返回”闭环通过再扩批。
+- 周日按前置完成情况推进AI、支付、多平台provider和真机；不通过则交付已通过Gx的候选与差异账本，旧端照常服务。
+- 没有新增并验证目标sourceRoot/profile/platform/artifact绑定的发布包装器前，**不得调用旧根release-trial.sh发布新工程**。
+- 不允许以热修漏同步、CR红项口径争议未批准、缺平台资质为代价赶周末上线。
 
 ---
 
@@ -238,7 +197,7 @@ pages/aiRecommendResult  AI推荐结果（finalScore 展示）
 
 **C. 关键链路（两端各跑一遍）**：手机号一键登录 → 首页/门店切换 → 相册列表与详情 → AI 试衣（选图/上传/生成/结果/下载/买断） → AI 推荐（提交/等待/结果） → 点赞/收藏 → 分享卡片 → 客服入口。
 
-**D. 工程红线**：三端构建（`mp-weixin`/`mp-toutiao`/`mp-xhs`）全 DONE、`vue-tsc` 零错误；① `src/pages`+`src/components` 中 `#ifdef` 与 `wx.`/`tt.` **0 命中** ② 无硬编码色值/尺寸 ③ `.env.local` 留空自动分流、产物无硬编码地址 ④ 未用 `--no-verify` 绕过校验。
+**D. 工程红线**：每个目标独立记录编译/工具/真机/资质状态；小红书未过关不得宣称三端完成。业务域禁止SDK直调，受控桥接/生成配置有白名单；模板兼容版本typecheck通过；Profile/Token生成幂等、产物AppID/APP_CODE/环境/源SHA校验通过；保留受控发布入口与真实退出码，不用`--no-verify`。
 
 **E. 真机**：微信（iOS/Android）+ 抖音（iOS/Android）各一遍，无白屏、无控制台报错。
 
@@ -249,11 +208,11 @@ pages/aiRecommendResult  AI推荐结果（finalScore 展示）
 | 风险 | 概率 | 影响 | 对策 |
 |---|---|---|---|
 | **Wot UI 在抖音/小红书不兼容** | 中 | 高 | Day-0 spike；条件编译组件替换层；必要时切 uview-plus 或自研基础件 |
-| **抖音支付/登录资质与流程差异** | 高 | 高 | 提前确认资质；支付走适配层；最坏先上「免费次数/引导」降级版 |
+| **抖音支付/登录资质与流程差异** | 高 | 高 | 平台provider与账号/权益合同先冻结；无资质则阻断相应发布，不擅改免费额度/引流商业规则 |
 | 抖音类目审核 | 中 | 中 | 提前准备资质材料 |
 | 两天窗口不足 | 中 | 中 | **微信端保持旧端可发版**：旧端 `main` 不动，迁移只在新工程/新分支推进 |
 | 组件库停更 | 低 | 中 | 锁版本 + lockfile；uview-plus 作为可切换备选 |
-| **回滚** | — | — | 旧端 uni-app x（`main`）与体验版 **v1.0.58** 原封不动；新工程可整体丢弃 |
+| **回滚** | — | — | 回到已验证旧包/兼容后端；订单/任务/存储和客户端更新延迟分别演练，不等于git revert立即生效 |
 
 ---
 
@@ -265,34 +224,20 @@ pages/aiRecommendResult  AI推荐结果（finalScore 展示）
 - **归档标签**：`archive/20260915/*`（24 个），覆盖历史 feat/fix 分支；可 `git checkout -b <name> archive/20260915/<name>` 复原。
 - **已删除（主人指示）**：`backup/lm-mp-uniapp-vue3_20260914`（历史 Vue3 骨架）、`feat/vue3-migration`、归档标签 `archive/20260915/backup-lm-mp-uniapp-vue3_20260914`；仓库内已无 `mp-vue3/` 引用。
 
-### B. 命令速查
+### B. 命令与发布边界
 
-```bash
-# 新建新端工程（§4）
-npx degit dcloudio/uni-preset-vue#vite-ts miniapp-vue3 && cd miniapp-vue3 && pnpm i && pnpm add @wot-ui/ui
+官方模板初始化仍在第4节；新端的目录限定、测试脚本契约、Profile构建/上传包装器见实施方案第5/10/12节。那些脚本是未来任务产物，**当前不能当成已经实现的命令**。
 
-# 三端构建与预览
-pnpm build:mp-weixin   # 微信
-pnpm build:mp-toutiao  # 抖音
-pnpm build:mp-xhs      # 小红书
-pnpm dev:h5            # H5 预览（本地冒烟）
-
-# 解耦红线自查
-grep -rn "#ifdef" src/pages src/components | wc -l   # 应为 0（只允许在 common/platform）
-grep -rn "\bwx\." src/pages src/components src/api | wc -l  # 应为 0
-
-# 微信体验版出包（旧端脚本沿用）
-cd .. && ./scripts/release-trial.sh <版本号> "描述"
-```
+禁止新工程`cd ..`后调用旧`release-trial.sh`：它按脚本父目录构建旧包。旧项目继续原脚本，新项目必须经已校验的engine/sourceRoot/profile/platform/artifact入口发布。
 
 ### C. 调研来源（2026-09-15 实测）
 
-- Wot UI v2 文档 / AI 能力：https://wot-ui.cn/ai/overview.html ｜ `llms.txt`：https://wot-ui.cn/llms.txt（HTTP 200 / 6,840 B）
-- Wot UI v1（已冻结）：https://v1.wot-ui.cn/guide/introduction.html
+- Wot UI v2 官方 AI 指南：https://wot-ui.cn/guide/ai.html ｜文档索引：https://wot-ui.cn/llms.txt；HTTP 200必须核正文而非首页回退。
+- Wot UI v1历史资料：https://v1.wot-ui.cn/guide/introduction.html（不以短窗口无提交推断冻结）。
 - uview-plus：https://uview-plus.jiangruyi.com/
 - nutui-uniapp：npm `nutui-uniapp` ｜ https://github.com/nutui-uniapp/nutui-uniapp
 - 数据源：npm registry、npm downloads API、GitHub REST API（stars / pushed_at / 近 30 天提交）
-- uni-app 平台包（抖音/小红书官方支持的证据）：`@dcloudio/uni-mp-toutiao`、`@dcloudio/uni-mp-xhs`
+- uni-app官方模板：https://uniapp.dcloud.net.cn/quickstart-cli.html ；平台包清单仅证明编译目标存在，业务资格仍需测试。
 
 ### D. 工程形态（待主人拍板）
 

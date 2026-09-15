@@ -1,7 +1,8 @@
 # Wot UI AI 能力接入指南（蓝梅旅拍小程序 · uni-app Vue3）
 
-> **版本 v1.0** · 2026-09-15 · 编制：公司秘书（依马老师指示）
-> 官方依据：**https://wot-ui.cn/guide/ai.html**（AI 使用指南）；本文所有命令与链接均于 **2026-09-15 本机实跑/实测**，非转述。
+> **版本 v1.1** · 更新2026-09-15 · 编制：公司秘书（依马老师指示）
+> **执行细化**：[重构迁移实施方案](./uniapp-vue3-migration-plan.md)第6.3节规定项目级锁版、MCP授权范围、Skills发现路径和验收证据；本轮不安装或更改现有客户端配置。
+> 官方依据：[Wot UI AI 使用指南](https://wot-ui.cn/guide/ai.html)。前序会话有CLI help/list/info及llms读取记录；**这不等于MCP已握手、Skills已安装、CI已接入或多端已验证**。本轮重新核实官方文档与CLI源码，并区分文档示例和实际安装状态。
 > 适用：迁移到 uni-app Vue3 后的新端工程（组件库选型见 `SPEC.md` §6，结论＝Wot UI v2 `@wot-ui/ui` 2.3.2）。
 
 ---
@@ -12,10 +13,10 @@ AI 写页面最大的风险是**凭空编造组件 API**。Wot UI 官方提供�
 
 | 能力 | 提供内容 | 我们是否采用 |
 |---|---|---|
-| **LLMs.txt** | 面向 AI 的文档入口、组件索引与结构化链接（每页可单独抓 .md） | ✅ 必装 |
+| **LLMs.txt** | 面向 AI 的文档入口、组件索引与结构化链接（每页可单独抓 .md） | 推荐引用文档入口，无须安装 |
 | **@wot-ui/cli** | 离线组件元数据、API 查询、Demo 查询、CSS 变量查询 | ✅ 必装（并纳入提交前检查） |
-| **MCP Server**（`wot mcp`） | 通过 MCP tools 暴露组件知识库 | ✅ 推荐（DSH / Cursor 可接） |
-| **AI Skills** | 面向 Agent 的任务说明、约束与最佳实践 | ✅ 必装（放 `agent/skills/`） |
+| **MCP Server**（`wot mcp`） | 通过 MCP tools 暴露组件知识库 | 可选；宿主配置合同与真实握手待验证 |
+| **AI Skills** | 面向 Agent 的任务说明、约束与最佳实践 | 按目标Agent发现机制配置，不能仅建目录就视为生效 |
 
 ## 1. 四种接入方式（官方对照 + 适用场景）
 
@@ -42,13 +43,17 @@ AI 写页面最大的风险是**凭空编造组件 API**。Wot UI 官方提供�
 ## 3. @wot-ui/cli —— 离线组件元数据 + 提交前检查
 
 ```bash
-npm install -g @wot-ui/cli        # 全局（临时用）
-pnpm add -D @wot-ui/cli          # 项目内（推荐：锁版本，随 lockfile 提交）
+# 以下用于未来已初始化并获准接入的新工程，本轮没有执行安装
+cd miniapp-vue3
+pnpm add --save-dev --save-exact @wot-ui/cli@1.1.0
+pnpm exec wot --help
 ```
 
 
 
-### 3.1 命令清单（实测 `wot --help`，CLI **1.1.0**）
+### 3.1 命令清单（前序 `wot --help` 记录，CLI **1.1.0**）
+
+表中`wot`为官方命令名；项目级安装后使用`pnpm exec wot`。目标组件版本也要传给支持`--version`的查询命令，避免把CLI的回退版本当成工程真实依赖。
 
 | 命令 | 用途 |
 |---|---|
@@ -91,9 +96,9 @@ Props:
 ### 3.3 纳入提交前检查（建议加入 CR / CI）
 
 ```bash
-wot doctor --format text      # 工程体检
-wot lint --format json        # 用法检查（可机读）
-wot usage --format markdown   # 组件用量报表（评审用）
+pnpm exec wot doctor --format text
+pnpm exec wot lint --format json
+pnpm exec wot usage --format markdown
 ```
 
 
@@ -101,13 +106,15 @@ wot usage --format markdown   # 组件用量报表（评审用）
 ## 4. MCP Server —— 让 AI 直接调用组件知识库
 
 ```bash
-wot mcp serve        # 显式启动 MCP server
-wot mcp              # 进入管理子命令：serve / init / list / status / remove / doctor
+pnpm exec wot mcp serve   # 显式启动MCP Server（长驻进程）
+pnpm exec wot mcp         # 同样启动Server，并非只显示管理菜单
 ```
 
 
 
-**客户端配置（官方示例）**：
+**客户端配置（官方通用示例，不是DSH现成配置）**：
+
+仅当宿主支持这个schema、能解析`wot`可执行路径且用户批准配置范围时应用。使用项目内CLI须给宿主可解析的绝对路径或锁版启动命令；不能把这个示例复制到DSH后就宣称接通。
 
 ```json
 {
@@ -125,16 +132,16 @@ wot mcp              # 进入管理子命令：serve / init / list / status / re
 **一键接入（实测 `wot mcp init --help`，CLI 1.1.0）**：
 
 ```bash
-wot mcp init --dry-run                              # 先预览，不写文件
-wot mcp init --client auto --scope project -y       # 自动识别客户端并写入项目配置
-wot mcp list                                        # 看支持/检测到的客户端
-wot mcp doctor                                      # 校验配置并做一次真实 MCP 握手
-wot agent init                                      # MCP + Skill + Agent 说明 一次接好
+pnpm exec wot mcp list
+pnpm exec wot mcp init --dry-run   # 先查看将写到哪里；确认目标客户端和scope
+# 仅经用户批准后运行init/agent init；具体client按上一步检测与本机help选择
+pnpm exec wot mcp status
+pnpm exec wot mcp doctor           # 配置完成后，实际握手结果才算接入证据
 ```
 
 
 
-`--client` 可选：`auto | all | claude | cursor | vscode | codex | opencode | antigravity`。
+CLI 1.1.0 `--client`帮助列：`auto | all | claude | cursor | vscode | codex | opencode | antigravity`。**不包含DSH专用自动接入承诺**，需查当前宿主配置合同；未接MCP时可以先用CLI只读查询，不阻塞整个迁移。
 
 ## 5. AI Skills —— 让 Agent 按 Wot UI 规范干活
 
@@ -149,19 +156,19 @@ pnpm dlx skills add wot-ui/open-wot     # 官方安装方式（按需勾选）
 | Skill | 作用 |
 |---|---|
 | `wot-ui-v2` | 组件选型 / API 查询 / 页面生成 / 常见坑位排查（**核心，必装**） |
-| `create-wot-ui-theme` | 生成品牌主题（**我们的黑金 token 就靠它**） |
+| `create-wot-ui-theme` | 辅助生成受审查的Wot主题bridge；品牌Token仍由项目单源生成 |
 | `migrate-v1-to-v2` | 仅在从 v1 迁到 v2 时使用 |
 
-**我们的约定**：Skills 与代码同仓维护（放 `agent/skills/`，随提交入库）；**每个开发任务开始前先读对应 `SKILL.md`**；主题相关改动必须走 `create-wot-ui-theme`，保证「单文件主题 SCSS ↔ 双源 token」同源（见 SPEC §8）。
+**我们的约定**：先审查官方Skill全文，固定来源commit/版本，再按目标Agent实际发现路径安装并验证能被加载。`agent/skills/`可作项目参考副本但不是各客户端通用自动发现目录；不自动改全局工具设置。主题Skill可辅助生成单文件SCSS，但**不能自动保证TS同步**；本项目以`tokens/source.json`单源生成CSS/SCSS/TS，Wot bridge独立映射（SPEC §8）。
 
 ## 6. 新端工程落地清单（DoD 勾选）
 
-- [ ] `pnpm add -D @wot-ui/cli`（锁版本，随 lockfile 提交）
+- [ ] 新工程内锁定CLI版本与lockfile，查询目标UI版本
 - [ ] AI 工具接入 `llms.txt`（DSH / Cursor / TRAE）
-- [ ] MCP 配好：`wot mcp init` → `wot mcp doctor` 握手通过
-- [ ] `agent/skills/` 放入 `wot-ui-v2` 与 `create-wot-ui-theme`
+- [ ] 若采用MCP：批准目标客户端/scope，init后doctor真实握手通过（未采用则记明CLI替代，不假报已接）
+- [ ] `wot-ui-v2`与`create-wot-ui-theme`的来源版本/发现路径/加载证据已记录
 - [ ] CR 流程纳入 `wot doctor` / `wot lint` / `wot usage`
-- [ ] 主题由 `create-wot-ui-theme` 生成，映射 SPEC §8 的双源 token
+- [ ] Token由单源生成并经过幂等测试，主题Skill输出只作受审阅的Wot bridge实现
 
 ## 7. 验证记录（2026-09-15 本机实测，可复算）
 
@@ -179,10 +186,11 @@ pnpm dlx skills add wot-ui/open-wot     # 官方安装方式（按需勾选）
 
 - **官方 AI 使用指南（本文依据）**：https://wot-ui.cn/guide/ai.html
 - LLMs.txt：https://wot-ui.cn/llms.txt ｜ 全文版：https://wot-ui.cn/llms-full.txt
-- AI 总览：https://wot-ui.cn/ai/overview.html
+- AI 专页：https://wot-ui.cn/guide/ai.html（`/ai/overview.html`本轮返回首页，不作专页证据）
+- CLI 1.1.0 MCP实现：https://raw.githubusercontent.com/wot-ui/open-wot/v1.1.0/src/commands/mcp.ts
 - CLI 文档：https://wot-ui.cn/guide/open-wot.md
 - 组件文档示例（可按名替换）：https://wot-ui.cn/component/button.md
-- 选型依据与迁移计划：本仓 `SPEC.md`（§6 组件库选型 / §8 design token / §9 执行计划）
+- 选型与执行入口：[SPEC](../SPEC.md)及[细化实施方案](./uniapp-vue3-migration-plan.md)；CLI检查不替代业务合同、框架编译与真机验收。
 
 ---
 
