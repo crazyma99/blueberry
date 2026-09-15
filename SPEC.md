@@ -139,6 +139,7 @@ miniapp-vue3/
 2. **维护活跃**：v2 线**当日（2026-09-15）仍有推送**、近 30 天 16 次提交、npm 33 个版本、最近发版 2026-08-10；**v1 已冻结（30 天 0 提交）** ⇒ **必须锁 v2 包名 `@wot-ui/ui`**。
 3. **主题/token**：CSS 变量主题 + 官方 `create-wot-ui-theme` 生成**单文件主题 SCSS**（把我们的黑金 token 映射到 Wot 变量），与 §8 双源 token 直接对接。
 4. 其余：Vue3 + TypeScript、80+ 组件、MIT、暗黑模式与国际化。
+5. **AI 能力接入步骤**：见 [`docs/wot-ui-ai-guide.md`](./docs/wot-ui-ai-guide.md)（LLMs.txt / `@wot-ui/cli` / MCP Server / AI Skills 四种接入，含本机实跑验证记录）。
 
 ### 6.3 备选与排除
 
