@@ -221,6 +221,7 @@
 	import { rejectAllPending } from '../../utils/http.uts'
 import { cosThumb } from '../../utils/imageLoader.uts'
 import { hapticTap } from '../../utils/haptics.uts'
+import { formatAlbumTitle as formatAlbumTitleUtil } from '../../utils/text.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -658,6 +659,9 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 				// 主人 2026-09-15 指示：按下即反馈——先本地乐观更新（状态/计数/动效/触感），再发请求，失败回滚
 				const prevLiked = item.liked === true
 				const prevCount = item.likeCount == null ? 0 : item.likeCount
+				// CR 🟡：并发守卫——每次点击递增序号，只有最后一次请求的响应才会被采纳（防乱序覆盖）
+				const seq = (item.likeSeq == null ? 0 : item.likeSeq) + 1
+				item.likeSeq = seq
 				const nextLiked = !prevLiked
 				item.liked = nextLiked
 				item.likeCount = nextLiked ? prevCount + 1 : (prevCount > 0 ? prevCount - 1 : 0)
@@ -665,13 +669,19 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 				this.playLikeAnim(item.id, nextLiked)
 				try {
 					const res = await toggleLike(item.id)
+					if (item.likeSeq !== seq) {
+						// 期间用户又点过（更新的请求已在途）⇒ 丢弃本次旧响应
+						return
+					}
 					if (res.code === 200 && res.data) {
 						// 以服务端返回为准（避免并发点击导致计数漂移）
 						item.liked = res.data.liked
 						item.likeCount = res.data.likeCount
 					} else {
+						// CR 🟡：非 200 同样回滚并给出反馈（原先静默回滚）
 						item.liked = prevLiked
 						item.likeCount = prevCount
+						uni.showToast({ title: '操作失败，请重试', icon: 'none' })
 					}
 				} catch (err) {
 					console.error('[demoDetail] 点赞失败:', err)
@@ -681,12 +691,9 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 				}
 			},
 			// 相册标题：长度 ≥7 字时显示前 6 字 + ...（主人 2026-09-15 指示）
+			// 标题截断：≥7 字符显示前 6 字符 + ...（实现见 utils/text.uts，按码点计数、emoji 安全）
 			formatAlbumTitle(title : any) : string {
-				const s : string = title == null ? '' : (title as string)
-				if (s.length >= 7) {
-					return s.substring(0, 6) + '...'
-				}
-				return s
+				return formatAlbumTitleUtil(title)
 			},
 			// 点赞动效：重置后再落标记（连点同一张也会重放），260ms 动画 + 100ms 余量
 			playLikeAnim(id: any, likedNow: boolean) {
@@ -1105,6 +1112,10 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
+	/* 主人 2026-09-15 指示：点赞图标与数量之间加间距（用 margin 而非 flex gap，兼容旧 WebView） */
+	.stat-count {
+		margin-left: 10rpx;
+	}
 	.desc-row {
 		/* 主人 2026-09-15 指示：标题与点赞模块之间加间距 */
 		margin-top: 10rpx;
@@ -1123,8 +1134,6 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		/* 主人 2026-09-15 指示：点赞图标与数量之间加间距 */
-		gap: 10rpx;
 		font-size: var(--font-size-body);
 		color: var(--color-primary);
 	}

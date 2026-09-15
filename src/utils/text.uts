@@ -1,0 +1,31 @@
+// 相册标题截断工具（主人 2026-09-15 指示）
+// 规则：长度 ≥7 字符时显示前 6 字符 + ...（字符级，非 CSS 省略号）
+// 为什么不用 length/substring：UTF-16 下 emoji 等占两个码元，直接截会切出乱码（独立 CR 🟡 指出）
+//   —— 这里按「码点」计数，遇到高位代理与低位代理成对时算作一个字符。
+// 抽成公共工具：相册列表页与收藏页共用（两页卡片同款，避免表现不一致）。
+
+/**
+ * @param title 原始标题（容错：非字符串或空值一律返回空串）
+ */
+export function formatAlbumTitle(title : any) : string {
+	const s : string = typeof title === 'string' ? title : ''
+	if (s.length === 0) {
+		return ''
+	}
+	let count = 0
+	let cut = 0
+	while (cut < s.length && count < 6) {
+		const code = s.charCodeAt(cut)
+		// 高位代理（0xD800-0xDBFF）与低位代理成对出现，视为一个字符
+		if (code >= 0xD800 && code <= 0xDBFF && cut + 1 < s.length) {
+			cut += 2
+		} else {
+			cut += 1
+		}
+		count += 1
+	}
+	if (count >= 6 && cut < s.length) {
+		return s.substring(0, cut) + '...'
+	}
+	return s
+}

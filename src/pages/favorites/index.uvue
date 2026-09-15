@@ -46,7 +46,7 @@
 						<image :src="coverThumb(item.coverImageUrl)" class="photo fade-in" mode="aspectFill" lazy-load />
 						<view class="mask">
 							<view class="desc">
-								<view class="photoName font-noto-serif">{{ item.title }}</view>
+								<view class="photoName font-noto-serif">{{ formatAlbumTitle(item.title) }}</view>
 								<view class="desc-row">
 									<view class="collect">
 										<image class="heart" mode="aspectFit" src="/static/iconpark/like-filled.svg"></image>
@@ -80,6 +80,7 @@
 <script lang="uts">
 import { getFavoriteList, searchAlbums } from '../../utils/api.uts'
 import { cosThumb } from '../../utils/imageLoader.uts'
+import { formatAlbumTitle as formatAlbumTitleUtil } from '../../utils/text.uts'
 import { formatCount as _formatCount } from '../../utils/format.uts'
 
 export default {
@@ -232,6 +233,10 @@ export default {
 			return fallback
 		},
 
+		// 标题截断：≥7 字符显示前 6 字符 + ...（实现见 utils/text.uts）
+		formatAlbumTitle(title : any) : string {
+			return formatAlbumTitleUtil(title)
+		},
 		handleItemClick(item: any) {
 			// 与客片列表页保持一致：必须携带 type(shopId) 与 liked，否则详情接口会 400
 			const shopId = item.shopId != null ? item.shopId : ''
@@ -381,9 +386,8 @@ export default {
 	color: var(--color-primary);
 }
 .collect {
-	/* 主人 2026-09-15 指示：点赞图标与数量之间加间距 */
-	gap: 10rpx;
-	display: flex;
+	/* 主人 2026-09-15 指示：点赞图标与数量之间加间距（用 margin 而非 flex gap，兼容旧 WebView） */
+	margin-left: 10rpx;	display: flex;
 	flex-direction: row;
 	align-items: center;
 	font-size: var(--font-size-body);
@@ -396,7 +400,8 @@ export default {
 	position: relative;
 }
 .stat-count {
-	margin-left: 4rpx;
+	/* 主人 2026-09-15 指示：点赞图标与数量之间加间距（用 margin 而非 flex gap，兼容旧 WebView） */
+	margin-left: 10rpx;
 }
 
 /* 加载更多 */

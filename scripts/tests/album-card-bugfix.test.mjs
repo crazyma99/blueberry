@@ -28,7 +28,7 @@ check('两处网格均已完成该结构（desc-main 出现 ≥2 次）', (DD.ma
 
 console.log('\n[② 标题截断：≥7 字显示前 6 字 + ...]');
 check('formatAlbumTitle(title : any) : string 存在', /formatAlbumTitle\(title : any\) : string/.test(DD));
-check('规则为 length >= 7 → substring(0, 6) + ...', /length >= 7[\s\S]{0,80}substring\(0, 6\) \+ '.{3}'/.test(DD));
+check('规则落在公共工具 src/utils/text.uts（码点计数 + 前 6 字符 + ...）', /count >= 6[\s\S]{0,120}substring\(0, cut\) \+ '\.\.\.'/.test(read('src/utils/text.uts')));
 check('两处网格标题均调用 formatAlbumTitle', (DD.match(/formatAlbumTitle\(item/g) || []).length >= 2);
 
 console.log('\n[③ 点赞即时反馈：乐观更新 + 失败回滚]');
@@ -43,7 +43,7 @@ check('已 import haptics 工具', DD.includes("from '../../utils/haptics.uts'")
 check('doToggleLike 内调用 hapticTap()', /async doToggleLike[\s\S]{0,600}hapticTap\(\)/.test(DD));
 
 console.log('\n[⑤ 间距]');
-check('点赞图标↔数量：.collect gap 10rpx（demoDetail + favorites）', /\.collect\s*\{[^}]*gap: 10rpx/.test(DD) && /\.collect\s*\{[^}]*gap: 10rpx/.test(FAV));
+check('点赞图标↔数量间距（demoDetail + favorites，由新断言覆盖实现方式）', true);
 check('标题↔点赞模块：.desc-row margin-top 10rpx（demoDetail + favorites）', /\.desc-row\s*\{[^}]*margin-top: 10rpx/.test(DD) && /\.desc-row\s*\{[^}]*margin-top: 10rpx/.test(FAV));
 check('长标题单行省略（避免顶到 AI 标签）', /\.desc \.photoName\{[\s\S]{0,200}text-overflow: ellipsis/.test(DD));
 
@@ -58,5 +58,51 @@ for (const [name, s] of [['demoDetail', DD], ['favorites', FAV]]) {
   check(name + ' view 开合配对', vo === vc, vo + '/' + vc);
 }
 
+
+// ============ CR 🟡8 补充：真行为测试（执行源码逻辑，而非仅正则 lint） ============
+console.log('\n[行为测试：formatAlbumTitle 真执行 + 表驱动边界]');
+const rawUtil = read('src/utils/text.uts');
+// 从 .uts 抽出函数体，去掉 UTS 类型注解后在 Node 里执行
+const fnStart = rawUtil.indexOf('export function formatAlbumTitle');
+// 工具文件只含该函数，直接取到文件末尾
+let fnSrc = rawUtil.slice(fnStart)
+  .replace('export function', 'function')
+  .replace('(title : any) : string', '(title)')
+  .replace(/const s : string =/g, 'const s =')
+  .replace(/let (\w+) : number =/g, 'let $1 =');
+const fmt = new Function('return (' + fnSrc + ')')();
+const cases = [
+  ['6 字不截', '一二三四五六', '一二三四五六'],
+  ['7 字截为 6+…', '一二三四五六七', '一二三四五六...'],
+  ['空串', '', ''],
+  ['null', null, ''],
+  ['undefined', undefined, ''],
+  ['数字（非字符串容错）', 1234567, ''],
+  ['emoji 按码点计数（4 个 emoji 不截）', '😀😀😀😀', '😀😀😀😀'],
+  ['emoji 7 个 → 前 6 + …', '😀😀😀😀😀😀😀', '😀😀😀😀😀😀...'],
+  ['混排不切在代理对中间', 'a😀😀😀😀', 'a😀😀😀😀'],
+  ['全角字符计数正确', '①②③④⑤⑥⑦', '①②③④⑤⑥...'],
+];
+for (const [label, input, want] of cases) {
+  const got = fmt(input);
+  check('formatAlbumTitle ' + label, got === want, JSON.stringify(got) + ' ≠ ' + JSON.stringify(want));
+}
+
+console.log('\n[CR 🟡 修复项断言]');
+check('失败反馈两条路径都有 toast（else + catch）', (DD.match(/操作失败，请重试/g) || []).length >= 2, String((DD.match(/操作失败，请重试/g) || []).length));
+check('并发 seq 守卫：请求前写 seq', /const seq = \(item\.likeSeq == null \? 0 : item\.likeSeq\) \+ 1[\s\S]{0,120}item\.likeSeq = seq/.test(DD));
+check('并发 seq 守卫：旧响应被丢弃', /item\.likeSeq !== seq[\s\S]{0,120}return/.test(DD));
+check('间距用 margin-left 而非 flex gap（旧 WebView 兼容）', /\.stat-count\s*\{[^}]*margin-left: 10rpx/.test(DD) && /\.stat-count\s*\{[^}]*margin-left: 10rpx/.test(FAV));
+check('两页均无 flex gap 残留于 .collect', !/\.collect\s*\{[^}]*gap:/.test(DD) && !/\.collect\s*\{[^}]*gap:/.test(FAV));
+check('favorites 也走标题截断', FAV.includes('formatAlbumTitle(item.title)') && FAV.includes('formatAlbumTitleUtil'));
+check('两页共用公共工具 src/utils/text.uts', read('src/utils/text.uts').includes('export function formatAlbumTitle'));
+
+console.log('\n[标签配平（先剥注释再计数，避免注释里的字面标签干扰）]');
+const stripComments = (s) => s.replace(/<!--[\s\S]*?-->/g, '');
+for (const [name, s] of [['demoDetail', stripComments(DD)], ['favorites', stripComments(FAV)]]) {
+  const vo = (s.match(/<view[\s>]/g) || []).length;
+  const vc = (s.match(/<\/view>/g) || []).length;
+  check(name + ' view 开合配对（剥注释后）', vo === vc, vo + '/' + vc);
+}
 console.log('\n结果：' + pass + ' 通过 / ' + fail + ' 失败');
 process.exit(fail === 0 ? 0 : 1);
