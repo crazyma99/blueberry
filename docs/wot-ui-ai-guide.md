@@ -43,7 +43,9 @@ AI 写页面最大的风险是**凭空编造组件 API**。Wot UI 官方提供�
 
 ```bash
 npm install -g @wot-ui/cli        # 全局（临时用）
-pnpm add -D @wot-ui/cli          # 项目内（推荐：锁版本，随 lockfile 提交）```
+pnpm add -D @wot-ui/cli          # 项目内（推荐：锁版本，随 lockfile 提交）
+```
+
 
 
 ### 3.1 命令清单（实测 `wot --help`，CLI **1.1.0**）
@@ -79,7 +81,9 @@ Props:
 - variant: string = base | 按钮变体，可选值为 base、plain、dashed、soft、subtle、text
 - size: string = medium | 按钮尺寸，可选值为 mini、small、medium、large
 - round: boolean = false | 圆角按钮
-...```
+...
+```
+
 
 
 > 提示：在**尚未接入 wot-ui 的目录**里运行会提示 `[wot] Version not detected in project, falling back to 2.3.2`——属正常回退，工程内装好后会读到项目版本。
@@ -89,14 +93,18 @@ Props:
 ```bash
 wot doctor --format text      # 工程体检
 wot lint --format json        # 用法检查（可机读）
-wot usage --format markdown   # 组件用量报表（评审用）```
+wot usage --format markdown   # 组件用量报表（评审用）
+```
+
 
 
 ## 4. MCP Server —— 让 AI 直接调用组件知识库
 
 ```bash
 wot mcp serve        # 显式启动 MCP server
-wot mcp              # 进入管理子命令：serve / init / list / status / remove / doctor```
+wot mcp              # 进入管理子命令：serve / init / list / status / remove / doctor
+```
+
 
 
 **客户端配置（官方示例）**：
@@ -109,7 +117,9 @@ wot mcp              # 进入管理子命令：serve / init / list / status / re
       "args": ["mcp"]
     }
   }
-}```
+}
+```
+
 
 
 **一键接入（实测 `wot mcp init --help`，CLI 1.1.0）**：
@@ -119,7 +129,9 @@ wot mcp init --dry-run                              # 先预览，不写文件
 wot mcp init --client auto --scope project -y       # 自动识别客户端并写入项目配置
 wot mcp list                                        # 看支持/检测到的客户端
 wot mcp doctor                                      # 校验配置并做一次真实 MCP 握手
-wot agent init                                      # MCP + Skill + Agent 说明 一次接好```
+wot agent init                                      # MCP + Skill + Agent 说明 一次接好
+```
+
 
 
 `--client` 可选：`auto | all | claude | cursor | vscode | codex | opencode | antigravity`。
@@ -127,7 +139,9 @@ wot agent init                                      # MCP + Skill + Agent 说明
 ## 5. AI Skills —— 让 Agent 按 Wot UI 规范干活
 
 ```bash
-pnpm dlx skills add wot-ui/open-wot     # 官方安装方式（按需勾选）```
+pnpm dlx skills add wot-ui/open-wot     # 官方安装方式（按需勾选）
+```
+
 
 
 官方 Skills（与迁移最相关）：
