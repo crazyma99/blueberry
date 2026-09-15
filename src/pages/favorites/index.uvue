@@ -367,6 +367,8 @@ export default {
 	flex-direction: column;
 }
 .desc-row {
+	/* 主人 2026-09-15 指示：标题与点赞模块之间加间距 */
+	margin-top: 10rpx;
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
@@ -379,6 +381,8 @@ export default {
 	color: var(--color-primary);
 }
 .collect {
+	/* 主人 2026-09-15 指示：点赞图标与数量之间加间距 */
+	gap: 10rpx;
 	display: flex;
 	flex-direction: row;
 	align-items: center;

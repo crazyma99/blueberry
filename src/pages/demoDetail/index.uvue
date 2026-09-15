@@ -59,7 +59,9 @@
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
-									<view class="photoName font-noto-serif">{{ item.title }}</view>
+									<!-- 左列：标题 + 点赞（右侧 AI 试衣按钮为兄弟节点，整块垂直居中——主人 2026-09-15 指示） -->
+									<view class="desc-main">
+									<view class="photoName font-noto-serif">{{ formatAlbumTitle(item.title) }}</view>
 									<view class="desc-row">
 										<view class="collect">
 											<image
@@ -73,7 +75,8 @@
 					@click.stop="handleLike(item)"></view>
 											<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 										</view>
-										<view v-if="item.tryonDisabled !== true" hover-class="press-dim"
+									</view>
+										<view class="desc-tryon" v-if="item.tryonDisabled !== true" hover-class="press-dim"
 					@click.stop="goToAiTryOn(item)">
 											<image mode="aspectFit" class="ai-tryon-tag" src="/static/aitry-btn.png"/>
 										</view>
@@ -141,7 +144,9 @@
 							<view class="mask" hover-class="press-dim"
 					@click="gotoDetail(item)">
 								<view class="desc">
-									<view class="photoName font-noto-serif">{{ item?.title }}</view>
+									<!-- 左列：标题 + 点赞（右侧 AI 试衣按钮为兄弟节点，整块垂直居中——主人 2026-09-15 指示） -->
+									<view class="desc-main">
+									<view class="photoName font-noto-serif">{{ formatAlbumTitle(item?.title) }}</view>
 									<view class="desc-row">
 										<view class="collect">
 											<image
@@ -155,7 +160,8 @@
 					@click.stop="handleLike(item)"></view>
 											<text class="stat-count">{{ formatCount(item.likeCount || 0) }}</text>
 										</view>
-										<view v-if="item?.tryonDisabled !== true" hover-class="press-dim"
+									</view>
+										<view class="desc-tryon" v-if="item?.tryonDisabled !== true" hover-class="press-dim"
 					@click.stop="goToAiTryOn(item)">
 											<image mode="aspectFit" class="ai-tryon-tag" src="/static/aitry-btn.png"/>
 										</view>
@@ -214,6 +220,7 @@
 	import { submitUserProfile } from '../../utils/profileSubmit.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
 import { cosThumb } from '../../utils/imageLoader.uts'
+import { hapticTap } from '../../utils/haptics.uts'
 	import {
 		USER_AGREEMENT_NAME,
 		PRIVACY_POLICY_NAME,
@@ -648,18 +655,38 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 			},
 			// 执行点赞切换
 			async doToggleLike(item) {
+				// 主人 2026-09-15 指示：按下即反馈——先本地乐观更新（状态/计数/动效/触感），再发请求，失败回滚
+				const prevLiked = item.liked === true
+				const prevCount = item.likeCount == null ? 0 : item.likeCount
+				const nextLiked = !prevLiked
+				item.liked = nextLiked
+				item.likeCount = nextLiked ? prevCount + 1 : (prevCount > 0 ? prevCount - 1 : 0)
+				hapticTap()
+				this.playLikeAnim(item.id, nextLiked)
 				try {
 					const res = await toggleLike(item.id)
 					if (res.code === 200 && res.data) {
+						// 以服务端返回为准（避免并发点击导致计数漂移）
 						item.liked = res.data.liked
 						item.likeCount = res.data.likeCount
-						// 播放心跳动效：点赞为放大回弹、取消为缩小回弹
-						this.playLikeAnim(item.id, item.liked === true)
+					} else {
+						item.liked = prevLiked
+						item.likeCount = prevCount
 					}
 				} catch (err) {
 					console.error('[demoDetail] 点赞失败:', err)
+					item.liked = prevLiked
+					item.likeCount = prevCount
 					uni.showToast({ title: '操作失败，请重试', icon: 'none' })
 				}
+			},
+			// 相册标题：长度 ≥7 字时显示前 6 字 + ...（主人 2026-09-15 指示）
+			formatAlbumTitle(title : any) : string {
+				const s : string = title == null ? '' : (title as string)
+				if (s.length >= 7) {
+					return s.substring(0, 6) + '...'
+				}
+				return s
 			},
 			// 点赞动效：重置后再落标记（连点同一张也会重放），260ms 动画 + 100ms 余量
 			playLikeAnim(id: any, likedNow: boolean) {
@@ -1054,10 +1081,33 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 		left: 20rpx;
 		right: 20rpx;
 		bottom: 20rpx;
+		/* 主人 2026-09-15 指示：标题+点赞模块 与 右侧 AI 试衣按钮 垂直居中对齐 */
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+	}
+	.desc-main{
+		flex: 1;
 		display: flex;
 		flex-direction: column;
+		min-width: 0;
+		/* 标题与点赞模块之间留间距 */
+		margin-right: 8rpx;
+	}
+	.desc-tryon{
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+	}
+	/* 长标题单行省略，避免顶到右侧 AI 试衣标签 */
+	.desc .photoName{
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.desc-row {
+		/* 主人 2026-09-15 指示：标题与点赞模块之间加间距 */
+		margin-top: 10rpx;
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
@@ -1073,6 +1123,8 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 		display: flex;
 		flex-direction: row;
 		align-items: center;
+		/* 主人 2026-09-15 指示：点赞图标与数量之间加间距 */
+		gap: 10rpx;
 		font-size: var(--font-size-body);
 		color: var(--color-primary);
 	}
