@@ -66,6 +66,7 @@
   import { getBrands, BrandBrief } from '../../utils/api.uts'
   import { setBrandId } from '../../utils/brand.uts'
   import { hapticTap } from '../../utils/haptics.uts'
+  import { isBrandHubEnabled } from '../../utils/pageConfig.uts'
 
   export default {
     data() {
@@ -74,10 +75,24 @@
         brands: [] as BrandBrief[]
       }
     },
-    onLoad() {
+    async onLoad() {
+      // 自守卫：该商户未开启品牌馆入口时，直接退回上一页（不加载品牌列表）
+      const ok = await this.guardEnabled()
+      if (!ok) return
       this.loadBrands()
     },
     methods: {
+      // 自守卫（CR 🟡）：本页开关按商户配置，关闭时任何可达路径（banner linkUrl / 外部路径）都不得进入。
+      // 安全默认：查询失败也视为关闭（与首页入口口径一致）。
+      async guardEnabled() {
+        const on = await isBrandHubEnabled(true)
+        if (!on) {
+          uni.showToast({ title: '该功能未开放', icon: 'none' })
+          setTimeout(() => { uni.navigateBack() }, 800)
+          return false
+        }
+        return true
+      },
       async loadBrands() {
         this.loading = true
         try {
