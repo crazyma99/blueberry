@@ -48,6 +48,10 @@
 - **抖音侧硬规则（踩坑实测）**：抖音工程**必须同时存在 `app.json` 与 `app.js`**（TS 工程为 `app.js` 或 `app.ts`），否则 CLI 报 `[ProjectConfig]Bad Project Type`；`project.config.json` 须带 `tt` 开头 appid。⇒ **新工程抖音产物必须输出这两个文件**（已并入 P4-13 验收）。
 - **抖音测试设备白名单（2026-09-15 主人已完成）**：主人已在抖音开放平台后台**添加测试设备并绑定其手机抖音的 UID／DID**（**标识值本身不入库**，仅登记「已绑定」这一事实）⇒ **抖音真机预览（扫码）与真机调试的前置已具备**；复验 `tma preview` 仍 **exit 0**、出码正常（短链 `https://t.zijieimg.com/iXub1bQY/`）。
 - **⚠️ 本机仍做不到「真机自动化」**：`tma --help` 实测**无 debug／automator 类命令**，且无官方 Linux 版 IDE ⇒ **Phase 4 抖音真机验收＝主人手机人工扫码逐项验证**，不得在文档或简报里承诺「真机自动化／无人值守真机测试」。
+- **⚠️ 抖音能力门禁（2026-09-15 实测踩到，必须先解决）**：本项目全局与品牌馆页使用 `navigationStyle: custom`（`src/pages.json`），抖音端**需要小程序先获得「自定义页面结构」能力权限**，否则 `tma preview/upload` 会被平台拒绝：
+  `Compile Error: 当前小程序「ttd6aba01648cc1bf701」暂未获得「自定义页面结构」权限，请将页面全局配置中的 navigationStyle 参数由 custom 改为 default，或在小程序控制台申请「自定义页面结构」能力权限`
+  ⇒ 两条路：**①在抖音小程序控制台申请该能力（推荐，不改代码）**；②抖音端产物改 `default` 导航（须做 UI 适配，属迁移期工作量）。**未解决前抖音端资格门禁保持 `blocked`**。
+- **迁移期一次性脚本**：`scripts/release-trial-douyin.sh`（＋`package.json` 的 `build:mp-toutiao`）＝抖音端「构建 → 结构/红线校验 → 包体留痕 → appid 覆盖 → 预览 / 上传」脚本，**默认演练（不加 `--execute` 不动平台）**；它服务**旧仓现有引擎的抖音产物**，属过渡工具，**Phase 5 的 `release-target.mjs` 受保护包装器在新工程落地后取代它**（两者形态不同，不冲突）。
 - **抖音上传/提审仍须单独授权**：`tma preview` 只出预览码；`tma upload -c <更新日志> -v <版本>` 与 `tma audit` 属发布动作，**未经主人明确授权不得执行**。
 - **敏感信息**：AppSecret 等密钥**不入库、不写文件、不引进简报**；`tma` 走登录态即可完成预览与上传，**不需要密钥**。
 
