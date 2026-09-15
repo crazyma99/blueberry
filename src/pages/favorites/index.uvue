@@ -386,8 +386,9 @@ export default {
 	color: var(--color-primary);
 }
 .heart {
-	width: 48rpx;
-	height: 40rpx;
+	/* 2026-09-15 主人指示：与相册列表/详情页保持一致，图标视觉缩小 */
+	width: 36rpx;
+	height: 30rpx;
 	position: relative;
 }
 .stat-count {

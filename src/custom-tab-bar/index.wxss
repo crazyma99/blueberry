@@ -9,9 +9,29 @@
 }
 
 .tabbar-inner {
+  position: relative;
   display: flex;
   flex-direction: row;
   height: 116rpx;
+}
+
+/* 选中背景：单一高亮块（宽度＝1/3），靠 translateX 在 tab 之间位移 */
+.tabbar-highlight {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 33.3333%;
+  background: linear-gradient(180deg, rgba(241, 205, 145, 0.1) 0%, rgba(241, 205, 145, 0) 100%);
+  /* 首帧 / 直达页面时不做动画，避免"从 0 号位滑过来"的假动效 */
+  transition: none;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 切换 Tab 时启用位移动效（由 index.js 在位移前打开） */
+.tabbar-highlight--animate {
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tabbar-item {
@@ -21,15 +41,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-}
-
-.tabbar-item--active {
-  background: linear-gradient(180deg, rgba(241, 205, 145, 0.1) 0%, rgba(241, 205, 145, 0) 100%);
+  position: relative;
+  z-index: 1;
 }
 
 .tabbar-icon {
   width: 38rpx;
   height: 38rpx;
+  /* 未选中：图标同样压暗（与 55% 的文字一致，主人 2026-09-15 选定口径） */
+  opacity: 0.55;
+}
+
+.tabbar-item--active .tabbar-icon {
+  opacity: 1;
 }
 
 .tabbar-text {
@@ -37,6 +61,11 @@
   font-size: 24rpx;
   font-weight: 700;
   /* 字体由全局类控制（如 font-noto-serif），此处不再写死 font-family */
+  /* 未选中：压暗（2026-09-15 主人指示） */
+  color: rgba(241, 205, 145, 0.55);
+}
+
+.tabbar-item--active .tabbar-text {
   color: #f1cd91;
 }
 
