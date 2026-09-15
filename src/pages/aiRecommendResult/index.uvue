@@ -53,7 +53,7 @@
 				<view class="rec-info">
 					<view class="rec-header">
 						<text class="rec-name">{{ rec.styleName }}</text>
-						<text class="rec-score" v-if="rec.score > 0">{{ rec.score }}分</text>
+						<text class="rec-score" v-if="rec.finalScore > 0">{{ rec.finalScore }}分</text>
 					</view>
 					<text class="rec-reason">{{ rec.reason }}</text>
 					<view class="rec-footer">
