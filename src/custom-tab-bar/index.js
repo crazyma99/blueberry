@@ -12,6 +12,7 @@
 //      并把「高亮块位置 highlightIndex」与「图标/文字激活态 selected」拆成两个数据源（避免动画期间闪旧图标）。
 let sharedSelected = -1; // -1 表示尚未初始化
 let sharedPrevSelected = -1; // 点击时记录的上一个选中位（新实例据此判断动画起点），用后即焚
+let sharedTapPending = false; // 是否因「用户点击 tab」而切换（程序化 switchTab 时为 false，避免首帧采用陈旧下标）
 
 // 取出并清空位移起点：仅当它有效且与目标位不同才返回，否则返回 -1
 function consumePrevIndex(target) {
@@ -65,6 +66,19 @@ Component({
       // （CR 🟡S1：attached 播一次 + onShow 又播一次 = 同一跳双播/重启动画）。
       // 图标态直接给目标（不闪旧图标）；高亮块先落在「上一跳」位置，等页面 onShow 播位移过去。
       this.setData({ selected: target, highlightIndex: prev > -1 ? prev : target });
+      // 兜底收敛（CR 🟡S7）：页面首个 onShow 里 getTabBar() 可能为 null（官方另有异步版 getTabBar(cb)），
+      // 此时动画不会被触发、高亮块会滞留在「上一跳」格子。400ms 后若仍未动，直接对齐目标位。
+      if (prev > -1 && prev !== target) {
+        if (this._slideFallbackTimer != null) {
+          clearTimeout(this._slideFallbackTimer);
+        }
+        this._slideFallbackTimer = setTimeout(() => {
+          this._slideFallbackTimer = null;
+          if (this.data.highlightIndex === prev && this.data.highlightIndex !== target) {
+            this.syncSelection(target);
+          }
+        }, 400);
+      }
     },
   },
   detached() {
@@ -72,6 +86,10 @@ Component({
     if (this._finishTimer != null) {
       clearTimeout(this._finishTimer);
       this._finishTimer = null;
+    }
+    if (this._slideFallbackTimer != null) {
+      clearTimeout(this._slideFallbackTimer);
+      this._slideFallbackTimer = null;
     }
   },
   pageLifetimes: {
@@ -88,7 +106,11 @@ Component({
       const pages = getCurrentPages();
       const route = pages.length > 0 ? pages[pages.length - 1].route : '';
       const routeIndex = this.data.list.findIndex(item => item.pagePath === route);
-      if (preferShared && sharedSelected > -1) {
+      // CR 🟡S8：只有「用户点击 tab」才信任模块级共享下标；程序化 switchTab（如品牌馆页切回首页）
+      // 没有点击记录，此时应以本页路由为准，否则首帧会短暂显示上一次点击的 tab。
+      const trustShared = preferShared && sharedTapPending && sharedSelected > -1;
+      sharedTapPending = false;
+      if (trustShared) {
         return sharedSelected;
       }
       if (routeIndex > -1) {
@@ -119,6 +141,11 @@ Component({
       const target = Number(index);
       if (isNaN(target) || target < 0 || target >= this.data.list.length) {
         return; // 越界守卫（CR 🟡：dataset 异常时不再抛错）
+      }
+      // 动画即将播放：取消 attached 里的兜底收敛定时器（CR 🟡S7），保持「单一播放者」
+      if (this._slideFallbackTimer != null) {
+        clearTimeout(this._slideFallbackTimer);
+        this._slideFallbackTimer = null;
       }
       // 图标/文字态立即切换（与高亮块动画解耦）
       if (this.data.selected !== target) {
@@ -168,15 +195,20 @@ Component({
         // 独立 CR 🔴R1。动画写下的内联样式会盖住 wxml 里由 highlightIndex 驱动的 transform，
         // 故必须 clearAnimation 清除后再对齐数据态（🔴R2）。
         const done = () => {
-          try {
-            if (typeof this.clearAnimation === 'function') {
-              this.clearAnimation('.tabbar-highlight', {}, finish);
-            } else {
-              finish();
+          // 顺序：先把数据态对齐（模板样式写入「段 0」），再清动画样式（「段 1」），避免 1 帧回跳。
+          finish();
+          // ⚠️ CR 🔴R2：clearAnimation 传 {} 在基础库里走「逐属性清除」分支且 keys 为空 ⇒ **一个属性都不清**，
+          // 动画写下的内联 transform 会永久盖住 wxml 由 highlightIndex 驱动的 transform。
+          // 正确形态是「不传 options」（2 参）= 清除全部。
+          setTimeout(() => {
+            try {
+              if (typeof this.clearAnimation === 'function') {
+                this.clearAnimation('.tabbar-highlight');
+              }
+            } catch (err) {
+              // 清理失败不影响状态（数据态已在上面对齐）
             }
-          } catch (err) {
-            finish();
-          }
+          }, 50);
         };
         try {
           this.animate('.tabbar-highlight', [
@@ -206,6 +238,7 @@ Component({
       // 点击时旧实例重绘 + 新实例渲染 = 一次切换两次渲染，会加重切换闪烁。
       sharedPrevSelected = this.data.selected;
       sharedSelected = index;
+      sharedTapPending = true;
       wx.switchTab({ url: '/' + this.data.list[index].pagePath });
     },
   },
