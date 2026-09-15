@@ -5,11 +5,36 @@
 //
 // 2026-09-15 主人指示：
 // - 图标支持「默认态线性 / 激活态面性」（icon / iconActive 两套 SVG）
-// - 选中背景改为单一高亮块并做位移动效：新实例先在【上一个选中位】渲染，
-//   下一帧再移到目标位，从而让 CSS transition 真的产生位移（否则首帧即目标位，无动画可播）
+// - 选中背景改为单一高亮块并做位移动效
+//
+// ⚠️ 2026-09-15 二修（主人报「位移动画只生效一次」）：
+//   根因＝微信 tab 页是**常驻实例**（switchTab 不销毁页面），tabbar 组件只在**首次**进入该页
+//   触发 attached，之后每次切回来只触发 pageLifetimes.show；而 show 时本实例的高亮块
+//   早已停在目标位，没有"变化"自然没有 transition ⇒ 只有每个 tab 首次被打开时能滑动。
+//   修法＝FLIP：无论 attached 还是 show，只要本次切换带「上一个选中位」（onTap 记录）
+//   就先瞬间落在上一个位（transition: none），下一帧再位移到目标位。
+//   该起点值用后即焚（consumePrevIndex），避免"从其它页面返回 tab 页"时重放假动画。
 let sharedSelected = -1; // -1 表示尚未初始化
-let sharedPrevSelected = -1; // 点击时记录的上一个选中位（用于位移动效的起点）
+let sharedPrevSelected = -1; // 点击时记录的上一个选中位（FLIP 起点，用后清零）
 
+// 取出并清空 FLIP 起点：仅当它有效且与目标位不同才返回，否则返回 -1
+function consumePrevIndex(target) {
+  const prev = sharedPrevSelected;
+  sharedPrevSelected = -1;
+  if (prev > -1 && prev !== target) {
+    return prev;
+  }
+  return -1;
+}
+
+// 下一帧：优先 wx.nextTick，缺失时用 setTimeout 兜底（CR 🟡）
+function nextTick(fn) {
+  if (typeof wx !== 'undefined' && typeof wx.nextTick === 'function') {
+    wx.nextTick(fn);
+    return;
+  }
+  setTimeout(fn, 0);
+}
 Component({
   data: {
     selected: 0,
@@ -44,31 +69,33 @@ Component({
         family: 'NotoSerifSC-Bold',
         source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/NotoSerifSC-Bold-subset.woff")',
       });
-      const target = this.resolveSelected(true);
-      const prev = sharedPrevSelected;
-      if (prev > -1 && prev !== target) {
-        // 先落在上一个选中位（无动画），下一帧再位移到目标位 —— 这样才有"滑动"效果
-        this.setData({ selected: prev, slideReady: false });
-        const nextTick = typeof wx.nextTick === 'function' ? wx.nextTick : (fn) => setTimeout(fn, 0);
-        nextTick(() => {
-          this.setData({ selected: target, slideReady: true });
-        });
-      } else {
-        this.setData({ selected: target, slideReady: false });
-      }
+      // 首帧：优先用点击写入的共享值（此时路由可能还是旧页）
+      this.applySelected(this.resolveSelected(true), consumePrevIndex(sharedSelected));
     },
   },
   pageLifetimes: {
     show() {
-      // 路由稳定后以路由为准；若与当前高亮位不同（例如从其它路径切回），同样走位移动效
+      // 路由稳定后以路由为准；tab 页是常驻实例，切回来只会走这里，
+      // 故同样用 FLIP（先落在上一个位、下一帧再位移）重放位移
       const target = this.resolveSelected(false);
+      this.applySelected(target, consumePrevIndex(target));
+    },
+  },
+  methods: {
+    // 统一落位逻辑：prev 有效时走 FLIP（先无动画落在 prev，下一帧再带动画位移到 target）
+    applySelected(target, prev) {
+      if (prev !== -1) {
+        this.setData({ selected: prev, slideReady: false });
+        nextTick(() => {
+          this.setData({ selected: target, slideReady: true });
+        });
+        return;
+      }
       if (target !== this.data.selected) {
         this.setData({ slideReady: true });
         this.setData({ selected: target });
       }
     },
-  },
-  methods: {
     // 计算应选中的下标；preferShared=true 时（attached 阶段）优先用点击写入的共享值
     resolveSelected(preferShared) {
       const pages = getCurrentPages();
