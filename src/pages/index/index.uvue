@@ -1,8 +1,9 @@
 <template>
 	<view class="container">
 		<!-- 首页无导航栏：Banner 沉浸式延伸到状态栏顶部 -->
-		<!-- 品牌馆入口：圆形悬浮左上角，点击进入中台切换品牌（2026-09-15 主人指示：文字「馆」改 IconPark Shop 图标） -->
-		<view class="home-btn" :style="{ top: (statusBarHeight + 8) + 'px' }" hover-class="press-dim" @click="goBrandHub">
+		<!-- 品牌馆入口：圆形悬浮左上角，点击进入中台切换品牌（2026-09-15 主人指示：文字「馆」改 IconPark Shop 图标）
+		     展示开关：仅当该商户在 OPS「首页配置 → 品牌馆展示入口」开启时展示（默认关闭，关闭时整块不渲染） -->
+		<view v-if="brandHubEnabled" class="home-btn" :style="{ top: (statusBarHeight + 8) + 'px' }" hover-class="press-dim" @click="goBrandHub">
 			<image class="home-btn-icon" src="/static/iconpark/shop.svg" mode="aspectFit"></image>
 		</view>
 		<!-- 骨架屏：与真实页面间距 1:1（hero 通栏 → 客片欣赏标题/副标题 → 店铺卡片区） -->
@@ -142,7 +143,7 @@
 </template>
 
 <script>
-	import { getImage, getShops, wxLogin, wxBindPhone, wxUpdateUserInfo, rejectAllPendingUploads } from '../../utils/api.uts'
+	import { getImage, getShops, wxLogin, wxBindPhone, wxUpdateUserInfo, rejectAllPendingUploads, getPageConfig } from '../../utils/api.uts'
 	import { hapticTap } from '../../utils/haptics.uts'
 	import { rejectAllPending } from '../../utils/http.uts'
 	import { loginSuccess, setUserInfo, mergeUserInfo, getUserInfo, consumeLoginExpired } from '../../utils/auth.uts'
@@ -192,7 +193,9 @@
 				// profile 弹窗是否由登录流程拉起（仅登录流程关闭弹窗时才弹"登录成功"toast）
 				profileFromLogin: false,
 				// 分享卡片（品牌配置 > 中台全局 > 代码默认），onLoad 异步解析后覆盖
-				shareCard: { title: '一键解锁AI推荐｜AI试衣｜客片展示', imageUrl: '/static/share-home.jpg' }
+				shareCard: { title: '一键解锁AI推荐｜AI试衣｜客片展示', imageUrl: '/static/share-home.jpg' },
+				// 品牌馆展示入口开关（OPS 首页配置，按商户生效；默认关闭）
+				brandHubEnabled: false
 			}
 		},
 		async onLoad(options : any) {
@@ -312,10 +315,12 @@
 			this.heroHeight = '794rpx'
 			try {
 				// 并行加载轮播图和店铺列表（X-Brand-Id 由 http 层自动携带）
-				const [bannerRes, shopRes] = await Promise.all([
+				const [bannerRes, shopRes, pageCfgRes] = await Promise.all([
 					// t 时间戳防缓存：下拉刷新时 banner 配置必定重新拉取
 					getImage('get', { type: 0, t: Date.now() }).catch(() => null),
-					getShops().catch(() => null)
+					getShops().catch(() => null),
+					// 页面组件配置（品牌馆展示入口开关等），失败静默（保持默认关闭）
+					getPageConfig().catch(() => null)
 				])
 				if (bannerRes && bannerRes.code === 200) {
 					// banner 出 750px WebP 缩略图，降低内存占用
@@ -336,6 +341,8 @@
 					this.showPlaceholder = this.shopList.length > 1 && this.shopList.length % 2 === 1
 					console.log('[index] shops=', this.shopList.length, 'showPlaceholder=', this.showPlaceholder)
 				}
+				// 品牌馆展示入口：按商户配置决定是否渲染左上角入口
+				this.brandHubEnabled = this.resolveBrandHubEnabled(pageCfgRes)
 			} catch (err) {
 				console.error('[index] 加载首页数据失败', err)
 				uni.showToast({ title: '首页加载失败，请下拉刷新', icon: 'none' })
@@ -343,6 +350,27 @@
 				this.loading = false
 			}
 		},
+			// 解析「品牌馆展示入口」开关：取 type=brand_hub 组件的 config.enabled
+			// 缺组件/字段缺失/JSON 异常一律视为关闭（安全默认）
+			resolveBrandHubEnabled(res: any): boolean {
+				if (res == null || res.code !== 200 || !Array.isArray(res.data)) return false
+				const list = res.data as any[]
+				for (let i = 0; i < list.length; i++) {
+					const c = list[i]
+					if (c != null && c.type === 'brand_hub') {
+						const raw = c.config
+						if (raw == null || (raw as string).length === 0) return false
+						try {
+							const cfg = JSON.parse(raw as string)
+							return cfg.enabled === true
+						} catch (e) {
+							console.error('[index] 品牌馆开关配置解析失败', e)
+							return false
+						}
+					}
+				}
+				return false
+			},
 			// 关闭登录弹窗
 			closeLoginPopup() {
 				this.showLoginPopup = false
