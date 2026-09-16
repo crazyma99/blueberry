@@ -154,7 +154,7 @@ printf "%s" "$APPID" | grep -qE "^tt[0-9a-zA-Z]{8,}$" || { echo "✗ appid 格�
 echo "✓ target appid = $APPID（来源：$APPID_SRC；产物现值：${CUR_APPID:-空}）"
 
 # ---------------- 4) 演练路径（不建证据目录、不清缓存、不构建、不写盘） ----------------
-if [ "$MODE" = "preview" ]; then PLAN=(tma preview --qrcode-output "<EVID>/qrcode.png" "$PROJECT");
+if [ "$MODE" = "preview" ]; then PLAN=(tma preview --disable-cache --qrcode-output "<EVID>/qrcode.png" "$PROJECT");
 else PLAN=(tma upload -c "[g$SHA] $DESC" "$PROJECT"); [ -n "$VERSION" ] && PLAN+=(-v "$VERSION"); [ -n "$CHANNEL" ] && PLAN+=(--channel "$CHANNEL"); fi
 if [ "$EXECUTE" != "1" ]; then
   echo
