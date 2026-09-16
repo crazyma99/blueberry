@@ -47,6 +47,7 @@
 
 - **抖音侧硬规则（踩坑实测）**：抖音工程**必须同时存在 `app.json` 与 `app.js`**（TS 工程为 `app.js` 或 `app.ts`），否则 CLI 报 `[ProjectConfig]Bad Project Type`；`project.config.json` 须带 `tt` 开头 appid。⇒ **新工程抖音产物必须输出这两个文件**（已并入 P4-13 验收）。
 - **抖音测试设备白名单（2026-09-15 主人已完成）**：主人已在抖音开放平台后台**添加测试设备并绑定其手机抖音的 UID／DID**（**标识值本身不入库**，仅登记「已绑定」这一事实）⇒ **抖音真机预览（扫码）与真机调试的前置已具备**；复验 `tma preview` 仍 **exit 0**、出码正常（短链 `https://t.zijieimg.com/iXub1bQY/`）。
+- **抖音合法域名（2026-09-15 主人已配置，与代码对表通过）**：request／socket／uploadFile／downloadFile **各 3 条**——`lanmei66.cloud`（正式）／`crazyma99.xyz`（测试）／`lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com`（COS 桶）。对表结论：①`request`＝`src/utils/config.uts` 的 `release→lanmei66.cloud`／其他→`crazyma99.xyz` ✅；②`downloadFile`＝AI 试衣结果页保存相册用的**后端签名 URL**，而后端 `cos.base_url` 在 dev／staging／prod **三套配置里都是同一 COS 桶** ⇒ 域一致 ✅；③`uploadFile`＝上传直传 COS 桶 ✅；④`socket`：**代码中无 `connectSocket` 使用**（配了无害，属预留）。⑤例外：`www.lanmei66.cloud` 仅出现在客服二维码 `<image>` 与 `src/App.uvue` 注释里——`<image>` 不受合法域名限制 ⇒ **抖音侧无需补配**；但该注释所称「微信需配 www.lanmei66.cloud 的 downloadFile」与实际字体源（已走 COS 桶）**疑为过时描述，微信侧上线前需复核**。
 - **⚠️ 本机仍做不到「真机自动化」**：`tma --help` 实测**无 debug／automator 类命令**，且无官方 Linux 版 IDE ⇒ **Phase 4 抖音真机验收＝主人手机人工扫码逐项验证**，不得在文档或简报里承诺「真机自动化／无人值守真机测试」。
 - **⚠️ 抖音能力门禁（2026-09-15 实测踩到，必须先解决）**：本项目全局与品牌馆页使用 `navigationStyle: custom`（`src/pages.json`），抖音端**需要小程序先获得「自定义页面结构」能力权限**，否则 `tma preview/upload` 会被平台拒绝：
   `Compile Error: 当前小程序「ttd6aba01648cc1bf701」暂未获得「自定义页面结构」权限，请将页面全局配置中的 navigationStyle 参数由 custom 改为 default，或在小程序控制台申请「自定义页面结构」能力权限`
@@ -181,7 +182,7 @@ D1–D5 只说「怎么迁」，不说「每页业务该是什么样」。页面
 | Phase 1（T1／T4） | 抖音：**CLI 登录态已就绪**（`tma`，✅ 2026-09-15 主人完成）＋**AppID 已提供**；**抖音测试设备已绑定（2026-09-15）**；仍需**微信真机**与抖音测试小程序号归属确认 | 工程与 Wot 资格门禁无法通过 | 先过微信；抖音标 `blocked`，不宣称支持 |
 | Phase 2 | 微信测试号（现有能力）；若涉及旧接口兼容，确认后端环境 | 真实闭环无法验收 | 用受控本地 provider 做合同测试 |
 | Phase 3 | 支付沙箱／测试额度（若需真实支付链路验证）；可复现任务失败的服务端日志 | 支付链路只能停在 mock 证据 | 用可控延迟测试证明状态机；真实支付留待授权 |
-| Phase 4 | ①每端 AppID 与开发者权限 ②类目／资质审批结果 ③支付能力 ④跨平台账号／余额／买断共享口径 ⑤双端真机（**抖音侧已有主人手机**，iOS/Android 双端覆盖待定）⑥各平台管理台域名白名单配置权限 | 对应平台门禁 blocked | provider 隔离实现 + 合同测试；不擅自合并账号 |
+| Phase 4 | ①每端 AppID 与开发者权限 ②类目／资质审批结果 ③支付能力 ④跨平台账号／余额／买断共享口径 ⑤双端真机（**抖音侧已有主人手机**，iOS/Android 双端覆盖待定）⑥各平台管理台域名白名单配置权限（**抖音侧 2026-09-15 已配置**：request／socket／uploadFile／downloadFile 各 3 条＝`lanmei66.cloud`／`crazyma99.xyz`／COS 桶 `lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com`；**微信侧待核**） | 对应平台门禁 blocked | provider 隔离实现 + 合同测试；不擅自合并账号 |
 | Phase 5 | ①体验版／正式版上传授权 ②后端 prod 部署批准 ③旧接口退役窗口与旧版用户分布 | 不得发布 | 只产出经校验的候选包与回滚演练证据 |
 | 任意时点 | 商业口径争议（默认品牌／全局开关、免费额度、商户范围） | 相关红项不得自行降级 | 保持现行后端合同，暂停该路径 |
 
