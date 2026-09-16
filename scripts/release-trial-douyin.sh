@@ -29,6 +29,8 @@ usage() {
   --channel <通道>         upload 时追加 tma --channel
   --execute                真正执行；不加则只演练（只打印将执行的命令，不写盘不触平台）
   --force-default-nav      仅验证用：把产物 app.json 的 navigationStyle 由 custom 临时改为 default
+  --force-native-tabbar    仅验证用：把产物 app.json 的 tabBar.custom 关掉，改用抖音原生 tabBar
+                           （微信原生 custom-tab-bar 目录在抖音端不生效，见 Phase 文档）
                            （抖音「自定义页面结构」能力仅 S 级/定向邀请可得，见 Phase 文档 Phase 4）
 
 例：
@@ -51,6 +53,7 @@ MODE="preview"
 CHANNEL=""
 EXECUTE=0
 FORCE_DEFAULT_NAV=0
+FORCE_NATIVE_TABBAR=0
 POSN=0
 
 need2() { [ "$#" -ge 2 ] || { echo "✗ $1 缺参数值"; usage 1; }; }
@@ -66,6 +69,7 @@ while [ "$#" -gt 0 ]; do
     --channel) need2 "$@"; CHANNEL="$2"; shift 2 ;;
     --execute) EXECUTE=1; shift ;;
     --force-default-nav) FORCE_DEFAULT_NAV=1; shift ;;
+    --force-native-tabbar) FORCE_NATIVE_TABBAR=1; shift ;;
     -h|--help) usage 0 ;;
     -*) echo "未知参数：$1"; usage 1 ;;
     *) POSN=$((POSN+1));
@@ -94,6 +98,7 @@ JS_SETAPPID='const fs=require("fs");const f=process.argv[1];const j=JSON.parse(f
 JS_HASBUILD='const s=require("./package.json").scripts||{};process.exit(s["build:mp-toutiao"]?0:1)'
 JS_NAV='const fs=require("fs");try{const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write((j.window&&j.window.navigationStyle)||"")}catch(e){process.stdout.write("")}'
 JS_SETNAV='const fs=require("fs"),p=require("path");let n=0;function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=p.join(d,e.name);if(e.isDirectory()){walk(f)}else if(e.name.endsWith(".json")){try{const j=JSON.parse(fs.readFileSync(f,"utf8"));let c=false;if(j.navigationStyle==="custom"){j.navigationStyle="default";c=true}if(j.window&&j.window.navigationStyle==="custom"){j.window.navigationStyle="default";c=true}if(c){fs.writeFileSync(f,JSON.stringify(j,null,2));n++}}catch(e){}}}}walk(process.argv[1]);process.stdout.write(String(n))'
+JS_SETTABBAR='const fs=require("fs");const f=process.argv[1];const j=JSON.parse(fs.readFileSync(f,"utf8"));if(j.tabBar&&j.tabBar.custom){j.tabBar.custom=false;fs.writeFileSync(f,JSON.stringify(j,null,2));process.stdout.write("1")}else{process.stdout.write("0")}'
 
 echo "==> 抖音流程：模式=$MODE 版本=${VERSION:-（tma 自增）} 产物=$PROJECT"
 
@@ -226,6 +231,21 @@ if [ "$FORCE_DEFAULT_NAV" = "1" ]; then
   fi
 fi
 
+# ---------------- 9c) 原生 tabBar（仅 --force-native-tabbar；只改产物） ----------------
+TB_BEFORE=no
+if node -e 'const j=require(process.argv[1]);process.stdout.write((j.tabBar&&j.tabBar.custom)?"yes":"no")' "$PROJECT/app.json" 2>/dev/null | grep -q yes; then TB_BEFORE=yes; fi
+TB_AFTER=$TB_BEFORE
+if [ "$FORCE_NATIVE_TABBAR" = "1" ]; then
+  TB_PATCHED="$(node -e "$JS_SETTABBAR" "$PROJECT/app.json")"
+  [ -n "$TB_PATCHED" ] || TB_PATCHED=0
+  if [ "$TB_PATCHED" = "1" ]; then
+    TB_AFTER=no
+    echo "已关闭产物 app.json 的 tabBar.custom（改用抖音原生 tabBar；只改产物，不动 src/）"
+  else
+    echo "产物 tabBar 已是原生模式（无需改写）"
+  fi
+fi
+
 # ---------------- 10) 执行 + 三重判据 ----------------
 QR=""
 if [ "$MODE" = "preview" ]; then
@@ -268,7 +288,7 @@ URL="$(grep -aoE "https://t\.zijieimg\.com/[A-Za-z0-9]+/" "$LOG" 2>/dev/null | h
 QR_EXISTS=no; [ -n "$QR" ] && [ -s "$QR" ] && QR_EXISTS=yes
 
 { echo "mode=$MODE"; echo "verdict=$VERDICT"; echo "reason=$REASON"; echo "exit=$RC"; echo "attempt=$ATTEMPT";
-  echo "appid=$APPID"; echo "appid_source=$APPID_SRC"; echo "appid_before=${CUR_APPID:-}"; echo "appid_after=$APPID_AFTER"; echo "navstyle_before=${NAV_BEFORE:-}"; echo "navstyle_after=${NAV_AFTER:-}";
+  echo "appid=$APPID"; echo "appid_source=$APPID_SRC"; echo "appid_before=${CUR_APPID:-}"; echo "appid_after=$APPID_AFTER"; echo "navstyle_before=${NAV_BEFORE:-}"; echo "navstyle_after=$NAV_AFTER"; echo "tabbar_custom_before=$TB_BEFORE"; echo "tabbar_custom_after=$TB_AFTER";
   echo "built=$BUILT"; echo "artifact_sha256=$ART_SHA"; echo "artifact_files=$SCANNED"; echo "app_json_mtime=$ART_MTIME";
   echo "pages=$PAGES"; echo "project=$PROJECT"; echo "version=${VERSION:-auto}"; echo "version_given=$VERSION_GIVEN";
   echo "desc=$DESC"; echo "channel=${CHANNEL:-}"; echo "commit_head=$SHA"; echo "tma=$TMA_VER";
