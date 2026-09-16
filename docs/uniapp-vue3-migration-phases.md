@@ -56,6 +56,18 @@
   - **抖音 default 导航下的顶部约束**：系统**左上常驻品牌 logo**（点击回首页）、**子页面左侧固定返回按钮**、**胶囊右侧反馈按钮** ⇒ **任何自绘顶部元素都必须避让这三块区域**；现有的自绘标题/搜索框/透明导航（`CustomNavBar transparent`）需按平台分别给出布局。
   - **归属**：该改造登记为 **Phase 4「平台 UI bridge」必做项**（并应在 Phase 2 起就以平台分支写，避免末期返工）；**未解决前抖音端资格门禁保持 `blocked`**。
 - **迁移期一次性脚本**：`scripts/release-trial-douyin.sh`（＋`package.json` 的 `build:mp-toutiao`）＝抖音端「构建 → 结构/红线校验 → 包体留痕 → appid 覆盖 → 预览 / 上传」脚本，**默认演练（不加 `--execute` 不动平台）**；它服务**旧仓现有引擎的抖音产物**，属过渡工具，**Phase 5 的 `release-target.mjs` 受保护包装器在新工程落地后取代它**（两者形态不同，不冲突）。
+- **⚠️ 抖音端平台 API 差异（2026-09-16 真机 vConsole 实测，**迁移期必须处理**）**：抖音小程序**缺少以下微信侧常用 API**，直接调用会抛 `TypeError`；已逐条定位源码落点，**并入 Phase 2（公共层平台适配）与 Phase 4（平台 UI bridge）改造清单**：
+
+| # | 缺失/不兼容 | 源码落点 | 真机后果 | 处理方向 |
+|---|---|---|---|---|
+| 1 | `uni.getAccountInfoSync` | `src/utils/config.uts:18` | **抛错 ⇒ `getHttpConfig()` 失败 ⇒ 全部请求发不出 ⇒ 界面完全无数据**（最严重） | 特性守卫＋兜底；或构建期注入 `VITE_API_BASE`（已实测可行） |
+| 2 | `uni.loadFontFace` | `src/App.uvue:11、:22` | 自定义字体不加载（onLaunch 抛错） | 抖音端跳过；或字体子集内嵌包内 |
+| 3 | `tt.getWindowInfo`（uni-app x 运行时内部调用） | 运行时 `vendor.js`（由 `uni.getSystemInfoSync()` 触发） | 窗口/状态栏尺寸取不到 ⇒ 布局错乱 | 兜底 `getSystemInfoSync`／基础库升级；或守卫 4 处调用点（`index`／`demoDetail`／`webview`／`CustomNavBar`） |
+| 4 | `getTabBar()`（微信自定义 tabBar 专用） | `src/utils/tabbar.uts:10` | 每个 tab 页 `onShow` 报错；底栏同步无效 | 特性守卫；抖音端走原生 tabBar |
+| 5 | 上传成功回调里的裸 `JSON.parse(res.data)` | `src/utils/api.uts:51` | `res.data` 为 `undefined` 时报 `「undefined」is not valid JSON` | 先判类型与空串再解析 |
+
+- **上述 4 项已写好补丁但按主人口径暂不入库**（2026-09-16：「**现在还没开始迁移，迁移的时候再做这些工作**」）：补丁留存于 `~/backups/douyin/douyin-platform-guards-20260916.patch`（88 行，`App.uvue`／`api.uts`／`config.uts`／`tabbar.uts`），**届时直接复用**；仓库 `src/` 保持零改动。
+- **迁移前的抖音联调可行路径（不改 `src/`，本机已验证）**：`VITE_API_BASE=<目标域> npm run build:mp-toutiao` 构建（显式注入可绕开 #1 的运行时探测）→ `./scripts/release-trial-douyin.sh --allow-stale --force-default-nav --force-native-tabbar --execute` 出码 ⇒ 数据可正常下发（字体/底栏/布局三类问题仍存在，属上表待办）。
 - **抖音上传/提审仍须单独授权**：`tma preview` 只出预览码；`tma upload -c <更新日志> -v <版本>` 与 `tma audit` 属发布动作，**未经主人明确授权不得执行**。
 - **敏感信息**：AppSecret 等密钥**不入库、不写文件、不引进简报**；`tma` 走登录态即可完成预览与上传，**不需要密钥**。
 
