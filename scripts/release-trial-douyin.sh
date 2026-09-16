@@ -28,6 +28,8 @@ usage() {
   --mode preview|upload    默认 preview（出预览二维码）；upload 才是发布动作
   --channel <通道>         upload 时追加 tma --channel
   --execute                真正执行；不加则只演练（只打印将执行的命令，不写盘不触平台）
+  --force-default-nav      仅验证用：把产物 app.json 的 navigationStyle 由 custom 临时改为 default
+                           （抖音「自定义页面结构」能力仅 S 级/定向邀请可得，见 Phase 文档 Phase 4）
 
 例：
   scripts/release-trial-douyin.sh 1.0.60 抖音端联调 --build --execute
@@ -48,6 +50,7 @@ APPID=""
 MODE="preview"
 CHANNEL=""
 EXECUTE=0
+FORCE_DEFAULT_NAV=0
 POSN=0
 
 need2() { [ "$#" -ge 2 ] || { echo "✗ $1 缺参数值"; usage 1; }; }
@@ -62,6 +65,7 @@ while [ "$#" -gt 0 ]; do
     --mode) need2 "$@"; MODE="$2"; shift 2 ;;
     --channel) need2 "$@"; CHANNEL="$2"; shift 2 ;;
     --execute) EXECUTE=1; shift ;;
+    --force-default-nav) FORCE_DEFAULT_NAV=1; shift ;;
     -h|--help) usage 0 ;;
     -*) echo "未知参数：$1"; usage 1 ;;
     *) POSN=$((POSN+1));
@@ -88,6 +92,8 @@ JS_APPID='const fs=require("fs");try{const j=JSON.parse(fs.readFileSync(process.
 JS_PAGES='const fs=require("fs");try{const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(String((j.pages||[]).length))}catch(e){process.stdout.write("0")}'
 JS_SETAPPID='const fs=require("fs");const f=process.argv[1];const j=JSON.parse(fs.readFileSync(f,"utf8"));j.appid=process.argv[2];fs.writeFileSync(f,JSON.stringify(j,null,2)+"\n")'
 JS_HASBUILD='const s=require("./package.json").scripts||{};process.exit(s["build:mp-toutiao"]?0:1)'
+JS_NAV='const fs=require("fs");try{const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write((j.window&&j.window.navigationStyle)||"")}catch(e){process.stdout.write("")}'
+JS_SETNAV='const fs=require("fs"),p=require("path");let n=0;function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=p.join(d,e.name);if(e.isDirectory()){walk(f)}else if(e.name.endsWith(".json")){try{const j=JSON.parse(fs.readFileSync(f,"utf8"));let c=false;if(j.navigationStyle==="custom"){j.navigationStyle="default";c=true}if(j.window&&j.window.navigationStyle==="custom"){j.window.navigationStyle="default";c=true}if(c){fs.writeFileSync(f,JSON.stringify(j,null,2));n++}}catch(e){}}}}walk(process.argv[1]);process.stdout.write(String(n))'
 
 echo "==> 抖音流程：模式=$MODE 版本=${VERSION:-（tma 自增）} 产物=$PROJECT"
 
@@ -205,6 +211,21 @@ else
   echo "✓ 产物 appid 已就绪：$APPID"
 fi
 
+# ---------------- 9b) 降级导航（仅 --force-default-nav；先备份、只改产物） ----------------
+NAV_BEFORE="$(node -e "$JS_NAV" "$PROJECT/app.json")"
+NAV_AFTER="$NAV_BEFORE"
+if [ "$FORCE_DEFAULT_NAV" = "1" ]; then
+  cp "$PROJECT/app.json" "$EVID/app.json.orig"
+  PATCHED="$(node -e "$JS_SETNAV" "$PROJECT")"
+  if [ "${PATCHED:-0}" != "0" ]; then
+    NAV_AFTER=default
+    echo "✓ 已把产物中 ${PATCHED} 处 navigationStyle 由 custom 降级为 default（app.json 已备份；只改产物，不动 src/）"
+    if [ "$MODE" = "upload" ]; then echo "⚠ 注意：upload 会把「降级导航」产物推上平台，仅建议用于测试通道"; fi
+  else
+    echo "✓ 产物 navigationStyle 已是 default（无需改写）"
+  fi
+fi
+
 # ---------------- 10) 执行 + 三重判据 ----------------
 QR=""
 if [ "$MODE" = "preview" ]; then
@@ -247,7 +268,7 @@ URL="$(grep -aoE "https://t\.zijieimg\.com/[A-Za-z0-9]+/" "$LOG" 2>/dev/null | h
 QR_EXISTS=no; [ -n "$QR" ] && [ -s "$QR" ] && QR_EXISTS=yes
 
 { echo "mode=$MODE"; echo "verdict=$VERDICT"; echo "reason=$REASON"; echo "exit=$RC"; echo "attempt=$ATTEMPT";
-  echo "appid=$APPID"; echo "appid_source=$APPID_SRC"; echo "appid_before=${CUR_APPID:-}"; echo "appid_after=$APPID_AFTER";
+  echo "appid=$APPID"; echo "appid_source=$APPID_SRC"; echo "appid_before=${CUR_APPID:-}"; echo "appid_after=$APPID_AFTER"; echo "navstyle_before=${NAV_BEFORE:-}"; echo "navstyle_after=${NAV_AFTER:-}";
   echo "built=$BUILT"; echo "artifact_sha256=$ART_SHA"; echo "artifact_files=$SCANNED"; echo "app_json_mtime=$ART_MTIME";
   echo "pages=$PAGES"; echo "project=$PROJECT"; echo "version=${VERSION:-auto}"; echo "version_given=$VERSION_GIVEN";
   echo "desc=$DESC"; echo "channel=${CHANNEL:-}"; echo "commit_head=$SHA"; echo "tma=$TMA_VER";
