@@ -250,7 +250,7 @@ fi
 QR=""
 if [ "$MODE" = "preview" ]; then
   QR="$EVID/qrcode.png"
-  CMD=(tma preview --qrcode-output "$QR" "$PROJECT")
+  CMD=(tma preview --disable-cache --qrcode-output "$QR" "$PROJECT")
 else
   CMD=(tma upload -c "[g$SHA] $DESC" "$PROJECT")
   if [ -n "$VERSION" ]; then CMD+=(-v "$VERSION"); fi
@@ -284,7 +284,7 @@ if [ "$VERDICT" != "ok" ] && [ -n "${TRANSPORT_HIT:-}" ]; then
 fi
 
 { tr -d "\r" < "$LOG" | grep -av "\[4[07]m" | sed "s/^/    /" | tail -20; } || true
-URL="$(grep -aoE "https://t\.zijieimg\.com/[A-Za-z0-9]+/" "$LOG" 2>/dev/null | head -1 || true)"
+URL="$(grep -aoE "https://t\.zijieimg\.com/[A-Za-z0-9]+/" "$LOG" 2>/dev/null | head -1 || true)"; CACHE_HIT="$(grep -aoiE "useCache[^,}]*" "$LOG" 2>/dev/null | head -1 || true)"
 QR_EXISTS=no; [ -n "$QR" ] && [ -s "$QR" ] && QR_EXISTS=yes
 
 { echo "mode=$MODE"; echo "verdict=$VERDICT"; echo "reason=$REASON"; echo "exit=$RC"; echo "attempt=$ATTEMPT";
@@ -292,7 +292,7 @@ QR_EXISTS=no; [ -n "$QR" ] && [ -s "$QR" ] && QR_EXISTS=yes
   echo "built=$BUILT"; echo "artifact_sha256=$ART_SHA"; echo "artifact_files=$SCANNED"; echo "app_json_mtime=$ART_MTIME";
   echo "pages=$PAGES"; echo "project=$PROJECT"; echo "version=${VERSION:-auto}"; echo "version_given=$VERSION_GIVEN";
   echo "desc=$DESC"; echo "channel=${CHANNEL:-}"; echo "commit_head=$SHA"; echo "tma=$TMA_VER";
-  echo "qrcode=$QR_EXISTS"; echo "qrcode_path=${QR:-}"; echo "preview_url=${URL:-}";
+  echo "qrcode=$QR_EXISTS"; echo "cache_note=$CACHE_HIT"; echo "qrcode_path=${QR:-}"; echo "preview_url=${URL:-}";
   echo "command=$CMD_STR"; echo "errhits=$(printf "%s" "$ERRHITS" | tr "\n" "|")";
   echo "keyhits=$(printf "%s" "$KEYHITS" | tr "\n" "|")"; echo "transport_hit=${TRANSPORT_HIT:-}"; echo "log=$LOG"; } > "$EVID/summary.txt"
 
