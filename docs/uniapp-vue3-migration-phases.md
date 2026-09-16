@@ -51,7 +51,10 @@
 - **⚠️ 本机仍做不到「真机自动化」**：`tma --help` 实测**无 debug／automator 类命令**，且无官方 Linux 版 IDE ⇒ **Phase 4 抖音真机验收＝主人手机人工扫码逐项验证**，不得在文档或简报里承诺「真机自动化／无人值守真机测试」。
 - **⚠️ 抖音能力门禁（2026-09-15 实测踩到，必须先解决）**：本项目全局与品牌馆页使用 `navigationStyle: custom`（`src/pages.json`），抖音端**需要小程序先获得「自定义页面结构」能力权限**，否则 `tma preview/upload` 会被平台拒绝：
   `Compile Error: 当前小程序「ttd6aba01648cc1bf701」暂未获得「自定义页面结构」权限，请将页面全局配置中的 navigationStyle 参数由 custom 改为 default，或在小程序控制台申请「自定义页面结构」能力权限`
-  ⇒ 两条路：**①在抖音小程序控制台申请该能力（推荐，不改代码）**；②抖音端产物改 `default` 导航（须做 UI 适配，属迁移期工作量）。**未解决前抖音端资格门禁保持 `blocked`**。
+  ⇒ **⭐ 2026-09-16 平台口径（主人核实）：「custom-自定义导航栏」权限仅『S 级小程序』与『平台定向邀请的小程序』可申请** ⇒ **我方当前不具备申请资格** ⇒ **唯一现实路线＝抖音端改用 `default` 系统导航**（**微信端不受影响**：微信允许 custom ⇒ 这是 **per-platform 分支**，不是全局改）。
+  - **影响面（2026-09-16 本机实测）**：**17 条路由中 15 页使用 `CustomNavBar`**（仅 `index`／`webview` 自管状态栏）；直接依赖 `statusBarHeight` 的文件 4 个＝`components/CustomNavBar/CustomNavBar.uvue`、`pages/index`、`pages/demoDetail`、`pages/webview`；`pages.json` 的 global（第 68 行）与品牌馆页（第 13 行）各有一处 `navigationStyle: custom`。
+  - **抖音 default 导航下的顶部约束**：系统**左上常驻品牌 logo**（点击回首页）、**子页面左侧固定返回按钮**、**胶囊右侧反馈按钮** ⇒ **任何自绘顶部元素都必须避让这三块区域**；现有的自绘标题/搜索框/透明导航（`CustomNavBar transparent`）需按平台分别给出布局。
+  - **归属**：该改造登记为 **Phase 4「平台 UI bridge」必做项**（并应在 Phase 2 起就以平台分支写，避免末期返工）；**未解决前抖音端资格门禁保持 `blocked`**。
 - **迁移期一次性脚本**：`scripts/release-trial-douyin.sh`（＋`package.json` 的 `build:mp-toutiao`）＝抖音端「构建 → 结构/红线校验 → 包体留痕 → appid 覆盖 → 预览 / 上传」脚本，**默认演练（不加 `--execute` 不动平台）**；它服务**旧仓现有引擎的抖音产物**，属过渡工具，**Phase 5 的 `release-target.mjs` 受保护包装器在新工程落地后取代它**（两者形态不同，不冲突）。
 - **抖音上传/提审仍须单独授权**：`tma preview` 只出预览码；`tma upload -c <更新日志> -v <版本>` 与 `tma audit` 属发布动作，**未经主人明确授权不得执行**。
 - **敏感信息**：AppSecret 等密钥**不入库、不写文件、不引进简报**；`tma` 走登录态即可完成预览与上传，**不需要密钥**。
