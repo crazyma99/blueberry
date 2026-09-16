@@ -206,6 +206,9 @@ ART_MTIME="$(date -r "$PROJECT/app.json" +%Y-%m-%dT%H:%M:%S%z 2>/dev/null || ech
 echo "✓ 路由页数：$PAGES ｜ 产物指纹：${ART_SHA:0:12} ｜ app.json mtime：$ART_MTIME"
 
 # ---------------- 9) 覆盖产物 appid（仅执行态，先备份） ----------------
+# 注意：构建会重新生成 project.config.json（appid 回到占位值 testAppId），
+# 因此必须在此处重新读取产物 appid，否则会误判为已就绪而跳过覆盖（历史 bug）。
+CUR_APPID="$(node -e "$JS_APPID" "$PROJECT/project.config.json")"
 APPID_AFTER="$CUR_APPID"
 if [ "$APPID" != "$CUR_APPID" ]; then
   cp "$PROJECT/project.config.json" "$EVID/project.config.json.orig"
@@ -215,6 +218,13 @@ if [ "$APPID" != "$CUR_APPID" ]; then
 else
   echo "✓ 产物 appid 已就绪：$APPID"
 fi
+
+AFTER_APPID="$(node -e "$JS_APPID" "$PROJECT/project.config.json")"
+if [ "$AFTER_APPID" != "$APPID" ]; then
+  echo "✗ 产物 appid 校验失败：期望 $APPID，实际 $AFTER_APPID （拒绝继续，避免推错应用）"
+  exit 1
+fi
+echo "✓ 产物 appid 复核通过：$AFTER_APPID"
 
 # ---------------- 9b) 降级导航（仅 --force-default-nav；先备份、只改产物） ----------------
 NAV_BEFORE="$(node -e "$JS_NAV" "$PROJECT/app.json")"
@@ -286,9 +296,19 @@ fi
 { tr -d "\r" < "$LOG" | grep -av "\[4[07]m" | sed "s/^/    /" | tail -20; } || true
 URL="$(grep -aoE "https://t\.zijieimg\.com/[A-Za-z0-9]+/" "$LOG" 2>/dev/null | head -1 || true)"; CACHE_HIT="$(grep -aoiE "useCache[^,}]*" "$LOG" 2>/dev/null | head -1 || true)"
 QR_EXISTS=no; [ -n "$QR" ] && [ -s "$QR" ] && QR_EXISTS=yes
+QR_APPID=""
+if [ -n "$URL" ]; then
+  QR_APPID="$(curl -sIL -m 15 "$URL" 2>/dev/null | grep -oiE "app_id=[A-Za-z0-9]+" | head -1 | cut -d= -f2)"
+  if [ -n "$QR_APPID" ] && [ "$QR_APPID" != "$APPID" ]; then
+    echo "✗ 二维码归属校验失败：二维码指向 appid=$QR_APPID，而目标 appid=$APPID（可能落到了平台演示应用，扫码会报无权限）"
+    VERDICT=failed; REASON="二维码 appid 与目标不一致（$QR_APPID ≠ $APPID）"
+  elif [ -n "$QR_APPID" ]; then
+    echo "✓ 二维码归属校验通过：appid=$QR_APPID"
+  fi
+fi
 
 { echo "mode=$MODE"; echo "verdict=$VERDICT"; echo "reason=$REASON"; echo "exit=$RC"; echo "attempt=$ATTEMPT";
-  echo "appid=$APPID"; echo "appid_source=$APPID_SRC"; echo "appid_before=${CUR_APPID:-}"; echo "appid_after=$APPID_AFTER"; echo "navstyle_before=${NAV_BEFORE:-}"; echo "navstyle_after=$NAV_AFTER"; echo "tabbar_custom_before=$TB_BEFORE"; echo "tabbar_custom_after=$TB_AFTER";
+  echo "appid=$APPID"; echo "appid_source=$APPID_SRC"; echo "appid_before=${CUR_APPID:-}"; echo "appid_after=$APPID_AFTER"; echo "appid_artifact_actual=$AFTER_APPID"; echo "navstyle_before=${NAV_BEFORE:-}"; echo "navstyle_after=$NAV_AFTER"; echo "tabbar_custom_before=$TB_BEFORE"; echo "tabbar_custom_after=$TB_AFTER";
   echo "built=$BUILT"; echo "artifact_sha256=$ART_SHA"; echo "artifact_files=$SCANNED"; echo "app_json_mtime=$ART_MTIME";
   echo "pages=$PAGES"; echo "project=$PROJECT"; echo "version=${VERSION:-auto}"; echo "version_given=$VERSION_GIVEN";
   echo "desc=$DESC"; echo "channel=${CHANNEL:-}"; echo "commit_head=$SHA"; echo "tma=$TMA_VER";
