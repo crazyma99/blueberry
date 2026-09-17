@@ -8,7 +8,11 @@ interface UniUploadRes {
   data: string;
 }
 
-export function createUniUpload(): UploadPort {
+/** 上传默认超时（2026-09-17 补：uni.uploadFile 不传 timeout 时可无限挂起 ⇒ 页面永久停在「上传中…」） */
+export const DEFAULT_UPLOAD_TIMEOUT_MS = 60000;
+
+export function createUniUpload(deps?: { defaultTimeoutMs?: number }): UploadPort {
+  const defaultTimeoutMs = deps?.defaultTimeoutMs ?? DEFAULT_UPLOAD_TIMEOUT_MS;
   let task: { abort?: () => void } | null = null;
   return {
     upload(req: UploadRequest): Promise<Result<UploadResponse>> {
@@ -27,16 +31,18 @@ export function createUniUpload(): UploadPort {
             name: req.name,
             header: req.headers as Record<string, string> | undefined,
             formData: req.formData as Record<string, unknown> | undefined,
-            timeout: req.timeoutMs,
+            timeout: req.timeoutMs ?? defaultTimeoutMs,
             success: (res: UniUploadRes) => {
               settled = true;
               task = null;
               resolve({ ok: true, value: { statusCode: res.statusCode, data: res.data } });
             },
-            fail: () => {
+            fail: (err?: unknown) => {
               settled = true;
               task = null;
-              resolve({ ok: false, reason: "network" });
+              // 超时与普通网络失败区分（页面可给「上传超时，请重试」而非笼统失败）
+              const msg = typeof (err as { errMsg?: unknown } | undefined)?.errMsg === "string" ? String((err as { errMsg: string }).errMsg) : "";
+              resolve({ ok: false, reason: msg.includes("timeout") ? "timeout" : "network" });
             },
           }) as { abort?: () => void } | undefined;
           if (!settled) task = handle ?? null;

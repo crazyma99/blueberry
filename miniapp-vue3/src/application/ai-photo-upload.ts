@@ -73,7 +73,11 @@ export function createAiPhotoUploader(deps: {
       headers: deps.headers(),
     });
     if (!res.ok) {
-      return { ok: false, message: "照片上传失败，请重新选择" };
+      // 超时与普通失败区分（2026-09-17：模拟器/弱网下超时若无提示，用户会以为「卡死」）
+      return {
+        ok: false,
+        message: res.reason === "timeout" ? "上传超时，请重试" : "照片上传失败，请重新选择",
+      };
     }
     return parseUploadResult(res.value.data);
   }

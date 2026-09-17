@@ -153,3 +153,21 @@ describe("platform/weixin/photo-check（T8 S3b 管线）", () => {
     await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
   });
 });
+
+describe("photo-check 超时兜底（2026-09-17：模拟器 canvas 不回调时不至于永久卡在「照片检测中…」）", () => {
+  it("⭐检测实现永不返回（模拟 canvas/VK 卡住）→ 超时后 **fail-open 放行**，不阻塞上传", async () => {
+    // 构造：getImageInfo 永不回调 ⇒ 内层实现挂起
+    (globalThis as { wx?: unknown }).wx = {
+      getImageInfo: () => undefined, // 既不 success 也不 fail
+      createOffscreenCanvas: () => ({ getContext: () => ({}), createImage: () => ({ set src(_v: string) {}, onload: () => undefined }) }),
+    };
+    const r = await createWeixinPhotoCheck({ timeoutMs: 30 }).check("/tmp/a.jpg");
+    expect(r).toEqual({ ok: true, reason: "" });
+  });
+
+  it("正常路径不受影响（未超时即返回真实判定）", async () => {
+    installWx({ pattern: "flat" });
+    const r = await createWeixinPhotoCheck({ timeoutMs: 5000 }).check("/tmp/a.jpg");
+    expect(r.ok).toBe(false); // 常量灰度 → 模糊拦截
+  });
+});

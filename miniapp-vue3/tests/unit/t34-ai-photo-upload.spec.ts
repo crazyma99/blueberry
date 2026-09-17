@@ -1,6 +1,7 @@
 // T8 S3a 测试：选图适配（容器安全/成功/取消）＋上传解析（字符串|对象/成功码 0·200/失败文案/401）＋上传头构造＋用例编排。
 import { beforeEach, describe, expect, it } from "vitest";
 import { createUniPhotoChooser } from "../../src/platform/uni/chooser";
+import { DEFAULT_UPLOAD_TIMEOUT_MS, createUniUpload } from "../../src/platform/uni/upload";
 import {
   buildUploadHeaders,
   createAiPhotoUploader,
@@ -99,5 +100,41 @@ describe("application/ai-photo-upload（T8 S3 上传用例）", () => {
 
   it("常量：单张上限 10MB（旧端 :445）", () => {
     expect(PHOTO_SIZE_LIMIT_BYTES).toBe(10 * 1024 * 1024);
+  });
+});
+
+describe("上传超时兜底（2026-09-17：防「上传中…」永久卡住）", () => {
+  it("适配层：未显式传 timeout 时套用默认 60s；fail(errMsg含 timeout) → reason=timeout", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    (globalThis as { uni?: unknown }).uni = {
+      uploadFile: (o: Record<string, unknown>) => {
+        seen.push(o);
+        (o.fail as (e: unknown) => void)({ errMsg: "uploadFile:fail timeout" });
+        return { abort: () => undefined };
+      },
+    };
+    const r = await createUniUpload().upload({ url: "https://x/u", filePath: "/tmp/a.png", name: "photo" });
+    expect(seen[0].timeout).toBe(DEFAULT_UPLOAD_TIMEOUT_MS);
+    expect(r).toEqual({ ok: false, reason: "timeout" });
+    // 显式传入优先
+    const seen2: Array<Record<string, unknown>> = [];
+    (globalThis as { uni?: unknown }).uni = {
+      uploadFile: (o: Record<string, unknown>) => {
+        seen2.push(o);
+        (o.success as (r: unknown) => void)({ statusCode: 200, data: "{}" });
+        return { abort: () => undefined };
+      },
+    };
+    await createUniUpload().upload({ url: "https://x/u", filePath: "/tmp/a.png", name: "photo", timeoutMs: 1234 });
+    expect(seen2[0].timeout).toBe(1234);
+  });
+
+  it("用例层：端口 timeout → 文案「上传超时，请重试」", async () => {
+    const uploader = createAiPhotoUploader({
+      upload: { upload: async () => ({ ok: false, reason: "timeout" }), cancel: () => undefined },
+      baseUrl: "https://x/",
+      headers: () => ({}),
+    });
+    await expect(uploader.upload("/tmp/a.jpg")).resolves.toEqual({ ok: false, message: "上传超时，请重试" });
   });
 });

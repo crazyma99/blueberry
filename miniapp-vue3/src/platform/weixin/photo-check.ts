@@ -32,7 +32,32 @@ export interface PhotoCheckPort {
   check(filePath: string): Promise<PhotoCheckResult>;
 }
 
-export function createWeixinPhotoCheck(): PhotoCheckPort {
+/** 检测总超时（2026-09-17 补：模拟器/低端机 offscreen canvas 可能不回调 ⇒ 无超时会让页面永久停在「照片检测中…」） */
+export const PHOTO_CHECK_TIMEOUT_MS = 6000;
+
+export function createWeixinPhotoCheck(deps?: { timeoutMs?: number }): PhotoCheckPort {
+  const timeoutMs = deps?.timeoutMs ?? PHOTO_CHECK_TIMEOUT_MS;
+  const raw = createWeixinPhotoCheckInner();
+  return {
+    async check(filePath: string): Promise<PhotoCheckResult> {
+      // ⭐超时兜底：与内层实现赛跑，超时按 **fail-open 放行**（前端检查只是体验拦截，后端校验才是裁决）
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const timeout = new Promise<PhotoCheckResult>((resolve) => {
+        timer = setTimeout(() => {
+          console.warn("[photoCheck] 检测超时，放行上传（fail-open）");
+          resolve({ ok: true, reason: "" });
+        }, timeoutMs);
+      });
+      try {
+        return await Promise.race([raw.check(filePath), timeout]);
+      } finally {
+        if (timer != null) clearTimeout(timer);
+      }
+    },
+  };
+}
+
+function createWeixinPhotoCheckInner(): PhotoCheckPort {
   function getImageInfo(src: string): Promise<{ width: number; height: number }> {
     return new Promise((resolve, reject) => {
       const wx = wxCanvas();
