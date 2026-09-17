@@ -224,6 +224,61 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T3b 剩余**：P1-36 CI 双车道（旧端回归／新端套件分车道，发布 job 受保护不执行）、P1-37 独立 CR（Profile/路径/数据隔离）＋**完整复跑 G1**（frozen 安装→typecheck→全量测试→双平台构建→双 Profile manifest/hash 入册）。T4 真机项（P1-25）仍等主人扫码回执。
 
+## 8.12 P1-26 方案 A 修复执行记录（抖音真机三症状 · 2026-09-17 第三批）
+
+> 依据：`docs/migration/wot-realdevice-investigation.md`（定稿，精确到文件行号的修复清单）；主人拍板**方案 A（平台 UI bridge 兜底）**。
+> 纪律：平台分支全部做成**运行时可判定结构**（vitest 用纯 @vitejs/plugin-vue、不处理 #ifdef）；本次改动**未新增任何 #ifdef**；门面对外合同（props/emits/expose）不变。
+
+### 改动文件清单
+
+| 文件 | 改动 |
+|---|---|
+| `miniapp-vue3/src/ui/ui-platform.ts` | **新增**：运行时平台判定（构建期注入位点 `process.env.UNI_PLATFORM` ＋ 运行时兜底 `uni.getSystemInfoSync().uniPlatform`）＋ `setUiPlatformOverride` 测试钩子；`isToutiaoPlatform()` 为方案 A 分支键 |
+| `miniapp-vue3/src/ui/wot-composables.js` ＋ `.d.ts` | **新增**：useToast/useDialog 构建期桥接（.js 不进 vue-tsc 程序，规避 wot 包内 .ts 触发 TS7053；.d.ts 提供结构化类型） |
+| `miniapp-vue3/src/ui/BaseFeedback.vue` | **重写**：useToast() 函数式驱动（事实源：wd-toast 无 show prop）；抖音分支改 `uni.showToast`/`uni.hideToast` 原生兜底（icon 映射 success/loading/none）；对外 expose `show(text, icon?)/hide()` 不变 |
+| `miniapp-vue3/src/ui/BasePopup.vue` | 新增 `rootPortal` prop（默认 true）透传 wd-popup；**抖音分支门面自绘**：纯 view+fixed 蒙层＋居中容器＋fade 过渡，cancel 单一出口与去重逻辑两条分支共用 |
+| `miniapp-vue3/src/ui/BasePicker.vue` | 新增 `rootPortal` prop（默认 true）透传 wd-picker；**抖音分支门面自绘**：底部面板（取消/标题/确定＋选项列表＋预选草稿），confirm/cancel/clear 合同与 wot 分支完全一致 |
+| `miniapp-vue3/src/pages/_probe/wot-sample.vue` | 对话框改 `useDialog().confirm({title,msg,showClose})` 函数式（resolve=确认、reject=取消/关闭）；挂载点改 `<wd-dialog root-portal :show-close="true">` ＋ `#actions` 作用域插槽（形参 confirm/cancel，wd-dialog.vue:56） |
+| `miniapp-vue3/vitest.config.ts` | plugin-vue 标记 uni 内置模板标签（view/text/image/scroll-view）为原生元素，消除误告警 |
+| `miniapp-vue3/tests/stubs/wot/wd-toast/wd-toast.vue` | 桩改镜像真实注入链（`__TOAST_OPTION__` provide/inject；真实组件本就无 show prop） |
+| `miniapp-vue3/tests/stubs/wot/wd-popup/wd-popup.vue` | 桩补 `rootPortal` prop（真实 types.ts:105）供透传断言 |
+| `miniapp-vue3/tests/stubs/wot/wd-dialog/wd-dialog.vue` | **新增**：镜像 `__MESSAGE_OPTION__` 注入通道（success=confirm resolve／fail=cancel reject，index.ts:124-137） |
+| `miniapp-vue3/tests/components/ui-contract.spec.ts` | 12 条既有合同测试全保留（挂载方式仅按新实现调整），**新增 12 条抖音分支/函数式测试** |
+
+### 新旧合同对照
+
+| 门面 | 旧实现（违规/缺口） | 新实现 | 对外合同 |
+|---|---|---|---|
+| BaseFeedback | `<wd-toast :show>`——show prop 不存在，任何平台都不显示 | 非抖音：useToast() 函数式；抖音：uni.showToast 原生兜底 | expose `show/hide` 不变 |
+| BasePopup | 仅 wd-popup 链；抖音 fixed 失效渲染成文档流块 | 非抖音：wd-popup ＋ rootPortal=true；抖音：自绘 fixed 蒙层＋居中容器 | props 增 `rootPortal`（向后兼容）；`update:show`/`cancel` 不变 |
+| BasePicker | 仅 wd-picker 链；抖音展开收起位置异常 | 非抖音：wd-picker ＋ rootPortal=true；抖音：自绘底部面板 | props 增 `rootPortal`；`confirm/cancel/clear/update:modelValue/update:show` 不变 |
+| 探针页 Dialog | `v-model/content/@confirm/@cancel` 均为不存在的 API，任何平台无响应 | `<wd-dialog root-portal>` 纯挂载点＋useDialog() 函数式＋#actions 作用域插槽 | 探针页仅工具链验证用，不进生产包 |
+
+### 测试与构建结果（本机实测，退出码可复算）
+
+| 命令 | 结果 |
+|---|---|
+| `pnpm exec vitest run` | **110/110，9 文件，exit 0**（此前 98/98；合同测试文件 12 → 24 条） |
+| `pnpm run typecheck` | **exit 0**（.js 桥接生效，wot 包内 .ts 未进 vue-tsc 程序） |
+| `pnpm run build:mp-weixin` | **exit 0** |
+| `pnpm run build:mp-toutiao` | **exit 0** |
+| `pnpm run build:mp-xhs` | **exit 0** |
+
+产物抽查（只读）：mp-toutiao `ui/BaseFeedback.js` 含 `index.showToast` 兜底分支；`ui/ui-platform.js` 构建期常量已折叠为 `"mp-toutiao"`（mp-weixin 产物为 `"mp-weixin"`）＋运行时 `getSystemInfoSync().uniPlatform` 兜底；`ui/BasePopup.ttml/.ttss` 含 `base-popup-native` 自绘节点；探针页产物含 useDialog `confirm()` 与 actions 作用域插槽。**未上传任何平台。**
+
+### 调查报告 6 条未验证项闭环情况
+
+| # | 未验证项 | 本次处置 |
+|---|---|---|
+| 1 | 抖音宿主节点导致 fixed 相对组件定位的运行时细节 | **不依赖**（方案 A 自绘节点在页面级，不经 wot 组件链）；真机回归仍待主人扫码 |
+| 2 | 抖音基础库是否原生支持 `<root-portal>` | **不依赖**（方案 A 绕过）；未闭环、也不阻塞 |
+| 3 | 候选 E（放开 virtualHost）真机效果与副作用 | **未采纳**（主人拍板方案 A）；未闭环 |
+| 4 | wd-toast 改对 API 后抖音端 fixed 定位是否正常 | **部分闭环**：抖音分支直接走 uni.showToast，绕开 wd-toast 定位链路；微信分支改对 useToast API（工具侧闭环，真机未验） |
+| 5 | uni.showToast 在 tma preview 真机的实际表现 | **工具侧闭环**（类型 uni.d.ts:11178/11228 ＋ 运行时转发链 ＋ 构建产物含该调用）；**真机表现仍待主人扫码回执** |
+| 6 | import useDialog 后 vue-tsc 是否复现 TS7053 | **已闭环**：经 `wot-composables.js`（.js 不进 TS 程序）＋ `.d.ts` 结构化声明，typecheck **exit 0**，未复现 |
+
+**剩余待真机验证**（需主人抖音扫码）：自绘 popup/picker 的 fixed 定位与开合、uni.showToast 原生兜底表现、useDialog 弹窗在抖音端的渲染与回调——工具侧全部就绪，属第 1/4/5 项的真机收口。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）

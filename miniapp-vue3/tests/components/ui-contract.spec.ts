@@ -1,18 +1,27 @@
 // P1-24 门面测试：按钮禁用/忙态不重复提交；弹层取消；picker 选中/取消/清空；反馈受控显示。
+// P1-26 方案 A（migration §8.12）新增：抖音运行时分支测试——popup 自绘蒙层开合/cancel 单一出口、
+// picker 自绘面板确认/取消/清空、toast uni.showToast 兜底、dialog useDialog 函数式驱动。
 // 桩 emit 名与真实 Wot 源码 grep 事实一致（tests/stubs/wot/*），测的是本项目门面合同。
 // 门面模板经 easycom 使用 wd-*；vitest 无 easycom，故以 global.components 注册桩。
-import { describe, expect, it } from "vitest";
+// 平台分支纪律：vitest 用纯 @vitejs/plugin-vue、不处理 #ifdef ⇒ 分支做成运行时判定
+// （src/ui/ui-platform.ts 的 setUiPlatformOverride 显式覆盖两条分支）。
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { defineComponent, h } from "vue";
 import { mount } from "@vue/test-utils";
 import BaseButton from "../../src/ui/BaseButton.vue";
 import BaseField from "../../src/ui/BaseField.vue";
 import BasePopup from "../../src/ui/BasePopup.vue";
 import BasePicker from "../../src/ui/BasePicker.vue";
 import BaseFeedback from "../../src/ui/BaseFeedback.vue";
+import { setUiPlatformOverride } from "../../src/ui/ui-platform";
+import { useDialog } from "../../src/ui/wot-composables";
+import type { WotDialogApi } from "../../src/ui/wot-composables";
 import StubButton from "../stubs/wot/wd-button/wd-button.vue";
 import StubInput from "../stubs/wot/wd-input/wd-input.vue";
 import StubPopup from "../stubs/wot/wd-popup/wd-popup.vue";
 import StubPicker from "../stubs/wot/wd-picker/wd-picker.vue";
 import StubToast from "../stubs/wot/wd-toast/wd-toast.vue";
+import StubDialog from "../stubs/wot/wd-dialog/wd-dialog.vue";
 
 const globalWith = {
   components: {
@@ -21,8 +30,14 @@ const globalWith = {
     "wd-popup": StubPopup,
     "wd-picker": StubPicker,
     "wd-toast": StubToast,
+    "wd-dialog": StubDialog,
   },
 };
+
+afterEach(() => {
+  setUiPlatformOverride(null);
+  vi.unstubAllGlobals();
+});
 
 describe("BaseButton（P1-24 禁用/忙态不重复提交）", () => {
   it("正常态 click 放行一次", async () => {
@@ -72,6 +87,11 @@ describe("BasePopup（取消语义单一出口）", () => {
     expect(w.emitted("cancel")?.length).toBe(1);
     expect(w.emitted("update:show")?.[0]).toEqual([false]);
   });
+  it("非抖音端走 wot 链且 rootPortal 默认 true 透传（对抖音无害 no-op、微信/支付宝/H5 生效）", () => {
+    const w = mount(BasePopup, { props: { show: true }, global: globalWith });
+    expect(w.findComponent(StubPopup).props("rootPortal")).toBe(true);
+    expect(w.find(".base-popup-native").exists()).toBe(false);
+  });
 });
 
 describe("BasePicker（选中/取消/清空）", () => {
@@ -105,7 +125,7 @@ describe("BasePicker（选中/取消/清空）", () => {
   });
 });
 
-describe("BaseFeedback（受控 toast）", () => {
+describe("BaseFeedback（非抖音端：useToast 函数式驱动，wd-toast 无 show prop）", () => {
   it("show 后渲染文案（含图片失败态用法），hide 后消失", async () => {
     const w = mount(BaseFeedback, { global: globalWith });
     expect(w.findComponent(StubToast).find(".stub-wd-toast").exists()).toBe(false);
@@ -115,5 +135,147 @@ describe("BaseFeedback（受控 toast）", () => {
     (w.vm as unknown as { hide: () => void }).hide();
     await w.vm.$nextTick();
     expect(w.findComponent(StubToast).find(".stub-wd-toast").exists()).toBe(false);
+  });
+  it("非抖音分支不触碰 uni.showToast", async () => {
+    const showToast = vi.fn();
+    vi.stubGlobal("uni", { showToast, hideToast: vi.fn() });
+    const w = mount(BaseFeedback, { global: globalWith });
+    (w.vm as unknown as { show: (t: string) => void }).show("轻提示");
+    await w.vm.$nextTick();
+    expect(showToast).not.toHaveBeenCalled();
+    expect(w.findComponent(StubToast).text()).toContain("轻提示");
+  });
+});
+
+describe("抖音分支：BaseFeedback uni.showToast 原生兜底", () => {
+  it("show → uni.showToast（icon 映射 success/loading/none），hide → uni.hideToast", async () => {
+    setUiPlatformOverride("mp-toutiao");
+    const showToast = vi.fn();
+    const hideToast = vi.fn();
+    vi.stubGlobal("uni", { showToast, hideToast });
+    const w = mount(BaseFeedback, { global: globalWith });
+    const api = w.vm as unknown as { show: (t: string, i?: string) => void; hide: () => void };
+
+    api.show("提交成功", "success");
+    expect(showToast).toHaveBeenLastCalledWith({ title: "提交成功", icon: "success", duration: 1500 });
+    api.show("加载中", "loading");
+    expect(showToast).toHaveBeenLastCalledWith({ title: "加载中", icon: "loading", duration: 1500 });
+    api.show("图片加载失败", "error");
+    expect(showToast).toHaveBeenLastCalledWith({ title: "图片加载失败", icon: "none", duration: 1500 });
+
+    api.hide();
+    expect(hideToast).toHaveBeenCalledTimes(1);
+    // 抖音分支不经过 wd-toast 注入链
+    expect(w.findComponent(StubToast).find(".stub-wd-toast").exists()).toBe(false);
+  });
+});
+
+describe("抖音分支：BasePopup 门面自绘（蒙层开合 / cancel 单一出口）", () => {
+  it("show=true 渲染自绘蒙层＋居中容器，点击蒙层 → cancel 只发一次 ＋ update:show false", async () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BasePopup, { props: { show: true, title: "弹层标题" }, global: globalWith });
+    expect(w.find(".base-popup-native").exists()).toBe(true);
+    expect(w.find(".base-popup-native__mask").exists()).toBe(true);
+    expect(w.text()).toContain("弹层标题");
+
+    await w.find(".base-popup-native__mask").trigger("click");
+    expect(w.emitted("cancel")?.length).toBe(1);
+    expect(w.emitted("update:show")?.[0]).toEqual([false]);
+  });
+  it("closable 时右上角关闭按钮存在，点击同样收敛到唯一 cancel 出口", async () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BasePopup, { props: { show: true, closable: true }, global: globalWith });
+    const closeBtn = w.find(".base-popup-native__close");
+    expect(closeBtn.exists()).toBe(true);
+    await closeBtn.trigger("click");
+    expect(w.emitted("cancel")?.length).toBe(1);
+    expect(w.emitted("update:show")?.[0]).toEqual([false]);
+  });
+  it("show=false 时不渲染任何自绘节点（也不走 wot 链）", () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BasePopup, { props: { show: false }, global: globalWith });
+    expect(w.find(".base-popup-native").exists()).toBe(false);
+    expect(w.findComponent(StubPopup).exists()).toBe(false);
+  });
+});
+
+describe("抖音分支：BasePicker 门面自绘底部面板", () => {
+  const options = [
+    { label: "红河水乡店", value: 1 },
+    { label: "昆明店", value: 2 },
+  ];
+  it("打开时按受控值预选，点选后确认 → confirm 纯值数组 ＋ update:show false", async () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BasePicker, { props: { show: true, options, modelValue: [1], title: "选择门店" }, global: globalWith });
+    const items = w.findAll(".base-picker-native__item");
+    expect(items.length).toBe(2);
+    expect(items[0].classes()).toContain("base-picker-native__item--active");
+
+    await items[1].trigger("click");
+    expect(w.findAll(".base-picker-native__item")[1].classes()).toContain("base-picker-native__item--active");
+    await w.find(".base-picker-native__btn--ok").trigger("click");
+    expect(w.emitted("confirm")?.[0]).toEqual([[2]]);
+    expect(w.emitted("update:show")?.[0]).toEqual([false]);
+  });
+  it("点击取消 → cancel ＋ update:show false", async () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BasePicker, { props: { show: true, options, modelValue: [] }, global: globalWith });
+    await w.find(".base-picker-native__btn").trigger("click");
+    expect(w.emitted("cancel")?.length).toBe(1);
+    expect(w.emitted("update:show")?.[0]).toEqual([false]);
+  });
+  it("点击蒙层也走同一 cancel 出口（只发一次）", async () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BasePicker, { props: { show: true, options, modelValue: [] }, global: globalWith });
+    await w.find(".base-picker-native__mask").trigger("click");
+    expect(w.emitted("cancel")?.length).toBe(1);
+    expect(w.emitted("update:show")?.[0]).toEqual([false]);
+  });
+  it("clearable 且有值 → 清空入口仍在（自绘分支不改清空合同）", async () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BasePicker, { props: { show: true, options, modelValue: [2], clearable: true }, global: globalWith });
+    const clearBtn = w.find(".base-picker__clear");
+    expect(clearBtn.exists()).toBe(true);
+    await clearBtn.trigger("click");
+    expect(w.emitted("clear")?.length).toBe(1);
+    expect(w.emitted("update:modelValue")?.[0]).toEqual([[]]);
+  });
+});
+
+describe("Dialog：useDialog 函数式驱动（2.3.2 唯一正确通道）", () => {
+  function makeHost(): { host: ReturnType<typeof defineComponent>; api: () => WotDialogApi } {
+    let dialog!: WotDialogApi;
+    const host = defineComponent({
+      setup() {
+        dialog = useDialog();
+        return () => h("div", [h(StubDialog)]);
+      },
+    });
+    return { host, api: () => dialog };
+  }
+  it("confirm promise：点确定 resolve、点取消 reject", async () => {
+    const { host, api } = makeHost();
+    const w = mount(host, { global: globalWith });
+
+    const ok = api().confirm({ title: "确认操作", msg: "内容" });
+    await w.vm.$nextTick();
+    await w.find(".stub-dialog-confirm").trigger("click");
+    await expect(ok).resolves.toEqual({ action: "confirm" });
+
+    const no = api().confirm({ title: "确认操作", msg: "内容" });
+    await w.vm.$nextTick();
+    await w.find(".stub-dialog-cancel").trigger("click");
+    await expect(no).rejects.toEqual({ action: "cancel" });
+  });
+  it("关闭后 dialogState.show 复位（组件自闭环，无需外部 v-model）", async () => {
+    const { host, api } = makeHost();
+    const w = mount(host, { global: globalWith });
+    const p = api().confirm({ title: "确认操作", msg: "内容" });
+    await w.vm.$nextTick();
+    expect(w.find(".stub-wd-dialog").exists()).toBe(true);
+    await w.find(".stub-dialog-confirm").trigger("click");
+    await w.vm.$nextTick();
+    expect(w.find(".stub-wd-dialog").exists()).toBe(false);
+    await expect(p).resolves.toBeTruthy();
   });
 });

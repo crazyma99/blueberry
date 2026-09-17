@@ -1,12 +1,17 @@
 <script setup lang="ts">
 // Wot 资格样页（P1-25）：Button/Input/Popup/Picker/Toast/Dialog/Cell＋图片失败态＋长标题。
-// 仅用于工具链/真机资格验证，不进入最终生产包（P1-08 口径）。
+// 仅用于工具链/真机资格验证，不进入最终生产包（P0-08 口径）。
+// 方案 A（migration §8.12）：对话框改 useDialog() 函数式驱动——wd-dialog 2.3.2 无任何 emit、
+// 不消费业务 props（仅 selector/root-portal/custom-class），v-model/content/@confirm/@cancel 均不存在；
+// 页面只挂载 <wd-dialog root-portal :show-close="true" /> 纯挂载点，actions 为作用域插槽
+// （形参 confirm/cancel/close，wd-dialog.vue:56）。
 import { ref } from "vue";
 import BaseButton from "../../ui/BaseButton.vue";
 import BaseField from "../../ui/BaseField.vue";
 import BasePopup from "../../ui/BasePopup.vue";
 import BasePicker from "../../ui/BasePicker.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
+import { useDialog } from "../../ui/wot-composables";
 import { formatAlbumTitle } from "../../domain/album-title";
 import { tokens } from "../../generated/tokens";
 
@@ -14,9 +19,12 @@ const phone = ref("");
 const popupShow = ref(false);
 const pickerShow = ref(false);
 const picked = ref<(string | number)[]>([]);
-const dialogShow = ref(false);
+const dialogResult = ref("（未操作）");
 const feedback = ref<InstanceType<typeof BaseFeedback> | null>(null);
 const busy = ref(false);
+
+// 与页面挂载点 <wd-dialog /> 同页 provide/inject 配对（wd-dialog/index.ts:34 useDialog）
+const dialog = useDialog();
 
 // 长标题（8 码点，含 emoji）→ 码点截断展示
 const longTitle = formatAlbumTitle("😀红河水乡旗袍汉服民族服客片合集第八季");
@@ -36,6 +44,20 @@ function onSubmit() {
 
 function onImageError() {
   feedback.value?.show("图片加载失败", "error");
+}
+
+// 函数式对话框：confirm 路径 resolve；cancel/modal/close 路径 reject（wd-dialog/index.ts:124-137）
+async function openDialog() {
+  try {
+    await dialog.confirm({
+      title: "确认操作",
+      msg: "这是对话框内容",
+      showClose: true,
+    });
+    dialogResult.value = "已确认";
+  } catch (err) {
+    dialogResult.value = "已取消/关闭";
+  }
 }
 </script>
 
@@ -82,10 +104,19 @@ function onImageError() {
       <text class="probe-title">Toast / Dialog / Cell</text>
       <view class="probe-row">
         <BaseButton label="轻提示" @click="feedback?.show('轻提示文案', 'success')" />
-        <BaseButton label="对话框" @click="dialogShow = true" />
+        <BaseButton label="对话框" @click="openDialog" />
       </view>
       <wd-cell title="单元格标题" value="右侧内容" border />
-      <wd-dialog v-model="dialogShow" title="确认操作" content="这是对话框内容" @confirm="dialogShow = false" @cancel="dialogShow = false" />
+      <text class="probe-value">对话框结果：{{ dialogResult }}</text>
+      <!-- 纯挂载点：状态由 useDialog() provide 驱动；自定义关闭按钮走 #actions 作用域插槽 -->
+      <wd-dialog root-portal :show-close="true">
+        <template #actions="{ confirm, cancel }">
+          <view class="probe-dialog-actions">
+            <view class="probe-dialog-btn" @click="cancel()">取消</view>
+            <view class="probe-dialog-btn probe-dialog-btn--ok" @click="confirm()">确定</view>
+          </view>
+        </template>
+      </wd-dialog>
     </view>
 
     <view class="probe-section">
@@ -148,5 +179,22 @@ function onImageError() {
   padding: 16rpx 24rpx;
   border-radius: v-bind("tokens.component.popupRadiusRpx + 'rpx'");
   font-size: 26rpx;
+}
+.probe-dialog-actions {
+  display: flex;
+  gap: 16rpx;
+}
+.probe-dialog-btn {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  border-radius: v-bind("tokens.component.popupRadiusRpx + 'rpx'");
+  background: v-bind("tokens.semantic.colorDivider");
+  color: v-bind("tokens.semantic.colorTextPrimary");
+  font-size: v-bind("tokens.semantic.fontSizeBody");
+}
+.probe-dialog-btn--ok {
+  background: v-bind("tokens.semantic.colorAction");
+  color: v-bind("tokens.semantic.colorActionText");
 }
 </style>
