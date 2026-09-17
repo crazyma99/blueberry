@@ -1,0 +1,74 @@
+// 支付门闩状态机 ＋ 业务错误码冻结（领域规则，纯 TS）
+// 移植来源：旧端 src/utils/payGuard.uts（2026-09-14 统一支付门闩）
+// P1-09 冻结：HTTP 业务码 4001 → INSUFFICIENT_CREDITS（保留 businessCode/message/requestId）；
+//           普通 BUSINESS 错误不得拉起支付。
+
+export type PayGuardState = "idle" | "paying" | "confirming";
+
+export class PayGuard {
+  private state: PayGuardState = "idle";
+  private lastTriggerAt = 0;
+  private minIntervalMs = 800;
+  private now: () => number;
+
+  /** minIntervalMs<=0 或缺省时回落 800；now 可注入（测试用固定时钟） */
+  constructor(minIntervalMs?: number, now?: () => number) {
+    if (minIntervalMs != null && minIntervalMs > 0) {
+      this.minIntervalMs = minIntervalMs;
+    }
+    this.now = now ?? (() => Date.now());
+  }
+
+  /** 尝试进入支付流程：空闲且超过防抖间隔才放行 */
+  tryBegin(): boolean {
+    if (this.state !== "idle") return false;
+    const t = this.now();
+    if (t - this.lastTriggerAt < this.minIntervalMs) return false;
+    this.lastTriggerAt = t;
+    this.state = "paying";
+    return true;
+  }
+
+  /** 支付面板已拉起：进入「到账确认中」 */
+  toConfirming(): void {
+    this.state = "confirming";
+  }
+
+  /** 结束本次支付流程（成功/失败/取消/超时后调用） */
+  end(): void {
+    this.state = "idle";
+  }
+
+  isBusy(): boolean {
+    return this.state !== "idle";
+  }
+
+  getState(): PayGuardState {
+    return this.state;
+  }
+}
+
+export type BusinessErrorKind = "INSUFFICIENT_CREDITS" | "BUSINESS" | "UNKNOWN";
+
+export interface BusinessError {
+  kind: BusinessErrorKind;
+  businessCode: number | null;
+  message: string;
+  requestId: string | null;
+}
+
+/** HTTP 业务码 → 领域错误：4001 必须映射 INSUFFICIENT_CREDITS，其余数字码 BUSINESS，缺失 UNKNOWN */
+export function mapBusinessCode(code: unknown, message = "", requestId: string | null = null): BusinessError {
+  if (code === 4001) {
+    return { kind: "INSUFFICIENT_CREDITS", businessCode: 4001, message, requestId };
+  }
+  if (typeof code === "number") {
+    return { kind: "BUSINESS", businessCode: code, message, requestId };
+  }
+  return { kind: "UNKNOWN", businessCode: null, message, requestId };
+}
+
+/** 仅 INSUFFICIENT_CREDITS 允许走充值支付路径；普通 BUSINESS 错误不得拉起支付 */
+export function mayTriggerRecharge(err: BusinessError): boolean {
+  return err.kind === "INSUFFICIENT_CREDITS";
+}

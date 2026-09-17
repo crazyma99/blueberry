@@ -143,6 +143,23 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 - **P1-03 R 目录文档集 ✅**：`miniapp-vue3/docs/migration/` 六件齐——`baseline.json`（机器可读基线：sourceCommit/旧端版本与哈希/后端双环境 SHA/模板 commit/工具链冻结值/账号证据/D1–D5 SHA-256，JSON 校验通过）、`inventory.md`（17 路由含抖音 Profile 列、15 组件、20 工具、34 wrapper、getalbum 退役）、`contracts.md`（4001→INSUFFICIENT_CREDITS 等已冻结规则＋wrapper 台账占位随 T5–T9 补实）、`parity.md`（17 页×15 组件 not_started）、`hotfix-sync.md`（账本建立）、`deviations.md`（6 条偏差含本轮 vitest 决策与测试 bug 修复留痕）。**基线转换只搬文档事实，未搬旧 Vue3 骨架**。
 - **T1 状态：P1-01~08 全部完成**；下一轮进入 **T2 领域规则与抽象端口**（P1-09~13）。
 
+
+## 8.7 T2 执行记录（P1-09~13，2026-09-17）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| P1-09 错误码冻结 | `payment-state.ts`：`mapBusinessCode` **4001→INSUFFICIENT_CREDITS**（保留 businessCode/message/requestId）、其余数字码→BUSINESS、缺失→UNKNOWN；`mayTriggerRecharge` **仅 INSUFFICIENT_CREDITS 放行** | ✅ 测试锁定 |
+| P1-10 先红后绿 | 4 个 spec 先落（品牌馆严格 boolean 14 用例／标题 6·7 码点＋emoji 代理对 6 用例／PayGuard 状态机 5 用例／错误码 3 用例）→ **无实现时 RED_EXIT=1（3 处 Failed to resolve import）** → 补实现后绿 | ✅ 纪律达成 |
+| P1-11 纯 TS | `src/domain/`（brand-hub／album-title／payment-state）＋`src/ports/`（context／http／identity／payments／media／storage／clock 七端口）；**grep 禁导核查 PURITY_OK**（无 Vue/Pinia/Wot/uni/平台 SDK） | ✅ |
+| P1-12 闭集测试 | engine（legacy/vue3 2 值）／platform（mp-weixin·mp-toutiao·mp-xhs 3 值）／env（develop·trial·release 3 值）未知即拒；必需能力 unsupported/unknown 阻断；可选降级**空/空白批准文案拒绝** | ✅ |
+| P1-13 汇总验证 | vitest **50/50 exit 0**（5 文件：4 unit＋1 pipeline）；typecheck **exit 0** | ✅ |
+
+**移植忠实性**：brand-hub 移植旧 `pageConfig.uts`（code===200＋数组＋type===brand_hub＋config 非空＋JSON 严格 enabled===true）；album-title 移植旧 `text.uts`（码点计数、代理对算一字符、>6 截 6＋...）；PayGuard 移植旧 `payGuard.uts`（idle→paying→confirming、800ms 防抖、可注入时钟）。**未迁移页面/组件**，本阶段只有领域规则与端口合同。
+
+**测试自身留痕**：首跑抓出 spec 一处字符串笔误（`{'"enabled"':true}"` 多余引号致 esbuild transform 失败）→ 修正后 50/50。
+
+**T2 状态：P1-09~13 全部完成**；下一轮进入 **T3a Profile 生成前置（P1-14~19）**。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
