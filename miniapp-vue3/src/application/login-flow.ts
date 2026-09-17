@@ -7,6 +7,7 @@
 // ⚠️ 有意偏差（已声明）：旧端登录成功后 flushPendingRequests/flushPendingUploads——新端由
 // authCoordinator.completeLogin 唤醒全部 waitForLogin 等待者（P2-03 队列语义），无需手动 flush。
 import type { RequestContext, Result } from "../ports/context";
+import { createUniLoginCode, type LoginCodePort } from "../platform/uni/login";
 import type { Platform } from "../ports/context";
 import type { AuthCoordinator } from "./auth-coordinator";
 import type { WxUserInfoLocal, UserInfoStore } from "./user-info-store";
@@ -31,15 +32,14 @@ export function createPhoneLoginFlow(deps: {
   context: () => RequestContext;
   platform: Platform;
   profileKey: string;
+  /** P4-12：平台取 code 必须经端口（默认 `platform/uni/login`），不得在本层直调 `uni.login` */
+  loginCode?: LoginCodePort;
 }) {
   async function runPhoneLogin(phoneCode: string): Promise<PhoneLoginResult> {
     try {
       // step 1: 静默登录拿 wx code（旧端 :36-41；容器无 uni.login 时安全失败）
-      let wxCode = "";
-      if (typeof uni !== "undefined" && typeof uni.login === "function") {
-        const loginRes = (await uni.login({ provider: "weixin" })) as { code?: string };
-        wxCode = typeof loginRes?.code === "string" ? loginRes.code : "";
-      }
+      // ⭐P4-12：改经 `LoginCodePort`（`platform/uni/login.ts`）——平台 API 只允许出现在 `src/platform/**`
+      const wxCode = (await (deps.loginCode ?? createUniLoginCode()).request()) ?? "";
       if (!wxCode) {
         return { ok: false, phoneHasFullProfile: false, errorKind: "login" };
       }
