@@ -13,7 +13,10 @@
 
 | 文档 | 作用 |
 |---|---|
-| `docs/uniapp-vue3-migration-phases.md`（仓库根 docs） | **验收条目唯一来源**（Phase 2：P2-xx；Phase 3：P3-xx）；勾选必须附证据 |
+| `docs/uniapp-vue3-migration-phases.md`（仓库根 docs） | **验收条目唯一来源**（P0/P1/P2/P3/P4/P5-x）；勾选必须附证据 |
+| `g3-acceptance.md` | **G3（Phase 3 出口）对账**：四条验收命令＋「17 路由/三池/买断/分享」＋未达成项 |
+| `device-acceptance-checklist.md` | **微信真机自验清单**（当前唯一卡口的可执行表） |
+| `phase4-prep.md`＋`platform-capability-matrix.md` | Phase 4 准备件（范围/缺口/能力矩阵草表） |
 | `miniapp-vue3/docs/migration/parity.md` | 17 页 × 15 组件去向台账（ported／not_started） |
 | `miniapp-vue3/docs/migration/contracts.md` | 端点合同冻结表（含 Phase3 credits／AI 端点） |
 | `miniapp-vue3/docs/migration/deviations.md` | 有意偏差登记（已 8 条） |
@@ -28,18 +31,34 @@
 - **T8 AI 试衣主体**：`aiTryOn`／`aiTryOnResult`／`aiTryOnHistory` 三页（1409/196/344 级）＋`ai-recommend-flow` 之外的全套适配（上传端口、照片质量管线、VK 人脸、截屏保护、订阅消息、分享 JPG 缩略、图片预热）＋`GenerationProgress` 等组件（**组件台账 14/15**）
 - 测试：50 文件、**351 passed／3 skipped**（skipped 为 gated provider 只读核对）
 
-## 4. 在途与下一步（2026-09-17 更新）
+## 4. 在途与下一步（2026-09-17 第二轮刷新）
 
-| 项 | 状态 | 下一步 |
+### 当前卡口：**只剩微信真机证据**
+| 待验 | 清单 | 谁做 |
 |---|---|---|
-| **T9b 推荐三页** | ✅ **已完成**（`aiRecommend` 737／`aiRecommendLoading` 584／`aiRecommendResult` 518；P3-16～19 勾选） | — |
-| `P3-20` 页级场景测试 ＋ **T9b 独立 CR** | 🟡 CR 在途；内核/静态层已覆盖（`t44` 连点·复用·失败不重发·分类；`t45` 禁自建轮询·分数口径·`#ifdef` 单块；`t46` 渲染与脏数据） | CR 结论回来后按 🔴 修＋补页级场景（401/4001/超时/弱网/旧响应覆盖） |
-| **T8 收口** | 🟡 主体完成；`P3-11` 真机、`P3-15`（真机＋**T8 独立 CR**）未达成 | 派 T8 独立 CR；真机由**主人自验** |
-| **G3 验收** | 🟡 **本地套件通过**（四条命令全绿、17 条业务路由覆盖）；真机与两项 CR 未完成 ⇒ **未标完全通过**，见 `g3-acceptance.md` | 补 CR 与真机证据后复检 |
-| G2 复核 🟡 | ②✅（share 契约已入 `tests/contracts/`）；①⏳ | ①`aiTryOnResult` 约 90 行 wx 管线（`downloadFile`/`saveImageToPhotosAlbum`/`authorize`）下沉 `platform/uni/*`——独立小批次 |
-| 全仓 AI 页注册 | ✅ 六页仅微信（产物 18/12 页实证） | 抖音仍不注册（主人拍板「抖音无 AI 功能」） |
+| `P3-11` 保存/买断、`P3-15` 纵切、`P3-13` 分享三分支、T9b 同步扣费、`P0-11` 基准 | **`device-acceptance-checklist.md`**（逐条「操作步骤／预期结果／记录项」，照做即可） | **主人或测试同学** |
+| 抖音真机（`P4-14`） | 需先解决 **AppID 占位**（真机出码必须走 `build-target` 管线） | 主人提供 AppID |
 
-**纪律提醒**：`P3-*` 的勾选一律以 `phases.md` 为唯一来源，勾选必须附证据；`g3-acceptance.md` 是 Phase 3 出口对账，**未达成项不得口头通过**。
+### 台账（`phases.md` 为唯一来源）
+| 阶段 | 勾选 | 未勾的都是什么 |
+|---|---|---|
+| Phase 0 | 12/15 | `P0-10` 留档、`P0-11` 真机基准、`P0-12` 待主人书面确认 |
+| Phase 1 | 26/37 | 11 条需真机/CI/工具证据（`P1-06/07/25/26/27/28/33/34/35/36/37`） |
+| Phase 2 | 21/23 | `P2-15/16` 真机 |
+| Phase 3 | 19/20 | **`P3-15` 微信真机** |
+| Phase 4/5 | 0/40 | **未开工**（门禁＝G3 通过） |
+| 合计 | **79/135** | — |
+
+### Phase 4 准备件（已备、**未开工**，勿误解为 P4 已勾）
+- `phase4-prep.md`：范围（抖音＝客片展示版 11 页/3 tab、AI 六页不注册、零支付）＋产物实证＋P4-01～17 缺口对照＋**三项外部前置**
+- `platform-capability-matrix.md`：**P4-10 草表**（13 能力×2 端，凡未真机验证记 `unknown`）
+- `scan-platform-usage.mjs`＋spec：**P4-12 规则**（敏感平台 API 仅允许 `src/{platform,ui,generated}/**` 或**显式登记例外**；不对 bundle 盲 grep）
+- `verify-target.mjs` 扩展＋spec：**P4-13**（产物级 `forbiddenRoutes`／抖音 `app.ttss` 指纹／appid 占位 `warnings`）
+
+### 外部前置（需主人/后端/运营）
+1. `P0-12`／`P4-01` 书面口径（跨平台账号·手机号·余额·买断能否共用；不确定则保持 provider 隔离）
+2. 各平台 **AppID**/权限/类目/支付资格证据（抖音现为 `testAppId` 占位）
+3. 各平台后台**合法域名**（request/upload/download、H5 CORS、COS 权限）（`P4-06`）
 
 ## 5. 踩坑留痕（**务必先读，能省数小时**）
 
