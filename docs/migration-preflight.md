@@ -160,6 +160,22 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T2 状态：P1-09~13 全部完成**；下一轮进入 **T3a Profile 生成前置（P1-14~19）**。
 
+
+## 8.8 T3a 执行记录（P1-14~19，2026-09-17）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| P1-14 旧字段对齐 | `scripts/profile-schema.mjs`：14 个 legacy 字段全量必需；平台 appid **按目标构建必填、不回落微信**（mp-weixin 校验 `wx`16hex／mp-toutiao 必填校验 `tt`16alnum／mp-xhs 必填） | ✅ 测试锁定 |
+| P1-15 env 语义 | `API_BASE_URL`＝**release 地址**；trial/develop 受控映射 `https://crazyma99.xyz/`；**未知 environment 拒绝**（production/prod 实测拒绝，不落生产也不默认 trial） | ✅ |
+| P1-16 失败用例 | 缺 APP_CODE／缺目标 appid／非法 host（evil.example.com 拒）／路径穿越 PROJECT_KEY（`../evil` 拒，`^[a-z][a-z0-9-]*$`）／注入表达式（`` ` ``／`$(`／`${` 三形态拒）——parseProfileText 与 validateProfile 双层拦截 | ✅ |
+| P1-17 幂等与隔离 | `scripts/generate-profile.mjs`：**A→B→A 字节一致＋digest 稳定**（sha256 规范化 JSON）；**只写 projectRoot/generated/**、sourceRoot sentinel 实测未动；合成 AppID 仅 fixtures（`wx0000…000a`/`tt0000…000a`）不入真实上传 | ✅ |
+| P1-18 结构化生成 | 生成 `generated/profile.json`＋`generated/profile.config.ts`（含 digest 注释）；**无宽正则改源码**；`docs/migration/profile-map.json` 17 字段（14 legacy＋3 平台 appid）逐条登记消费者与测试归属 | ✅ |
+| P1-19 汇总 | vitest **62/62 exit 0**（6 文件）＋ typecheck **exit 0** ＋ `build:mp-weixin` DONE ＋ `node --check` 两 mjs SYNTAX_OK | ✅ |
+
+**NormalizedProfile 字段（含 2026-09-17 拍板新增）**：14 legacy ＋ platform/environment/appid ＋ `apiBases`（三环境）＋ **`pageRegistry`**（微信 17／抖音 11）＋ **`features`**（mineMenu 微信 2 项·抖音仅 favorites；mineHintText；navStyle 微信 custom·抖音 default；tabBarCustom）。抖音侧注册表与功能开关自此**由 Profile 生成器产出**，业务代码不写平台判断。
+
+**T3a 状态：P1-14~19 全部完成**；**Phase 1 剩余：T4 Token 与 UI 门面（P1-20 起）＋ T3b 完整构建集成**。T4 需装 Wot UI 2.3.2＋Sass 锁版实编译（SPEC §6.4 纪律），属下一轮。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）

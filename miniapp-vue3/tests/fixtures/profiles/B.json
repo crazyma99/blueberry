@@ -1,0 +1,17 @@
+{
+  "PROJECT_KEY": "profile-b",
+  "PACKAGE_NAME": "profileb",
+  "MANIFEST_NAME": "ProfileB",
+  "DESCRIPTION": "合成配置B",
+  "MP_WEIXIN_APPID": "wx000000000000000b",
+  "MP_TOUTIAO_APPID": "tt000000000000000b",
+  "NAVIGATION_TITLE": "合成B",
+  "BRAND_NAME": "合成品牌B",
+  "COPYRIGHT_TEXT": "Copyright B",
+  "CONTACT_PHONE_TEXT": "11111111111",
+  "CONTACT_QR_SRC": "https://www.lanmei66.cloud/qr-b.png",
+  "PRICE_FALLBACK_TITLE": "价目B",
+  "API_BASE_URL": "https://lanmei66.cloud/",
+  "APP_CODE": "profileB",
+  "MINI_APP_NAME": "合成B SKILL"
+}

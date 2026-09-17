@@ -1,0 +1,17 @@
+{
+  "PROJECT_KEY": "profile-a",
+  "PACKAGE_NAME": "profilea",
+  "MANIFEST_NAME": "ProfileA",
+  "DESCRIPTION": "合成配置A",
+  "MP_WEIXIN_APPID": "wx000000000000000a",
+  "MP_TOUTIAO_APPID": "tt000000000000000a",
+  "NAVIGATION_TITLE": "合成A",
+  "BRAND_NAME": "合成品牌A",
+  "COPYRIGHT_TEXT": "Copyright A",
+  "CONTACT_PHONE_TEXT": "00000000000",
+  "CONTACT_QR_SRC": "https://www.lanmei66.cloud/qr-a.png",
+  "PRICE_FALLBACK_TITLE": "价目A",
+  "API_BASE_URL": "https://lanmei66.cloud/",
+  "APP_CODE": "profileA",
+  "MINI_APP_NAME": "合成A SKILL"
+}

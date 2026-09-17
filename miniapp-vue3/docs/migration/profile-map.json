@@ -1,0 +1,113 @@
+{
+  "_comment": "P1-18 字段→消费者映射（不暗中弃字段）：每个 legacy 输入的输出目标与测试",
+  "fields": {
+    "PROJECT_KEY": {
+      "consumers": [
+        "profiles/<key>/ 目录名",
+        "generated/profile.json#profileKey"
+      ],
+      "test": "profile.spec 校验 charset"
+    },
+    "PACKAGE_NAME": {
+      "consumers": [
+        "package.json#name"
+      ],
+      "test": "profile-map completeness"
+    },
+    "MANIFEST_NAME": {
+      "consumers": [
+        "src/manifest.json#name"
+      ],
+      "test": "profile-map completeness"
+    },
+    "DESCRIPTION": {
+      "consumers": [
+        "src/manifest.json#description"
+      ],
+      "test": "profile-map completeness"
+    },
+    "MP_WEIXIN_APPID": {
+      "consumers": [
+        "src/manifest.json#mp-weixin.appid"
+      ],
+      "test": "validateProfile mp-weixin 格式"
+    },
+    "MP_TOUTIAO_APPID": {
+      "consumers": [
+        "src/manifest.json#mp-toutiao.appid"
+      ],
+      "test": "validateProfile mp-toutiao 必填"
+    },
+    "MP_XHS_APPID": {
+      "consumers": [
+        "src/manifest.json#mp-xhs.appid"
+      ],
+      "test": "validateProfile mp-xhs 必填"
+    },
+    "NAVIGATION_TITLE": {
+      "consumers": [
+        "pages.json#global.navigationBarTitleText",
+        "CustomNavBar 标题"
+      ],
+      "test": "profile-map completeness"
+    },
+    "BRAND_NAME": {
+      "consumers": [
+        "分享卡片 brand 占位符",
+        "AppFooter"
+      ],
+      "test": "profile-map completeness"
+    },
+    "COPYRIGHT_TEXT": {
+      "consumers": [
+        "legal 页",
+        "AppFooter"
+      ],
+      "test": "profile-map completeness"
+    },
+    "CONTACT_PHONE_TEXT": {
+      "consumers": [
+        "ServiceContact"
+      ],
+      "test": "profile-map completeness"
+    },
+    "CONTACT_QR_SRC": {
+      "consumers": [
+        "ServiceContact 客服二维码"
+      ],
+      "test": "validateProfile host 白名单"
+    },
+    "PRICE_FALLBACK_TITLE": {
+      "consumers": [
+        "priceList/priceHomePage 无数据 fallback"
+      ],
+      "test": "profile-map completeness"
+    },
+    "API_BASE_URL": {
+      "consumers": [
+        "generated/profile.json#apiBases.release",
+        "http 端口 release 地址"
+      ],
+      "test": "validateProfile P1-15 语义"
+    },
+    "APP_CODE": {
+      "consumers": [
+        "http 请求头",
+        "产物校验 verify-target"
+      ],
+      "test": "validateProfile 缺失拒绝"
+    },
+    "MINI_APP_NAME": {
+      "consumers": [
+        "legal MINI_APP_NAME"
+      ],
+      "test": "profile-map completeness"
+    },
+    "RESIDUAL_SEARCH_REGEX": {
+      "consumers": [
+        "构建后残留扫描（可选）"
+      ],
+      "test": "为空跳过"
+    }
+  }
+}
