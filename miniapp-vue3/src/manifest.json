@@ -54,7 +54,11 @@
         "setting" : {
             "urlCheck" : false
         },
-        "usingComponents" : true
+        "usingComponents" : true,
+        // 2026-09-17（排查「模拟器卡死」）：微信官方推荐的**按需注入**——不设时开发者工具/客户端会把
+        // 全部 18 页与所有自定义组件**一次性**编译加载（本项目含 @wot-ui/ui 门面，产物 2.4MB），
+        // 首开/切页会长时间停在「编译中」，观感即「卡死」。设为 requiredComponents 后按需注入。
+        "lazyCodeLoading" : "requiredComponents"
     },
     "mp-alipay" : {
         "usingComponents" : true
