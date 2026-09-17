@@ -137,6 +137,19 @@ miniapp-vue3/src/
 
 少量差异做platform/ui-bridge；关键场景广泛失败才让uview-plus跑同一组资格测试，再作ADR决定。不安装两套完整库拼接。未证实兼容性的库先不纳入主路径，不将缺证据写成“永久不支持”。
 
+### 6.4 AI 开发约束（强制 · 2026-09-17 开工版，主人指示「先读 AI agent 接入相关、再约束 SPEC」）
+
+依据 `docs/wot-ui-ai-guide.md`（v1.1，四件套实测记录）与实施方案 §6.3，以下为**新工程内 AI 参与开发的强制约束**（与 §6.2 选型结论配套，违反即 CR 红项）：
+
+1. **锁版组合**：`@wot-ui/ui@2.3.2` ＋ `@wot-ui/cli@1.1.0`，项目级 `--save-exact` ＋ lockfile；变更版本走 ADR。查询一律锁版只读命令（如 `pnpm exec wot info <组件> --version 2.3.2`），不把 CLI 回退版本当工程真实依赖。
+2. **禁止凭记忆写组件 API**：写任何 `wd-*` 前必须先取事实源——`wot info/doc/demo/token` 或 `https://wot-ui.cn/component/<name>.md` 单页（省 token、避免噪音）；业务视图只用 `ui/` 门面契约（BaseButton/BasePopup 等），`wd-*` 仅允许出现在 `ui/` 与资格样页。
+3. **MCP 三步走**：`wot mcp init --dry-run` 先看写入位置 → **经主人批准**目标客户端/scope 后才 init → `wot mcp doctor` **真实握手**才算接入证据；未接通时以 CLI 只读查询替代，**不假报已接**（DSH 是否识别该 schema 单独记录，不套用别家 `mcpServers` JSON 宣称接通）。
+4. **AI Skills 纪律**：先审官方 Skill 全文、**固定来源 commit/版本**，按目标 Agent 的**实际发现路径**安装并验证能被加载；`agent/skills/` 目录存在 ≠ 自动生效；主题 Skill 输出只作受审阅的 Wot bridge 实现，**不产生第二份手改权威数据**（Token 单源仍是 `tokens/source.json`，§8 不变）。
+5. **CR/CI 纳入 CLI 检查**：`wot doctor`／`wot lint`／`wot usage`（`--format json` 机器可读）作为辅助门禁；**不替代**框架编译、业务契约测试、真机验收与独立 CR；确认退出码语义，不把 stdout 有 PASS 当全绿。
+6. **AI 执行纪律**：**一次只实现一个任务和一组测试**，输入当前 baseline／接口合同／禁改范围；**禁止多个 agent 并发改 Profile 生成器／锁文件／路由总表**。
+7. **文档入口**：LLMs.txt（`https://wot-ui.cn/llms.txt`，实测 200／6,840 B）作为 AI 工具文档集入口；讨论单个组件只抓对应 `.md` 页。
+
+> 证据基线：guide §7 实测记录（CLI 1.1.0 十一条命令、`wot list`／`wot info Button` 实跑成功、`wot mcp init --help` 客户端列 `auto|all|claude|cursor|vscode|codex|opencode|antigravity`——**不含 DSH 自动接入**，需查宿主配置合同）。
 ---
 
 ## 7. 各生态条件编译层（微信 / 抖音 / 小红书）
