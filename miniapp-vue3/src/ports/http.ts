@@ -4,6 +4,8 @@ import type { RequestContext, Result } from "./context";
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface HttpRequest {
+  /** P2-02（T5 端口演进）：传输层透传的请求头（Bearer/X-App-Code/可选 X-Brand-Id 由 client 注入） */
+  readonly headers?: Readonly<Record<string, string>>;
   readonly method: HttpMethod;
   readonly url: string;
   readonly query?: Readonly<Record<string, string>>;

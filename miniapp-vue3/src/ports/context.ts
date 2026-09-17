@@ -25,6 +25,13 @@ export interface RequestContext {
   readonly environment: Environment;
   readonly brandId: string | null;
   readonly requestId: string;
+  /** T5 扩展（phases P2 合同）：Profile 键与 APP_CODE 随请求快照捕获 */
+  readonly profileKey: string;
+  readonly appCode: string;
+  /** 品牌/商户作用域代次：切品牌递增，用于丢弃迟到旧响应 */
+  readonly scopeRevision: number;
+  /** 登录代次：logout 递增，旧会话请求作废 */
+  readonly authRevision: number;
 }
 
 export type CapabilityLevel = "supported" | "unsupported" | "unknown";
