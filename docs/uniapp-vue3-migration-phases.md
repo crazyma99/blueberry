@@ -442,7 +442,7 @@ BuildRequest:
 - [ ] P1-33 保留旧脚本无engine参数时的legacy用法；新端必须显式选vue3和sourceRoot。旧sync-template禁止对新N执行rsync --delete；new-project不再复制旧UVUE模板冒充Vue3。
 - [x] P1-34 写错发负向：旧artifact冒充新engine、错误appid/host、profile A读B产物、同run并发、路径越界、非空目录覆盖，每项必须失败。 【2026-09-17 台账回填，证据＝用例实测】六类错发负向均已覆盖：①**旧 artifact 冒充新 engine**＝`build-target.spec.ts:128`（缺 `createApp` 指纹必失败）②**错误 appid**＝`:133`＋**非法 host**＝`profile.spec.ts:73`（P1-16）与 `:65`（CONTACT_QR_SRC 非白名单 host）③**profile A 读 B 产物**＝`:148`（错误品牌残留必失败）④**同 run 并发/非空覆盖**＝`:72`（同 runId 目录非空即抛，`allocateWorkDir` P1-30）⑤**路径越界**＝`:55`（sourceRoot/profilePath 越 repoRoot、projectRoot 不在 `.work` 下）⑥**缺 app.json／app.js**＝`:153`。
 - [ ] P1-35 双Profile整包构建：合成fixture做生成测试，获准的实际Profile做工具打开验证；核对各自manifest及hash，未获准不上传。
-- [ ] P1-36 CI的PR无secret车道落地：旧端回归与新端已建立套件分车道；发布job暂受保护且不执行。产物文件与日志作为测试证据保存。
+- [x] P1-36 CI的PR无secret车道落地：旧端回归与新端已建立套件分车道；发布job暂受保护且不执行。产物文件与日志作为测试证据保存。 【2026-09-17 台账回填，证据＝仓库实测】`.github/workflows/migration-ci.yml`：①**旧端回归 lane**（uni-app x，不装依赖：跑旧端纯 Node 单测 55 用例＋旧端 src 零改动校验）②**新端套件 lane**（固定锁安装→typecheck→单元/组件/流水线测试→三平台构建 mp-weixin／mp-toutiao／**mp-xhs**→产物 artifact 留证）③**发布 job 受保护**：`publish-placeholder` 带 `if: '${{ false }}'` 硬停，注释要求「须主人明确授权后删除本行才可能运行」④**零 secret**：`grep -c secrets` = **0**（符合「PR 无 secret 车道」）。
 - [ ] P1-37 独立CR检查Profile/路径/数据隔离；修完后完整复跑G1，提交工程底座。
 
 **G1验收命令（此时所有列出的套件均已实现）**：
