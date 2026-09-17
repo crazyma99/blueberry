@@ -14,11 +14,11 @@
 | getImage | GET（可传 method 覆盖） | `/wechat/carousels` | method?, params? | index | frozen |
 | getShops | GET | `/api/shops` | — | index | frozen |
 | getCategories | GET | `/wechat/categories` | shopId | demoDetail | frozen |
-| getAlbumList | GET | `/wechat/albums` | params（shopId/分类/分页，随 T6 迁移时逐字段登记） | demoDetail（×2 调用点） | frozen-path／参数明细 pending |
-| getalbumDetail | GET（可传 method 覆盖） | `/wechat/album/detail` | method?, params?（idx/type 等，随 T6 登记） | targetPhotoDetail | frozen-path／参数明细 pending |
+| getAlbumList | GET | `/wechat/albums` | params（shopId 等） | demoDetail（×2 调用点） | **frozen**（P2-09 实测：响应＝{albums,page,size,total}，album 项键 6 个已登记 DTO） |
+| getalbumDetail | GET（可传 method 覆盖） | `/wechat/album/detail` | **albumId＋type**（旧端 :221 实测，非 idx） | targetPhotoDetail | **frozen**（P2-09 响应键 7 个已登记 DTO） |
 | getLikeStatus | GET | `/api/like/status` | albumIds（逗号串） | demoDetail、targetPhotoDetail | frozen |
 | toggleLike | POST | `/api/like` | albumId（number） | demoDetail、targetPhotoDetail | frozen |
-| wxLogin | POST | `/api/wx/login` | 平台登录 code 等（T6 登记） | demoDetail、targetPhotoDetail（登录前置） | frozen-path／参数明细 pending |
+| wxLogin | POST | `/api/wx/login` | { code, ... }（真实 code 需真机登录，**留待 T6 真机验证**） | demoDetail、targetPhotoDetail（登录前置） | frozen-path／code 注入 pending |
 
 ### 纵切片三页的 utils 依赖面（迁移范围边界，旧端实测）
 
@@ -27,6 +27,9 @@
 - **targetPhotoDetail**：api／auth／format／haptics／http／imageLoader／legal／loginFlow／share
 
 > 说明：13 个 wrapper 名单见 inventory.md；本表只冻结 T5/T6 切片涉及的 8 个。`getalbum` 已登记退役不重实现。其余 wrapper（B2-B4 批次）随各批次迁移逐条冻结。
+
+**⭐ P2-09 真实 provider 报文核对（2026-09-17，测试域只读 GET，门控 spec `tests/provider/wire-format.spec.ts`）**：8 个切片 wrapper 中 6 个已对真实线格式核对一致——`/api/shops`（14 键）／`/wechat/carousels`（8 键）／`/wechat/categories`（4 键）／`/wechat/albums`（信封 4 键＋album 项 6 键）／`/wechat/album/detail`（7 键）／`/api/like/status`（albumId,likeCount,liked **与冻结 DTO 逐字段一致**）；**fixture 与 provider 无冲突，无需修合同**；wxLogin 的 code 注入与 toggleLike 写调用**不在只读核对范围**（写/付费调用须单独授权，P2-09 纪律）。
+
 
 ## wrapper 台账（34 条全名单见 inventory.md）
 

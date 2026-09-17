@@ -52,8 +52,8 @@ describe("repositories 请求形状（contracts.md 冻结值）", () => {
   });
   it("getAlbumDetail：method 覆盖＋idx/type 入参透传", async () => {
     const f = fakeClient([{ ok: true, value: {} }]);
-    await createAlbumRepository({ client: f.client }).getAlbumDetail(ctx, { params: { idx: "5", type: "photo" } });
-    expect(f.seen[0]).toMatchObject({ method: "GET", url: "/wechat/album/detail", query: { idx: "5", type: "photo" } });
+    await createAlbumRepository({ client: f.client }).getAlbumDetail(ctx, { params: { albumId: "5", type: "photo" } });
+    expect(f.seen[0]).toMatchObject({ method: "GET", url: "/wechat/album/detail", query: { albumId: "5", type: "photo" } });
   });
   it("likes：读免登录 idempotent／写需登录 never；wxLogin 换票入口不带 Bearer、never", async () => {
     const f1 = fakeClient([{ ok: true, value: [] }]);

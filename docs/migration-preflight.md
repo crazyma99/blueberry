@@ -339,6 +339,19 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T5 剩余**：P2-09 provider 验证、P2-10 独立 CR（P2-05 调用侧细则并入 T6 一起落）。
 
+
+## 8.18 T5 执行记录（P2-09，2026-09-17 第六批）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| P2-09 provider 验证 | 门控 spec `tests/provider/wire-format.spec.ts`（`RUN_PROVIDER=1` 才跑，默认跳过避免 CI 网络依赖）——**真实 client＋repositories＋node fetch 传输适配**打测试域 `https://crazyma99.xyz`，**只读 GET**（写/付费调用按纪律不在范围） | ✅ 3 条链路测试 exit 0 |
+| 真实线格式核对（6/8 wrapper） | `/api/shops`（数组 14 键）／`/wechat/carousels`（8 键）／`/wechat/categories`（4 键）／`/wechat/albums`（信封 **albums,page,size,total**＋album 项 6 键）／`/wechat/album/detail`（7 键）／`/api/like/status`（**albumId,likeCount,liked 与冻结 DTO 逐字段一致**）——**fixture 与 provider 无冲突，无需修合同** | ✅ |
+| 合同修正（实测驱动） | 详情入参实测＝**albumId＋type**（旧端 targetPhotoDetail:221，非此前登记的 idx）⇒ contracts.md 该行改 frozen；getAlbumList 信封确认 ⇒ frozen；wxLogin 的 code 注入**留待 T6 真机**（真实 code 需真机登录） | ✅ |
+| DTO 强化 | `albums.ts` 按实测键集强化：CategoryBrief／AlbumBrief／AlbumListPage／AlbumDetail；**未取样类型（price 数值形态、images 元素、subCategory 内层）保持 unknown 不臆造**；params 改必填（albumId 语义必传，修 TS18048） | ✅ |
+| 汇总 | vitest **152/152＋3 skipped**（provider 门控）exit 0＋typecheck **exit 0**＋三平台构建各 exit 0 | ✅ |
+
+**T5 剩余**：P2-10 独立 CR（子 agent 在途）；P2-05 调用侧细则并入 T6。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
