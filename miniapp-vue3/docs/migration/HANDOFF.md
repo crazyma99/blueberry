@@ -28,14 +28,18 @@
 - **T8 AI 试衣主体**：`aiTryOn`／`aiTryOnResult`／`aiTryOnHistory` 三页（1409/196/344 级）＋`ai-recommend-flow` 之外的全套适配（上传端口、照片质量管线、VK 人脸、截屏保护、订阅消息、分享 JPG 缩略、图片预热）＋`GenerationProgress` 等组件（**组件台账 14/15**）
 - 测试：50 文件、**351 passed／3 skipped**（skipped 为 gated provider 只读核对）
 
-## 4. 在途与下一步
+## 4. 在途与下一步（2026-09-17 更新）
 
 | 项 | 状态 | 下一步 |
 |---|---|---|
-| **T9b 推荐三页**（`aiRecommendResult` 334／`aiRecommendLoading` 395／`aiRecommend` 665） | 在途（子代理按页交付；宽任务易空转，**建议一次只派一页、限时、先写后读**） | 逐页落盘→我验证（TC／回归／三平台／双端页数）→补 P3-16/17/18 页面级测试→提交 |
-| `P3-07` | 未勾 | T9b 消费 `payment-coordinator` 后收口（显式传 `isWeixin`、按 `isTerminalPhase` 判终态） |
-| **G2 独立复核** | 挂账 | P2-23 的 G2 由主会话自查通过；独立复核子代理曾超时，待重派 |
-| **T8 收口件** | 部分 | `P3-11` 真机联调（主人自验）｜`P3-15` 微信真机＋**T8 独立 CR** |
+| **T9b 推荐三页** | ✅ **已完成**（`aiRecommend` 737／`aiRecommendLoading` 584／`aiRecommendResult` 518；P3-16～19 勾选） | — |
+| `P3-20` 页级场景测试 ＋ **T9b 独立 CR** | 🟡 CR 在途；内核/静态层已覆盖（`t44` 连点·复用·失败不重发·分类；`t45` 禁自建轮询·分数口径·`#ifdef` 单块；`t46` 渲染与脏数据） | CR 结论回来后按 🔴 修＋补页级场景（401/4001/超时/弱网/旧响应覆盖） |
+| **T8 收口** | 🟡 主体完成；`P3-11` 真机、`P3-15`（真机＋**T8 独立 CR**）未达成 | 派 T8 独立 CR；真机由**主人自验** |
+| **G3 验收** | 🟡 **本地套件通过**（四条命令全绿、17 条业务路由覆盖）；真机与两项 CR 未完成 ⇒ **未标完全通过**，见 `g3-acceptance.md` | 补 CR 与真机证据后复检 |
+| G2 复核 🟡 | ②✅（share 契约已入 `tests/contracts/`）；①⏳ | ①`aiTryOnResult` 约 90 行 wx 管线（`downloadFile`/`saveImageToPhotosAlbum`/`authorize`）下沉 `platform/uni/*`——独立小批次 |
+| 全仓 AI 页注册 | ✅ 六页仅微信（产物 18/12 页实证） | 抖音仍不注册（主人拍板「抖音无 AI 功能」） |
+
+**纪律提醒**：`P3-*` 的勾选一律以 `phases.md` 为唯一来源，勾选必须附证据；`g3-acceptance.md` 是 Phase 3 出口对账，**未达成项不得口头通过**。
 
 ## 5. 踩坑留痕（**务必先读，能省数小时**）
 
