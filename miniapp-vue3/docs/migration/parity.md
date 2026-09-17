@@ -23,14 +23,14 @@
 
 > 说明：上表 11 条与抖音 Profile 的 `pageRegistry`（`scripts/profile-schema.mjs` PAGES_ALL 前 11 项）同集合。
 
-### AI 闭环 6 页（T8 全部完成；T9b 进行中）
+### AI 闭环 6 页（**T8＋T9b 全部 ported**）
 
 | # | path | 状态 | 备注 |
 |---|---|---|---|
 | 12 | `pages/aiTryOn` | ported | T8 装配完成（`698fd09`）：模板双入口（travel/album＋相册空回退）／选图·质量检测·上传／提交守卫与 4001→共享协调器／防截屏 onShow-onHide-onUnload；`#ifdef MP-WEIXIN` 注册；t38 三例 |
 | 13 | `pages/aiTryOnResult` | ported | T8 末片（**1409 行**，`cf83763`）：结果轮询（自适应间隔/180s/抖动容忍＋**代次守卫停旧回调**）／24 片水印**仅覆盖预览**／付费原图／**买断以服务端 `taskBought` 为准**／匿名只读 `shareReadOnly` **无付费下载入口**；`#ifdef MP-WEIXIN` 注册 |
 | 14 | `pages/aiTryOnHistory` | ported | T8 首片（`d002d7c`）：记录页（**一次取全量、无分页**）＋AI 仓储 `getTasks`；t30 四例 |
-| 15 | `pages/aiRecommend` | not_started | T9b 末片（665 行）；抖音侧**不注册** |
+| 15 | `pages/aiRecommend` | ported | T9b 末片（**737 行**）：入口页（上传/权益/付费按钮/登录资料弹窗）；**P3-16** 单次 POST、**P3-17** 充值走共享 coordinator、**P3-20** 代次守卫（`runGeneration`，离页/重试/超时/成功后的旧响应一律不回写）；`#ifdef MP-WEIXIN` 注册（产物实证微信 18 页／抖音 12 页） |
 | 16 | `pages/aiRecommendLoading` | ported | T9b 次片（**584 行**，`204add7`）：**P3-16** 单次 POST（内核 `inFlight` 同 op 复用）＋**绝不用重复 POST 当轮询**＋180s 只切 failed 不自动重发；**P3-17** 充值走共享 `payment-coordinator`（**旧端自建 2.5s×48 次轮询整段删除**）＋`resumeAfterCredit` 先清后调只续跑一次＋失败给「重试/返回」入口 |
 | 17 | `pages/aiRecommendResult` | ported | T9b 首片（**518 行**，`1351a13`）：**P3-18** 只渲染 `shouldShowScore` 为真的 `finalScore`（经 `normalizeFinalScore`；并指出旧类型 `AiRecommendation` **漏 `finalScore` 字段**，按现行 DTO 显式收、兼容 `final_score`） |
 

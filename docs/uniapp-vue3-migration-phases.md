@@ -625,11 +625,11 @@ And：切换authRevision后，即便旧查询返回true也不改变新账号权�
 
 **文件**：新增 `N/src/pages/{aiRecommend,aiRecommendLoading,aiRecommendResult}/index.vue`、`N/src/application/recommend.ts`、`N/src/infrastructure/repositories/recommend.ts`；`N/tests/unit/recommend.spec.ts`、`N/tests/contracts/recommend.spec.ts`、`N/tests/e2e/recommend.md`。
 
-- [ ] P3-16 保留现行同步180秒请求合同；每次POST会扣推荐次数，等待页不能用重复POST当轮询，也不能超时后自动扣第二次。
-- [ ] P3-17 复用共享支付/登录/上传，paid与余额同时满足后只续跑一次；取消/离页/未知网络结果均有明确恢复入口。
-- [ ] P3-18 返回DTO显式包含 `finalScore`，不照搬旧类型漏字段；按现行显示条件处理缺失/0/异常值，禁止用原始score凑分。
-- [ ] P3-19 保留移除“暂无同性样例”标签、缩略图成功/失败时序、试衣跳转参数、等待页文案与操作。
-- [ ] P3-20 测同一任务复进、连点、401、4001、超时、弱网、旧响应覆盖；独立CR后提交B4三页。
+- [x] P3-16 保留现行同步180秒请求合同；每次POST会扣推荐次数，等待页不能用重复POST当轮询，也不能超时后自动扣第二次。（2026-09-17 完成：内核 `RECOMMEND_REQUEST_TIMEOUT_MS=180000`＋`createRecommendRunner` **单次 POST**（同 `operationId` 复用在飞 Promise、失败不自动重发、仅用户显式重试才再发）；`t44` 锁「同 op 复用 `p1===p2` 且请求数 1」「失败不自动重发」；`t45` 静态守卫锁「等待页**不得调用查单**（`getRechargeStatus(`/`pollRechargeStatus(`/`payPollToken` 清零）＋`setInterval` 仅用于 180s 计时器」）
+- [x] P3-17 复用共享支付/登录/上传，paid与余额同时满足后只续跑一次；取消/离页/未知网络结果均有明确恢复入口。（2026-09-17 完成：等待页与入口页充值**一律走共享 `payment-coordinator.recharge/resume`**，**旧端自建 `pollRechargeStatus` 2.5s×48 次轮询整段删除**（`t45` 守卫）；`resumeAfterCredit`／`resumeAnalyzeAfterCredit` **一次性标记先清后调**（`t45` 次序断言）；取消/超时/下单失败/网络异常→失败态给「重试／返回」入口；登录走 P2-03 静默换票、上传复用既有端口。**待办如实登记**：coordinator 默认到账确认 30s（旧端≈2 分钟）⇒ 若需等价应传 `poll:{intervalMs:2500,timeoutMs:120000}`，列为收口项）
+- [x] P3-18 返回DTO显式包含 `finalScore`，不照搬旧类型漏字段；按现行显示条件处理缺失/0/异常值，禁止用原始score凑分。（2026-09-17 完成：`normalizeFinalScore` 仅接受 `number>0 且有限`（缺失/0/负数/字符串/NaN/Infinity→null），`shouldShowScore` 与旧端 `v-if="rec.finalScore > 0"` 等价；结果页**只渲染**该口径的分数并**指出旧 `AiRecommendation` 漏 `finalScore` 字段**（按现行 DTO 显式收、兼容 `final_score`）；`t44` 锁九态＋`{score:99}`→不显示；`t45` 守卫禁「原始 score 拼分」。**并修内核缺陷**：`{analysis,recommendations}` 多形态兼容、空载荷判失败（`59e7a89`））
+- [x] P3-19 保留移除“暂无同性样例”标签、缩略图成功/失败时序、试衣跳转参数、等待页文案与操作。（2026-09-17 完成：①标签**确已移除**且新端有意不恢复（结果页 :319 留注释、全仓 0 命中）；②结果页缩略图 `previewLoaded` 骨架成功/失败时序；③试衣跳转参数口径保留——查看模板 `targetPhotoDetail?idx&type=shopId&liked=false&style`，`onPreviewClick`（`aiTryOn?style&gender&shopId`）**旧端定义但模板未绑定**⇒ 原样保留方法同样不绑定（偏差已登记）；④等待页文案与操作=NavBar「AI分析中」＋仅步骤条＋失败遮罩「AI分析失败，请重试」＋重试/返回（旧端 2026-09-14 主人指示**不要** Tips／双按钮））
+- [ ] P3-20 测同一任务复进、连点、401、4001、超时、弱网、旧响应覆盖；独立CR后提交B4三页。**（2026-09-17 部分完成，未勾：内核层已覆盖——连点/同 op 复用＋失败不自动重发（t44）、4001→共享支付、超时只切 failed、弱网/ 异常分类（t44）、**旧响应覆盖**＝入口页 `runGeneration` 代次守卫＋等待页 `stopAll()` 递增代次（`t45` 静态守卫）；**页级场景测试与独立 CR 仍未做**；另**如实登记两条存疑**：①`inFlight` 为页面实例级 ⇒ 跨页面重进按现行同步扣费合同**会再扣一次**（旧端相同，若要真幂等需把 runner 提为模块级单例——待主人拍板）②coordinator 到账确认默认 30s vs 旧端≈2 分钟）**
 
 **G3验收命令（无新平台真实支付凭据也可跑这些本地套件）**：
 
