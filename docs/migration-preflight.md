@@ -207,6 +207,23 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T4 剩余**：P1-25 **真机部分**（微信/抖音真机扫码同一 Wot 样页——**需主人手机**，工具侧已就绪）、P1-26 失败处置（若真机关键场景失败）、P1-28 审阅提交（本轮先提交工具侧证据）。
 
+
+## 8.11 T3b 执行记录（P1-29~35，2026-09-17）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| P1-29 BuildRequest 闭集＋realpath | `build-target.mjs`：新端**只认 engine=vue3**（legacy 拒绝，走旧脚本）；platform/env 闭集；runId/profileKey 字符集（防路径穿越）；**sourceRoot/profilePath 须在 repoRoot 内、projectRoot 须在 `.work/` 内**（realpath 比对）；不以调用者 cwd 猜目标 | ✅ 7 条校验用例 |
+| P1-30 隔离 run 目录 | `.work/build/<engine>/<profile>/<platform>/<sha12>/<digest12>/<runId>/`；**runId 唯一、目录非空即拒**（同 run 并发必失败）；profileDigest 与 profilePath 实际内容比对（来源验证） | ✅ |
+| P1-31 流水线 | 白名单复制（10 项；node_modules/dist/tests 不进）→ **结构化应用 Profile**（JSONC 感知编辑 manifest.json name/description/平台 appid＋pages.json 导航标题，无宽正则）→ 生成 profile 配置 → 生成 Token（**请求携带的 tokenDigest 与实际生成比对**）→ `pnpm install --frozen-lockfile` → 构建 → verify → 写 `release-manifest.json` | ✅ 真实双 Profile 跑通 |
+| P1-32 产物 verify 七查 | app.json／app.js／**路由集合**／appid（project.config.json）／导航标题／**引擎指纹**（vendor.js 含 createApp，防旧产物冒充）／**品牌残留全文扫**——全部命中产物文件；**⭐修正一处循环校验**：expectedRoutes 原从产物 app.json 自读自证（恒过），改从**源码 pages.json** 取阶段期望集合；appCode/apiBase 产物命中如实标注 pending-http-layer（Phase 2） | ✅ |
+| P1-33 旧入口安全 | 新端构建器拒绝 legacy engine（测试锁定）；旧脚本本轮未动（逐个适配＝后续子任务，如实挂账） | ✅ 部分 |
+| P1-34 负向用例 16 条 | legacy engine／闭集外 platform·env／缺字段／runId·profileKey 越界／sourceRoot·profilePath 出 repoRoot／projectRoot 出 .work／digest 不符／抖音缺 appid／**同 runId 非空覆盖**／旧产物冒充（无指纹）／错 appid／路由不匹配／导航不匹配／**A 读 B 产物（品牌残留）**／缺 app.json·app.js——**每项必须失败，实测全部失败** | ✅ 16/16 |
+| **P1-35 双 Profile 真实整包构建（⭐ 本轮主证据）** | 隔离目录真实构建两遍（install frozen＋build:mp-weixin）：**blueberry**（appid `wxb19ad7426dfb8bd4`／appCode `blueBerry`／navTitle「蓝梅旗袍·汉服·民...」）＋**huahua**（appid `wxd3933d928ffed10d`／appCode `huahua`／navTitle「花花旅拍」）——两份 manifest **verify.ok=true**、**profileDigest 不同**（`2d8fb058…`/`81333505…`）、生成配置 digest 不同（`e8bbdeb8…`/`9f46bdc8…`）、**tokenDigest 相同**（`55a65558fc17`，同一 Token 源，符合预期）；**交叉残留实测 0**：blueberry 产物 grep「花花旅拍」命中 **0**、huahua 产物 grep「蓝莓」命中 **0**，各自品牌正常命中（2/1）；**未上传** | ✅ |
+| ⭐ 本轮抓出的三个真问题（均已修＋测试锁定） | ①`stripJsonc` 只删整行 `//` 注释、**删不掉行尾注释**——真实 pages.json 首行正是行尾注释写法 ⇒ 重写为**字符串感知**逐字符扫描（串内 `//` 如 URL 不误删）；②`CONTACT_QR_SRC` 白名单**过严**——huahua 实况用包内路径 `/static/contactQRCode.jpg`（旧端既有用法）⇒ 放行 `static/` 包内路径（仍拒 `../` 穿越与非白名单 host，测试锁定）；③verify 路由集合**自证循环**（见 P1-32 行） | ✅ |
+| 汇总 | vitest **98/98 exit 0**（9 文件）＋ typecheck exit 0；`.work/` 已入根 .gitignore | ✅ |
+
+**T3b 剩余**：P1-36 CI 双车道（旧端回归／新端套件分车道，发布 job 受保护不执行）、P1-37 独立 CR（Profile/路径/数据隔离）＋**完整复跑 G1**（frozen 安装→typecheck→全量测试→双平台构建→双 Profile manifest/hash 入册）。T4 真机项（P1-25）仍等主人扫码回执。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
