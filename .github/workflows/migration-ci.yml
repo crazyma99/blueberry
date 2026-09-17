@@ -53,11 +53,17 @@ jobs:
         run: pnpm run build:mp-toutiao
       - name: 构建 mp-xhs
         run: pnpm run build:mp-xhs
+      # P1-35/P1-37 + P4-13：**合成 Profile 端到端管线校验（双 Profile）**——只用 tests/fixtures（无 secret/无真实凭证），
+      # 锁住「平台作用域（抖音 AI 六页不得注册）／appid 注入非占位／tt 前缀产物／跨品牌残留」这些回归。
+      - name: 合成 Profile 端到端管线（双 Profile，mp-toutiao）
+        run: node scripts/e2e-build.mjs mp-toutiao both
       - name: 产物留证
         uses: actions/upload-artifact@v4
         with:
           name: new-end-artifacts
-          path: miniapp-vue3/dist/build/
+          path: |
+            miniapp-vue3/dist/build/
+            miniapp-vue3/.work/build/**/release-manifest.json
           retention-days: 7
 
   publish-placeholder:
