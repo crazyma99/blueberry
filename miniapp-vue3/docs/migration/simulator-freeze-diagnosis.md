@@ -12,7 +12,7 @@
 | `watch(` 自改写 | **0** | `grep watch(` over `src/pages/**`、`src/components/**` 无命中 |
 | 最大 `v-for` 基数 | **24** | `aiTryOnResult/index.vue:884`（水印切片）；骨架类 4 |
 | 最重运算 | **照片质量检测** | `domain/photo-check.ts` 拉普拉斯方差（≈6.5 万像素）＋离屏 canvas＋VK 人脸；**仅在选图后触发**，不在启动路径 |
-| 包体 | **2.4 MB** | `du -sh dist/build/mp-weixin`（老端 baseline 记 2.6M，量级相当） |
+| 包体 | **1.14 MB（真实内容）**／旧端 1.71MB | `du -sb`（**更正**：此前记的 2.4MB 为 `du -sh` 块占用）⇒ **远低于微信主包 2MB 上限**，体验版上传无体积阻碍 |
 | `App.vue` 启动钩子 | 空实现 | onLaunch/onShow/onHide 无网络/重活 |
 
 ## 2. 已修的三处脆弱点（会把「慢/等」放大成「卡死」观感）
@@ -45,7 +45,7 @@
 
 ### 6.1 新增审计结论
 - **运行期重算：已排除**（§1：无界循环 0、无 `watch` 自改写、最大 `v-for` 24、最重运算仅在选图后）
-- **产物构成（微信）**：2.4MB／**322 文件**——**不属病态**（工具可轻松处理数千文件）；顶层：`static 776K`、`pages 448K`、
+- **产物构成（微信）**：**真实内容 1.14MB**（`du -sb`；此前记的「2.4MB」是 `du -sh` 的**块占用**，322 个小文件被 4KB 块虚增约 1.3MB —— **2026-09-17 更正**）／322 文件——不属病态（工具可轻松处理数千文件）；顶层：`static 776K`、`pages 448K`、
   **`node-modules 356K（55 文件）`**、`components 304K`、`ui 96K`、`common 96K`…
 - ⭐**关键点**：产物含 **`node-modules/@wot-ui/ui`**（uni 为小程序内联的 npm 依赖）。微信开发者工具对该目录需要执行
   **「工具 → 构建 npm」**，**这是最常见的长时间卡死/无响应环节**（尤其被反复触发时）
@@ -110,3 +110,29 @@
 
 **测试顺序**：① → ② → ③，每级**强退工具 → 清缓存 → 打开该目录 → 只点一次编译**，记录「哪一级开始无响应」。
 > 构建方式（未触碰 `dist/build/mp-weixin`）：临时替换 `src/pages.json` 后用 `UNI_OUTPUT_DIR=dist/trial-*/mp-weixin npx uni build -p mp-weixin`，**构建后已用 `git checkout` 还原**（`git diff src/pages.json` 为空）。
+
+---
+
+## 8. 【2026-09-17】体验版上传通路评估（主人问「直接传体验版我手机扫可以吗」）
+
+### 8.1 结论：**可以**，但三条通路各有前置
+| 通路 | 可行性 | 前置 |
+|---|---|---|
+| ① 官方开发者工具（Win/macOS）点「上传」 | ✅ 最省事 | 需官方工具 + 扫码登录；上传后在后台**设为体验版** |
+| ② **`miniprogram-ci` 无 GUI 上传**（推荐，可复用进 CI） | ✅ 本机可装（npm 源可达，最新 **2.1.31**） | 需**代码上传密钥** `private.<appid>.key`（后台「开发管理→开发设置→小程序代码上传」生成）＋若开 IP 白名单需加本机公网 **43.224.245.247** |
+| ③ Linux 移植版工具界面 | ❌ 不推荐 | 该版本 `bin/` **无 `cli` 可执行**（仅 `nwjs`／`package.nw`）⇒ 只能界面点，而界面正是卡死的那个 |
+
+### 8.2 已备好
+- `scripts/upload-trial.mjs`（本仓）：走 `miniprogram-ci`，**必须显式 `--yes`** 才上传；**不打印密钥**；上传前自检产物含 `app.json` 且 `lazyCodeLoading` 生效。用法：
+  `node scripts/upload-trial.mjs --project dist/trial-lazy/mp-weixin --key ~/.dsh/secrets/private.wxb19ad7426dfb8bd4.key --version 0.1.0 --desc "迁移试运行" --yes`
+- 产物：`dist/trial-lazy/mp-weixin`（1.14MB，`lazyCodeLoading=requiredComponents` 已生效）
+
+### 8.3 上传 ≠ 体验版（必做的一步）
+`miniprogram-ci`/工具上传后，代码进入**开发版本**；须到 mp.weixin.qq.com「**版本管理**」把该版本**设为体验版**，再用「体验版二维码」扫码；扫码者的微信号须为**开发者或体验成员**（「成员管理」）。
+
+### 8.4 体积核对（重要更正）
+| | 真实内容 | 说明 |
+|---|---|---|
+| 新端（`dist/trial-lazy`） | **1.14 MB** | `du -sb`；此前各处记的 2.4MB 是 `du -sh` 块占用，**已更正** |
+| 旧端（已上线产物） | **1.71 MB** | 同口径 |
+⇒ 均**远低于微信主包 2MB 上限**；(旧端 `minified:true`、新端 `minified:false`) ⇒ 上传可再压缩（`upload-trial.mjs` 的 `setting.minify: true` 已开）。
