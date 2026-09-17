@@ -62,6 +62,18 @@
 > balance>0**；单任务下载需 paid **且服务端 taskBought=true**。4001＝次数不足（HTTP 200）→ `INSUFFICIENT_CREDITS`，
 > 普通 BUSINESS 错误不得拉起支付。确认轮询有截止时间，**超时≠订单作废**（按 outTradeNo resume，不新建订单）。
 
+## Phase 3 · T8/T9b AI 端点合同（2026-09-17 旧端 api.uts:440-664/800-820 实测冻结）
+
+> ⚠️ 成功码口径：aiface 接口 **code===0 或 200 均为成功**（client `isBusinessSuccess` 已兼容）。
+
+| wrapper | method | path | 入参 | 消费方 | 状态 |
+|---|---|---|---|---|---|
+| getAiTemplates | GET | `/api/aiface/templates` | style?/keyword?/category?/package_type?/sub_category?/shop_id?/album_id?/gender?（空值不传） | aiTryOn（模板选择） | frozen（公开 idempotent） |
+| getAiStyles | GET | `/api/aiface/styles` | category?/package_type?/sub_category?/shop_id? | aiTryOn（风格分组） | frozen（公开；→ [{style_name,count,cover_url}]） |
+| submitAiTryOn | POST | `/api/aiface/tasks` | { templateId, userPhotoFilename, shopId, userOpenid?, category?, bodyType?, ageRange? } | aiTryOn（提交试衣） | frozen（**需登录 never**；→ {task_id}；code!==0 时 message 即业务提示） |
+| getAiTasks | GET | `/api/aiface/tasks` | openid | aiTryOnHistory（历史） | frozen（**需登录** idempotent；→ [{id,status,result_image_url,template_image_url,style_name,created_at}]） |
+| getAiRecommend | POST | `/api/aiface/recommend` | { user_photo_filename, shop_id } | aiRecommend（推荐结果） | frozen（**需登录 never＋timeout 180s**）：⭐**同步扣费**（每次调用扣 1 次推荐余额，耗时 1~3 分钟）⇒ **调用方严禁轮询/并发重发**（重发再次扣费）；4001＝次数不足→充值 |
+
 ## wrapper 台账（34 条全名单见 inventory.md）
 
 | 批次 | wrapper | 状态 |

@@ -14,3 +14,9 @@ export {
 } from "./favorites";
 export { createPageConfigRepository, type PageConfigItem } from "./page-config";
 export { createBrandRepository, type BrandBrief } from "./brands";
+export {
+  createAiRepository,
+  type AiStyleGroup,
+  type AiTaskListItem,
+  type AiTemplateBrief,
+} from "./ai";
