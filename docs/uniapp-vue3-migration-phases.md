@@ -248,9 +248,9 @@ Phase 5  候选产物、灰度和退役         → G5 / T11 → T12
 
 ### 0.1 确定最新源与工作分支
 
-- [ ] P0-01 核对旧端当前分支、干净工作树、远端 `fork/main`；后端staging/prod分别取实际SHA/部署版本，不能用staging推测prod。
-- [ ] P0-02 在隔离工作区从**当时最新main**创建新的 `feat/vue3-migration`；若已有同名分支先识别归属，不强制覆盖、不从旧标签恢复。
-- [ ] P0-03 记录旧端应用版本、源码SHA/树、包体、Profile摘要及依赖锁摘要。今天的17路由/15组件/20工具/34wrapper只是起始盘点口径，开工若增量变化必须更新。
+- [x] P0-01 核对旧端当前分支、干净工作树、远端 `fork/main`；后端staging/prod分别取实际SHA/部署版本，不能用staging推测prod。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
+- [x] P0-02 在隔离工作区从**当时最新main**创建新的 `feat/vue3-migration`；若已有同名分支先识别归属，不强制覆盖、不从旧标签恢复。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
+- [x] P0-03 记录旧端应用版本、源码SHA/树、包体、Profile摘要及依赖锁摘要。今天的17路由/15组件/20工具/34wrapper只是起始盘点口径，开工若增量变化必须更新。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
 
 **现有Git命令示例（正式开工时，在隔离B内执行）**：
 
@@ -268,21 +268,21 @@ echo "sourceTree=$(git rev-parse HEAD^{tree})"
 
 ### 0.2 建立资产与差异清单
 
-- [ ] P0-04 导出 `src/pages.json` 的完整17条路径和3个Tab；记录每页入参、回退、登录要求、品牌范围、加载/空/错状态。
-- [ ] P0-05 对15组件与20工具登记“旧文件→新文件→负责人→用例”；微信native tabBar四文件单独列出，不能算作普通Vue组件改后缀。
-- [ ] P0-06 对34个API wrapper登记 method/path/query/body/header/业务code/timeout/副作用/消费者；`getalbum`查无调用后登记退役，而不是重新实现废弃功能。
-- [ ] P0-07 单列 `flushPendingUploads/rejectAllPendingUploads` 两个队列函数及11个导出类型；这些不是额外业务接口。
-- [ ] P0-08 将Profile现字段、9个shell脚本及apply-profile.mjs的输入输出列成表；记录旧同步脚本可能覆盖新代码、旧发布脚本锁定旧ROOT的风险。
-- [ ] P0-09 登记已知偏差：package/lock差异、finalScore类型缺失、下载paid与权益到账竞态、品牌馆跨生命周期30s节流。行为修正必须写明产品依据与测试，不盲保缺陷。
+- [x] P0-04 导出 `src/pages.json` 的完整17条路径和3个Tab；记录每页入参、回退、登录要求、品牌范围、加载/空/错状态。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
+- [x] P0-05 对15组件与20工具登记“旧文件→新文件→负责人→用例”；微信native tabBar四文件单独列出，不能算作普通Vue组件改后缀。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
+- [x] P0-06 对34个API wrapper登记 method/path/query/body/header/业务code/timeout/副作用/消费者；`getalbum`查无调用后登记退役，而不是重新实现废弃功能。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
+- [x] P0-07 单列 `flushPendingUploads/rejectAllPendingUploads` 两个队列函数及11个导出类型；这些不是额外业务接口。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
+- [x] P0-08 将Profile现字段、9个shell脚本及apply-profile.mjs的输入输出列成表；记录旧同步脚本可能覆盖新代码、旧发布脚本锁定旧ROOT的风险。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
+- [x] P0-09 登记已知偏差：package/lock差异、finalScore类型缺失、下载paid与权益到账竞态、品牌馆跨生命周期30s节流。行为修正必须写明产品依据与测试，不盲保缺陷。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
 
 ### 0.3 固化测试与外部前置
 
-- [ ] P0-10 保存旧端现有单测/构建结果（不上传）；缺fixture或依赖错误分开记录，不把失败隐藏为通过。
-- [ ] P0-11 用同设备/网络/数据集采集首页、相册首图、任务返回等基准；记录样本数量和p50/p95，不能填估计值。敏感图片/账号脱敏。
-- [ ] P0-12 产品确认默认品牌/商户开关、跨平台账号/余额/买断共享的业务口径；未确认时按母方案保现有合同，不自动扩大为全局开关。
-- [ ] P0-13 登记微信/抖音/小红书AppID、开发者权限、类目/支付资格的**证据状态**。没有账号证据仍可做后续离线代码，但相关真机/商业发布门禁不能通过。
-- [ ] P0-14 建热修账本：每笔main修复写旧SHA、新端等价SHA、回归用例；每个Phase开始与候选发布前核对增量。
-- [ ] P0-15 独立检查清单完整性，提交 `B/docs/migration-preflight.md`，记录G0审阅人；并登记 D1–D5 五份输入文档的实测 SHA-256（见「输入文档与任务简报」第 4 节）。
+- [ ] P0-10 保存旧端现有单测/构建结果（不上传）；缺fixture或依赖错误分开记录，不把失败隐藏为通过。**（2026-09-17 待核：旧端单测/构建结果留档未在本仓找到独立留档文件，需从旧端 CI/本地日志补证后再勾）**
+- [ ] P0-11 用同设备/网络/数据集采集首页、相册首图、任务返回等基准；记录样本数量和p50/p95，不能填估计值。敏感图片/账号脱敏。**（2026-09-17 未做：首页/相册首图/任务返回的**同设备同网络基准 p50/p95**属真机采样，未采即不勾）**
+- [ ] P0-12 产品确认默认品牌/商户开关、跨平台账号/余额/买断共享的业务口径；未确认时按母方案保现有合同，不自动扩大为全局开关。**（2026-09-17 部分：默认品牌/商户开关与跨平台账号·余额·买断共享口径已按母方案「保现有合同」执行（见 `deviations.md` #4／T8/T9b 行为口径），但**未见主人书面确认记录**⇒ 留白待确认）**
+- [x] P0-13 登记微信/抖音/小红书AppID、开发者权限、类目/支付资格的**证据状态**。没有账号证据仍可做后续离线代码，但相关真机/商业发布门禁不能通过。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
+- [x] P0-14 建热修账本：每笔main修复写旧SHA、新端等价SHA、回归用例；每个Phase开始与候选发布前核对增量。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
+- [x] P0-15 独立检查清单完整性，提交 `B/docs/migration-preflight.md`，记录G0审阅人；并登记 D1–D5 五份输入文档的实测 SHA-256（见「输入文档与任务简报」第 4 节）。 【2026-09-17 台账回填】证据＝`miniapp-vue3/docs/migration/` 实测：`baseline.json`（sourceCommit 95528cd…／sourceTree fb34865…／oldEnd 版本与包体／backend staging=prod SHA／template uni-preset-vue vite-ts@6fb81ac…／toolchain 锁定 3.0.0-5020420260813003＋vite 5.2.8／accounts 微信·抖音 AppID 与 status／D1–D5 SHA-256）、`inventory.md`（17 路由＋3 Tab 含 onLoad 入参·登录静态命中·抖音 Profile｜15 组件｜20 工具｜34 wrapper＋2 队列函数＋11 导出类型）、`contracts.md`（wrapper 台账 34 行）、`deviations.md`（已知偏差 10 条）、`hotfix-sync.md`（热修账本已建立）
 
 **验收 G0**：基线可定位、资产有去向、风险/外部前置可见；未捏造“业务回归全绿”。
 
