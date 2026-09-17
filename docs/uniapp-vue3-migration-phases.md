@@ -588,6 +588,15 @@ tryon/recommend：订单paid 且对应池balance>0，才允许后续任务
 - [ ] P3-06 对本地provider/沙箱验签、订单/权益归属与重复入账做验证。不能调用真实支付只为测试变绿。
 - [ ] P3-07 独立CR通过后提交共享PaymentCoordinator；T8/T9b只消费它。
 
+> **2026-09-17 进展（T9a 共享底板已落地，P3-01～P3-07 均未勾选）**：`application/payment-coordinator.ts`＋
+> `infrastructure/repositories/credits.ts`（四端点）＋`platform/weixin/payments.ts`（fail-closed 适配）＋
+> `domain/payment-state.ts` 追加 `PaymentPhase` 状态机；测试 `tests/unit/payment.spec.ts`(15)＋`tests/contracts/credits.spec.ts`(3)，
+> 全量 246 passed/3 skipped＋TC 0＋三平台构建 0；独立 CR（v4-flash-vision-exp）**无 🔴**、三条硬约束全绿（状态机逐字一致／
+> 终态全路径释放门闩／三池单一出口＋4001 映射未动）。**已实现并有测试**：operationId 复用（P3-03 前半）、有限轮询＋
+> 超时≠作废＋`resume(outTradeNo)` 恢复（P3-04）、paid≠权益（balance>0／taskBought）＋下载买断校验（P3-05 核心）、
+> 面板回调兜底超时＋防御收敛。**遗留（下一步）**：P3-01 三池/taskId 归属用例扩充、P3-02 callback 重复与旧账号迟到场景、
+> P3-06 本地 provider/沙箱验签与归属校验、P3-07 后半（T8/T9b 消费端装配：显式传 `isWeixin`，按 `isTerminalPhase` 判终态）。
+
 **控制权益迟到的最小测试协议**：
 
 ~~~text

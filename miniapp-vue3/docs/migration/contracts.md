@@ -49,6 +49,19 @@
 > P2-19 红线四成立项：①`getFavoriteList` 无分页参数 ②分页 UI 仅搜索态渲染 ③`loadMore` 有 `isSearching` 守卫
 > ④仓储层无 page/size。其中 ①④ 由 `tests/unit/repositories.spec.ts` 契约断言自动锁定，②③ 由 `tests/unit/t26-favorites.spec.ts` 覆盖。
 
+## Phase 3 · T9a 共享支付合同（2026-09-17 旧端 api.uts:678-780 实测冻结）
+
+| wrapper | method | path | 入参 | 消费方 | 状态 |
+|---|---|---|---|---|---|
+| getCreditBalance | GET | `/api/aiface/credit/balance` | shopId?／feature?（tryon 默认、recommend、download）／taskId? | 支付协调器权益确认＋页面余额展示 | frozen（**需登录** idempotent；download＋taskId 时返回 taskBought） |
+| createCreditRecharge | POST | `/api/aiface/credit/recharge` | { shopId, credits, feature?, taskId? } | payment-coordinator 下单 | frozen（**需登录 never**——扣费接口禁自动重放，客户端去重≠服务端幂等） |
+| getCreditRechargeStatus | GET | `/api/aiface/credit/recharge/status` | outTradeNo | payment-coordinator 轮询到账 | frozen（**需登录** idempotent；status 0待付/1已付/2关闭/3退款；paid 由回调异步入账） |
+| redeemCreditCode | POST | `/api/aiface/credit/redeem` | code（12 位） | 兑换入口 | frozen（**需登录 never**） |
+
+> ⭐ 口径冻结（phases :571-589）：**平台支付面板 success ≠ 订单 paid ≠ 权益到账**——tryon/recommend 需 paid **且对应池
+> balance>0**；单任务下载需 paid **且服务端 taskBought=true**。4001＝次数不足（HTTP 200）→ `INSUFFICIENT_CREDITS`，
+> 普通 BUSINESS 错误不得拉起支付。确认轮询有截止时间，**超时≠订单作废**（按 outTradeNo resume，不新建订单）。
+
 ## wrapper 台账（34 条全名单见 inventory.md）
 
 | 批次 | wrapper | 状态 |

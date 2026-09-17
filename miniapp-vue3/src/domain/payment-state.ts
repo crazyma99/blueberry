@@ -50,6 +50,26 @@ export class PayGuard {
 
 export type BusinessErrorKind = "INSUFFICIENT_CREDITS" | "BUSINESS" | "UNKNOWN";
 
+/**
+ * T9a 支付协调状态机（phases Phase 3 冻结）：
+ *   idle → creatingOrder → awaitingUser → confirmingEntitlement → succeeded
+ *   用户取消 → cancelled；超时/业务错误 → failed（**均释放前端门闩**，终态不再 busy）
+ * 与 PayGuard 的分工：PayGuard＝防抖门闩（同一时刻只允许一个支付流程）；本状态机＝流程可观测阶段。
+ */
+export type PaymentPhase =
+  | "idle"
+  | "creatingOrder"
+  | "awaitingUser"
+  | "confirmingEntitlement"
+  | "succeeded"
+  | "cancelled"
+  | "failed";
+
+/** 终态：succeeded / cancelled / failed（进入终态即释放门闩） */
+export function isTerminalPhase(p: PaymentPhase): boolean {
+  return p === "succeeded" || p === "cancelled" || p === "failed";
+}
+
 export interface BusinessError {
   kind: BusinessErrorKind;
   businessCode: number | null;
