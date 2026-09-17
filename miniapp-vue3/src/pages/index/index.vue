@@ -26,6 +26,16 @@ import { createHomeViewModel } from "../../composables/use-home";
 import { syncTabBarSelected } from "../../application/tabbar";
 import PhotoGrid from "../../components/PhotoGrid/PhotoGrid.vue";
 import type { PhotoGridShop } from "../../components/PhotoGrid/PhotoGrid.vue";
+import ServiceContact from "../../components/ServiceContact/ServiceContact.vue";
+import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import {
+  createPageConfigContent,
+  type FooterContent,
+  type ContactContent,
+  SERVICE_LIST_DEFAULT,
+  SLOGAN_DEFAULT,
+  COOP_PHONE_DEFAULT,
+} from "../../application/page-config-content";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseButton from "../../ui/BaseButton.vue";
 
@@ -60,10 +70,33 @@ const vm = createHomeViewModel({
   shops: createShopRepository({ client }),
   brandHub,
 });
+// P2-21：服务保障/联系我们＋页脚（旧 index :109-113）内容经用例取数，组件纯 props
+const pageContent = createPageConfigContent({
+  pageConfig: createPageConfigRepository({ client }),
+  profile: {
+    copyrightText: PROFILE.copyrightText,
+    contactQrSrc: PROFILE.contactQrSrc,
+    contactPhoneText: PROFILE.contactPhoneText,
+  },
+});
 
 // —— 页面状态 ——
 const ready = ref(false);
 const brandHubOn = ref(false); // controller.enabled 非响应式，刷新后拷贝入 ref
+const footer = ref<FooterContent>({ mainLine: "", supportLine: "" });
+// 初值＝本地兜底（旧端组件即时用默认值渲染再异步更新）
+const contact = ref<ContactContent>({
+  list: [...SERVICE_LIST_DEFAULT],
+  slogan: SLOGAN_DEFAULT,
+  qrSrc: PROFILE.contactQrSrc,
+  phone: PROFILE.contactPhoneText,
+  coopPhone: COOP_PHONE_DEFAULT,
+});
+
+async function loadStaticContent(): Promise<void> {
+  footer.value = await pageContent.loadFooter(ctxFactory.next());
+  contact.value = await pageContent.loadContact(ctxFactory.next());
+}
 const statusBarHeight = ref(20);
 try {
   if (typeof uni !== "undefined" && typeof uni.getSystemInfoSync === "function") {
@@ -81,7 +114,7 @@ const shops = computed<PhotoGridShop[]>(() => vm.shops.value as unknown as Photo
 
 async function init(): Promise<void> {
   const context = ctxFactory.next();
-  await Promise.all([vm.load(context), vm.refreshBrandHub(context)]);
+  await Promise.all([vm.load(context), vm.refreshBrandHub(context), loadStaticContent()]);
   brandHubOn.value = brandHub.enabled;
   ready.value = true;
 }
@@ -189,6 +222,20 @@ onMounted(() => {
         <PhotoGrid :shop-list="shops" @shop-click="onShopClick" @demo-click="onDemoClick" />
       </view>
 
+      <!-- P2-21：服务保障/联系我们＋页脚（旧 index :109-113 ServiceContact＋page-footer/beian） -->
+      <ServiceContact
+        :list="contact.list"
+        :slogan="contact.slogan"
+        :qr-src="contact.qrSrc"
+        :phone="contact.phone"
+        :coop-phone="contact.coopPhone"
+      />
+      <view class="page-footer">
+        <view class="beian">
+          <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
+        </view>
+      </view>
+
       <view v-if="vm.error.value !== null" class="home-error">
         <text class="home-error-text">{{ vm.error.value }}</text>
         <BaseButton label="重试" @click="init" />
@@ -254,5 +301,15 @@ onMounted(() => {
 .home-error-text {
   font-size: v-bind("tokens.semantic.fontSizeBody");
   color: v-bind("tokens.semantic.colorTextSecondary");
+}
+/* P2-21 页脚包裹（旧 index :110-113 page-footer/beian） */
+.page-footer {
+  margin-top: auto;
+}
+.beian {
+  margin: 40rpx auto 32rpx;
+  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx */
+  font-weight: 400;
+  text-align: center;
 }
 </style>

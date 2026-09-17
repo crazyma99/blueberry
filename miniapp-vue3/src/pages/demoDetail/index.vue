@@ -26,6 +26,9 @@ import { formatAlbumTitle } from "../../domain/album-title";
 import { cosThumb } from "../../application/image";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
+import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 import LoadingBlock from "../../components/LoadingBlock/LoadingBlock.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import type { AlbumBrief } from "../../infrastructure/repositories/albums";
@@ -44,6 +47,19 @@ const authCoordinator = createAuthCoordinator({
 });
 const client = createHttpClient({ transport, authCoordinator });
 const albumRepo = createAlbumRepository({ client });
+// P2-21：页脚内容经用例取数（旧 demoDetail :184-187 divide＋bottomdesc AppFooter）
+const pageContent = createPageConfigContent({
+  pageConfig: createPageConfigRepository({ client }),
+  profile: {
+    copyrightText: PROFILE.copyrightText,
+    contactQrSrc: PROFILE.contactQrSrc,
+    contactPhoneText: PROFILE.contactPhoneText,
+  },
+});
+const footer = ref<FooterContent>({ mainLine: "", supportLine: "" });
+async function loadFooter(): Promise<void> {
+  footer.value = await pageContent.loadFooter(ctxFactory.next());
+}
 const likeRepo = createLikeRepository({ client });
 const ctxFactory = createContextFactory({
   platform,
@@ -113,6 +129,7 @@ async function reloadList(): Promise<void> {
   };
   if (searching.value && keyword.value.trim() !== "") params.keyword = keyword.value.trim();
   await listVM.loadFirst(ctxFactory.next(), params);
+  void loadFooter();
   await refreshLikeStatus();
 }
 
@@ -261,6 +278,14 @@ onMounted(() => {
         <text>暂无客片</text>
       </view>
     </template>
+
+    <!-- P2-21：页脚（旧 :184-187 divide＋bottomdesc AppFooter；内容经用例 props 注入） -->
+    <view class="page-footer">
+      <view class="divide"></view>
+      <view class="bottomdesc">
+        <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
+      </view>
+    </view>
 
     <BaseFeedback ref="feedbackRef" />
   </view>
@@ -411,5 +436,20 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 16rpx;
+}
+/* P2-21 页脚包裹（旧 demoDetail :184-187） */
+.page-footer {
+  margin-top: auto;
+}
+.divide {
+  height: 2rpx;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.15);
+}
+.bottomdesc {
+  margin: 32rpx auto;
+  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx */
+  font-weight: 400;
+  text-align: center;
 }
 </style>

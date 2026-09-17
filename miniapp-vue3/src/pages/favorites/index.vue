@@ -8,7 +8,7 @@
 // formatCount＋like 图标（:45-58）；点击 → targetPhotoDetail 携 idx/liked/type(shopId)（:240-247，
 // 缺 type 或 liked 详情接口会 400）；onShow firstShow 跳过一次后刷新（搜索态重搜/否则重拉，:108-120）；
 // 搜索双形态响应收窄 getSearchItems/getSearchTotal（数组或 {list,total}，:225-234）。
-// 有意偏差（已声明）：①AppFooter（旧 :75）未移植——组件属后续批次 not_started（同 priceList 声明口径）；
+// 有意偏差（已声明）：①AppFooter 已由 P2-21 接入（旧 :75；内容经 page-config 用例注入）；
 // ②主题暗→亮（旧 --color-bg #160F04→colorPage 白；金色元素在白底对比度待真机核对）；
 // ③sk-animate 闪烁动画未带（共享 SkeletonBlock 口径）；④卡片 fade-in 入场动画未带（旧 :46，属全局样式批次，
 // preflight:485 已登记 T6 同族缺口）；⑤搜索框 placeholder-style（旧 :12 金色 70%）未带——白底对比度考虑，待主题批次统一；
@@ -37,6 +37,9 @@ import { cosThumb } from "../../application/image";
 import { formatAlbumTitle } from "../../domain/album-title";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
+import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 
 // —— 装配（同 index/demoDetail/priceList/mine）——
 const detected = detectUiPlatform();
@@ -52,6 +55,15 @@ const authCoordinator = createAuthCoordinator({
 });
 const client = createHttpClient({ transport, authCoordinator });
 const favRepo = createFavoriteRepository({ client });
+// P2-21：页脚内容经用例取数（AppFooter 纯 props）
+const pageContent = createPageConfigContent({
+  pageConfig: createPageConfigRepository({ client }),
+  profile: {
+    copyrightText: PROFILE.copyrightText,
+    contactQrSrc: PROFILE.contactQrSrc,
+    contactPhoneText: PROFILE.contactPhoneText,
+  },
+});
 const ctxFactory = createContextFactory({
   platform,
   environment: env,
@@ -70,11 +82,18 @@ const page = ref(1);
 const pageSize = 10;
 const noMore = ref(false);
 const isSearching = ref(false);
+// P2-21 页脚（用例内已合并 OPS→Profile→本地兜底）
+const footer = ref<FooterContent>({ mainLine: "", supportLine: "" });
+
+async function loadFooter(): Promise<void> {
+  footer.value = await pageContent.loadFooter(ctxFactory.next());
+}
 // 首次显示由 onLoad 触发 loadData，onShow 跳过一次（旧端 :98-100/:108-113）
 const firstShow = ref(true);
 
 onLoad(() => {
   void loadData();
+  void loadFooter();
 });
 
 onShow(() => {
@@ -294,7 +313,10 @@ function toast(title: string): void {
 
     <view class="page-footer">
       <view class="divide"></view>
-      <!-- AppFooter（旧 :75）未移植：组件属后续批次 not_started（页头已声明） -->
+      <!-- P2-21：AppFooter 接入（旧 :75）——内容经 page-config 用例 props 注入 -->
+      <view class="copyright">
+        <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
+      </view>
     </view>
   </view>
 </template>
@@ -316,6 +338,13 @@ function toast(title: string): void {
   height: 2rpx;
   width: 100%;
   background: rgba(255, 255, 255, 0.15);
+}
+/* 页脚包裹（旧 :418-424 .copyright） */
+.copyright {
+  margin: 32rpx auto;
+  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx（App.uvue:131，CR 🟡2 纠错） */
+  font-weight: 400;
+  text-align: center;
 }
 /* 自定义导航栏内搜索框（旧端 :277-305） */
 .search-bar-wrap {

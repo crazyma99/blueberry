@@ -7,7 +7,7 @@
 // getPackages(id)（:82-93）：code===200 且有数据才渲染套餐区；失败静默（仅 console.error，无错误 UI）；
 // 模板：骨架（sk-banner 384rpx＋sk-block 600rpx，:5-8）→ 价目大图 widthFix（:12）→
 // 套餐卡（1:1 头图/名称/detail 两行截断/¥ 价格，:15-38）→ divide＋AppFooter（:40-41）。
-// 有意偏差（已声明）：①AppFooter 未移植——组件属后续批次 not_started（同 priceHomePage 声明口径）；
+// 有意偏差（已声明）：①AppFooter 已由 P2-21 接入（旧 :41；内容经 page-config 用例 props 注入，与旧端 mounted 自取数等价）；
 // ②失败静默忠实保留（不引入 index/demoDetail 的内联错误+重试——本页主内容为价目大图，套餐为辅）。
 // ⚠️ 兜底资产 /static/honghe-price.png 在旧端仓库亦不存在（2026-09-17 静态盘点实测，旧端同为死引用），保持同引用不修正。
 import { computed, ref } from "vue";
@@ -30,6 +30,9 @@ import {
 } from "../../infrastructure/repositories/packages";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
+import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
+import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 
 // —— 装配（同 index/demoDetail/priceHomePage）——
 const detected = detectUiPlatform();
@@ -45,6 +48,15 @@ const authCoordinator = createAuthCoordinator({
 });
 const client = createHttpClient({ transport, authCoordinator });
 const packageRepo = createPackageRepository({ client });
+// P2-21：页脚内容经用例取数（组件纯 props，不再自请求）
+const pageContent = createPageConfigContent({
+  pageConfig: createPageConfigRepository({ client }),
+  profile: {
+    copyrightText: PROFILE.copyrightText,
+    contactQrSrc: PROFILE.contactQrSrc,
+    contactPhoneText: PROFILE.contactPhoneText,
+  },
+});
 const ctxFactory = createContextFactory({
   platform,
   environment: env,
@@ -58,6 +70,12 @@ const loading = ref(true);
 const navTitle = ref("");
 const priceImage = ref("");
 const packages = ref<ShopPackageInfo[]>([]);
+// P2-21 页脚（OPS→Profile→本地兜底 已在用例内合并）
+const footer = ref<FooterContent>({ mainLine: "", supportLine: "" });
+
+async function loadFooter(): Promise<void> {
+  footer.value = await pageContent.loadFooter(ctxFactory.next());
+}
 
 // 旧端 :70-77 decodeRouteValue：decodeURIComponent 容错（非法编码保持原样不阻断）
 function decodeRouteValue(value: string): string {
@@ -84,6 +102,7 @@ onLoad((query) => {
   navTitle.value = shopName ? `${shopName}价目表` : "蓝梅价目表";
   priceImage.value = priceImageParam || getFallbackPriceImage(id);
   void loadPackages(id);
+  void loadFooter();
 });
 
 async function loadPackages(shopId: string): Promise<void> {
@@ -138,7 +157,10 @@ async function loadPackages(shopId: string): Promise<void> {
         </view>
       </view>
       <view class="divide"></view>
-      <!-- AppFooter（旧 :41）未移植：组件属后续批次 not_started（页头已声明） -->
+      <!-- P2-21：AppFooter 接入（旧 :41）——内容经 page-config 用例上提后 props 注入 -->
+      <view class="bottomdesc">
+        <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
+      </view>
     </view>
   </view>
 </template>
@@ -259,5 +281,12 @@ async function loadPackages(shopId: string): Promise<void> {
   height: 2rpx;
   width: 100%;
   background: rgba(255, 255, 255, 0.15);
+}
+/* 页脚包裹（旧 :211-216 .bottomdesc：margin 32rpx auto） */
+.bottomdesc {
+  margin: 32rpx auto;
+  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx（App.uvue:131，CR 🟡2 纠错） */
+  font-weight: 400;
+  text-align: center;
 }
 </style>

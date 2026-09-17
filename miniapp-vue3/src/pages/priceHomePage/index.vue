@@ -6,8 +6,8 @@
 // demo 点击 → priceList?from=banner&idx（:79-82）；CustomNavBar transparent＋PRICE LIST/价目表 标题（:3,15-16）；
 // 样式已收敛 PhotoGrid（:106）。
 // priceList 页与 getPackages 仓储属 P2-17 后半（下轮），导航先忠实接线。
-// 有意偏差（已声明）：①ServiceContact（旧 :19）/AppFooter beian（旧 :20）/tabbar-safe-spacer（旧 :23）未移植
-// ——组件属后续批次 not_started；②错误态 toast→内联错误+重试（与 index/demoDetail 装配一致）；
+// 有意偏差（已声明）：①ServiceContact（旧 :19）/AppFooter beian（旧 :20）已由 P2-21 接入（内容经 page-config 用例
+// props 注入，等价旧端 mounted 自取数）；tabbar-safe-spacer（旧 :23）未移植——自定义 tabbar 占位属 P2-12 组件批次；②错误态 toast→内联错误+重试（与 index/demoDetail 装配一致）；
 // ③id 空守卫（旧端会拼出 idx=undefined，新端防御性 return）。
 import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
@@ -31,6 +31,17 @@ import type { PhotoGridShop } from "../../components/PhotoGrid/PhotoGrid.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseButton from "../../ui/BaseButton.vue";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+import ServiceContact from "../../components/ServiceContact/ServiceContact.vue";
+import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
+import {
+  createPageConfigContent,
+  type FooterContent,
+  type ContactContent,
+  SERVICE_LIST_DEFAULT,
+  SLOGAN_DEFAULT,
+  COOP_PHONE_DEFAULT,
+} from "../../application/page-config-content";
 
 // —— 装配（同 index/demoDetail）——
 const detected = detectUiPlatform();
@@ -46,6 +57,15 @@ const authCoordinator = createAuthCoordinator({
 });
 const client = createHttpClient({ transport, authCoordinator });
 const shopRepo = createShopRepository({ client });
+// P2-21：服务保障/联系我们＋页脚内容经用例取数（组件纯 props，不再 mounted 自请求）
+const pageContent = createPageConfigContent({
+  pageConfig: createPageConfigRepository({ client }),
+  profile: {
+    copyrightText: PROFILE.copyrightText,
+    contactQrSrc: PROFILE.contactQrSrc,
+    contactPhoneText: PROFILE.contactPhoneText,
+  },
+});
 const ctxFactory = createContextFactory({
   platform,
   environment: env,
@@ -61,6 +81,21 @@ const ready = ref(false);
 const shops = ref<ShopBrief[]>([]);
 const error = ref<string | null>(null);
 const lastBrandId = ref<string | null>(null);
+// P2-21：服务保障/联系我们（旧 :19 ServiceContact）＋页脚（旧 :20 beian AppFooter）
+const footer = ref<FooterContent>({ mainLine: "", supportLine: "" });
+// 初值＝本地兜底（旧端组件即时用 data 默认值渲染再异步更新，CR 🟡5：避免请求返回前整块空白）
+const contact = ref<ContactContent>({
+  list: [...SERVICE_LIST_DEFAULT],
+  slogan: SLOGAN_DEFAULT,
+  qrSrc: PROFILE.contactQrSrc,
+  phone: PROFILE.contactPhoneText,
+  coopPhone: COOP_PHONE_DEFAULT,
+});
+
+async function loadStaticContent(): Promise<void> {
+  footer.value = await pageContent.loadFooter(ctxFactory.next());
+  contact.value = await pageContent.loadContact(ctxFactory.next());
+}
 
 // 封面 600 缩略在展示层做（旧端 loadShops 内改写对象；新端保持 repo DTO 原样——语义等价）
 const gridShops = computed<PriceShop[]>(() =>
@@ -90,6 +125,7 @@ async function loadShops(): Promise<void> {
 
 onLoad(() => {
   void loadShops();
+  void loadStaticContent();
   lastBrandId.value = versioned.loadBrandId();
 });
 
@@ -143,6 +179,17 @@ function onDemoClick(idx: number): void {
       <view class="divideTit">PRICE LIST</view>
       <view class="demoPhotoTit font-noto-serif">价目表</view>
       <PhotoGrid :shop-list="gridShops" @shop-click="onShopClick" @demo-click="onDemoClick" />
+      <!-- P2-21：服务保障/联系我们（旧 :19）＋页脚（旧 :20）——内容经用例注入 -->
+      <ServiceContact
+        :list="contact.list"
+        :slogan="contact.slogan"
+        :qr-src="contact.qrSrc"
+        :phone="contact.phone"
+        :coop-phone="contact.coopPhone"
+      />
+      <view class="beian">
+        <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
+      </view>
       <view v-if="error !== null" class="page-error">
         <text class="page-error-text">{{ error }}</text>
         <BaseButton label="重试" @click="loadShops" />
@@ -187,6 +234,13 @@ function onDemoClick(idx: number): void {
   margin-top: 16rpx;
   font-size: v-bind("tokens.semantic.fontSizeSubTitle");
   color: v-bind("tokens.semantic.colorAction");
+  text-align: center;
+}
+/* 页脚包裹（旧 :107-113 .beian） */
+.beian {
+  margin: 40rpx auto 32rpx;
+  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx（App.uvue:131，CR 🟡2 纠错） */
+  font-weight: 400;
   text-align: center;
 }
 .page-error {
