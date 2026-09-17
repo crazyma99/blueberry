@@ -16,6 +16,7 @@ function walk(dir, out = []) {
 
 export function verifyTarget({ manifest, artifactDir }) {
   const errors = [];
+  const warnings = []; // 非阻断但必须上报（如产物 appid 为占位 ⇒ 无法真机出码）
   const checked = [];
   const A = resolve(artifactDir);
   if (!existsSync(A)) return { ok: false, errors: ["artifactDir missing: " + A], checked };
@@ -78,5 +79,26 @@ export function verifyTarget({ manifest, artifactDir }) {
   // 当前 src 尚无 HTTP 消费方，profile 配置已生成于 src/generated/（构建目录内可查）。
   checked.push("appCode/apiBase: pending-http-layer(Phase2)");
 
-  return { ok: errors.length === 0, errors, checked };
+  // 8) P4-07/P4-13：平台作用域路由断言——**未迁移/不注册的页必须不在产物里**
+  //    （抖音＝客片展示版：AI 六页不注册；靠产物命中判定，不用源码推断）
+  for (const forbidden of manifest.forbiddenRoutes ?? []) {
+    if (!forbidden) continue;
+    const hit = (appJson.pages ?? []).find((p) => p.startsWith(forbidden));
+    if (hit) errors.push("forbidden route present: " + hit + " (platform=" + manifest.platform + ")");
+  }
+  checked.push("forbiddenRoutes:" + String((manifest.forbiddenRoutes ?? []).length));
+
+  // 9) P4-13：平台专属产物指纹——抖音产物须自带 tt 前缀样式 `app.ttss`
+  if (manifest.platform === "mp-toutiao") {
+    if (!existsSync(join(A, "app.ttss"))) errors.push("mp-toutiao artifact missing app.ttss (tt-prefixed style)");
+    else checked.push("platform:mp-toutiao(tt-files)");
+  }
+
+  // 10) appid 占位告警（P4-11/P4-13）：占位 appid 的产物无法真机出码 ⇒ 上报但不伪装成通过
+  const pcForAppid = existsSync(join(A, "project.config.json")) ? readJson(join(A, "project.config.json")) : {};
+  if (!manifest.appid || String(pcForAppid.appid ?? "") === "testAppId") {
+    warnings.push("artifact appid is placeholder (testAppId): 该产物不可用于真机出码（须经 build-target 管线注入平台 AppID）");
+  }
+
+  return { ok: errors.length === 0, errors, warnings, checked };
 }

@@ -18,7 +18,7 @@
 | AI 页注册 | 产物内 `pages` 无任何 `aiRecommend*`／`aiTryOn*` | ✅ 满足拍板口径 |
 | tabBar | `app.json.tabBar.list` = `index`／`priceHomePage`／`mine`（3 tab） | ✅ |
 | 抖音专用产物 | 含 `app.json`＋`app.js`＋**`app.ttss`**（tt 前缀样式）＋`project.config.json` | ✅ 基本齐 |
-| ⚠️ **AppID 注入** | `project.config.json.appid` = **`testAppId`（占位）**；`src/manifest.json` 的 `mp-toutiao` 块**只有 `usingComponents`、无 appid** | ❌ **未落地** |
+| ⚠️ **AppID 注入** | **绕过管线**直接 `npx uni build -p mp-toutiao` 时产物 `project.config.json.appid` = `testAppId`（占位）；**但 `build-target` 管线已强制**——`validateProfile` 对抖音缺 `MP_TOUTIAO_APPID` 直接拒绝（既有用例「抖音构建缺 MP_TOUTIAO_APPID 拒绝（P1-14 不回落微信）」），且 `manifest.appid` 取自 profile | 🟡 **管线安全、直跑不安全**：真机出码必须走 `build-target`（勿直接 `uni build`） |
 | 账号证据记录 | `docs/migration/baseline.json → accounts`（微信/抖音 AppID 与 status） | ✅ 记录在案 |
 | 抖音支付/登录能力 | 本仓**未声明**任何抖音支付/身份能力；`platform/weixin/payments.ts` 对非微信一律 `unsupported`（fail-closed） | ✅ 未越界（符合「零支付改造」） |
 

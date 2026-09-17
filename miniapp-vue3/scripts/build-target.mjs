@@ -180,6 +180,8 @@ export function runBuild(req, { repoRoot, pnpmCmd = "pnpm", skipInstall = false 
     engine: req.engine,
     profileKey: req.profileKey,
     platform: req.platform,
+    // P4-07/P4-13：平台作用域「不应注册」的路由前缀（抖音＝客片展示版 ⇒ AI 六页不得出现）
+    forbiddenRoutes: req.platform === "mp-weixin" ? [] : ["pages/aiTryOn", "pages/aiTryOnResult", "pages/aiTryOnHistory", "pages/aiRecommend"],
     environment: req.environment,
     appid: v.profile.appid,
     appCode: v.profile.appCode,
