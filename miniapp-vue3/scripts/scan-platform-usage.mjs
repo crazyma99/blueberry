@@ -92,3 +92,41 @@ export function collectSources(root, walk) {
 }
 
 export { join };
+
+// ——— 配置/编译侧规则（P4-12 的「配置/编译」两侧；2026-09-17 补，CR 指出的缺口）———
+//  适用文件：`src/pages.json`／`src/manifest.json`／`vite.config.*`（**不含**构建产物）
+//  规则：①`#ifdef`/`#ifndef` 的宏必须在**登记集合**内（未知宏拼写错误会静默失效）②标记必须**配对**（栈式校验）
+//        ③`condition`（调试启动模式）**不得用于平台裁剪**（P4-07）
+export const REGISTERED_MACROS = ["MP-WEIXIN", "MP-TOUTIAO", "MP-XHS", "H5", "APP-PLUS", "MP", "APP"];
+
+const MARKER_RE = /^\s*\/\/\s*#(ifdef|ifndef|endif|else|elif)\s*([A-Za-z0-9_|-]*)/;
+
+export function scanConfigPlatformUsage(files) {
+  const violations = [];
+  for (const { file, src } of files) {
+    const isConfig = /(^|\/)(pages\.json|manifest\.json|vite\.config\.[a-z]+)$/.test(file);
+    if (!isConfig) continue;
+    // ①/② 标记检查（仅 JSONC/JS 配置；逐行栈式）
+    const stack = [];
+    src.split("\n").forEach((line, i) => {
+      const m = line.match(MARKER_RE);
+      if (!m) return;
+      const [, kind, macros] = m;
+      const at = file + ":" + (i + 1);
+      if (kind === "ifdef" || kind === "ifndef") {
+        const list = macros.split("||").map((x) => x.trim()).filter(Boolean);
+        if (list.length === 0) violations.push({ file, api: "config:empty-macro", at });
+        for (const macro of list) {
+          if (!REGISTERED_MACROS.includes(macro)) violations.push({ file, api: "config:unknown-macro:" + macro, at });
+        }
+        stack.push(kind);
+      } else if (kind === "endif") {
+        if (stack.pop() === undefined) violations.push({ file, api: "config:unbalanced-endif", at });
+      }
+    });
+    if (stack.length > 0) violations.push({ file, api: "config:unclosed-ifdef", at: file });
+    // ③ condition 不得用于平台裁剪（P4-07）
+    if (/"condition"\s*:/.test(src)) violations.push({ file, api: "config:condition-for-platform", at: file });
+  }
+  return violations;
+}

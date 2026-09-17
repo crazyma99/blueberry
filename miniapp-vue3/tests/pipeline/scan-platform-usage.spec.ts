@@ -3,7 +3,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { REGISTERED_EXCEPTIONS, collectSources, scanPlatformUsage, scanSource } from "../../scripts/scan-platform-usage.mjs";
+import { REGISTERED_EXCEPTIONS, collectSources, scanConfigPlatformUsage, scanPlatformUsage, scanSource } from "../../scripts/scan-platform-usage.mjs";
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
@@ -86,5 +86,27 @@ describe("P4-12 平台用法扫描规则", () => {
     for (const e of REGISTERED_EXCEPTIONS) {
       expect(readFileSync(join(root, e.file), "utf-8")).toContain(e.api);
     }
+  });
+});
+
+describe("P4-12 配置/编译侧规则（2026-09-17 补）", () => {
+  it("⭐未知宏／配对问题／condition 平台裁剪 → 报违规；登记宏且配对 → 通过", () => {
+    expect(scanConfigPlatformUsage([{ file: "src/pages.json", src: '// #ifdef MP-WEIXIN\n{}\n// #endif' }])).toEqual([]);
+    expect(
+      scanConfigPlatformUsage([{ file: "src/pages.json", src: '// #ifdef MP-WEIXN\n{}\n// #endif' }]).map((v) => v.api),
+    ).toContain("config:unknown-macro:MP-WEIXN");
+    expect(scanConfigPlatformUsage([{ file: "src/pages.json", src: '// #ifdef MP-WEIXIN\n{}' }]).map((v) => v.api)).toContain("config:unclosed-ifdef");
+    expect(scanConfigPlatformUsage([{ file: "src/pages.json", src: "// #endif\n{}" }]).map((v) => v.api)).toContain("config:unbalanced-endif");
+    expect(
+      scanConfigPlatformUsage([{ file: "src/pages.json", src: '{ "condition": { "miniprogram": { "list": [] } } }' }]).map((v) => v.api),
+    ).toContain("config:condition-for-platform");
+  });
+
+  it("非配置文件不参与该规则；⭐真实仓库配置侧 0 违规（pages.json 11 个 MP-WEIXIN 全部登记且配对）", () => {
+    expect(scanConfigPlatformUsage([{ file: "src/pages/index/index.vue", src: '// #ifdef MP-BOGUS' }])).toEqual([]);
+    const root = resolve(__dirname, "../..");
+    const cfgs = ["src/pages.json", "src/manifest.json", "vite.config.ts"]
+      .map((f) => ({ file: f, src: readFileSync(join(root, f), "utf-8") }));
+    expect(scanConfigPlatformUsage(cfgs)).toEqual([]);
   });
 });
