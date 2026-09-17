@@ -7,7 +7,7 @@ const h = vi.hoisted(() => ({
   onShowCalls: [] as Array<() => void>,
   onUnloadCalls: [] as Array<() => void>,
   recommendCalls: 0,
-  mode: "ok" as "ok" | "insufficient" | "network" | "business",
+  mode: "ok" as "ok" | "insufficient" | "network" | "business" | "auth",
   toasts: [] as string[],
 }));
 
@@ -24,6 +24,7 @@ vi.mock("../../src/infrastructure/repositories/ai", () => ({
       h.recommendCalls += 1;
       if (h.mode === "insufficient") return { ok: false, error: { kind: "INSUFFICIENT_CREDITS" } };
       if (h.mode === "network") return { ok: false, error: { kind: "NETWORK" } };
+      if (h.mode === "auth") return { ok: false, error: { kind: "AUTH_EXPIRED" } };
       if (h.mode === "business") return { ok: false, error: { kind: "BUSINESS", message: "功能未启用" } };
       return { ok: true, value: { analysis: { gender: "女" }, recommendations: [{ id: 1, finalScore: 88 }] } };
     },
@@ -129,5 +130,42 @@ describe("pages/aiRecommendLoading（P3-20 页级场景）", () => {
     await w.vm.$nextTick();
     expect(h.recommendCalls).toBe(1);
     expect(h.toasts).toContain("功能未启用");
+  });
+
+  it("⭐401（AUTH_EXPIRED）→ 失败态＋toast「登录已过期，请返回重新登录」，**零自动重发**", async () => {
+    h.mode = "auth";
+    const w = boot();
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.recommendCalls).toBe(1);
+    expect(w.find(".fail-wrapper").exists()).toBe(true);
+    expect(h.toasts).toContain("登录已过期，请返回重新登录");
+    await flush();
+    expect(h.recommendCalls).toBe(1); // 不自动重发
+  });
+
+  it("⭐180s 超时（页面计时器到点）→ 失败态且**绝不自动重发**（每次 POST 都会再扣次数）", async () => {
+    // 捕获页面注册的 1s 计时器回调，手工推进 180 次（避免真实等待/假计时器与 Promise 混用）
+    const intervals: Array<() => void> = [];
+    const realSetInterval = globalThis.setInterval;
+    (globalThis as { setInterval: typeof setInterval }).setInterval = ((fn: () => void) => {
+      intervals.push(fn);
+      return 0 as unknown as ReturnType<typeof setInterval>;
+    }) as typeof setInterval;
+    try {
+      const w = boot();
+      await flush();
+      await w.vm.$nextTick();
+      expect(h.recommendCalls).toBe(1);
+      const tick = intervals[intervals.length - 1];
+      expect(typeof tick).toBe("function");
+      for (let i = 0; i < 180; i++) tick();
+      await w.vm.$nextTick();
+      expect(w.find(".fail-wrapper").exists()).toBe(true);
+      expect(w.find(".fail-text").text()).toContain("AI分析失败，请重试");
+      expect(h.recommendCalls).toBe(1); // ✅ 超时不得自动再扣第二次
+    } finally {
+      (globalThis as { setInterval: typeof setInterval }).setInterval = realSetInterval;
+    }
   });
 });
