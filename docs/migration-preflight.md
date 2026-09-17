@@ -365,6 +365,21 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **⭐ T5（P2-01~10）全部完成**；下一步＝**T6 首条纵切片**（首页→相册列表→详情→返回：三页/composables/组件，8 条合同＋仓储层＋公共层已就位）。
 
+
+## 8.20 T6 执行记录（P2-11 VM 层首批，2026-09-17 第八批）
+
+| 项 | 内容 |
+|---|---|
+| 路由入参 | `application/route-params.ts`（`parseDetailParams`）——旧端 demoDetail:735 实测**六参数忠实解析**（idx→albumId／type→shopId／category／subCategory／liked／style percent-decode 含 emoji）；**缺 idx → null 安全失败**；多余参数忽略 |
+| 首页 VM | `composables/use-home.ts`（`createHomeViewModel`）——轮播与店铺**并行加载**（旧端 index:356-357 `Promise.all`＋各自容错语义）；**单侧失败不拖垮另一侧**、双侧皆败才置 error；品牌馆开关经 controller 委托（在飞去重由 controller 保证） |
+| 列表 VM | `composables/use-album-list.ts`（`createAlbumListViewModel`）——分页 **noMore 双条件**（页码达 ceil(total/size) 或本页不满，旧端 demoDetail:497）；搜索 keyword 透传（旧端 :551-556 同一接口）；loadFirst 重置、noMore 后不再请求；pageSize 默认 10（旧端 albumSize/searchSize :256/265） |
+| 测试 | 8 条（入参 2／首页 3／列表 3），先红（模块缺失 RED）后绿 |
+| 汇总 | vitest **161/161＋3 skipped** exit 0＋typecheck **exit 0**＋三平台构建各 exit 0 |
+
+**T6 剩余**：P2-11 后半（三页接入：index/demoDetail/targetPhotoDetail＋组件 PhotoGrid/SkeletonBlock/LoadingBlock/CustomNavBar）、P2-12 3Tab 复刻、P2-13 两套布局验证、P2-14 点赞乐观更新、P2-15 场景矩阵、P2-16 微信真机＋独立 CR。
+
+**备注（主人指示）**：后续派子 Agent 可使用 **mify 的 deepseek v4 pro 模型**——已记，下次派发时启用。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
