@@ -45,10 +45,10 @@
 | ServiceContact | ported | **等价实现＋请求上提**（P2-21；纯 props；本地兜底 8 条与旧端一致） |
 | LoadingBlock | ported | 等价实现（T5/T6 期间） |
 | AppInput | not_started | AI 批次；ProfilePopup 已就地内联其结构（待替换回组件） |
-| AppPhotoPicker | not_started | AI 批次 |
-| AppSegment | not_started | AI 批次 |
-| AppSelector | not_started | AI 批次 |
-| BottomActionBar | not_started | AI 批次（与已迁的 Secondary 款不同组件） |
+| AppPhotoPicker | ported | 等价实现（T8 S2，纯展示：只转发 click，选图/登录/上传留页面 handler） |
+| AppSegment | ported | 等价实现（T8 S2；`change` 载荷＝纯下标 number，与旧端逐字） |
+| AppSelector | ported | 等价实现（T8 S2；原生 `picker` 保真，未走 wot 统一口径——待对齐批次；`change`＝`e.detail.value`） |
+| BottomActionBar | ported | 等价实现（T8 S2；⚠️ 唯一偏差：新增 `footerMainLine`/`footerSupportLine` 透传 props——新端 AppFooter 已 props 化；渐变底沿用旧 `#160F04`） |
 | GenerationProgress | not_started | AI 批次 |
 
 ## native tabBar

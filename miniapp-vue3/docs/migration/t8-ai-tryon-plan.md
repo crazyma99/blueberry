@@ -68,6 +68,18 @@
 
 - `infrastructure/repositories/ai.ts`（templates/styles/tasks/recommend）＋契约测试（`d3a2dd8`）
 - `infrastructure/repositories/credits.ts`＋`application/payment-coordinator.ts`＋`platform/weixin/payments.ts`（`31586ee`/`d21316e`）
+- **S1 适配层**：`ports/upload`＋`platform/uni/upload.ts`（品牌头透传）＋`platform/weixin/capabilities.ts`（截屏保护·订阅消息）（`0d3806d`）
+- **S2 基础组件**：`AppSegment`／`AppSelector`／`AppPhotoPicker`／`BottomActionBar`（t32 五例；parity 已记 ported）
 - `application/login-flow.ts`／`user-info-store.ts`／`components/LoginPopup`（P2-18）
 - `application/page-config-content.ts`＋`AppFooter`（P2-21）
 - 注册口径：AI 页 `pages.json` 以 `#ifdef MP-WEIXIN` 包裹（产物实证：微信含／抖音不含，`d002d7c`）
+
+## 6. 装配注意（S2/S4 落地时逐条遵守）
+
+1. **BottomActionBar 必须显式传页脚**：`:footer-main-line="footer.mainLine" :footer-support-line="footer.supportLine"`（`footer` 来自 `createPageConfigContent().loadFooter()`）——新端 `AppFooter` 已 props 化，不传则为空白。
+2. **组件显式 import**（无自动注册）；`aiTryOn` 需引入 `AppSegment/AppSelector/AppPhotoPicker/BottomActionBar/LoginPopup/ProfilePopup/AppFooter`。
+3. **素材已入库**：`/static/aitry-text.png`、`btn-left-icon.png`、`btn-right-icon.png`、`iconpark/down.svg`（S2 提交一并纳入）。
+4. **`AppSelector` 用原生 `<picker>`**（保真优先）；是否统一到 wot 口径属**对齐批次**决策，本批不改。
+5. **token 雷区**：旧 `--font-size-body=24rpx` ≠ `tokens.semantic.fontSizeBody(32rpx)`；金色→`colorAction`、金色面上的墨色→`colorActionText`；派生透明度按 rgba 字面值。
+6. ⚠️ **页面底色决策（S2 装配时定）**：`BottomActionBar` 渐变底沿用旧 `#160F04`（未映射 light `colorPage`，与 `BottomActionBarSecondary` 同口径）⇒ 若沿用，`aiTryOn` 页需保持**深色页底**才自洽；若新端统一亮色，则须同批把该组件与页面一起改并登记偏差。
+
