@@ -380,6 +380,21 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **备注（主人指示）**：后续派子 Agent 可使用 **mify 的 deepseek v4 pro 模型**——已记，下次派发时启用。
 
+
+## 8.21 T6 执行记录（P2-11/13 组件层，2026-09-17 第九批）
+
+| 项 | 内容 |
+|---|---|
+| 组件四件移植 | `src/components/{SkeletonBlock,LoadingBlock,PhotoGrid,CustomNavBar}/`（旧端 25/51/155/141 行 .uvue → Vue3 SFC）——**PhotoGrid**：flex-wrap gap 8rpx／单店全宽／多店 2 列／奇数(>1)补「敬请期待」占位卡不可点／空列表回退双 demo 图，事件透传 shop-click/demo-click（P2-13 布局基线）；**CustomNavBar**：微信自绘金色标题＋返回（backFallbackUrl/manualBack 语义保留），**抖音整体渲染空**（default 导航定案，isToutiaoPlatform 分支）；SkeletonBlock/LoadingBlock 忠实移植 |
+| token 纪律 | solid 色走 `tokens.semantic`（v-bind）；**派生透明度**（旧 --color-primary-20/-30/-50/-70）按 gold #F1CD91=rgb(241,205,145) 同值 rgba 派生并注明；`--radius-card` 旧值未盘点→按 popupRadiusRpx 映射（视觉差异待 P2-13 样页核对）——不臆造旧值 |
+| 运行时守卫 | CustomNavBar 的 statusBarHeight 经 getSystemInfoSync typeof 守卫（默认 20）；showBack 的 getCurrentPages typeof 守卫；导航调用全部 typeof 守卫（测试环境与异常容器安全） |
+| 静态资源 | demo1/demo2.png、iconpark/back.svg 随组件入新端 `src/static/` |
+| ⭐ 测试环境事实 | **happy-dom CSSOM 会丢弃 rpx 值**（uni 专用单位非标准 CSS，style 属性里被剥离）⇒ 组件样式断言改用可存活单位（%/px）验证绑定机制；**rpx 透传属 uni 运行时行为，真机样页核对（P2-13）** |
+| 测试 | 8 条（骨架/加载 2、PhotoGrid 3、CustomNavBar 3）——占位卡奇偶、单店全宽、demo 回退、抖音渲染空、manualBack 只 emit 均锁定 |
+| 汇总 | vitest **169/169＋3 skipped** exit 0＋typecheck **exit 0**＋三平台构建各 exit 0（组件首次真实编译进三端产物） |
+
+**T6 剩余**：三页接入（index/demoDetail/targetPhotoDetail 接 VM＋组件＋pages.json 平台条件导航）、P2-12 3Tab 复刻、P2-13 两套布局样页验证、P2-14 点赞乐观更新、P2-15 场景矩阵、P2-16 微信真机＋独立 CR。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
