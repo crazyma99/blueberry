@@ -80,6 +80,26 @@ describe("createAuthCoordinator（P2-03）", () => {
     expect(r2.ok).toBe(true);
     if (r2.ok) expect(r2.value.authRevision).toBeGreaterThan(1); // 代次递增
   });
+  it("换票 Promise reject → 全部等待者失败且不悬挂（P2-10 CR 回归）", async () => {
+    let calls = 0;
+    const co = createAuthCoordinator({
+      exchangeIdentity: () => {
+        calls++;
+        return calls === 1
+          ? Promise.reject(new Error("provider exploded"))
+          : Promise.resolve({ ok: true, value: mkSession(0) });
+      },
+      storage: memStorage(),
+      clock: systemClock,
+    });
+    const w = co.waitForLogin(ctx());
+    const r = await w;
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe("exchange-failed");
+    const r2 = await co.waitForLogin(ctx());
+    expect(calls).toBe(2);
+    expect(r2.ok).toBe(true);
+  });
   it("超时：不能无限等待（timeoutMs 到点失败）", async () => {
     const co = createAuthCoordinator({ exchangeIdentity: () => new Promise(() => {}), storage: memStorage(), clock: systemClock });
     const r = await co.waitForLogin(ctx(), { timeoutMs: 20 });

@@ -20,6 +20,8 @@ export interface HttpRequest {
 export interface HttpResponse<T> {
   readonly status: number;
   readonly businessCode: number | null;
+  /** 业务信封 message（P2-10 CR：错误信息不得在传输边界丢失） */
+  readonly message?: string;
   readonly requestId: string | null;
   readonly data: T;
 }

@@ -352,6 +352,19 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T5 剩余**：P2-10 独立 CR（子 agent 在途）；P2-05 调用侧细则并入 T6。
 
+
+## 8.19 T5 执行记录（P2-10 独立 CR，2026-09-17 第七批）
+
+| 项 | 内容 |
+|---|---|
+| CR 执行方式 | 派发子 agent `d43c87dc` **真失败**（注册表 ready＋零产出＋worktree 干净——与既往两次「失败通知但实为 running」的误报**不同**，本次经三重核实）⇒ 秘书内联完成 CR；**独立性有限、已注明留待主人/团队二审** |
+| 🔴 队列悬空（已修） | auth-coordinator 换票 Promise reject 路径未接：`.then` 只接成功 ⇒ exchanging 永久卡死、waiters 永不唤醒 ⇒ 补 rejection 处理器＋回归测试（reject 后第二次 waitForLogin 正常发起换票，calls=2 断言） |
+| 🟡 错误信息丢失（已修） | 业务失败映射丢信封 message（ports HttpResponse 无该字段、client 传空串）⇒ HttpResponse 补 `message?`＋client 透传＋回归断言（`存储失败` 原样到达 AppError.message） |
+| 越权／合同一致性 | ✅ 通过（Bearer/X-Brand-Id/authRequired 三处用法与旧端语义一致；repositories 8 wrapper 与 contracts.md 逐条一致；重放策略符合 P2-05） |
+| 汇总 | vitest **153/153＋3 skipped** exit 0＋typecheck **exit 0**＋三平台构建各 exit 0；报告 `docs/migration/cr-t5.md` |
+
+**⭐ T5（P2-01~10）全部完成**；下一步＝**T6 首条纵切片**（首页→相册列表→详情→返回：三页/composables/组件，8 条合同＋仓储层＋公共层已就位）。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）

@@ -73,14 +73,21 @@ export function createAuthCoordinator(deps: {
   function startExchange(context: RequestContext): void {
     if (exchanging) return; // 一个登录交互唤醒全部
     exchanging = true;
-    deps.exchangeIdentity(context).then((result) => {
-      exchanging = false;
-      if (result.ok) {
-        completeLogin(result.value);
-      } else {
-        failAll(result.reason);
-      }
-    });
+    // CR（P2-10）：换票 Promise 若 reject 也必须收口——否则 exchanging 卡死、waiters 悬空
+    deps.exchangeIdentity(context).then(
+      (result) => {
+        exchanging = false;
+        if (result.ok) {
+          completeLogin(result.value);
+        } else {
+          failAll(result.reason);
+        }
+      },
+      () => {
+        exchanging = false;
+        failAll("exchange-failed");
+      },
+    );
   }
 
   function waitForLogin(

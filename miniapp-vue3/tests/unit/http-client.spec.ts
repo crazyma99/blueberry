@@ -83,10 +83,11 @@ describe("createHttpClient 响应与错误映射（P2-01/05）", () => {
       expect(r1.error.businessCode).toBe(4001);
       expect(r1.error.retryable).toBe(false);
     }
-    const t2 = makeTransport(() => ({ ok: true, value: { status: 200, businessCode: 5001, requestId: "rq", data: null } }));
+    const t2 = makeTransport(() => ({ ok: true, value: { status: 200, businessCode: 5001, message: "存储失败", requestId: "rq", data: null } }));
     const r2 = await createHttpClient({ transport: t2.port, authCoordinator: okAuth }).request({ method: "POST", url: "/p", context: ctx });
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.error.kind).toBe("BUSINESS");
+    if (!r2.ok) expect(r2.error.message).toBe("存储失败"); // P2-10 CR：信封 message 不丢失
   });
   it("HTTP 401 → AUTH_EXPIRED；传输失败 reason 映射 network/timeout", async () => {
     const t1 = makeTransport(() => ({ ok: true, value: { status: 401, businessCode: null, requestId: "r", data: null } }));

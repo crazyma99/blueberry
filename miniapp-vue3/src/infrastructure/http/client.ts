@@ -128,7 +128,7 @@ export function createHttpClient(deps: {
     }
     return {
       ok: false,
-      error: mapBusinessFailure(http.businessCode, "", http.requestId ?? ctx.requestId),
+      error: mapBusinessFailure(http.businessCode, http.message ?? "", http.requestId ?? ctx.requestId),
     };
   }
 
