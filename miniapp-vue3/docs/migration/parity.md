@@ -30,7 +30,8 @@
 | 12 | `pages/aiTryOnHistory` | ported | T8 首片（2026-09-17）：记录页＋AI 仓储 getTasks；`pages.json` 以 `#ifdef MP-WEIXIN` 注册（产物实证：微信 13 页含本页／抖音 12 页不含）；t30 四例 |
 | 13 | `pages/aiTryOn` | ported | T8 装配完成：模板双入口（travel/album＋相册空回退）／选图·质量检测·上传／提交守卫与 4001→共享协调器／防截屏 onShow-onHide-onUnload；`#ifdef MP-WEIXIN` 注册（产物实证微信 14 页含／抖音 12 页不含）；t38 三例 |
 | 14 | `pages/aiTryOnResult` | not_started | T8 末片（结果轮询＋下载买断 `taskBought` 权益）；抖音侧**不注册** |
-| 15–17 | `pages/aiRecommend`、`aiRecommendLoading`、`aiRecommendResult` | not_started | Phase 3；抖音侧**不注册** |
+| 17 | `pages/aiRecommendResult` | ported | T9b 首片（518 行）：推荐结果页；**P3-18** 只渲染 `shouldShowScore` 为真的 `finalScore`（经 `normalizeFinalScore`，且指出旧类型 `AiRecommendation` 漏 `finalScore` 字段——按现行 DTO 显式收，兼容 `final_score`）；`#ifdef MP-WEIXIN` 注册（产物实证微信 16 页含／抖音 12 页不含） |
+| 15–16 | `pages/aiRecommend`、`aiRecommendLoading` | not_started | T9b 后续片；抖音侧**不注册** |
 
 ## 组件（15）
 
