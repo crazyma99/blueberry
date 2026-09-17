@@ -33,3 +33,15 @@ export function parseDetailParams(query: Record<string, unknown>): DetailParams 
     style,
   };
 }
+
+/** demoDetail 导航入参（旧端 index:578-582 实测：?idx=店铺id&from=banner 可选） */
+export interface ListPageParams {
+  shopId: string;
+  from: string;
+}
+
+export function parseListParams(query: Record<string, unknown>): ListPageParams | null {
+  const shopId = str(query.idx);
+  if (shopId.length === 0) return null;
+  return { shopId, from: str(query.from) };
+}

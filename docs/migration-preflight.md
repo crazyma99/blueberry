@@ -410,6 +410,21 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T6 剩余**：demoDetail（分类 tabs＋列表＋搜索＋点赞乐观更新 P2-14）、targetPhotoDetail（详情＋点赞）、P2-12 3Tab 复刻、P2-13 布局样页、P2-15 场景矩阵、P2-16 微信真机＋独立 CR。
 
+
+## 8.23 T6 执行记录（P2-11/14 相册列表页接入，2026-09-17 第十一批）
+
+| 项 | 内容 |
+|---|---|
+| **点赞乐观更新** | `composables/use-like.ts`（`createLikeToggler`，旧端 demoDetail:660-693 忠实移植）——**按下即反馈**（状态/计数先改后发）；**seq 并发守卫**（每次点击递增，晚到旧响应 `discarded-stale` 丢弃）；**服务端返回为准**（防并发漂移）；**失败回滚前态**；**计数不为负** |
+| **相册列表页** | `pages/demoDetail/index.vue`（414 行）——分类 tabs（父/子两级，`child.query` 透传旧端 :478-482）＋无有效子分类→空列表+noMore（:473-476）＋**搜索同接口加 keyword**（:551-556）＋**liked 批量 getLikeStatus 合并**（:613-619）＋分页 onReachBottom＋点赞经 use-like＋失败 toast（BaseFeedback 桥）；CustomNavBar 空标题（只返回，旧标题未盘点不臆造）；AI 推荐入口 banner 忠实渲染（目标页属 B4，导航随其注册） |
+| 路由入参 | `parseListParams`（idx=店铺id 必填、from 可选；旧端 index:578-582）；缺 idx 安全停留加载态 |
+| 附带移植 | `application/format.ts`（formatCount ≥1万→x.x万，旧端 format.uts:10-15）；静态资产 like/like-filled.svg、ai-recom-banner.png 入新端 |
+| **⭐ 测试环境新事实** | `@dcloudio/uni-app` 的 onLoad 在非页面容器调用 **`vue.injectHook` 崩溃** ⇒ 组件测试须 **vi.mock 该模块**并手动驱动生命周期（顺带获得「缺入参安全态/有入参收敛」双路径覆盖）——与 happy-dom 丢 rpx 并列的第二条 uni 运行时测试纪律 |
+| pages.json | demoDetail 注册＋平台条件导航；**产物实证**：微信页面 json **有** navigationStyle custom、抖音**无** |
+| 汇总 | vitest **178/178＋3 skipped** exit 0＋typecheck **exit 0**＋三平台构建各 exit 0 |
+
+**T6 剩余**：targetPhotoDetail（详情＋点赞，第二页）、P2-12 3Tab 复刻、P2-13 布局样页、P2-15 场景矩阵、P2-16 微信真机＋独立 CR。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
