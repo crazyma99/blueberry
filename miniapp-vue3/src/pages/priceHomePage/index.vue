@@ -1,38 +1,203 @@
 <script setup lang="ts">
-// B2/T7 占位页（P2-12 3Tab 复刻所需注册）：价目表页随 T7 批次完整迁移；
-// 当前仅承担 tabBar 路由与选中态同步（parity.md 记 not_started，不伪装完成度）。
-import { onShow } from "@dcloudio/uni-app";
-import { syncTabBarSelected } from "../../application/tabbar";
+// T7 首批（P2-17）：价目表 tab 页——店铺网格（复用 PhotoGrid）＋品牌切换检测重载＋tab 同步。
+// 旧端事实（priceHomePage/index.uvue）：onLoad 只跑一次（tab 常驻内存）；onShow 检测品牌变化重载且先置
+// loading=true 骨架重现（:45-54）；列表封面出 600 WebP 缩略（:59-65）；店铺点击 →
+// priceList?idx&shopName&priceImage（:74-77，shopName 用 shop.shopName 而非 displayName，:76）；
+// demo 点击 → priceList?from=banner&idx（:79-82）；CustomNavBar transparent＋PRICE LIST/价目表 标题（:3,15-16）；
+// 样式已收敛 PhotoGrid（:106）。
+// priceList 页与 getPackages 仓储属 P2-17 后半（下轮），导航先忠实接线。
+// 有意偏差（已声明）：①ServiceContact（旧 :19）/AppFooter beian（旧 :20）/tabbar-safe-spacer（旧 :23）未移植
+// ——组件属后续批次 not_started；②错误态 toast→内联错误+重试（与 index/demoDetail 装配一致）；
+// ③id 空守卫（旧端会拼出 idx=undefined，新端防御性 return）。
+import { computed, ref } from "vue";
+import { onLoad, onShow } from "@dcloudio/uni-app";
+import { PROFILE } from "../../generated/profile.config";
+import { detectUiPlatform } from "../../ui/ui-platform";
+import { isPlatform } from "../../ports/context";
+import type { Platform } from "../../ports/context";
+import { systemClock } from "../../ports/clock";
 import { tokens } from "../../generated/tokens";
+import { createUniTransport } from "../../platform/uni/transport";
+import { createUniStorage } from "../../platform/uni/storage";
+import { createAuthCoordinator } from "../../application/auth-coordinator";
+import { createContextFactory } from "../../application/request-context";
+import { createVersionedStorage } from "../../infrastructure/storage/versioned";
+import { createHttpClient } from "../../infrastructure/http/client";
+import { createShopRepository, type ShopBrief } from "../../infrastructure/repositories/shops";
+import { cosThumb } from "../../application/image";
+import { syncTabBarSelected } from "../../application/tabbar";
+import PhotoGrid from "../../components/PhotoGrid/PhotoGrid.vue";
+import type { PhotoGridShop } from "../../components/PhotoGrid/PhotoGrid.vue";
+import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
+import BaseButton from "../../ui/BaseButton.vue";
+import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+
+// —— 装配（同 index/demoDetail）——
+const detected = detectUiPlatform();
+const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
+const env = PROFILE.environment;
+const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
+const uniStorage = createUniStorage();
+const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });
+const authCoordinator = createAuthCoordinator({
+  exchangeIdentity: async () => ({ ok: false, reason: "wx-login-pending-T7" }),
+  storage: uniStorage,
+  clock: systemClock,
+});
+const client = createHttpClient({ transport, authCoordinator });
+const shopRepo = createShopRepository({ client });
+const ctxFactory = createContextFactory({
+  platform,
+  environment: env,
+  profileKey: PROFILE.profileKey,
+  appCode: PROFILE.appCode,
+  getBrandId: () => versioned.loadBrandId(),
+});
+
+// —— 页面状态 ——
+type PriceShop = PhotoGridShop & { id?: number; priceImage?: string; shopName?: string };
+
+const ready = ref(false);
+const shops = ref<ShopBrief[]>([]);
+const error = ref<string | null>(null);
+const lastBrandId = ref<string | null>(null);
+
+// 封面 600 缩略在展示层做（旧端 loadShops 内改写对象；新端保持 repo DTO 原样——语义等价）
+const gridShops = computed<PriceShop[]>(() =>
+  shops.value.map((s) => ({
+    id: typeof s.id === "number" ? s.id : undefined,
+    homeImage: typeof s.homeImage === "string" ? cosThumb(s.homeImage, 600) : undefined,
+    displayName: typeof s.displayName === "string" ? s.displayName : undefined,
+    displayNameEn: typeof s.displayNameEn === "string" ? s.displayNameEn : undefined,
+    priceImage: typeof s.priceImage === "string" ? s.priceImage : undefined,
+    // shopName 是导航串专用字段（旧端 api.uts ShopInfo 中与 displayName 并列独立字段）；
+    // priceList 二级页用它拼导航标题「${shopName}价目表」——不得用 displayName 替代
+    shopName: typeof s.shopName === "string" ? s.shopName : undefined,
+  })),
+);
+
+async function loadShops(): Promise<void> {
+  error.value = null;
+  const r = await shopRepo.getShops(ctxFactory.next());
+  if (r.ok) {
+    shops.value = r.value;
+  } else {
+    // 旧端为 toast「门店加载失败，请重试」；新端统一内联错误态＋重试（与 index/demoDetail 一致）
+    error.value = "门店加载失败，请重试";
+  }
+  ready.value = true;
+}
+
+onLoad(() => {
+  void loadShops();
+  lastBrandId.value = versioned.loadBrandId();
+});
 
 onShow(() => {
+  // ①tab 选中同步（本页下标 1）②品牌切换后重载：否则仍显示上一品牌门店（旧端 :49-52）
   syncTabBarSelected(1);
+  const brandId = versioned.loadBrandId();
+  if (brandId !== lastBrandId.value) {
+    lastBrandId.value = brandId;
+    // 旧端 :52 重载前先置 loading=true（骨架重现，避免上一品牌门店在新数据返回前可见）
+    ready.value = false;
+    void loadShops();
+  }
 });
+
+function onShopClick(shop: PhotoGridShop): void {
+  const s = shop as PriceShop;
+  if (s.id == null) return;
+  // 旧端 :74-77 原样拼接（shopName 可含中文，旧端未编码——微信实测可用，保持忠实）；
+  // 字段必须用 shopName（旧端 :76 shop.shopName，导航标题专用），不得用 displayName 替代
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") {
+    uni.navigateTo({
+      url: "/pages/priceList/index?from=banner&idx=" + s.id + "&shopName=" + s.shopName + "&priceImage=" + s.priceImage,
+    });
+  }
+}
+
+function onDemoClick(idx: number): void {
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") {
+    uni.navigateTo({ url: "/pages/priceList/index?from=banner&idx=" + idx });
+  }
+}
 </script>
 
 <template>
-  <view class="placeholder-page">
-    <text class="placeholder-title">价目表</text>
-    <text class="placeholder-note">本页随 T7 批次迁移接入</text>
+  <view class="container">
+    <CustomNavBar transparent />
+    <view v-if="!ready" class="sk-wrap">
+      <view class="sk-title">
+        <SkeletonBlock width="46%" height="48rpx" radius="8rpx" />
+      </view>
+      <view class="sk-subtitle">
+        <SkeletonBlock width="30%" height="36rpx" radius="8rpx" />
+      </view>
+      <view class="sk-row">
+        <SkeletonBlock height="226rpx" radius="12rpx" />
+        <SkeletonBlock height="226rpx" radius="12rpx" />
+      </view>
+    </view>
+    <template v-else>
+      <view class="divideTit">PRICE LIST</view>
+      <view class="demoPhotoTit font-noto-serif">价目表</view>
+      <PhotoGrid :shop-list="gridShops" @shop-click="onShopClick" @demo-click="onDemoClick" />
+      <view v-if="error !== null" class="page-error">
+        <text class="page-error-text">{{ error }}</text>
+        <BaseButton label="重试" @click="loadShops" />
+      </view>
+    </template>
   </view>
 </template>
 
 <style scoped>
-.placeholder-page {
+.container {
   min-height: 100vh;
+  background: v-bind("tokens.semantic.colorPage");
+}
+.sk-wrap {
+  padding: 40rpx 8rpx 0;
+}
+.sk-title {
+  display: flex;
+  justify-content: center;
+  margin-top: 40rpx;
+}
+.sk-subtitle {
+  display: flex;
+  justify-content: center;
+  margin-top: 16rpx;
+}
+.sk-row {
+  display: flex;
+  gap: 8rpx;
+  margin-top: 16rpx;
+}
+.sk-row > * {
+  flex: 1;
+}
+/* 标题（旧端 :95-105 divideTit/demoPhotoTit 忠实移植；金色 30% 派生同 PhotoGrid 注释口径） */
+.divideTit {
+  text-align: center;
+  font-size: v-bind("tokens.semantic.fontSizeCaption");
+  color: rgba(241, 205, 145, 0.3);
+}
+.demoPhotoTit {
+  margin-top: 16rpx;
+  font-size: v-bind("tokens.semantic.fontSizeSubTitle");
+  color: v-bind("tokens.semantic.colorAction");
+  text-align: center;
+}
+.page-error {
+  margin: 40rpx 16rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 16rpx;
-  background: v-bind("tokens.semantic.colorPage");
 }
-.placeholder-title {
-  font-size: v-bind("tokens.semantic.fontSizeTitle");
-  color: v-bind("tokens.semantic.colorTextStrong");
-}
-.placeholder-note {
-  font-size: v-bind("tokens.semantic.fontSizeCaption");
-  color: v-bind("tokens.semantic.colorTextMuted");
+.page-error-text {
+  font-size: v-bind("tokens.semantic.fontSizeBody");
+  color: v-bind("tokens.semantic.colorTextSecondary");
 }
 </style>
