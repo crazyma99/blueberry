@@ -31,7 +31,7 @@
 **⭐ P2-09 真实 provider 报文核对（2026-09-17，测试域只读 GET，门控 spec `tests/provider/wire-format.spec.ts`）**：8 个切片 wrapper 中 6 个已对真实线格式核对一致——`/api/shops`（14 键）／`/wechat/carousels`（8 键）／`/wechat/categories`（4 键）／`/wechat/albums`（信封 4 键＋album 项 6 键）／`/wechat/album/detail`（7 键）／`/api/like/status`（albumId,likeCount,liked **与冻结 DTO 逐字段一致**）；**fixture 与 provider 无冲突，无需修合同**；wxLogin 的 code 注入与 toggleLike 写调用**不在只读核对范围**（写/付费调用须单独授权，P2-09 纪律）。
 
 
-## T7 普通业务页批次合同（P2-17/18/19，2026-09-17 旧端 api.uts 实测冻结）
+## T7 普通业务页批次合同（P2-17/18/19/20，2026-09-17 旧端 api.uts 实测冻结）
 
 | wrapper | method | path | 入参 | 消费页面 | 状态 |
 |---|---|---|---|---|---|
@@ -43,6 +43,8 @@
 | getFavoriteStatus | GET | `/api/favorite/status` | albumIds（逗号串） | favorites（批量收藏态预留） | frozen（P2-19；需登录） |
 | toggleFavorite | POST | `/api/favorite` | albumId（number） | favorites | frozen（P2-19；需登录 never） |
 | searchAlbums | GET | `/api/search` | keyword,page,size | favorites（**唯一允许分页的路径**） | frozen（P2-19；公开 idempotent） |
+| getPageConfig | GET | `/api/page-config` | — | index（品牌馆入口显隐）＋brandHub（**页内自守卫**） | frozen（P2-20；公开 idempotent。⭐ 两侧**必须共用同一仓储**——入口显示而进入被拦＝P2-20 红线；旧端 60s 缓存由 controller scope 代次取代） |
+| getBrands | GET | `/api/brands` | — | brandHub（**过滤 brandId==='PLATFORM' 占位品牌**） | frozen（P2-20；公开 idempotent；BrandBrief 6 键登记） |
 
 > P2-19 红线四成立项：①`getFavoriteList` 无分页参数 ②分页 UI 仅搜索态渲染 ③`loadMore` 有 `isSearching` 守卫
 > ④仓储层无 page/size。其中 ①④ 由 `tests/unit/repositories.spec.ts` 契约断言自动锁定，②③ 由 `tests/unit/t26-favorites.spec.ts` 覆盖。

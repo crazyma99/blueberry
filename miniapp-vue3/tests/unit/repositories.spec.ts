@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   createCarouselRepository, createShopRepository, createAlbumRepository,
   createLikeRepository, createWxAuthRepository, createPackageRepository,
-  createUserInfoRepository, createFavoriteRepository,
+  createUserInfoRepository, createFavoriteRepository, createPageConfigRepository,
+  createBrandRepository,
 } from "../../src/infrastructure/repositories";
 import type { ClientRequestInput, ClientResult } from "../../src/infrastructure/http/client";
 import type { RequestContext } from "../../src/ports/context";
@@ -108,6 +109,16 @@ describe("repositories 请求形状（contracts.md 冻结值）", () => {
     const f = fakeClient([{ ok: true, value: [] }]);
     await createPackageRepository({ client: f.client }).getPackages(ctx, 3);
     expect(f.seen[0]).toMatchObject({ method: "GET", url: "/wechat/packages", query: { shopId: "3" }, replayPolicy: "idempotent" });
+  });
+  it("page-config／brands：公开读 idempotent（品牌馆开关两侧同源＋品牌列表）", async () => {
+    const f1 = fakeClient([{ ok: true, value: [] }]);
+    await createPageConfigRepository({ client: f1.client }).getPageConfig(ctx);
+    expect(f1.seen[0]).toMatchObject({ method: "GET", url: "/api/page-config", replayPolicy: "idempotent" });
+    expect(f1.seen[0].authRequired).toBeFalsy();
+    const f2 = fakeClient([{ ok: true, value: [] }]);
+    await createBrandRepository({ client: f2.client }).getBrands(ctx);
+    expect(f2.seen[0]).toMatchObject({ method: "GET", url: "/api/brands", replayPolicy: "idempotent" });
+    expect(f2.seen[0].authRequired).toBeFalsy();
   });
 });
 

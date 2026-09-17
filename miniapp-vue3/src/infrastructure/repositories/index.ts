@@ -12,3 +12,5 @@ export {
   type FavoriteStatusItem,
   type SearchPageResult,
 } from "./favorites";
+export { createPageConfigRepository, type PageConfigItem } from "./page-config";
+export { createBrandRepository, type BrandBrief } from "./brands";

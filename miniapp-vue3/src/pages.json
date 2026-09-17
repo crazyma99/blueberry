@@ -70,6 +70,15 @@
 			}
 		},
 		{
+			"path": "pages/brandHub/index",
+			"style": {
+				// #ifdef MP-WEIXIN
+				"navigationStyle": "custom",
+				// #endif
+				"navigationBarTitleText": "品牌馆"
+			}
+		},
+		{
 			"path": "pages/_probe/wot-sample",
 			"style": {
 				"navigationBarTitleText": "Wot 资格样页"

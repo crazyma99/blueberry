@@ -15,12 +15,13 @@ import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
-import { createBrandHubController } from "../../application/brand-hub-controller";
+import { createBrandHubGate } from "../../application/brand-hub-gate";
 import { createContextFactory } from "../../application/request-context";
 import { createVersionedStorage } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createCarouselRepository, type CarouselItem } from "../../infrastructure/repositories/carousels";
 import { createShopRepository } from "../../infrastructure/repositories/shops";
+import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
 import { createHomeViewModel } from "../../composables/use-home";
 import { syncTabBarSelected } from "../../application/tabbar";
 import PhotoGrid from "../../components/PhotoGrid/PhotoGrid.vue";
@@ -42,21 +43,10 @@ const authCoordinator = createAuthCoordinator({
   clock: systemClock,
 });
 const client = createHttpClient({ transport, authCoordinator });
-const brandHub = createBrandHubController({
-  // 旧端 pageConfig.uts 语义：page-config 数组取 type==='brand_hub' 的 config 字符串；
-  // 缺失/空/失败 → 空串或抛错，controller 统一按隐藏（false）处理
-  loadConfig: async (context) => {
-    const r = await client.request<Array<{ type?: unknown; config?: unknown }>>({
-      method: "GET",
-      url: "/api/page-config",
-      replayPolicy: "idempotent",
-      context,
-    });
-    if (!r.ok) throw new Error(r.error.kind);
-    const comp = r.value.find((c) => c != null && c.type === "brand_hub");
-    const cfg = comp != null ? comp.config : null;
-    return typeof cfg === "string" ? cfg : "";
-  },
+const brandHub = createBrandHubGate({
+  // ⭐ P2-20：与品牌馆页自守卫共用同一 page-config 仓储（旧端 pageConfig.uts 公共工具同义）——
+  // 入口显隐与页内自守卫不得各写一套 /api/page-config 解析
+  pageConfig: createPageConfigRepository({ client }),
 });
 const ctxFactory = createContextFactory({
   platform,
@@ -129,9 +119,23 @@ function goBrandHub(): void {
   }
 }
 
+// 品牌基线：onShow 检测品牌变化后重载（旧端 index:218-232）。
+// ⭐ P2-20 CR 🔴1：品牌馆页切品牌后 switchTab 回首页，首页 factory 从不 bump ⇒ 必须在此检测并重载，
+// 否则用户看到的是旧品牌数据（仅冷启动生效）。
+let lastBrandId: string | null = versioned.loadBrandId();
+
 onShow(() => {
   // P2-12：自定义 tabBar 选中态由页面 onShow 同步（唯一必然触发的入口）
   syncTabBarSelected(0);
+  const brandId = versioned.loadBrandId();
+  if (brandId !== lastBrandId) {
+    lastBrandId = brandId;
+    // 作废在飞旧品牌响应（本页 scope 代次）＋隐藏旧入口开关＋回到骨架后重载（旧端同序）
+    ctxFactory.bumpScope();
+    brandHubOn.value = false;
+    ready.value = false;
+    void init();
+  }
 });
 
 onMounted(() => {
