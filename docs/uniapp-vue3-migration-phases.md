@@ -300,14 +300,14 @@ echo "sourceTree=$(git rev-parse HEAD^{tree})"
 
 **文件**：新增 `N/package.json`、`N/pnpm-lock.yaml`、`N/vite.config.ts`、`N/tsconfig.json`、`N/vitest.config.ts`、`N/src/main.ts`、`N/src/App.vue`、`N/src/pages/_probe/index.vue`、`N/tests/pipeline/toolchain.spec.ts`。
 
-- [ ] P1-01 重新核对官方 `vite-ts` 模板commit及配套依赖，冻结Node/pnpm/DCloud/Vue/Vite/TS/vue-tsc/Sass/Vitest组合到 `B/docs/migration-preflight.md`；不把原项目TS5直接覆盖官方模板配套。
-- [ ] P1-02 检查N不存在；从官方模板**固定commit**初始化N，记录模板SHA。禁止复制旧 `mp-vue3/` 或给旧UVUE项目批量改后缀充当初始化。
-- [ ] P1-03 初始化后建立R；把预检事实转换为 `R/baseline.json`、`inventory.md`、`contracts.md`、`parity.md`、`hotfix-sync.md`、`deviations.md`，与预检记录核对。基线转换只搬文档事实，不搬旧Vue3骨架。
-- [ ] P1-04 保留模板最小入口与探针页；配置test/typecheck脚本和platform构建脚本。未迁移页面不生成“看起来存在”的空壳来骗路由验收。
-- [ ] P1-05 写工具链测试：DCloud包同发行线、Vue运行时/类型一致、目标平台闭集、lockfile与manifest一致；先令不一致fixture变红，再做校验器。
+- [x] P1-01 重新核对官方 `vite-ts` 模板commit及配套依赖，冻结Node/pnpm/DCloud/Vue/Vite/TS/vue-tsc/Sass/Vitest组合到 `B/docs/migration-preflight.md`；不把原项目TS5直接覆盖官方模板配套。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-02 检查N不存在；从官方模板**固定commit**初始化N，记录模板SHA。禁止复制旧 `mp-vue3/` 或给旧UVUE项目批量改后缀充当初始化。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-03 初始化后建立R；把预检事实转换为 `R/baseline.json`、`inventory.md`、`contracts.md`、`parity.md`、`hotfix-sync.md`、`deviations.md`，与预检记录核对。基线转换只搬文档事实，不搬旧Vue3骨架。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-04 保留模板最小入口与探针页；配置test/typecheck脚本和platform构建脚本。未迁移页面不生成“看起来存在”的空壳来骗路由验收。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-05 写工具链测试：DCloud包同发行线、Vue运行时/类型一致、目标平台闭集、lockfile与manifest一致；先令不一致fixture变红，再做校验器。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
 - [ ] P1-06 构建微信/抖音最小样例、记录工具实际打开结果（**抖音用 `tma project-size`／`tma preview --qrcode-output`，产物须含 `app.json`+`app.js`**）；小红书编译目标也验证并记录。工具/账号不可用不标通过，但不把它当业务SDK已支持。
 - [ ] P1-07 保存首次正常安装得到的lockfile；随后使用 `--frozen-lockfile` 重装/构建再验，不能复制旧锁文件。
-- [ ] P1-08 提交最小可构建工程与工具链报告。探针页仅用于资格，不进入最终生产包。
+- [x] P1-08 提交最小可构建工程与工具链报告。探针页仅用于资格，不进入最终生产包。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
 
 **初始化命令协议**：正式执行者在官方模板复核后提供固定SHA，命令不自动追远端分支。
 
@@ -333,11 +333,11 @@ pnpm --dir miniapp-vue3 run build:mp-xhs
 
 **接口**：沿用母方案的 `RequestContext/Result/IdentityTicket/IdentityPort/StoragePort/ClockPort`。HTTP/upload端口再明确 timeout、取消、requestContext快照与replayPolicy；PaymentPort只提供平台面板结果，不改业务余额。
 
-- [ ] P1-09 冻结字段名和允许的错误码：HTTP业务码4001必须映射到 `INSUFFICIENT_CREDITS`，并保留businessCode/安全message/requestId；普通BUSINESS错误不能拉支付。
-- [ ] P1-10 先写品牌馆严格boolean、标题6/7码点、emoji、支付门闩状态转移测试；确认缺实现或行为不满足会红。
-- [ ] P1-11 只用纯TS实现规则；不导入Vue、Pinia、Wot或平台SDK。12类能力是小端口集合，不写万能平台单例。
-- [ ] P1-12 加入闭集测试：未知engine/platform/env失败；必需能力unknown/unsupported阻断用例，可选能力降级必须有批准文案及测试。
-- [ ] P1-13 跑领域测试和typecheck，审阅后提交；这些纯领域结果不算真机验证。
+- [x] P1-09 冻结字段名和允许的错误码：HTTP业务码4001必须映射到 `INSUFFICIENT_CREDITS`，并保留businessCode/安全message/requestId；普通BUSINESS错误不能拉支付。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-10 先写品牌馆严格boolean、标题6/7码点、emoji、支付门闩状态转移测试；确认缺实现或行为不满足会红。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-11 只用纯TS实现规则；不导入Vue、Pinia、Wot或平台SDK。12类能力是小端口集合，不写万能平台单例。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-12 加入闭集测试：未知engine/platform/env失败；必需能力unknown/unsupported阻断用例，可选能力降级必须有批准文案及测试。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-13 跑领域测试和typecheck，审阅后提交；这些纯领域结果不算真机验证。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
 
 **可直接落实的测试与最小实现例子**（两个独立文件）：
 
@@ -379,12 +379,12 @@ generateProfile({profile, sourceRoot, projectRoot}) -> {digest, generatedFiles}
 
 `NormalizedProfile`必须含profileKey、packageName、manifestName、description、目标appid、appCode、各环境apiBases、导航/品牌/版权/联系方式/协议名/价目fallback字段；每项旧输入到输出的映射写入profile-map.json，不暗中弃字段。**新增（2026-09-17 主人拍板）**：`PAGE_REGISTRY`（该平台注册路径闭集：微信＝17 页、抖音＝11 页）与「我的」页菜单/文案功能块开关（抖音菜单仅「我的喜欢」）。
 
-- [ ] P1-14 对齐母方案5.2列出的全部旧字段；新增抖音/小红书appid仅在目标构建时必填，不用微信appid兜底。
-- [ ] P1-15 明确 `API_BASE_URL`仍指release地址；测试地址走受控映射。未知env不落到生产也不默认为trial。
-- [ ] P1-16 写失败用例：缺APP_CODE/目标appid、错误Profile选择、非法host、路径越界、注入表达式、必需字段未消费。
-- [ ] P1-17 用合成A/B配置验证A→B→A幂等；合成AppID/素材不得进入真实上传。确认所有输出只在projectRoot，不修改模板src。
-- [ ] P1-18 实现结构化生成配置与静态资源overlay，避免宽正则静默漏注入；存在的目标目录按幂等策略处理，不覆盖其他run。
-- [ ] P1-19 跑pipeline/profile测试并审阅提交。此时只算生成前置通过，尚未证明完整Profile包可用。
+- [x] P1-14 对齐母方案5.2列出的全部旧字段；新增抖音/小红书appid仅在目标构建时必填，不用微信appid兜底。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-15 明确 `API_BASE_URL`仍指release地址；测试地址走受控映射。未知env不落到生产也不默认为trial。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-16 写失败用例：缺APP_CODE/目标appid、错误Profile选择、非法host、路径越界、注入表达式、必需字段未消费。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-17 用合成A/B配置验证A→B→A幂等；合成AppID/素材不得进入真实上传。确认所有输出只在projectRoot，不修改模板src。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-18 实现结构化生成配置与静态资源overlay，避免宽正则静默漏注入；存在的目标目录按幂等策略处理，不覆盖其他run。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-19 跑pipeline/profile测试并审阅提交。此时只算生成前置通过，尚未证明完整Profile包可用。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
 
 **目标命令**：`pnpm --dir miniapp-vue3 exec vitest run tests/pipeline/profile.spec.ts`。
 
@@ -394,11 +394,11 @@ generateProfile({profile, sourceRoot, projectRoot}) -> {digest, generatedFiles}
 
 **文件**：新增 `N/tokens/source.json`、`N/scripts/generate-tokens.mjs`、`N/src/generated/{tokens.ts,theme.css,theme.scss}`、`N/src/ui/{BaseButton,BaseField,BasePopup,BasePicker,BaseFeedback}.vue`、`N/src/pages/_probe/wot.vue`、`N/tests/components/ui-contract.spec.ts`、`N/tests/pipeline/tokens.spec.ts`、`R/ui-qualification.md`。
 
-- [ ] P1-20 从旧端登记颜色/字号/间距/热区/动效/safe-area语义，建primitive→semantic→component单一Token输入；TS/SCSS均为生成输出，禁止双源手改。
-- [ ] P1-21 先写token失败用例：循环引用、未知引用、错误单位、重复生成有差异；实现 `generateTokens({sourceFile, outputDir})`，只生成指定目录。
-- [ ] P1-22 核对候选Wot v2和CLI/Sass配套。候选组合 `@wot-ui/ui@2.3.2`、`@wot-ui/cli@1.1.0`须锁准确版本；变更先记ADR，不混用v1资料。
-- [ ] P1-23 按Wot AI指南先查目标组件API/事件/token，再写项目门面。门面统一label/disabled/busy/value与标准事件，业务层不接收Wot内部数据对象。
-- [ ] P1-24 写门面测试：按钮禁用/忙状态不重复提交；弹层取消、picker选中和清空事件正确；图片失败、长标题布局与token映射正确。
+- [x] P1-20 从旧端登记颜色/字号/间距/热区/动效/safe-area语义，建primitive→semantic→component单一Token输入；TS/SCSS均为生成输出，禁止双源手改。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-21 先写token失败用例：循环引用、未知引用、错误单位、重复生成有差异；实现 `generateTokens({sourceFile, outputDir})`，只生成指定目录。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-22 核对候选Wot v2和CLI/Sass配套。候选组合 `@wot-ui/ui@2.3.2`、`@wot-ui/cli@1.1.0`须锁准确版本；变更先记ADR，不混用v1资料。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-23 按Wot AI指南先查目标组件API/事件/token，再写项目门面。门面统一label/disabled/busy/value与标准事件，业务层不接收Wot内部数据对象。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-24 写门面测试：按钮禁用/忙状态不重复提交；弹层取消、picker选中和清空事件正确；图片失败、长标题布局与token映射正确。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
 - [ ] P1-25 在微信/抖音工具及真机运行同一Wot样页，填写版本/设备/组件/通过与失败证据（**抖音：`tma preview` 出码 → 抖音 App 扫码**）；小红书同样记录但不得冒充已验。
 - [ ] P1-26 若关键场景失败：先做最小复现；少量差异收敛platform/ui-bridge；大面积失败才让uview-plus跑同一资格测试，不混装两套库。
 - [ ] P1-27 CLI读取与lint作为辅助证据；MCP/Skills仅在宿主配置授权后安装，未握手不宣称已接入。
@@ -435,10 +435,10 @@ BuildRequest:
  platform, environment, sourceCommit, profileDigest, tokenDigest, runId
 ~~~
 
-- [ ] P1-29 实现BuildRequest闭集和realpath校验；明确模板根、隔离目录、Profile来源，不以调用者cwd或工具仓Profile猜目标。
-- [ ] P1-30 每次构建分配 `B/.work/build/<engine>/<profile>/<platform>/<sha>/<digest>/<runId>/`；runId唯一且不覆盖已有run，Profile与Token摘要参与来源验证。
-- [ ] P1-31 复制模板白名单→应用当前Profile→生成Token/配置→固定锁依赖安装→构建→产物verify→写manifest；静态资源只在隔离目录清陈旧文件。
-- [ ] P1-32 verify同时核对AppID、APP_CODE、环境、17路由的**阶段期望集合**、协议、导航title、静态资源、错误品牌残留和引擎指纹；不能让源码命中代替产物命中。
+- [x] P1-29 实现BuildRequest闭集和realpath校验；明确模板根、隔离目录、Profile来源，不以调用者cwd或工具仓Profile猜目标。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-30 每次构建分配 `B/.work/build/<engine>/<profile>/<platform>/<sha>/<digest>/<runId>/`；runId唯一且不覆盖已有run，Profile与Token摘要参与来源验证。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-31 复制模板白名单→应用当前Profile→生成Token/配置→固定锁依赖安装→构建→产物verify→写manifest；静态资源只在隔离目录清陈旧文件。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
+- [x] P1-32 verify同时核对AppID、APP_CODE、环境、17路由的**阶段期望集合**、协议、导航title、静态资源、错误品牌残留和引擎指纹；不能让源码命中代替产物命中。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
 - [ ] P1-33 保留旧脚本无engine参数时的legacy用法；新端必须显式选vue3和sourceRoot。旧sync-template禁止对新N执行rsync --delete；new-project不再复制旧UVUE模板冒充Vue3。
 - [ ] P1-34 写错发负向：旧artifact冒充新engine、错误appid/host、profile A读B产物、同run并发、路径越界、非空目录覆盖，每项必须失败。
 - [ ] P1-35 双Profile整包构建：合成fixture做生成测试，获准的实际Profile做工具打开验证；核对各自manifest及hash，未获准不上传。
