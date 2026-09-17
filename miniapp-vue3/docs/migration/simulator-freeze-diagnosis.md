@@ -72,3 +72,10 @@
 1. 卡的**具体步骤**：(a) 打开项目时的「编译」 (b) 「工具 → 构建 npm」 (c) 我的命令行 `uni build` (d) 其他
 2. **旧端产物**（`~/blueberry/dist/build/mp-weixin`）在同一台机器同一工具打开，**是否同样卡**？（同卡 ⇒ 工具/机器侧）
 3. 卡住时工具的**进度百分比**与**内存占用**（是否 OOM）
+
+### 6.6 本轮（round 108）验证与产物现状
+- **两平台复跑**：`uni build -p mp-toutiao` exit 0（12 页）｜`uni build`（h5）exit 0 —— 最近三处改动（`uni.login` 10s 超时／`manifest.lazyCodeLoading`／`PhotoGrid lazy-load`）未破坏构建
+- **测试**：vitest **400 passed／3 skipped**；`vue-tsc` 0 错
+- ⚠️ **未触碰** `dist/build/mp-weixin`（主人若仍打开着该项目，重建会触发连续重编译）；**带 `lazyCodeLoading` 的干净产物在 `dist/trial-lazy/mp-weixin`**
+- 说明：`lazyCodeLoading` 只写进 **`mp-weixin`** 段 ⇒ 仅微信产物带该字段（抖音产物 12 页，无此字段且不需要）
+- 实验记录：`usingComponents:false` 试过并**已完全还原**（`git diff src/manifest.json` 干净）；该开关**不消除** `node-modules/@wot-ui` 内联
