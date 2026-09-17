@@ -20,7 +20,7 @@ import { createAlbumRepository, type AlbumDetail } from "../../infrastructure/re
 import { createLikeRepository } from "../../infrastructure/repositories/likes";
 import { createLikeToggler, type LikeableItem } from "../../composables/use-like";
 import { parseDetailParams } from "../../application/route-params";
-import { cosThumb } from "../../application/image";
+import { progressivePhotoSrc } from "../../application/image";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import LoadingBlock from "../../components/LoadingBlock/LoadingBlock.vue";
@@ -67,12 +67,8 @@ const images = computed<DetailImage[]>(() => {
   return Array.isArray(list) ? list : [];
 });
 
-// 首图原图、其余 750 WebP 缩略（旧端 :68-72 渐进加载口径）
-function photoSrc(url: string | undefined, index: number): string {
-  const u = url ?? "";
-  if (u === "") return "";
-  return index === 0 ? u : cosThumb(u, 750);
-}
+// 渐进加载规则已提取至 application/image.ts 的 progressivePhotoSrc（P2-13 可测化）
+const photoSrc = progressivePhotoSrc;
 
 async function init(id: string, type: string): Promise<void> {
   albumId.value = id;

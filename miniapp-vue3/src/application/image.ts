@@ -13,3 +13,10 @@ export function cosThumb(url: string, width: number): string {
   const sep = url.includes("?") ? "&" : "?";
   return url + sep + "imageMogr2/format/webp/thumbnail/" + width + "x";
 }
+
+/** 详情图渐进加载（旧端 targetPhotoDetail:68-72 口径）：首图原图（高清主视觉）、其余 750 WebP 缩略 */
+export function progressivePhotoSrc(url: string | undefined, index: number): string {
+  const u = url ?? "";
+  if (u === "") return "";
+  return index === 0 ? u : cosThumb(u, 750);
+}

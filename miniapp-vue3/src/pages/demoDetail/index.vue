@@ -23,6 +23,7 @@ import { createAlbumListViewModel } from "../../composables/use-album-list";
 import { createLikeToggler, type LikeableItem } from "../../composables/use-like";
 import { parseListParams } from "../../application/route-params";
 import { formatAlbumTitle } from "../../domain/album-title";
+import { cosThumb } from "../../application/image";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import LoadingBlock from "../../components/LoadingBlock/LoadingBlock.vue";
@@ -234,7 +235,8 @@ onMounted(() => {
       <!-- 相册网格 -->
       <view class="album-grid">
         <view v-for="item in albums" :key="item.id" class="album-card">
-          <image class="album-cover" :src="item.coverImageUrl" mode="aspectFill" lazy-load />
+          <!-- 封面走 COS 600 缩略（旧端 coverThumb=url→cosThumb 600，demoDetail:378-380） -->
+          <image class="album-cover" :src="cosThumb(item.coverImageUrl, 600)" mode="aspectFill" lazy-load />
           <view class="album-meta">
             <text class="album-title">{{ formatAlbumTitle(item.title) }}</text>
             <view class="like-row" @click="onToggleLike(item)">

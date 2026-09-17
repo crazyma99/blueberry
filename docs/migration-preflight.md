@@ -456,6 +456,38 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T6 剩余（验证类收口）**：P2-13 两套布局样页验证、P2-15 场景矩阵、P2-16 微信真机＋独立 CR（真机需主人手机配合）。
 
+
+## 8.26 T6 执行记录（P2-13/15 工具侧收口＋场景矩阵记录，2026-09-17 第十四批）
+
+| 项 | 内容 |
+|---|---|
+| P2-13 可测化 | 详情图渐进加载规则从页面内提取为 `application/image.ts` 的 **`progressivePhotoSrc`**（首图原图/其余 750 WebP 缩略/非 COS 原样/空安全——旧端 :68-72 口径），detail 页改引用；4 断言测试 |
+| 忠实性补齐 | demoDetail 卡片封面原用原图——旧端 `coverThumb(url)=cosThumb(url,600)`（demoDetail:378-380）⇒ 已接 COS 600 缩略 |
+| 自纠 | t21 长标题断言期望值算错（12 码点前 6＝😀红河水乡旗，实现正确断言写错）⇒ 修正 |
+
+**P2-15 场景矩阵记录（工具侧覆盖 → 真机待验）**：
+
+| 场景 | 工具侧覆盖 | 真机待验（P2-16） |
+|---|---|---|
+| 无品牌（开关关） | brand-hub controller 测试＋index 冒烟（入口不渲染） | — |
+| 有品牌（开关开） | controller enabled 测试 | 浮钮位置/状态栏避让 |
+| 空列表 | PhotoGrid demo 回退测试 | demo 卡视觉 |
+| 正常列表分页 | use-album-list 测试（10/20 条、noMore 双条件） | 卡片间距 |
+| 长标题 8 码点含 emoji | formatAlbumTitle＋t21 断言（6+...） | 卡片截断视觉 |
+| 单/双/三店布局 | PhotoGrid 全宽/两列/占位卡测试 | 间距几何 |
+| 未登录/过期 | client 401→AUTH_EXPIRED＋coordinator 测试 | 登录链路（T7 后） |
+| 弱网单侧失败 | home VM 部分数据测试 | — |
+| 全失败 | index 冒烟错误重试 | — |
+| 点赞失败/乱序 | use-like 回滚/seq 丢弃/计数不为负测试 | 触感与点赞动效（见缺口①） |
+| 图片成功/失败时序 | progressivePhotoSrc 逻辑测试 | 真机加载表现 |
+| 返回场景 | — | 真机页面栈返回 |
+
+**⚠️ 忠实性缺口登记（如实）**：①**点赞动效未移植**——旧端 `playLikeAnim`（260ms 点赞动画）/`playHeartAnim`（heart-pop/shrink）未进新端，属视觉动效细节；与「回滚 tab 位移动效」同类，**待 P2-16 真机评估后请主人拍板**是否补；②demoDetail 的 `onGridImgLoad` 渐显时序（fade-in 触发）未移植——纯视觉细节，同样真机评估。
+
+**汇总**：vitest **186/186＋3 skipped** exit 0＋typecheck **exit 0**＋三平台构建各 exit 0。
+
+**T6 剩余**：P2-16 微信真机＋独立 CR（真机需主人手机配合；独立 CR 可派子 agent——按主人指示用 mify deepseek v4 pro 模型）。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
