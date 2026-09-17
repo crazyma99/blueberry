@@ -205,8 +205,14 @@ onMounted(() => {
         <SkeletonBlock width="46%" height="48rpx" radius="8rpx" />
       </view>
       <view class="sk-grid">
-        <SkeletonBlock height="226rpx" radius="12rpx" />
-        <SkeletonBlock height="226rpx" radius="12rpx" />
+        <!-- 2026-09-17：微信 wxss **不支持通配选择器 `*`**（上传时编译报 `error at token *`）⇒
+             原先的 `.sk-grid > * { flex: 1 }` 改为「包裹 view + .sk-cell」等价实现（骨架占位，视觉一致） -->
+        <view class="sk-cell">
+          <SkeletonBlock height="226rpx" radius="12rpx" />
+        </view>
+        <view class="sk-cell">
+          <SkeletonBlock height="226rpx" radius="12rpx" />
+        </view>
       </view>
     </view>
 
@@ -286,7 +292,7 @@ onMounted(() => {
   display: flex;
   gap: 8rpx;
 }
-.sk-grid > * {
+.sk-cell {
   flex: 1;
 }
 .hero {

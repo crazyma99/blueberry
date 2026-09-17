@@ -181,8 +181,13 @@ function onDemoClick(idx: number): void {
         <SkeletonBlock width="30%" height="36rpx" radius="8rpx" />
       </view>
       <view class="sk-row">
-        <SkeletonBlock height="226rpx" radius="12rpx" />
-        <SkeletonBlock height="226rpx" radius="12rpx" />
+        <!-- 2026-09-17：同上（微信 wxss 不支持 `*`）——`.sk-row > *` 改「包裹 view + .sk-cell」 -->
+        <view class="sk-cell">
+          <SkeletonBlock height="226rpx" radius="12rpx" />
+        </view>
+        <view class="sk-cell">
+          <SkeletonBlock height="226rpx" radius="12rpx" />
+        </view>
       </view>
     </view>
     <template v-else>
@@ -231,7 +236,7 @@ function onDemoClick(idx: number): void {
   gap: 8rpx;
   margin-top: 16rpx;
 }
-.sk-row > * {
+.sk-cell {
   flex: 1;
 }
 /* 标题（旧端 :95-105 divideTit/demoPhotoTit 忠实移植；金色 30% 派生同 PhotoGrid 注释口径） */

@@ -15,3 +15,12 @@
 11. **字体全局类未定义（2026-09-17 补登，CR 🔴2 触发）**：旧端 `App.uvue` 全局类 `font-noto-serif`／`harmony`（宋体/鸿蒙字族）在新端**未定义**，样式沿用既有口径：字号按旧值**字面量**还原（如旧 `--font-size-body=24rpx` ≠ 新 `tokens.semantic.fontSizeBody=32rpx`，不得混映射），字体族差异由后续主题批次统一处理。**产品依据**：字体族缺失属视觉细节，不阻断功能闭环；**测试**：各批页面单测按字面量断言字号（如 `t22`／`t26`／`t32`），本表 `platform-capability-matrix.md` 引用本条。此条为补齐「矩阵引用不存在的登记」的缺口而补登（此前该偏差**未登记**，违反「偏差必须进 deviations」纪律）。
 
 12. **店铺封面追加 `lazy-load`（2026-09-17，性能偏差；排查「模拟器卡死」时引入）**：旧端 `components/PhotoGrid/PhotoGrid.uvue` 的店铺封面（`<image mode="aspectFill">`）**无懒加载**（`grep lazy-load` = 0），新端初版按忠实移植同样未加；但首页会**一次性渲染全部店铺封面**，在微信模拟器/低端机上首屏容易长卡。**改法**：仅给该 `<image>` 追加 `lazy-load`——**只改变加载时机**，不改布局类名、尺寸、圆角与点击行为。**产品依据**：性能与可感知卡顿；**测试**：`tests/components/ui-contract.spec.ts`、`t6-index.spec.ts` 与三平台构建均通过（无断言依赖图片加载时机）。
+
+13. **骨架栅格用「包裹 view + class」替代通配选择器（2026-09-17，平台强制；首次体验版上传实测触发）**：`pages/index/index.vue` 与
+    `pages/priceHomePage/index.vue` 的骨架占位原用 `.sk-grid > * { flex: 1 }` / `.sk-row > * { flex: 1 }`（**通配选择器 `*`**）。
+    新版代码在 `uni build` 阶段不报错，但**微信 wxss 编译器拒绝 `*`**：体验版上传时编译失败
+    `wxss 编译错误 ErrorFileCount[2] ... error at token \`*\``（`pages/index/index.wxss`、`pages/priceHomePage/index.wxss`）。
+    **改法**：子元素各包一层 `<view class="sk-cell">`，CSS 改 `.sk-cell { flex: 1 }`——**视觉与布局等价**（`.sk-grid/.sk-row` 仍为
+    `display:flex; gap:8rpx`，两个占位仍各占 1 份），仅多一层 view（骨架为临时占位，不影响业务 DOM）。
+    **产品依据**：微信 wxss 不支持通配选择器（平台限制，非可选）；**测试**：全量 vitest 400 passed、`vue-tsc` 0 错、三平台构建 0，
+    且**产物实测无 `*` 选择器**（`grep '*.data-v'` 与通配正则均 0 命中），体验版上传成功（`v1.0.25`）。
