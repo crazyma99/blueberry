@@ -87,6 +87,16 @@
 				"navigationBarTitleText": "详情"
 			}
 		},
+		// #ifdef MP-WEIXIN
+		// AI 闭环 6 页（T8/T9b）仅微信侧注册——2026-09-17 主人拍板「抖音不注册 AI 六页」
+		{
+			"path": "pages/aiTryOnHistory/index",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "AI试衣记录"
+			}
+		},
+		// #endif
 		{
 			"path": "pages/_probe/wot-sample",
 			"style": {

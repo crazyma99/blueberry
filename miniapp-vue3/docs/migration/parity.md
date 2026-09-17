@@ -27,7 +27,8 @@
 
 | # | path | 状态 | 备注 |
 |---|---|---|---|
-| 12–14 | `pages/aiTryOn`、`aiTryOnResult`、`aiTryOnHistory` | not_started | Phase 3（T8/T9b）；抖音侧**不注册**（2026-09-17 主人拍板） |
+| 12 | `pages/aiTryOnHistory` | ported | T8 首片（2026-09-17）：记录页＋AI 仓储 getTasks；`pages.json` 以 `#ifdef MP-WEIXIN` 注册（产物实证：微信 13 页含本页／抖音 12 页不含）；t30 四例 |
+| 13–14 | `pages/aiTryOn`、`aiTryOnResult` | not_started | T8 后续片（模板选择/上传/提交/结果轮询/下载买断）；抖音侧**不注册** |
 | 15–17 | `pages/aiRecommend`、`aiRecommendLoading`、`aiRecommendResult` | not_started | Phase 3；抖音侧**不注册** |
 
 ## 组件（15）
