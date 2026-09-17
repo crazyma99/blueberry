@@ -11,7 +11,11 @@ interface UniLoginRes {
   errMsg?: unknown;
 }
 
-export function createUniLoginCode(): LoginCodePort {
+/** 取码超时（2026-09-17 补：`uni.login` 无内建超时，容器不回调时会让 `waitForLogin` 排队者长期悬挂） */
+export const LOGIN_CODE_TIMEOUT_MS = 10000;
+
+export function createUniLoginCode(deps?: { timeoutMs?: number }): LoginCodePort {
+  const timeoutMs = deps?.timeoutMs ?? LOGIN_CODE_TIMEOUT_MS;
   return {
     request(): Promise<string | null> {
       return new Promise((resolve) => {
@@ -19,6 +23,18 @@ export function createUniLoginCode(): LoginCodePort {
           resolve(null);
           return;
         }
+        let settled = false;
+        const finish = (code: string | null) => {
+          if (settled) return;
+          settled = true;
+          resolve(code);
+        };
+        setTimeout(() => {
+          if (!settled) {
+            console.warn("[login] uni.login 超时（容器未回调），按 fail-closed 处理");
+            finish(null);
+          }
+        }, timeoutMs);
         try {
           // 窄化调用：@dcloudio/types 对 login 的 options/回调签名更严，与 transport/upload/chooser 同口径
           const api = uni as unknown as { login: (options: Record<string, unknown>) => void };
@@ -26,12 +42,12 @@ export function createUniLoginCode(): LoginCodePort {
             provider: "weixin",
             success: (res: UniLoginRes) => {
               const code = res?.code;
-              resolve(typeof code === "string" && code !== "" ? code : null);
+              finish(typeof code === "string" && code !== "" ? code : null);
             },
-            fail: () => resolve(null),
+            fail: () => finish(null),
           });
         } catch {
-          resolve(null);
+          finish(null);
         }
       });
     },

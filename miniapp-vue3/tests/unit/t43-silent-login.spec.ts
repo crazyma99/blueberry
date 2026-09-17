@@ -118,3 +118,17 @@ describe("application/silent-login（P2-03 静默换票 · fail-closed）", () =
     }
   });
 });
+
+describe("取码超时兜底（2026-09-17：防 uni.login 不回调导致 waitForLogin 长期悬挂）", () => {
+  it("⭐容器/实现永不回调 → 超时后 fail-closed 返回 null（不悬挂）", async () => {
+    (globalThis as { uni?: unknown }).uni = { login: () => undefined }; // 既不 success 也不 fail
+    await expect(createUniLoginCode({ timeoutMs: 30 }).request()).resolves.toBeNull();
+  });
+
+  it("正常路径不受影响（success 立即返回 code；超时计时器不再覆盖）", async () => {
+    (globalThis as { uni?: unknown }).uni = {
+      login: (o: Record<string, unknown>) => (o.success as (r: unknown) => void)({ code: "C1" }),
+    };
+    await expect(createUniLoginCode({ timeoutMs: 1000 }).request()).resolves.toBe("C1");
+  });
+});

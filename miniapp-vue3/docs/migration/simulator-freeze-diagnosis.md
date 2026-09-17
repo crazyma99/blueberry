@@ -38,3 +38,37 @@
 ## 5. 备选快诊（我可在 1 笔内加）
 - `PROFILE.debugSkipPhotoCheck`（临时开关）：整段跳过检测链路，一键判定是否由 canvas/VK 引起
 - 快速二分：先只走「首页→我的→收藏→价目」等**不选图**路径；若均正常，则锁定在**选图后的检测/上传**（即 #1/#2 修复处）
+
+---
+
+## 6. 【2026-09-17 更新】主人反馈：**「构建的时候卡死，完全无响应」** ⇒ 定位到编译/工具链，不在运行期
+
+### 6.1 新增审计结论
+- **运行期重算：已排除**（§1：无界循环 0、无 `watch` 自改写、最大 `v-for` 24、最重运算仅在选图后）
+- **产物构成（微信）**：2.4MB／**322 文件**——**不属病态**（工具可轻松处理数千文件）；顶层：`static 776K`、`pages 448K`、
+  **`node-modules 356K（55 文件）`**、`components 304K`、`ui 96K`、`common 96K`…
+- ⭐**关键点**：产物含 **`node-modules/@wot-ui/ui`**（uni 为小程序内联的 npm 依赖）。微信开发者工具对该目录需要执行
+  **「工具 → 构建 npm」**，**这是最常见的长时间卡死/无响应环节**（尤其被反复触发时）
+- 另：`project.config.json.setting` 为 uni 默认（`urlCheck:false, es6:true, postcss:false, minified:false, bigPackageSizeSupport:true`）
+
+### 6.2 新增修复（第 5 项，本轮）
+| # | 位置 | 问题 | 修法 |
+|---|---|---|---|
+| 5 | `platform/uni/login.ts` | `uni.login` **无内建超时** ⇒ 容器不回调时 `waitForLogin` 排队者长期悬挂（`waitForLogin` 的超时是**可选**的，页面调用未传） | 新增 `LOGIN_CODE_TIMEOUT_MS=10000` 兜底：超时按 **fail-closed 返回 null**＋`console.warn`（保持 P2-03「可选超时」契约不变） |
+
+### 6.3 已就绪的**干净产物**（避免干扰主人卡住的目录）
+- `dist/trial-lazy/mp-weixin`（**`app.json.lazyCodeLoading = "requiredComponents"` 已生效**，18 页，2.4MB）
+- 构建命令：`UNI_OUTPUT_DIR=dist/trial-lazy/mp-weixin npx uni build -p mp-weixin`（**未触碰** `dist/build/mp-weixin`）
+
+### 6.4 建议的恢复步骤（按序，每步只做一次、勿连点）
+1. **强制退出**开发者工具（释放对 `dist/build/mp-weixin` 的占用；必要时 `killall wechatwebdevtools`）
+2. 工具内**清缓存 → 全部清除**；或删除项目目录下的 `project.private.config.json`
+3. 打开**新目录** `dist/trial-lazy/mp-weixin`（带 `lazyCodeLoading`，按需注入可显著减少首开编译量）
+4. 打开后**只点一次「编译」**；若提示缺 npm 组件，**只点一次「构建 npm」**，中途不要重复点击
+5. 若仍卡在「构建 npm」：请把**卡住的那一步名称与进度**告诉我——备选方案是**把 Wot 组件从产物中彻底去掉**（改为本地组件，影响 7 个页面，工作量中等），
+   即可完全消除 npm 构建环节
+
+### 6.5 仍需主人确认（一刀切开「工具/机器」vs「本仓产物」）
+1. 卡的**具体步骤**：(a) 打开项目时的「编译」 (b) 「工具 → 构建 npm」 (c) 我的命令行 `uni build` (d) 其他
+2. **旧端产物**（`~/blueberry/dist/build/mp-weixin`）在同一台机器同一工具打开，**是否同样卡**？（同卡 ⇒ 工具/机器侧）
+3. 卡住时工具的**进度百分比**与**内存占用**（是否 OOM）
