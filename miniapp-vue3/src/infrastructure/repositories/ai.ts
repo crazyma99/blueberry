@@ -117,6 +117,16 @@ export function createAiRepository(deps: { client: ClientLike }) {
         context,
       });
     },
+    /** 旧端 getSharedAiTryOnResult（api.uts:611-…）：GET /api/aiface/tasks/share/{shareToken}
+     * ⭐ 匿名只读落地：**公开端点（无需登录）**、调用方**只拉一次**（不轮询、不重试）。 */
+    getSharedTask(context: RequestContext, shareToken: string): Promise<RepoResult<Record<string, unknown>>> {
+      return deps.client.request<Record<string, unknown>>({
+        method: "GET",
+        url: `/api/aiface/tasks/share/${encodeURIComponent(shareToken)}`,
+        replayPolicy: "idempotent",
+        context,
+      });
+    },
     /** 旧端 getAiRecommend：POST /api/aiface/recommend（需登录；**同步扣费·180s·禁重发**） */
     getRecommend(
       context: RequestContext,
