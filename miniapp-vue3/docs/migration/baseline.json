@@ -1,0 +1,45 @@
+{
+  "_comment": "P1-03 基线事实（自 docs/migration-preflight.md 转换，只搬文档事实；2026-09-17）",
+  "sourceCommit": "95528cd0f33846ebc98d3760d0fc0e857a16b2f5",
+  "sourceTree": "fb34865cc8acdfa3686a2b3c4f12c06e5d2f0df0",
+  "oldEnd": {
+    "versionName": "1.0.0",
+    "versionCode": "100",
+    "weixinBundleSize": "2.6M",
+    "unitTests": "55/55 exit 0 (scripts/tests/album-card-bugfix.test.mjs)",
+    "lockSha256_20": "60a176ad37a564a0",
+    "pkgSha256_20": "9f52234985a85b723ed2"
+  },
+  "backend": {
+    "staging": "f736de4e04ffe6bb99d2f5bf48aa5d497aded4ab",
+    "prod": "f736de4e04ffe6bb99d2f5bf48aa5d497aded4ab"
+  },
+  "template": {
+    "repo": "dcloudio/uni-preset-vue",
+    "branch": "vite-ts",
+    "commit": "6fb81ac3c5736b8b0a83e667b3ed90223d458dd8",
+    "degit": "3.10.0"
+  },
+  "toolchain": {
+    "dcloudLine": "3.0.0-5020420260813003",
+    "vue": "^3.4.21",
+    "vite": "5.2.8",
+    "typescript": "^4.9.4",
+    "vueTscResolved": "1.8.27",
+    "vitest": "3.2.4",
+    "node": "v24.14.0",
+    "pnpm": "11.7.0"
+  },
+  "accounts": {
+    "weixin": { "appid": "wxb19ad7426dfb8bd4", "status": "ready" },
+    "toutiao": { "appid": "ttd6aba01648cc1bf701", "status": "dev-ready / release-blocked(备案进行中)" },
+    "xhs": { "appid": null, "status": "deferred" }
+  },
+  "d1toD5Sha256": {
+    "SPEC.md": "6a9d85bb3a4fcb394a9db6d75c0dde925e26bb2e3c951a484ba4a74f41830d02",
+    "docs/wot-ui-ai-guide.md": "4385cb808d1fff6d09d338f7582cf5c12a74c527ac06ba24a7d3d27c0007102e",
+    "docs/uniapp-vue3-migration-plan.md": "de9241d202a8453944ca50b5edb9960f009ce1c9ad4d62ded224be6582565b30",
+    "docs/uniapp-vue3-migration-phases.md": "4668f953cb360746a0ebcc62a672201072bac02d6d4a398bd1d346a1d2539c4e",
+    "docs/uniapp-x迁移uniapp-vue3_实施细则&流水线参考.txt": "31d827462c281a23c78daddb06da1a91c4b1e185fd06268174bbb64fad8d9fe7"
+  }
+}

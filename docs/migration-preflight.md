@@ -135,7 +135,13 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **探针页边界**：模板自带首页仅用于工具链资格验证，**不进入最终生产包**（P1-08 口径）；路由总表以旧端 17 条为准（§1），未迁移页面**不生成空壳**。
 
-**待补（下一轮）**：P1-05 工具链测试（`tests/pipeline/toolchain.spec.ts`：DCloud 同发行线/Vue 运行时与类型一致/目标平台闭集/lockfile 与 manifest 一致，先令不一致 fixture 变红）、P1-07 `--frozen-lockfile` 复装实测、P1-03 R 目录文档集（baseline/inventory/contracts/parity/hotfix-sync/deviations）。
+**T1 已全部收口**（原「待补」三项完成，记录如下）。
+**T1 收口补记（2026-09-17 第二批实测）**：
+- **P1-05 工具链测试 ✅**：新增 `tests/pipeline/toolchain-rules.ts`（校验器：DCloud 同发行线且等于冻结值／vue 与 @vue/runtime-core 一致／批准平台闭集 mp-weixin·mp-toutiao·mp-xhs 各有 dev/build 脚本／lockfile 含全部钉版依赖）＋ `tests/pipeline/toolchain.spec.ts`（真实工程 4 用例 ＋ **6 条负向 fixture**：跨发行线混装、发行线漂移、vue 不一致、闭集外平台（mp-kuaishou/mp-douyin）、缺脚本、lock 缺失/漏钉版）。**首跑抓出并修复校验器自身 2 个 bug**（精确版正则语义写反、`@dcloudio/types@^3.4.8` 独立版本线被误判跨线）⇒ 修正后 **10/10 通过、exit 0**（负向 fixture 先红后绿纪律达成）。
+- **⚠️ vitest 版本适配决策（留痕）**：首装 `vitest@5.0.1` 启动即报 `ERR_PACKAGE_PATH_NOT_EXPORTED`（需 vite `./module-runner`，vite 6+ 才有）——**冻结组合是 vite 5.2.8，不为测试框架盲升** ⇒ 查 npm 元数据后**降级锁 `vitest@3.2.4`**（`dependencies.vite`＝`^5.0.0`），与冻结线兼容。
+- **P1-07 `--frozen-lockfile` 复装 ✅**：移走 `node_modules` → `pnpm install --frozen-lockfile` **exit 0（714ms）** → 复验 typecheck exit 0 ＋ vitest 10/10 exit 0 ＋ `build:mp-weixin` DONE exit 0 ⇒ **锁文件可重建性证明**。
+- **P1-03 R 目录文档集 ✅**：`miniapp-vue3/docs/migration/` 六件齐——`baseline.json`（机器可读基线：sourceCommit/旧端版本与哈希/后端双环境 SHA/模板 commit/工具链冻结值/账号证据/D1–D5 SHA-256，JSON 校验通过）、`inventory.md`（17 路由含抖音 Profile 列、15 组件、20 工具、34 wrapper、getalbum 退役）、`contracts.md`（4001→INSUFFICIENT_CREDITS 等已冻结规则＋wrapper 台账占位随 T5–T9 补实）、`parity.md`（17 页×15 组件 not_started）、`hotfix-sync.md`（账本建立）、`deviations.md`（6 条偏差含本轮 vitest 决策与测试 bug 修复留痕）。**基线转换只搬文档事实，未搬旧 Vue3 骨架**。
+- **T1 状态：P1-01~08 全部完成**；下一轮进入 **T2 领域规则与抽象端口**（P1-09~13）。
 
 ## 9. G0 验收自查
 
