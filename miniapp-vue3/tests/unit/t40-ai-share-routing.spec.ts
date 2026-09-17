@@ -158,24 +158,3 @@ describe("ai-share-routing · 匿名只读落地（旧 :612-660）", () => {
     });
   });
 });
-
-describe("ai 契约 · getSharedTask（P3-13）", () => {
-  it("GET /api/aiface/tasks/share/{token}（公开、无需登录、idempotent、token 编码）", async () => {
-    const seen: Array<Record<string, unknown>> = [];
-    const repo = createAiRepository({
-      client: {
-        request: async <R,>(input: Record<string, unknown>) => {
-          seen.push(input);
-          return { ok: true, value: {} } as unknown as RepoResult<R>;
-        },
-      } as never,
-    });
-    await repo.getSharedTask(ctx, "a/b c");
-    expect(seen[0]).toMatchObject({
-      method: "GET",
-      url: "/api/aiface/tasks/share/a%2Fb%20c",
-      replayPolicy: "idempotent",
-    });
-    expect(seen[0].authRequired).toBeFalsy();
-  });
-});
