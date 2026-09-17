@@ -1,0 +1,273 @@
+<script setup lang="ts">
+// ProfilePopup — 完善个人资料弹窗（全局居中弹窗 · 与 LoginPopup 品牌视觉一致）
+// 旧端源：/home/majunhi/blueberry/src/components/ProfilePopup/ProfilePopup.uvue（195 行）
+// 忠实移植：模板 :9-38；props :43-52；emits :53；样式 :62-195。
+//
+// 视觉：居中卡片 + 顶部金色氛围光 + Noto Serif 金色标题 + 头像金描边角标
+//       + 深色输入面板 + 渐变主按钮 + 弹入动画。
+// 交互：emit 事件交回页面既有 handler（业务逻辑完全不变）。
+// 事件：@choose-avatar 头像选择（透传 open-type="chooseAvatar" 原始事件对象，detail.avatarUrl）；
+//       @update-nickname 昵称输入（string）；@submit 确认；@skip 跳过/遮罩关闭。
+//
+// ⚠️ 有意偏差（AppInput 未移植）：旧端模板 :25-32 引用 <AppInput>（独立组件，本批次未移植）。
+// 按「模板/样式照搬 + 不发明新交互」纪律，此处将 AppInput.uvue 的结构（label/value/placeholder/
+// maxLength/focus 描边/@input 发 string）与样式（:42-72）就地内联还原；待 AppInput 组件移植后
+// 应替换回 <AppInput>（页头已声明，避免伪装完成度）。
+//
+// 平台差异（已知，保留原样不降级）：chooseAvatar 为 MP-WEIXIN 专属 button open-type；
+// 抖音端不可用属已知平台差异，照旧端原样保留。
+//
+// token 映射与 LoginPopup 同口径（详见其页头）：金色 → tokens.semantic.colorAction；
+// 墨色 → tokens.semantic.colorActionText；深色卡片/渐变/字号档位 → 硬编码并注释。
+import { ref } from "vue";
+import { tokens } from "../../generated/tokens";
+
+withDefaults(
+  defineProps<{
+    avatarUrl?: string;
+    nickname?: string;
+  }>(),
+  { avatarUrl: "", nickname: "" },
+);
+
+const emit = defineEmits<{
+  (e: "choose-avatar", event: unknown): void;
+  (e: "update-nickname", value: string): void;
+  (e: "submit"): void;
+  (e: "skip"): void;
+}>();
+
+// 内联 AppInput 的聚焦态（旧 AppInput.uvue :31-32 data.focused；@focus/@blur 切换金描边）
+const inputFocused = ref(false);
+
+// 昵称输入（模板内不能写 TS as 断言，统一在方法里收窄；uni input 事件 detail.value 为 string）
+function onNicknameInput(e: unknown): void {
+  const value = (e as { detail?: { value?: unknown } })?.detail?.value;
+  emit("update-nickname", typeof value === "string" ? value : "");
+}
+</script>
+
+<template>
+  <view class="profile-overlay" @click="emit('skip')">
+    <view class="profile-card" @click.stop>
+      <!-- 顶部氛围光 -->
+      <view class="card-aura"></view>
+      <view class="card-title font-noto-serif">完善个人资料</view>
+      <view class="card-desc">设置头像和昵称以获得完整体验</view>
+
+      <!-- 头像选择 -->
+      <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="emit('choose-avatar', $event)">
+        <image class="avatar-img" :src="avatarUrl || '/static/iconpark/mine.svg'" mode="aspectFill"></image>
+        <view class="avatar-badge">+</view>
+        <text class="avatar-tip">点击选择头像</text>
+      </button>
+
+      <!-- 昵称输入（内联 AppInput，见页头有意偏差声明；外层控制与下方按钮间距） -->
+      <view class="input-wrap">
+        <view class="app-input" :class="{ 'is-focused': inputFocused }">
+          <text class="app-input-label">昵称</text>
+          <input
+            class="app-input-field"
+            :value="nickname"
+            placeholder="请输入昵称"
+            :maxlength="60"
+            placeholder-class="app-input-placeholder"
+            @focus="inputFocused = true"
+            @blur="inputFocused = false"
+            @input="onNicknameInput"
+          />
+        </view>
+      </view>
+
+      <button class="confirm-btn btn-primary" hover-class="press-dim" @click="emit('submit')">确认</button>
+      <view class="profile-skip" hover-class="press-dim" @click="emit('skip')">跳过</view>
+    </view>
+  </view>
+</template>
+
+<style scoped>
+/* 遮罩 + 渐显（全屏：vw/vh 撑满） */
+.profile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: overlayFadeIn 0.25s ease-out;
+}
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 居中卡片（与 LoginPopup login-card 同款视觉） */
+.profile-card {
+  position: relative;
+  width: 620rpx;
+  background: #262626; /* 旧 var(--color-popup-card) #262626（App.uvue :90） */
+  border-radius: 48rpx; /* 旧 var(--radius-2xl) 48rpx（App.uvue :104） */
+  padding: 56rpx 48rpx 44rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  animation: cardPopIn 0.28s ease-out;
+}
+@keyframes cardPopIn {
+  from { opacity: 0; transform: scale(0.92) translateY(24rpx); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 顶部金色氛围光 */
+.card-aura {
+  position: absolute;
+  top: -100rpx;
+  left: 50%;
+  width: 420rpx;
+  height: 220rpx;
+  margin-left: -210rpx;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(241, 205, 145, 0.2), rgba(241, 205, 145, 0) 70%);
+  pointer-events: none;
+}
+
+.card-title {
+  font-size: 40rpx;
+  font-weight: 400;
+  color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) #F1CD91 */
+  margin-bottom: 12rpx;
+}
+
+.card-desc {
+  font-size: 22rpx; /* 旧 var(--font-size-body-sm) 22rpx */
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 36rpx;
+}
+
+/* 头像 */
+.avatar-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32rpx;
+  padding: 0 20rpx;
+  width: 180rpx;
+  box-sizing: border-box;
+  line-height: normal;
+}
+.avatar-btn::after {
+  border: none;
+}
+.avatar-img {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  border: 3rpx solid v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) */
+  background: rgba(255, 255, 255, 0.08);
+}
+.avatar-badge {
+  position: absolute;
+  right: 24rpx;
+  bottom: 30rpx;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%); /* 旧 var(--gradient-btn-primary) */
+  color: v-bind("tokens.semantic.colorActionText"); /* 旧 var(--color-bg) #160F04 */
+  font-size: 26rpx;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #262626; /* 旧 var(--color-popup-card) #262626 */
+}
+.avatar-tip {
+  margin-top: 14rpx;
+  font-size: 20rpx; /* 旧 var(--font-size-body-xs) 20rpx */
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* 输入框间距（使用方控制，组件不带外距） */
+.input-wrap {
+  width: 100%;
+  margin-bottom: 36rpx;
+}
+
+/* —— 以下为内联 AppInput 样式（旧 AppInput.uvue :42-72 就地还原，待组件移植后移除）—— */
+.app-input {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2rpx solid rgba(255, 255, 255, 0.12);
+  border-radius: 18rpx; /* 旧 var(--radius-item) 18rpx */
+  padding: 0 24rpx;
+  height: 88rpx;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease-out;
+}
+.app-input.is-focused {
+  border-color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) */
+}
+.app-input-label {
+  font-size: 24rpx; /* 旧 var(--font-size-body) 24rpx */
+  color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) */
+  margin-right: 20rpx;
+}
+.app-input-field {
+  flex: 1;
+  font-size: 24rpx; /* 旧 var(--font-size-body) 24rpx */
+  color: #fff;
+}
+.app-input-placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* 金色主按钮统一类（旧 App.uvue :148-163 就地还原；全局样式移植后此处可删） */
+.btn-primary {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 26rpx 40rpx;
+  font-size: 32rpx;
+  line-height: 1.2;
+  font-weight: 400;
+  color: v-bind("tokens.semantic.colorActionText"); /* 旧 var(--color-bg) #160F04 */
+  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%); /* 旧 var(--gradient-btn-primary) */
+  border: 1rpx solid v-bind("tokens.semantic.colorActionText");
+  border-radius: 999rpx; /* 旧 var(--radius-full) */
+  transition: opacity 0.15s ease-out;
+}
+
+/* 确认 + 跳过 */
+.confirm-btn {
+  width: 100%;
+  height: 92rpx;
+  font-size: 28rpx; /* 旧 var(--font-size-body-plus) 28rpx */
+}
+.confirm-btn::after {
+  border: none;
+}
+.profile-skip {
+  margin-top: 28rpx;
+  padding: 10rpx 40rpx;
+  font-size: 22rpx; /* 旧 var(--font-size-body-sm) 22rpx */
+  color: rgba(255, 255, 255, 0.4);
+  transition: opacity 0.15s ease-out;
+}
+
+/* 全局按压反馈（旧 App.uvue :139-141 就地还原，hover-class 引用） */
+.press-dim {
+  opacity: 0.82;
+}
+</style>
