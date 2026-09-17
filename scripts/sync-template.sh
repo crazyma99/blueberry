@@ -59,6 +59,20 @@ if [ "$TARGET_REPO" = "$TEMPLATE_ROOT" ]; then
   exit 0
 fi
 
+# ⭐护栏（2026-09-17，主人授权；P1-33）：**禁止**把模板（uni-app x / uvue）同步进 **Vue3 新端**。
+# 理由：本脚本以 `rsync -a --delete` 覆盖 `src/pages`、`src/utils`——若误指到新端仓（vue3），
+# 会把 `miniapp-vue3/src/pages` 下的迁移成果整目录删除（且路径同名，事后难以肉眼发现）。
+if [ -d "$TARGET_REPO/miniapp-vue3" ] || [ -f "$TARGET_REPO/miniapp-vue3/src/pages.json" ]; then
+  echo "拒绝：目标仓库看起来是 **Vue3 新端**（存在 miniapp-vue3/）——本模板同步脚本会 rsync --delete，禁止对新端执行。" >&2
+  echo "      如确需同步，请显式删除本护栏并说明理由（P1-33）。" >&2
+  exit 1
+fi
+# 二次防线：目标不像 uni-app x 端（缺 App.uvue）也拒绝，避免误指到任意目录
+if [ ! -f "$TARGET_REPO/src/App.uvue" ]; then
+  echo "拒绝：目标仓库缺少 src/App.uvue（不像 uni-app x 端）——疑似误指目录，已中止以免误删。" >&2
+  exit 1
+fi
+
 mkdir -p "$TARGET_REPO/src"
 
 cp "$TEMPLATE_ROOT/src/App.uvue" "$TARGET_REPO/src/App.uvue"
