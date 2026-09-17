@@ -16,6 +16,11 @@ interface UniRes {
 }
 
 export function createUniTransport(deps: { baseUrl: string }): HttpPort {
+  // ⭐2026-09-17 修复（体验版「接口失败」根因）：`PROFILE.apiBases[env]` 带**尾斜杠**（`https://crazyma99.xyz/`），
+  // 而仓储路径带**首斜杠**（`/api/wx/login`）⇒ 直接相加得到 `…xyz//api/…`（双斜杠）→ 服务端 404。
+  // 统一规范化：base 去尾斜杠、path 补首斜杠后再拼（查询串原样保留）。
+  const base = deps.baseUrl.replace(/\/+$/, "");
+  const joinUrl = (path: string) => base + (path.startsWith("/") ? path : "/" + path);
   return {
     request<T>(req: HttpRequest): Promise<Result<HttpResponse<T>>> {
       return new Promise((resolve) => {
@@ -24,7 +29,7 @@ export function createUniTransport(deps: { baseUrl: string }): HttpPort {
           return;
         }
         uni.request({
-          url: deps.baseUrl + req.url,
+          url: joinUrl(req.url),
           method: req.method,
           // uni.request 的 data 期望 string|AnyObject|ArrayBuffer；body 为 unknown，按对象契约收窄后传入
           data: (req.method === "GET" ? req.query : req.body) as Record<string, unknown> | undefined,
