@@ -25,6 +25,15 @@
 			}
 		},
 		{
+			"path": "pages/targetPhotoDetail/index",
+			"style": {
+				// #ifdef MP-WEIXIN
+				"navigationStyle": "custom",
+				// #endif
+				"navigationBarTitleText": "客片详情"
+			}
+		},
+		{
 			"path": "pages/_probe/wot-sample",
 			"style": {
 				"navigationBarTitleText": "Wot 资格样页"

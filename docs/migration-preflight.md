@@ -425,6 +425,22 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T6 剩余**：targetPhotoDetail（详情＋点赞，第二页）、P2-12 3Tab 复刻、P2-13 布局样页、P2-15 场景矩阵、P2-16 微信真机＋独立 CR。
 
+
+## 8.24 T6 执行记录（P2-11 客片详情页接入，2026-09-17 第十二批）
+
+| 项 | 内容 |
+|---|---|
+| COS 缩略工具 | `application/image.ts`（`cosThumb`/`isCosHost`，旧端 imageLoader.uts:33-46 忠实移植）——**仅精确主域匹配**（`lanmei66.cloud`/`*.lanmei66.cloud`，**防 `xx-lanmei66.cloud.yy` 子串误命中**，旧端 CR 🟡）；COS 万象 WebP 缩略参数拼接（已有 query 用 & 连接） |
+| **客片详情页（T6 最后一页）** | `pages/targetPhotoDetail/index.vue`（235 行）——**详情图渐进加载**（首图原图、其余 750 WebP 缩略＋lazy-load，旧端 :68-72）＋价格/套餐内容（:46-53）＋**点赞**（getLikeStatus 单 id 合并 :246-250 ＋ use-like 乐观更新＋失败 toast 桥接）＋错误态可重试；**非 shareToken 作品页**（P2-11 边界）；BottomActionBar AI 试衣按钮属 B3（AI 页不进抖音 Profile）随 T8 迁移 |
+| 路由入参 | `parseDetailParams`（idx→albumId、type→shopId；缺 idx 安全停留加载态） |
+| 产物实证 | pages.json 平台条件导航第三次实证：微信详情页 json **有** navigationStyle custom、抖音**无** |
+| 测试 | 3 条（cosThumb/isCosHost 五断言含子串防误命中；详情页冒烟：缺入参安全态/有入参错误态可重试——mock 生命周期驱动） |
+| 汇总 | vitest **181/181＋3 skipped** exit 0＋typecheck **exit 0**＋三平台构建各 exit 0 |
+
+**⭐ T6 首条纵切片（首页→相册列表→客片详情→返回）三页全部接入完成**——8 条合同仓储层＋VM 层＋组件层＋三页全链路就位。
+
+**T6 剩余**：P2-12 3Tab 复刻（custom-tab-bar 四文件）、P2-13 两套布局样页验证、P2-15 场景矩阵、P2-16 微信真机＋独立 CR。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
