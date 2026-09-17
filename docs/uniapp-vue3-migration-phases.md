@@ -491,7 +491,7 @@ Session是**新端内部模型**，不是伪造后端响应字段；repository�
 
 - [ ] P2-01 先按母方案11.4给34wrapper逐个落到repositories；保原method/path/header/body/业务码，废弃项记录不恢复。HTTP网络错误与业务4001、0/200成功兼容分别测试。
 - [ ] P2-02 让所有请求捕获发起时的RequestContext；保Bearer、X-App-Code与**可选**X-Brand-Id。默认品牌不能硬塞到所有数据请求，后端默认品牌规则只按现合同消费。
-- [ ] P2-03 写并发401/取消/退出/超时/二次401测试后实现AuthCoordinator；一个登录交互唤醒队列，取消时全部reject，不能无限等待。
+- [ ] P2-03 写并发401/取消/退出/超时/二次401测试后实现AuthCoordinator；一个登录交互唤醒队列，取消时全部reject，不能无限等待。**（2026-09-17 进展：协调器本体已落地 `application/auth-coordinator.ts`（一个登录交互唤醒全部等待者）＋并发/401 测试；⚠️ 仍缺 provider 侧——`exchangeIdentity` 在 8 个页面仍是 stub（`wx-login-pending-T7`，命名有误：T7=P2-17～23 已完成），真机 `authRequired` 端点（结果页保存/买断、权益查询、我的页资料等）因此以 AUTH_EXPIRED 收口。收口动作＝`platform/uni/login.ts`（`uni.login` 取 code，容器守卫）＋`application/silent-login.ts`（code→`wxAuth.login(POST /api/wx/login)`→Session→completeLogin，fail-closed）＋8 页改接该工厂＋t43 用例。**主人 2026-09-17 拍板：先做此项解锁保存/买断；微信真机由主人稍后自验**）
 - [ ] P2-04 上传仍用multipart字段 `photo`，对JSON字符串响应解码、非法JSON、权限、取消、401挂起上传队列分别测试；不把上传改成普通JSON请求。
 - [ ] P2-05 明确请求重放策略：安全读可在同上下文重发；跨品牌/账号旧POST作废；同步扣次/下单/兑换码没有provider幂等保证就禁止自动重发。
 - [ ] P2-06 实现versioned storage：兼容读旧token/userInfo/brand_id，同平台+Profile有效性校验、幂等读旧写新；验证期间不删除旧key，损坏内容安全失败。
