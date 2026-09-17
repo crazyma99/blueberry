@@ -26,6 +26,21 @@ describe("P4-12 平台用法扫描规则", () => {
     expect(scanSource("src/application/x.ts", "tt.login({})")).toEqual(["tt.login"]);
   });
 
+  it("⭐可绕过构造（加固）：globalThis 访问／别名赋值／解构取值／方括号访问 一律报 bypass", () => {
+    const cases: Array<[string, string]> = [
+      ["globalThis-access", "const w = globalThis.wx; w.request({})"],
+      ["alias-assignment", "const w = wx; w.request({})"],
+      ["destructure", "const { request } = uni; request({})"],
+      ["bracket-access", 'wx["setVisualEffectOnCapture"]({})'],
+    ];
+    for (const [name, code] of cases) {
+      const out = scanSource("src/pages/index/index.vue", code);
+      expect(out, name + " 未被拦截: " + JSON.stringify(out)).toContain("bypass:" + name);
+    }
+    // 允许目录内同样不报（平台适配层本来就该这么写）
+    expect(scanSource("src/platform/uni/transport.ts", "const w = wx; w.request({})")).toEqual([]);
+  });
+
   it("UI 类 API（toast/导航/getSystemInfoSync）与注释提及**不算违规**", () => {
     const uiOnly = "uni.showToast({}); uni.navigateTo({url:'/x'}); uni.showLoading({}); uni.hideLoading(); uni.getSystemInfoSync(); uni.switchTab({});";
     expect(scanSource("src/pages/index/index.vue", uiOnly)).toEqual([]);

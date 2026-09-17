@@ -21,6 +21,15 @@ export const REGISTERED_EXCEPTIONS = [
 
 const ALLOWED_DIRS = ["src/platform/", "src/ui/", "src/generated/"];
 
+/** 绕过形态（2026-09-17 加固）：直接 `wx.` 之外，还要拦住「换名/换取值方式」的平台访问——
+ *  ①`globalThis.wx`／`globalThis.uni` ②`const w = wx`／`= uni` 别名 ③`const { request } = uni` 解构 ④`wx["request"]` 方括号 */
+const BYPASS_PATTERNS = [
+  { name: "globalThis-access", re: /\bglobalThis\s*\.\s*(wx|uni)\b/g },
+  { name: "alias-assignment", re: /=\s*(wx|uni)\b(?![\w.$])/g },
+  { name: "destructure", re: /\{[^}]*\}\s*=\s*(wx|uni)\b/g },
+  { name: "bracket-access", re: /\b(wx|uni)\s*\[/g },
+];
+
 function stripComments(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
 }
@@ -31,6 +40,9 @@ export function scanSource(file, src, exceptions = REGISTERED_EXCEPTIONS) {
   const code = stripComments(src);
   const found = new Set();
   for (const m of code.matchAll(SENSITIVE)) found.add(m[0]);
+  for (const b of BYPASS_PATTERNS) {
+    for (const _m of code.matchAll(b.re)) found.add("bypass:" + b.name);
+  }
   return [...found].filter((api) => !exceptions.some((e) => e.file === file && e.api === api));
 }
 
