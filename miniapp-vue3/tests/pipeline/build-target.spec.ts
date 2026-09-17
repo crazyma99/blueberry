@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
-  validateBuildRequest, allocateWorkDir, applyProfile, profileDigestOf,
+  validateBuildRequest, allocateWorkDir, applyProfile, profileDigestOf, expectedRoutesForPlatform, stripJsonc,
 } from "../../scripts/build-target.mjs";
 import { verifyTarget } from "../../scripts/verify-target.mjs";
 
@@ -90,7 +90,10 @@ describe("applyProfile（P1-31 结构化编辑，源目录不动）", () => {
     const man = JSON.parse(readFileSync(join(dir, "src/manifest.json"), "utf-8"));
     expect(man.name).toBe("blueBerry");
     expect(man["mp-weixin"].appid).toBe("wxb19ad7426dfb8bd4");
-    const pages = JSON.parse(readFileSync(join(dir, "src/pages.json"), "utf-8"));
+    // ⭐P1-37 CR 🔴1 后：pages.json **保留注释与 `#ifdef` 标记**（有意行为）⇒ 解析前先剥注释
+    const pagesRaw = readFileSync(join(dir, "src/pages.json"), "utf-8");
+    expect(pagesRaw).toContain("// 注释"); // 注释未被抹掉
+    const pages = JSON.parse(stripJsonc(pagesRaw));
     expect(pages.globalStyle.navigationBarTitleText).toBe("蓝梅旗袍·汉服·民...");
   });
 });
@@ -155,5 +158,42 @@ describe("verifyTarget（P1-32 产物命中；P1-34 每项负向必须失败）"
     const v = verifyTarget({ manifest: manifestBase, artifactDir: makeArtifact({ noAppJs: true }) });
     expect(v.ok).toBe(false);
     expect(v.errors.join(" ")).toContain("app.js missing");
+  });
+});
+
+describe("P1-37 CR 回归（🔴1 条件编译保留／🔴2 期望集合按平台求值／P0-3 目录原子化）", () => {
+  const realPagesText = () => readFileSync(resolve(__dirname, "../../src/pages.json"), "utf-8");
+
+  it("⭐applyProfile **不得抹掉 `#ifdef` 标记**（实测曾 22→0，导致抖音侧 18 页全量注册）", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ap-"));
+    mkdirSync(join(dir, "src"), { recursive: true });
+    const raw = realPagesText();
+    writeFileSync(join(dir, "src/pages.json"), raw);
+    writeFileSync(join(dir, "src/manifest.json"), '{\n  "name": "",\n  "mp-toutiao": { "appid": "" }\n}\n');
+    const before = (raw.match(/^\s*\/\/\s*#(ifdef|ifndef|endif)/gm) ?? []).length;
+    applyProfile(dir, {
+      manifestName: "X", description: "d", platform: "mp-toutiao", appid: "tt0000000000000001", navigationTitle: "标题X",
+    });
+    const after = readFileSync(join(dir, "src/pages.json"), "utf-8");
+    const afterCount = (after.match(/^\s*\/\/\s*#(ifdef|ifndef|endif)/gm) ?? []).length;
+    expect(afterCount).toBe(before); // 标记原样保留
+    expect(after).toContain("navigationBarTitleText");
+    expect(after).toContain('"标题X"'); // 标题确实被替换
+  });
+
+  it("⭐expectedRoutes 按平台求值（不再恒等）：微信 18 ／ 抖音 12（11 业务＋探针）", () => {
+    const t = realPagesText();
+    expect(expectedRoutesForPlatform(t, "mp-weixin").length).toBe(18);
+    const tt = expectedRoutesForPlatform(t, "mp-toutiao");
+    expect(tt.length).toBe(12);
+    expect(tt.some((r) => r.startsWith("pages/aiTryOn"))).toBe(false); // AI 六页仅在微信宏内
+  });
+
+  it("⭐runId 目录分配原子化：同目录二次分配抛错（非递归 mkdir + EEXIST）", () => {
+    const dir = mkdtempSync(join(tmpdir(), "alloc-"));
+    const req = baseReq({ repoRoot: dir, sourceRoot: dir, profilePath: profilePath, projectRoot: join(dir, ".work") });
+    const d1 = allocateWorkDir(req, { repoRoot: dir });
+    expect(existsSync(d1)).toBe(true);
+    expect(() => allocateWorkDir(req, { repoRoot: dir })).toThrow(/already exists|non-empty/);
   });
 });

@@ -45,14 +45,20 @@ export function verifyTarget({ manifest, artifactDir }) {
   if (!existsSync(pcPath)) errors.push("project.config.json missing");
   else {
     const pc = readJson(pcPath);
-    if (manifest.appid && pc.appid !== manifest.appid) {
+    // P1-37 CR P0-4：不再 fail-open——manifest 缺 appid 属契约缺失，报错而非「跳过且谎报 checked」
+    if (!manifest.appid) {
+      errors.push("manifest.appid missing: 无法核对产物 appid（不得跳过）");
+    } else if (pc.appid !== manifest.appid) {
       errors.push("appid mismatch: artifact=" + pc.appid + " expected=" + manifest.appid);
     } else checked.push("appid");
   }
 
   // 5) 导航标题（产物 app.json window）
   const navTitle = appJson.window ? appJson.window.navigationBarTitleText : undefined;
-  if (manifest.navTitle && navTitle !== manifest.navTitle) {
+  // P1-37 CR P0-4：同上——缺 navTitle 报错，不虚报 checked
+  if (!manifest.navTitle) {
+    errors.push("manifest.navTitle missing: 无法核对产物导航标题（不得跳过）");
+  } else if (navTitle !== manifest.navTitle) {
     errors.push("nav title mismatch: artifact=" + navTitle + " expected=" + manifest.navTitle);
   } else checked.push("navTitle");
 
@@ -74,7 +80,9 @@ export function verifyTarget({ manifest, artifactDir }) {
       }
     }
   }
-  checked.push("residue-scan");
+  // P1-37 CR P0-4：residues 为空时不 push——避免「声称扫过」的空覆盖
+  if ((manifest.forbiddenResidues ?? []).filter(Boolean).length > 0) checked.push("residue-scan");
+  else warnings.push("forbiddenResidues empty: 未执行跨品牌残留扫描（调用方需显式提供）");
 
   // 阶段说明（诚实登记，不假装已验）：appCode/apiBase 命中产物属 Phase 2 HTTP 层接入后的检查——
   // 当前 src 尚无 HTTP 消费方，profile 配置已生成于 src/generated/（构建目录内可查）。

@@ -102,6 +102,8 @@ describe("verify-target（P4-07/P4-13 平台作用域断言）", () => {
       manifest: { platform: "mp-weixin", expectedRoutes: ["pages/aiTryOn/index", "pages/index/index"], appid: "wxreal", navTitle: "AI试衣", forbiddenRoutes: [] },
     });
     expect(r.ok).toBe(true);
-    expect(r.warnings).toEqual([]);
+    // P1-37 CR P0-4 后：未提供 forbiddenResidues 会给出「未执行残留扫描」的上报（不再静默）
+    expect(r.warnings.join(" ")).toContain("forbiddenResidues empty");
+    expect(r.checked).not.toContain("residue-scan");
   });
 });

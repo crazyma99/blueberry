@@ -31,7 +31,7 @@ function inside(child, parent) {
   return c === p || c.startsWith(p + sep);
 }
 
-function stripJsonc(s) {
+export function stripJsonc(s) {
   // JSONC 注释剥离：字符串感知（串内 // 不误删，如 https:// URL）；
   // 支持 /* */ 与行尾 // 两种注释——首版只删整行注释，被 P1-31 用例抓出行尾注释漏删（真 bug）。
   let out = "";
@@ -52,6 +52,78 @@ function stripJsonc(s) {
     out += c;
   }
   return out;
+}
+
+
+/** 平台宏名：`mp-weixin` → `MP-WEIXIN`（uni 条件编译宏） */
+function platformMacro(platform) {
+  return String(platform ?? "").toUpperCase();
+}
+
+/** 条件编译感知求值（P1-37 CR 🔴1/🔴2 修复核心）：按平台保留/剔除 `// #ifdef`／`// #ifndef` 包夹的行。
+ *  仅处理整行标记（本项目 pages.json 的用法即整行包夹整条页面条目）。 */
+export function evaluateIfdefs(rawText, platform) {
+  const macro = platformMacro(platform);
+  const stack = [];
+  const out = [];
+  for (const line of rawText.split("\n")) {
+    const m = line.match(/^\s*\/\/\s*#(ifdef|ifndef|endif)\s*([A-Z0-9_|-]*)/);
+    if (m) {
+      if (m[1] === "ifdef") stack.push(m[2].split("||").map((x) => x.trim()).includes(macro));
+      else if (m[1] === "ifndef") stack.push(!m[2].split("||").map((x) => x.trim()).includes(macro));
+      else stack.pop();
+      continue; // 标记行本身不进入 JSON
+    }
+    if (stack.every(Boolean)) out.push(line);
+  }
+  return out.join("\n");
+}
+
+/** 平台作用域下的源码路由集合（供 verify 的「阶段期望集合」使用；**不再恒等**） */
+export function expectedRoutesForPlatform(rawPagesJsonText, platform) {
+  const parsed = JSON.parse(stripJsonc(evaluateIfdefs(rawPagesJsonText, platform)));
+  return (parsed.pages ?? []).map((p) => p.path).sort();
+}
+
+/** globalStyle.navigationBarTitleText 的最小化文本替换（**保留全部注释与 `#ifdef` 标记**） */
+function setGlobalNavTitleText(rawText, title) {
+  const gsIdx = rawText.indexOf('"globalStyle"');
+  if (gsIdx < 0) return rawText;
+  const open = rawText.indexOf("{", gsIdx);
+  if (open < 0) return rawText;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  let end = -1;
+  for (let i = open; i < rawText.length; i++) {
+    const c = rawText[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') inStr = true;
+    else if (c === "{") depth++;
+    else if (c === "}") {
+      depth--;
+      if (depth === 0) { end = i + 1; break; }
+    }
+  }
+  if (end < 0) return rawText;
+  const body = rawText.slice(gsIdx, end);
+  let replaced;
+  if (/"navigationBarTitleText"\s*:/.test(body)) {
+    replaced = body.replace(/("navigationBarTitleText"\s*:\s*)"[^"]*"/, `$1${JSON.stringify(title)}`);
+  } else {
+    // 缺键 → **插入**（不回退为整份重写，标记仍保留）：插在 globalStyle 的开括号之后。
+    // ⚠️ 空对象不得带尾逗号（`{ "k": "v", }` 非法 JSON）——按开括号后是否仅有空白决定是否加逗号。
+    const braceAt = body.indexOf("{");
+    const inner = body.slice(braceAt + 1, body.lastIndexOf("}"));
+    const comma = inner.trim() === "" ? "" : ",";
+    replaced = body.slice(0, braceAt + 1) + `\n\t\t"navigationBarTitleText": ${JSON.stringify(title)}${comma}` + body.slice(braceAt + 1);
+  }
+  return rawText.slice(0, gsIdx) + replaced + rawText.slice(end);
 }
 
 /** profileDigest 语义：sha256(JSON.stringify(parseProfileText(profileFile)))——对给定文件稳定可复算 */
@@ -112,7 +184,14 @@ export function allocateWorkDir(req, { repoRoot }) {
   if (existsSync(dir) && readdirSync(dir).length > 0) {
     throw new Error("run dir exists and non-empty (runId must be unique): " + dir);
   }
-  mkdirSync(dir, { recursive: true });
+  // ⭐P1-37 CR P0-3：先建父目录，再**非递归**建 run 目录 ⇒ 同 runId 并发时后者抛 EEXIST（原子化，不再共用同一目录）
+  mkdirSync(dirname(dir), { recursive: true });
+  try {
+    mkdirSync(dir);
+  } catch (e) {
+    if (e && e.code === "EEXIST") throw new Error("run dir already exists (runId must be unique): " + dir);
+    throw e;
+  }
   return dir;
 }
 
@@ -134,10 +213,15 @@ export function applyProfile(projectDir, profile) {
   node.appid = profile.appid;
   writeFileSync(mp, JSON.stringify(man, null, 2) + "\n");
   const pp = join(projectDir, "src/pages.json");
-  const pages = JSON.parse(stripJsonc(readFileSync(pp, "utf-8")));
-  pages.globalStyle = pages.globalStyle ?? {};
-  pages.globalStyle.navigationBarTitleText = profile.navigationTitle;
-  writeFileSync(pp, JSON.stringify(pages, null, 2) + "\n");
+  // ⭐P1-37 CR 🔴1：原先 `JSON.parse(stripJsonc(...))` 整份重写会把 `#ifdef MP-WEIXIN` 标记**全部抹掉**
+  // （实测 22 → 0，抖音侧 18 页全量注册 ⇒ 必然被 forbiddenRoutes 拦成构建失败）。
+  // 现改为**最小化文本替换**：只改 globalStyle 的标题，注释与条件编译标记原样保留，交给 uni 编译器按平台求值。
+  const rawPages = readFileSync(pp, "utf-8");
+  const patchedPages = setGlobalNavTitleText(rawPages, profile.navigationTitle);
+  if (patchedPages === rawPages && !/"navigationBarTitleText"/.test(rawPages)) {
+    throw new Error("pages.json globalStyle.navigationBarTitleText not found (profile title not applied)");
+  }
+  writeFileSync(pp, patchedPages);
   return { manifest: "src/manifest.json", pages: "src/pages.json" };
 }
 
@@ -173,9 +257,9 @@ export function runBuild(req, { repoRoot, pnpmCmd = "pnpm", skipInstall = false 
   execFileSync(pnpmCmd, ["run", "build:" + req.platform], { cwd: dir, stdio: "pipe" });
   steps.push("build:" + req.platform);
   const artifactDir = join(dir, "dist/build", req.platform);
-  // 阶段期望集合来自**源码** pages.json（应构建出什么）；不用产物自身回填，否则 verify 自证恒过
-  const srcPagesJson = JSON.parse(stripJsonc(readFileSync(join(dir, "src/pages.json"), "utf-8")));
-  const expectedRoutes = (srcPagesJson.pages ?? []).map((p) => p.path).sort();
+  // 阶段期望集合来自**源码** pages.json 且**按平台求值**（P1-37 CR 🔴2：直接 parse 会因标记被抹/未求值而恒得全量 18 页，断言退化）
+  const rawSrcPagesJson = readFileSync(join(dir, "src/pages.json"), "utf-8");
+  const expectedRoutes = expectedRoutesForPlatform(rawSrcPagesJson, req.platform);
   const manifest = {
     engine: req.engine,
     profileKey: req.profileKey,
@@ -188,7 +272,8 @@ export function runBuild(req, { repoRoot, pnpmCmd = "pnpm", skipInstall = false 
     navTitle: v.profile.navigationTitle,
     apiBase: v.profile.apiBases[req.environment],
     expectedRoutes,
-    forbiddenResidues: req.forbiddenResidues ?? [],
+    // P1-37 CR P0-4：调用者不传时**跨品牌残留检查会静默消失** ⇒ 记 warning 上报（verify 侧据 checked/warnings 可见）
+    forbiddenResidues: Array.isArray(req.forbiddenResidues) ? req.forbiddenResidues : [],
     sourceCommit: req.sourceCommit,
     profileDigest: req.profileDigest,
     generatedProfileDigest: pg.digest,
