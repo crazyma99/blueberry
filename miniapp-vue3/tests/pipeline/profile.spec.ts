@@ -114,3 +114,16 @@ describe("profile-map.json（不暗中弃字段）", () => {
     }
   });
 });
+
+describe("parseProfileText 兼容 JSON 形态（2026-09-17：合成 fixture 驱动 E2E 的前置）", () => {
+  it("⭐JSON fixture 可解析且能通过 validateProfile；非法 JSON/数组拒绝", () => {
+    const text = readFileSync(resolve(__dirname, "../fixtures/profiles/A.json"), "utf-8");
+    const raw = parseProfileText(text);
+    expect(Object.keys(raw).length).toBeGreaterThan(10);
+    expect(raw.PROJECT_KEY).toBe("profile-a");
+    const v = validateProfile(raw, { platform: "mp-toutiao", environment: "trial" });
+    expect(v.ok, JSON.stringify(v.errors)).toBe(true);
+    expect(() => parseProfileText("{ not json }")).toThrow(/malformed profile JSON/);
+    expect(() => parseProfileText("[1,2]")).toThrow(/must be an object/);
+  });
+});

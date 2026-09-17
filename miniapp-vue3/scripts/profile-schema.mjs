@@ -25,9 +25,28 @@ const PROJECT_KEY_RE = /^[a-z][a-z0-9-]*$/;
 const API_HOSTS = ["lanmei66.cloud", "www.lanmei66.cloud", "crazyma99.xyz"];
 const QR_HOSTS = ["lanmei66.cloud", "www.lanmei66.cloud", "crazyma99.xyz", "lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com"];
 
-/** project.env 文本 → 原始键值对象。逐行正则解析，绝不 eval/source；畸形行与注入表达式即抛错。 */
+/** project.env 文本 → 原始键值对象。逐行正则解析，绝不 eval/source；畸形行与注入表达式即抛错。
+ *  ⭐2026-09-17：**兼容 JSON 形态**（合成 fixture `tests/fixtures/profiles/*.json` 即 JSON）——此前只认 `.env` 行格式，
+ *  导致「合成 Profile 驱动管线 E2E」无法进行（P1-37 CR 指出的 E2E 前置缺口）。JSON 分支同样做注入检查。 */
 export function parseProfileText(text) {
   if (typeof text !== "string") throw new Error("profile text must be string");
+  const trimmed = text.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    let obj;
+    try {
+      obj = JSON.parse(trimmed);
+    } catch (e) {
+      throw new Error("malformed profile JSON: " + (e && e.message ? e.message : String(e)));
+    }
+    if (obj == null || typeof obj !== "object" || Array.isArray(obj)) throw new Error("profile JSON must be an object");
+    const normalized = {};
+    for (const [k, v] of Object.entries(obj)) {
+      const val = typeof v === "string" ? v : String(v);
+      if (INJECTION_RE.test(val)) throw new Error("injection pattern in " + k);
+      normalized[k] = val;
+    }
+    return normalized;
+  }
   const out = {};
   const lines = text.split("\n");
   for (let i = 0; i < lines.length; i++) {
