@@ -8,7 +8,7 @@
 | # | 命令（phases 原文） | 实际执行 | 结果 |
 |---|---|---|---|
 | 1 | `pnpm --dir miniapp-vue3 run typecheck` | `vue-tsc --noEmit` | ✅ **exit 0**（0 错） |
-| 2 | `vitest run tests/unit tests/contracts tests/components tests/pipeline` | 同 | ✅ **384 passed / 0 skipped**（57 文件；skipped 3 例属 `tests/provider` gated，不在该命令集合内）<br>（2026-09-17 复跑刷新：T8/T9b 收尾与 P4 准备件新增用例后由 361→384） |
+| 2 | `vitest run tests/unit tests/contracts tests/components tests/pipeline` | 同 | ✅ **392 passed / 0 skipped**（57 文件；skipped 3 例属 `tests/provider` gated，不在该命令集合内）<br>（2026-09-17 **三次复跑**刷新：361→384→**392**，随 T8/T9b 收尾、P4 准备件与 P1-37 修复的用例增长） |
 | 3 | `run build:mp-weixin` | `uni build -p mp-weixin` | ✅ **exit 0** |
 | 4 | `run build:mp-toutiao` | `uni build -p mp-toutiao` | ✅ **exit 0** |
 

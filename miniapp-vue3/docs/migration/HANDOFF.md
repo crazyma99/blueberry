@@ -17,6 +17,8 @@
 | `g3-acceptance.md` | **G3（Phase 3 出口）对账**：四条验收命令＋「17 路由/三池/买断/分享」＋未达成项 |
 | `device-acceptance-checklist.md` | **微信真机自验清单**（当前唯一卡口的可执行表） |
 | `phase4-prep.md`＋`platform-capability-matrix.md` | Phase 4 准备件（范围/缺口/能力矩阵草表） |
+| `profile-build-records.md` | Profile 整包构建留档（P1-35 的 manifest/hash 表，自动汇总） |
+| `scripts/e2e-build.mjs` | 合成 Profile 端到端管线（`node scripts/e2e-build.mjs mp-toutiao both`），已入 CI 新端车道 |
 | `miniapp-vue3/docs/migration/parity.md` | 17 页 × 15 组件去向台账（ported／not_started） |
 | `miniapp-vue3/docs/migration/contracts.md` | 端点合同冻结表（含 Phase3 credits／AI 端点） |
 | `miniapp-vue3/docs/migration/deviations.md` | 有意偏差登记（已 8 条） |
@@ -46,11 +48,11 @@
 | 阶段 | 勾选 | 未勾的都是什么 |
 |---|---|---|
 | Phase 0 | 12/15 | `P0-10` 留档、`P0-11` 真机基准、`P0-12` 待主人书面确认 |
-| Phase 1 | 28/37 | 9 条需真机/CI/工具/旧端脚本证据（`P1-06/25/26/27/28/33/35/36/37`；`P1-07` 冻结安装、`P1-34` 负向六类已回填） |
+| Phase 1 | **32/37** | 余 5 条需工具/真机或待主人拍板（`P1-06/25/28` 工具·样页、`P1-33` 旧仓护栏、`P1-35` 工具打开） |
 | Phase 2 | 21/23 | `P2-15/16` 真机 |
 | Phase 3 | 19/20 | **`P3-15` 微信真机** |
 | Phase 4/5 | 0/40 | **未开工**（门禁＝G3 通过） |
-| 合计 | **80/135** | — |
+| 合计 | **84/135** | — |
 
 ### Phase 4 准备件（已备、**未开工**，勿误解为 P4 已勾）
 - `phase4-prep.md`：范围（抖音＝客片展示版 11 页/3 tab、AI 六页不注册、零支付）＋产物实证＋P4-01～17 缺口对照＋**三项外部前置**
