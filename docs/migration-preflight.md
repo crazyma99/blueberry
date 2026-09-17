@@ -313,6 +313,17 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T5 剩余**：P2-01 34 wrapper 落 repositories（8 条切片合同已冻结）、P2-05 重放策略落调用侧、P2-08 授权按钮 ui-bridge＋协议两页、P2-09 provider 验证、P2-10 独立 CR。
 
+
+## 8.16 T5 执行记录（P2-01 首批，2026-09-17 第四批）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| P2-01 切片 repositories | `infrastructure/repositories/` 6 模块——**切片 8 wrapper 逐个落仓储层**（contracts.md 冻结值逐条对照）：carousels（getImage GET 默认＋method 覆盖＋参数按方法落位）／shops（`/api/shops`）／albums（getCategories·getAlbumList·getalbumDetail，idx/type 入参透传）／likes（读免登录 idempotent／**写 authRequired＋replayPolicy=never**）／wx-auth（**换票入口 authRequired=false＋never**）；每仓储消费 client `{request}` 合同、响应类型仅对已确认形状强类型（like 两接口/wxLogin token+userInfo），未冻结结构松类型并注明随 T6 登记 | ✅ 6 条合同测试 |
+| 请求形状测试 | method/path/query·body 位／authRequired／replayPolicy 逐条断言；错误透传不吞（4001/网络错误已在 client 层测，仓储层原样透传 bizErr 引用） | ✅ |
+| 汇总 | vitest **146/146 exit 0**（15 文件）＋typecheck **exit 0**＋三平台构建各 exit 0 | ✅ |
+
+**T5 剩余**：P2-05 重放策略落调用侧细则、P2-08 授权按钮 ui-bridge＋协议两页（B0）、P2-09 provider 验证、P2-10 独立 CR；B2-B4 批次 26 个 wrapper 随 T6/T7 各批迁移补齐。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
