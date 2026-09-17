@@ -54,12 +54,15 @@
 | **S4** 提交与扣费 | `runSubmitFlow` 接 **coordinator**（禁自建轮询）：`balance>0` 直接提交；4001 → `recharge`（`operationId`＝task 维度）→ 成功后重试提交；超时 → `resume(outTradeNo)` | 单测：4001→充值→重试成功；取消不提交；超时不重复扣费；**页面零自建轮询**（grep 断言） |
 | **S5** 结果页 | `aiTryOnResult`：轮询任务态＋进度；**下载买断用 `taskBought` 权益**（禁用「仅 paid 即解锁」） | 单测：paid≠权益、买断后放行原图、失败可重试 |
 
-## 4. 需主人/负责人拍板的点（先登记，不擅自定）
+## 4. 待拍板项与结论（2026-09-17 主人已拍板）
 
-1. **截屏保护范围**：旧端在试衣页/结果页 `wx.setVisualEffectOnCapture(hidden)`；抖音端无该 API 且 AI 页不注册 → 本批仅微信实现，是否需要在其他端做等效替代？
-2. **上传通道设计**：新端 http client 不覆盖 `uni.uploadFile`（无统一拦截器）。S1 拟新增 `ports/upload` 端口＋uni 适配（保留品牌头注入与失败重试语义），是否认可？
-3. **`requestTaskNotify`（订阅消息）**：旧端在提交前请求订阅；新端保留（fail-soft，拒绝不阻断提交），是否保留？
-4. **`resumeGenerateIfNeeded` 的后端依据**：新端按「后端任务态」而非本地标记恢复，需确认后端是否已有可查询的「进行中任务」端点（若无，则以 `getAiTasks` 列表内 `pending/processing` 兜底）。
+| # | 事项 | 结论 |
+|---|---|---|
+| 1 | 上传通道设计 | ✅ **按已实现方案**：抽出 `ports/upload` ＋ `platform/uni/upload.ts`（保留品牌头注入/失败可重试/容器安全的单一事实源；T8/T9b 上传统一走它） |
+| 2 | 截屏保护范围 | ✅ **仅微信端实现**。主人原话：「抖音根本就没有AI相关功能（因为支付都没有）」⇒ 不为其他端设计等效替代；AI 六页 `#ifdef MP-WEIXIN` 注册已与之自洽 |
+| 3 | `requestTaskNotify`（订阅消息） | 默认**保留**（fail-soft：拒绝/不支持均不阻断提交）；如需去掉请指示 |
+| 4 | `resumeGenerateIfNeeded` 后端依据 | 默认**以后端任务态为准**（`getAiTasks` 列表内 `pending/processing` 兜底）；若后端另有「进行中任务」端点请提供 |
+
 
 ## 5. 已完成的可复用底座（勿重复实现）
 
