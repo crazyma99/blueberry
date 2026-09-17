@@ -302,6 +302,17 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T5 剩余**：P2-01 34 wrapper 落 repositories（8 条切片合同已冻结）、P2-04 上传 multipart `photo`、P2-05 重放策略细则落 client 调用侧、P2-06 versioned storage 完整实现（含旧键兼容读）、P2-08 授权按钮 ui-bridge＋协议两页、P2-09 provider 验证、P2-10 独立 CR。
 
+
+## 8.15 T5 执行记录（P2-04/06，2026-09-17 第三批）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| P2-06 versioned storage | `infrastructure/storage/versioned.ts`——**兼容读旧键**（token/userInfo/brand_id，旧端键事实：auth.uts:23/62、brand.uts:17）→ **幂等读旧写新**（仅新键缺失时写，**验证期不删旧键**）；新键带平台/Profile 归属、**读取时校验**（跨 Profile 隔离：huahua 会话在 blueberry 组合下视为无会话）；**损坏内容安全失败**（新键非法 JSON→null 不抛；旧 userInfo 损坏→token 仍迁移、userId 降级空串）；clearSession **只清新键** | ✅ 5 条测试 |
+| P2-04 上传 | `infrastructure/http/upload.ts`（`createUploadClient`）——**保持 multipart 字段 `photo`**（不改普通 JSON 请求，URL `/api/aiface/upload` 与旧端 api.uts:499-515 一致）；JSON 字符串响应解码（0/200 双信封兼容）；**非法 JSON 安全失败不抛**；业务码走 mapBusinessFailure；**401→挂起等待登录后重试一次**（waitForLogin 唤醒重登），**二次 401 即失败不无限重试**；Bearer＋X-App-Code 注入 | ✅ 3 条测试（7 断言面） |
+| 汇总 | vitest **140/140 exit 0**（14 文件）＋typecheck **exit 0**＋三平台构建各 exit 0 | ✅ |
+
+**T5 剩余**：P2-01 34 wrapper 落 repositories（8 条切片合同已冻结）、P2-05 重放策略落调用侧、P2-08 授权按钮 ui-bridge＋协议两页、P2-09 provider 验证、P2-10 独立 CR。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
