@@ -34,7 +34,7 @@ export function shouldShowScore(item: { finalScore?: unknown }): boolean {
 export type RecommendFailureKind = "INSUFFICIENT_CREDITS" | "BUSINESS" | "NETWORK" | "AUTH_EXPIRED";
 
 export type RecommendOutcome =
-  | { ok: true; items: RecommendItem[] }
+  | { ok: true; items: RecommendItem[]; analysis: Record<string, unknown> | null }
   | { ok: false; kind: RecommendFailureKind; message: string };
 
 export interface RecommendRepositoryLike {
@@ -73,16 +73,33 @@ export function createRecommendRunner(deps: {
       const message = typeof res.error.message === "string" && res.error.message !== "" ? res.error.message : "推荐失败，请重试";
       return { ok: false, kind, message };
     }
-    return { ok: true, items: normalizeItems(res.value) };
+    const items = normalizeItems(res.value);
+    const analysis = extractAnalysis(res.value);
+    // 旧端 :819-826 以 `res.data` 真值判定成功；「ok 但载荷为空」在旧端走 failed ⇒ 此处对齐（不得静默转场到空白结果页）
+    if (items.length === 0 && analysis == null) {
+      return { ok: false, kind: "BUSINESS", message: "推荐结果为空，请重试" };
+    }
+    return { ok: true, items, analysis };
   }
 
-  /** 列表归一：显式产出 `finalScore`（缺失→null），并把原始 DTO 原样保留供页面展示其它字段 */
+  /** 列表归一：显式产出 `finalScore`（缺失→null），并把原始 DTO 原样保留供页面展示其它字段。
+   *  ⭐兼容三种载荷形态（旧端 /api/aiface/recommend 实测为 `{analysis, recommendations}`；
+   *  历史/其它出口可能是顶层数组或 `{data:[]}`）——**不得只认数组**，否则会丢 analysis 且列表为空。 */
+  function extractList(raw: unknown): unknown[] {
+    if (Array.isArray(raw)) return raw;
+    if (raw == null || typeof raw !== "object") return [];
+    const obj = raw as { data?: unknown; recommendations?: unknown };
+    if (Array.isArray(obj.recommendations)) return obj.recommendations;
+    if (Array.isArray(obj.data)) return obj.data;
+    return [];
+  }
+  function extractAnalysis(raw: unknown): Record<string, unknown> | null {
+    if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return null;
+    const a = (raw as { analysis?: unknown }).analysis;
+    return a != null && typeof a === "object" && !Array.isArray(a) ? (a as Record<string, unknown>) : null;
+  }
   function normalizeItems(raw: unknown): RecommendItem[] {
-    const list = Array.isArray(raw)
-      ? raw
-      : raw != null && typeof raw === "object" && Array.isArray((raw as { data?: unknown }).data)
-        ? ((raw as { data: unknown[] }).data as unknown[])
-        : [];
+    const list = extractList(raw);
     return list.map((item) => {
       const obj = (item ?? {}) as Record<string, unknown>;
       return { ...obj, finalScore: normalizeFinalScore(obj.finalScore ?? obj.final_score) };

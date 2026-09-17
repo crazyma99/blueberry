@@ -41,17 +41,39 @@ describe("ai-recommend-flow · finalScore（P3-18）", () => {
     expect(RECOMMEND_REQUEST_TIMEOUT_MS).toBe(180000);
   });
 
-  it("列表归一：显式产出 finalScore（缺失→null），其余字段原样保留", async () => {
+  it("⭐现行 DTO `{analysis, recommendations}`：列表与 analysis 都要拿到（内核曾只认数组→会丢 analysis 且列表空）", async () => {
     const { runner } = makeRunner({
       ok: true,
-      value: { data: [{ id: 1, final_score: 77, style: "汉服" }, { id: 2, style: "旗袍", score: 99 }] },
+      value: {
+        analysis: { styleKeywords: ["汉服"], genderMatched: true },
+        recommendations: [{ id: 1, final_score: 77, style: "汉服" }, { id: 2, style: "旗袍", score: 99 }],
+      },
     });
     const out = await runner.run({ userPhotoFilename: "u.png", shopId: 7 });
     expect(out.ok).toBe(true);
     if (!out.ok) return;
+    expect(out.analysis).toMatchObject({ genderMatched: true });
+    expect(out.items.length).toBe(2);
     expect(out.items[0].finalScore).toBe(77);
-    expect(out.items[0].style).toBe("汉服");
     expect(out.items[1].finalScore).toBeNull(); // 只有原始 score → 不显示（不凑分）
+  });
+
+  it("兼容历史形态：顶层数组 与 `{data:[]}`（回归不破）", async () => {
+    const top = makeRunner({ ok: true, value: [{ id: 1, finalScore: 80 }] as unknown as Record<string, unknown> });
+    await expect(top.runner.run({ userPhotoFilename: "u.png", shopId: 7 })).resolves.toMatchObject({ ok: true });
+    const data = makeRunner({ ok: true, value: { data: [{ id: 2, finalScore: 81 }] } });
+    const out = await data.runner.run({ userPhotoFilename: "u.png", shopId: 7 });
+    expect(out.ok && out.items[0].finalScore).toBe(81);
+  });
+
+  it("⭐ok 但载荷为空（无 analysis 且无推荐）→ 业务失败（对齐旧端 res.data 真值判定，不静默转场空白结果页）", async () => {
+    for (const value of [{}, { analysis: null }, { recommendations: [] }, { data: [] }]) {
+      const f = makeRunner({ ok: true, value: value as Record<string, unknown> });
+      await expect(f.runner.run({ userPhotoFilename: "u.png", shopId: 7 })).resolves.toMatchObject({
+        ok: false,
+        kind: "BUSINESS",
+      });
+    }
   });
 });
 
@@ -80,7 +102,7 @@ function makeRunner(result: RepoResult<Record<string, unknown>> | "throw", defer
 
 describe("ai-recommend-flow · 请求纪律（P3-16/P3-17）", () => {
   it("⭐单次 POST：同 operationId 复用同一在飞过程（只 1 次请求，不扣第二次）", async () => {
-    const f = makeRunner({ ok: true, value: { data: [] } }, true);
+    const f = makeRunner({ ok: true, value: { analysis: { ok: 1 }, recommendations: [{ id: 1, finalScore: 5 }] } }, true);
     const p1 = f.runner.run({ userPhotoFilename: "u.png", shopId: 7, operationId: "op-1" });
     const p2 = f.runner.run({ userPhotoFilename: "u.png", shopId: 7, operationId: "op-1" });
     expect(p1).toBe(p2); // 复用而非重发
@@ -98,7 +120,7 @@ describe("ai-recommend-flow · 请求纪律（P3-16/P3-17）", () => {
   });
 
   it("入参逐字：user_photo_filename／shop_id", async () => {
-    const f = makeRunner({ ok: true, value: { data: [] } });
+    const f = makeRunner({ ok: true, value: { analysis: { ok: 1 }, recommendations: [{ id: 1, finalScore: 5 }] } });
     await f.runner.run({ userPhotoFilename: "up.png", shopId: 7 });
     expect(f.params[0]).toEqual({ user_photo_filename: "up.png", shop_id: 7 });
   });
