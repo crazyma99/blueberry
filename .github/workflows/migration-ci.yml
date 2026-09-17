@@ -1,0 +1,70 @@
+# P1-36 CI 双车道（PR 无 secret 车道）：旧端回归 lane ＋ 新端套件 lane；发布 job 受保护且不执行。
+# 纪律：本 workflow 不引用任何 secret；发布占位 job 用 if:false 硬停，须主人授权后另行开启。
+name: migration-ci
+
+on:
+  pull_request:
+  push:
+    branches: [feat/vue3-migration]
+
+jobs:
+  old-end-regression:
+    name: 旧端回归 lane（uni-app x，不装依赖）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # 旧端单测为纯 Node 脚本（解析源文件断言），无需 node_modules
+      - name: 旧端单测（55 用例）
+        run: node scripts/tests/album-card-bugfix.test.mjs
+      - name: 旧端 src 零改动校验（迁移期红线）
+        run: |
+          if [ -n "$(git diff --name-only 95528cd0f33846ebc98d3760d0fc0e857a16b2f5 HEAD -- src/)" ]; then
+            echo "::error::迁移期禁止改动旧端 src/（基线 95528cd）"; exit 1
+          fi
+
+  new-end-suite:
+    name: 新端套件 lane（vue3：typecheck＋vitest＋三平台构建）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: miniapp-vue3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: miniapp-vue3/pnpm-lock.yaml
+      - name: 固定锁安装
+        run: pnpm install --frozen-lockfile
+      - name: typecheck
+        run: pnpm run typecheck
+      - name: 单元/组件/流水线测试
+        run: pnpm exec vitest run
+      - name: 构建 mp-weixin
+        run: pnpm run build:mp-weixin
+      - name: 构建 mp-toutiao
+        run: pnpm run build:mp-toutiao
+      - name: 构建 mp-xhs
+        run: pnpm run build:mp-xhs
+      - name: 产物留证
+        uses: actions/upload-artifact@v4
+        with:
+          name: new-end-artifacts
+          path: miniapp-vue3/dist/build/
+          retention-days: 7
+
+  publish-placeholder:
+    name: 发布 job（受保护·暂不执行）
+    runs-on: ubuntu-latest
+    # P1-36：发布 job 暂受保护且不执行——须主人明确授权后删除本行才可能运行
+    if: '${{ false }}'
+    needs: [old-end-regression, new-end-suite]
+    steps:
+      - run: echo "发布动作须主人授权；本 job 永不在无授权下执行"
