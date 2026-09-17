@@ -31,7 +31,8 @@
 | 13 | `pages/aiTryOn` | ported | T8 装配完成：模板双入口（travel/album＋相册空回退）／选图·质量检测·上传／提交守卫与 4001→共享协调器／防截屏 onShow-onHide-onUnload；`#ifdef MP-WEIXIN` 注册（产物实证微信 14 页含／抖音 12 页不含）；t38 三例 |
 | 14 | `pages/aiTryOnResult` | not_started | T8 末片（结果轮询＋下载买断 `taskBought` 权益）；抖音侧**不注册** |
 | 17 | `pages/aiRecommendResult` | ported | T9b 首片（518 行）：推荐结果页；**P3-18** 只渲染 `shouldShowScore` 为真的 `finalScore`（经 `normalizeFinalScore`，且指出旧类型 `AiRecommendation` 漏 `finalScore` 字段——按现行 DTO 显式收，兼容 `final_score`）；`#ifdef MP-WEIXIN` 注册（产物实证微信 16 页含／抖音 12 页不含） |
-| 15–16 | `pages/aiRecommend`、`aiRecommendLoading` | not_started | T9b 后续片；抖音侧**不注册** |
+| 16 | `pages/aiRecommendLoading` | ported | T9b 次片（584 行）：等待页；**P3-16** 单次 POST（内核 `inFlight` 同 op 复用）＋**绝不用重复 POST 当轮询**＋180s 只切 failed 不自动重发；**P3-17** 充值走共享 `payment-coordinator`（**旧端自建 2.5s×48 次轮询整段删除**）＋`resumeAfterCredit` 先清后调只续跑一次＋失败给「重试/返回」恢复入口；`#ifdef MP-WEIXIN` 注册（产物实证微信 17 页含） |
+| 15 | `pages/aiRecommend` | not_started | T9b 末片；抖音侧**不注册** |
 
 ## 组件（15）
 
