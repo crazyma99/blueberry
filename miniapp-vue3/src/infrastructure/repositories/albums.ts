@@ -21,6 +21,9 @@ export interface AlbumBrief {
   likeCount: number;
   packageDesc: string;
   price: unknown;
+  /** 旧端 aiTryOn:346 随机相册过滤用（`tryonDisabled !== true` 才入池）。P2-09 取样未见到该键，
+   * 但旧端按此语义过滤 ⇒ 保守保留为可选字段，避免把「不可试衣相册」选进随机池。 */
+  tryonDisabled?: boolean;
 }
 
 export interface AlbumListPage {
