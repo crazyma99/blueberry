@@ -4,3 +4,11 @@ export { createShopRepository } from "./shops";
 export { createAlbumRepository } from "./albums";
 export { createLikeRepository, type LikeStatusItem, type ToggleLikeResult } from "./likes";
 export { createWxAuthRepository, type WxLoginResult } from "./wx-auth";
+export { createPackageRepository, type ShopPackageInfo } from "./packages";
+export { createUserInfoRepository, type WxUserInfo } from "./user-info";
+export {
+  createFavoriteRepository,
+  type FavoriteAlbum,
+  type FavoriteStatusItem,
+  type SearchPageResult,
+} from "./favorites";

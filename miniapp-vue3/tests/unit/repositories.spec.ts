@@ -3,7 +3,8 @@
 import { describe, expect, it } from "vitest";
 import {
   createCarouselRepository, createShopRepository, createAlbumRepository,
-  createLikeRepository, createWxAuthRepository,
+  createLikeRepository, createWxAuthRepository, createPackageRepository,
+  createUserInfoRepository, createFavoriteRepository,
 } from "../../src/infrastructure/repositories";
 import type { ClientRequestInput, ClientResult } from "../../src/infrastructure/http/client";
 import type { RequestContext } from "../../src/ports/context";
@@ -67,6 +68,46 @@ describe("repositories 请求形状（contracts.md 冻结值）", () => {
     await createWxAuthRepository({ client: f3.client }).login(ctx, { code: "wxcode" });
     expect(f3.seen[0]).toMatchObject({ method: "POST", url: "/api/wx/login", body: { code: "wxcode" }, replayPolicy: "never" });
     expect(f3.seen[0].authRequired).toBe(false);
+  });
+  it("⭐收藏红线：getFavoriteList 无 page/size（默认全量）；分页只在 searchAlbums", async () => {
+    const f1 = fakeClient([{ ok: true, value: [] }]);
+    await createFavoriteRepository({ client: f1.client }).getFavoriteList(ctx);
+    expect(f1.seen[0]).toMatchObject({ method: "GET", url: "/api/favorite/list", authRequired: true, replayPolicy: "idempotent" });
+    // ⭐ 红线（phases P2-19）：不得偷偷引入默认分页——query 里不得出现 page/size
+    expect(Object.keys(f1.seen[0].query ?? {})).toEqual([]);
+    expect(f1.seen[0].query?.page).toBeUndefined();
+    expect(f1.seen[0].query?.size).toBeUndefined();
+    // shopId 可选筛选（不改变全量语义）
+    const f2 = fakeClient([{ ok: true, value: [] }]);
+    await createFavoriteRepository({ client: f2.client }).getFavoriteList(ctx, { shopId: 9 });
+    expect(f2.seen[0].query).toEqual({ shopId: "9" });
+    // 唯一允许分页的路径
+    const f3 = fakeClient([{ ok: true, value: { list: [], total: 0 } }]);
+    await createFavoriteRepository({ client: f3.client }).searchAlbums(ctx, { keyword: "k", page: 2, size: 10 });
+    expect(f3.seen[0]).toMatchObject({ url: "/api/search", query: { keyword: "k", page: "2", size: "10" }, replayPolicy: "idempotent" });
+    expect(f3.seen[0].authRequired).toBeFalsy();
+  });
+  it("收藏 status/toggle 与 userinfo：需登录；toggle/PUT 非幂等 never", async () => {
+    const f1 = fakeClient([{ ok: true, value: [] }]);
+    await createFavoriteRepository({ client: f1.client }).getFavoriteStatus(ctx, "1,2");
+    expect(f1.seen[0]).toMatchObject({ url: "/api/favorite/status", query: { albumIds: "1,2" }, authRequired: true });
+    const f2 = fakeClient([{ ok: true, value: { favorited: true } }]);
+    await createFavoriteRepository({ client: f2.client }).toggleFavorite(ctx, 7);
+    expect(f2.seen[0]).toMatchObject({ method: "POST", url: "/api/favorite", body: { albumId: 7 }, authRequired: true, replayPolicy: "never" });
+    // P2-18 CR 🔴1 回归锁：userinfo 读写都必须带 Bearer
+    const f3 = fakeClient([{ ok: true, value: {} }]);
+    await createUserInfoRepository({ client: f3.client }).getUserInfo(ctx);
+    expect(f3.seen[0]).toMatchObject({ method: "GET", url: "/api/wx/userinfo", authRequired: true });
+    const f4 = fakeClient([{ ok: true, value: {} }]);
+    await createUserInfoRepository({ client: f4.client }).updateUserInfo(ctx, { nickname: "n", avatarUrl: "" });
+    expect(f4.seen[0]).toMatchObject({ method: "PUT", url: "/api/wx/userinfo", authRequired: true, replayPolicy: "never" });
+    // PUT 仅保留有值字段（空串不得覆盖后端）
+    expect(f4.seen[0].body).toEqual({ nickname: "n" });
+  });
+  it("getPackages：GET /wechat/packages?shopId 公开读", async () => {
+    const f = fakeClient([{ ok: true, value: [] }]);
+    await createPackageRepository({ client: f.client }).getPackages(ctx, 3);
+    expect(f.seen[0]).toMatchObject({ method: "GET", url: "/wechat/packages", query: { shopId: "3" }, replayPolicy: "idempotent" });
   });
 });
 

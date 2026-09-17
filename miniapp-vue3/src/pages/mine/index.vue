@@ -12,7 +12,8 @@
 // 对微信 profile 是空操作（两项都渲染，与旧端一致）；抖音 profile 生成时 pageRegistry 不含 AI 页才真正生效。
 // 有意偏差（已声明）：①uni.$on('login-required') 401 事件监听未移植——新端 client 401 返回 AUTH_EXPIRED
 // 错误给调用方，无事件总线（T5 合同），页面侧显式处理；②list-view/list-item（uni-app x 组件）→普通 view 容器；
-// ③favorites/aiTryOnHistory 页尚未迁移（P2-19/AI 批次），菜单项点击目标页在 pages.json 注册前会导航失败；
+// ③aiTryOnHistory 页尚未迁移（AI 批次），「AI试衣」菜单点击在 pages.json 注册前会导航失败；favorites 页已由
+// P2-19 迁移并注册（2026-09-17），菜单可正常进入。
 // ④主题：旧端深色底 #160F04→新端 tokens.semantic.colorPage 亮色（全仓迁移主题口径），金色元素在白底的
 // 观感差异待真机核对（CR 🟡6）；⑤骨架屏未带旧端 sk-animate 闪烁动画（共享 SkeletonBlock 组件口径）。
 import { computed, ref } from "vue";
