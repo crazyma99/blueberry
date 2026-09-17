@@ -586,7 +586,7 @@ tryon/recommend：订单paid 且对应池balance>0，才允许后续任务
 - [x] P3-04 明确确认截止时间与退出状态；不得无限轮询。前端超时不代表订单作废，后续重新进入按后端状态恢复而不是再创建订单。（2026-09-17 完成：`poll.timeoutMs` 截止＋超时返回 `outTradeNo`；新增 `resume(outTradeNo)` 按后端状态恢复——用例断言**恢复路径下单次数仍为 1**（不新建订单））
 - [x] P3-05 下载买断必须查服务端权益；修正“仅paid就本地置taskBought”的静态竞态疑点，用可控延迟测试证明不再重复扣费或提前放原图。（2026-09-17 完成：权益确认下沉到协调器——tryon/recommend 需 paid **且对应池 balance>0**；download 需 paid **且服务端 taskBought=true**；可控延迟用例证明 paid 先到而权益未到时不判成功（继续确认直至到位或超时））
 - [x] P3-06 对本地provider/沙箱验签、订单/权益归属与重复入账做验证。不能调用真实支付只为测试变绿。（2026-09-17 完成：**验签口径说明**＝微信支付签名由服务端完成，客户端仅透传 `paySign`，故本地不做验签而做**订单字段逐字透传（归属）**＋`isWeixin=false` 时**零支付调用**断言；重复入账＝callback 重复只确认一次；全部测试基于本地 mock provider，**未调用任何真实支付**）
-- [ ] P3-07 独立CR通过后提交共享PaymentCoordinator；T8/T9b只消费它。
+- [x] P3-07 独立CR通过后提交共享PaymentCoordinator；T8/T9b只消费它。（2026-09-17 完成：共享协调器经独立 CR 后提交（`31586ee`）；**T8/T9b 四张 AI 页全部只消费它**——`grep createPaymentCoordinator src/pages/` 命中 `aiTryOn`／`aiTryOnResult`／`aiRecommend`／`aiRecommendLoading` **恰四页**，且四页内**无直接 `tryBegin`**（`PayGuard` 仅作 `gate` 入参构造，`grep -n "tryBegin" src/pages/` = 0）；`t45` 静态守卫另锁「等待页不得持有查单能力」）
 
 > **2026-09-17 进展（T9a 共享底板已落地，P3-01～P3-07 均未勾选）**：`application/payment-coordinator.ts`＋
 > `infrastructure/repositories/credits.ts`（四端点）＋`platform/weixin/payments.ts`（fail-closed 适配）＋
