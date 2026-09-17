@@ -395,6 +395,21 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T6 剩余**：三页接入（index/demoDetail/targetPhotoDetail 接 VM＋组件＋pages.json 平台条件导航）、P2-12 3Tab 复刻、P2-13 两套布局样页验证、P2-14 点赞乐观更新、P2-15 场景矩阵、P2-16 微信真机＋独立 CR。
 
+
+## 8.22 T6 执行记录（P2-11 首页接入，2026-09-17 第十批）
+
+| 项 | 内容 |
+|---|---|
+| 平台适配层 | `platform/uni/transport.ts`（uni.request → HttpPort：baseUrl 由 PROFILE.apiBases[env] 注入、业务信封 code/message/data 解码、容器无 uni 安全回落 network）＋`platform/uni/storage.ts`（uni KV → StoragePort，容器无该 API 降级内存实现） |
+| 上下文工厂 | `application/request-context.ts`（`createContextFactory`）——RequestContext 代次（scopeRevision/authRevision）与 requestId 序号**统一治理单一出口**；bumpScope（切品牌）/bumpAuth（登出重登）；brandId 每次取最新（在飞请求持旧快照，client 冻结保证） |
+| **首页接入** | `pages/index/index.vue`（替换模板 Hello 页，248 行）——**品牌馆浮钮**（开关驱动默认不渲染，shop.svg，旧端 index:4-8 语义）＋**骨架屏**（hero 794rpx→标题→卡片区）＋**banner swiper**（autoplay circular 3000ms，**点击 300ms 节流＋空链不响应＋仅站内路径**，旧端 :557-560）＋**PhotoGrid**（shop-click→demoDetail?idx=店铺id；demo-click→`demoDetail?from=banner&idx=N` 旧端 :578-582）＋错误态可重试；装配链＝transport/storage/versioned/auth 占位（wx-login-pending-T7 不假装成功）/client/repositories/brand-hub controller/context 工厂/home VM |
+| **pages.json 平台条件导航（⭐产物实证）** | index 条目加 `// #ifdef MP-WEIXIN` 包裹的 `navigationStyle: custom`——**构建产物实证**：微信 `pages/index/index.json` **有** `navigationStyle custom`、抖音**无**（条件编译生效，default 导航定案落地） |
+| 测试 | 5 条（request-context 3：字段/代次递增/brandId 取最新；index 冒烟 2：骨架→错误态收敛、空态无 swiper、品牌馆入口默认不渲染） |
+| 修错 | transport.ts 类型三连修：req 补注解／信封类型具名（typeof envelope 流分析收窄成 null 致 TS2352/never）／uni.request data 契约收窄 cast（TS2769 overload） |
+| 汇总 | vitest **174/174＋3 skipped** exit 0＋typecheck **exit 0**＋三平台构建各 exit 0 |
+
+**T6 剩余**：demoDetail（分类 tabs＋列表＋搜索＋点赞乐观更新 P2-14）、targetPhotoDetail（详情＋点赞）、P2-12 3Tab 复刻、P2-13 布局样页、P2-15 场景矩阵、P2-16 微信真机＋独立 CR。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
