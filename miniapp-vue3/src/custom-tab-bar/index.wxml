@@ -1,8 +1,10 @@
 <!--
-  自定义底部 tabBar（仅微信；抖音走原生 tabBar）
-  - 图标：未选中线性压暗、选中面性品牌金；文字：未选中 rgba 55%、选中 #F1CD91
-  - 选中背景：每 tab 静态淡金渐变（2026-09-15 主人指示回滚位移动效后形态）
-  - 均分宽度、高 116rpx＋底部安全区
+  自定义底部 tabbar（对应 pages.json tabBar.custom = true）
+  - 图标：未选中＝线性（outline，压暗），选中＝面性（filled，品牌金）
+  - 文字：未选中 rgba(241,205,145,.55)，选中 #F1CD91
+  - 选中背景：**每个 tab 各自的静态淡金渐变**（2026-09-15 主人指示回滚位移动效，恢复 v1.0.43 形态）
+  - 所有 tab 均分宽度，高度 116rpx（另加底部安全区）
+  当前选中项由 index.js 按页面路由 + 模块级共享下标自动判定，页面侧无需额外代码。
 -->
 <view class="tabbar">
   <view class="tabbar-inner">
@@ -14,7 +16,7 @@
       bindtap="onTap"
     >
       <image class="tabbar-icon" src="{{selected === index ? item.iconActive : item.icon}}" mode="aspectFit"></image>
-      <text class="tabbar-text">{{item.text}}</text>
+      <text class="tabbar-text font-noto-serif">{{item.text}}</text>
     </view>
   </view>
 </view>
