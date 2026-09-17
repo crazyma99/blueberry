@@ -3,12 +3,12 @@
 > 口径来源：`docs/uniapp-vue3-migration-phases.md`「**G3验收命令**」与「**验收 G3**」两段。
 > 本表**只记可复算证据**；未达成项一律标 ❌／🟡，不做「口头通过」。
 
-## 1. G3 验收命令（原样执行，2026-09-17）
+## 1. G3 验收命令（原样执行；**2026-09-17 二次复跑刷新**）
 
 | # | 命令（phases 原文） | 实际执行 | 结果 |
 |---|---|---|---|
 | 1 | `pnpm --dir miniapp-vue3 run typecheck` | `vue-tsc --noEmit` | ✅ **exit 0**（0 错） |
-| 2 | `vitest run tests/unit tests/contracts tests/components tests/pipeline` | 同 | ✅ **361 passed / 0 skipped**（52 文件；skipped 3 例属 `tests/provider` gated，不在该命令集合内） |
+| 2 | `vitest run tests/unit tests/contracts tests/components tests/pipeline` | 同 | ✅ **384 passed / 0 skipped**（57 文件；skipped 3 例属 `tests/provider` gated，不在该命令集合内）<br>（2026-09-17 复跑刷新：T8/T9b 收尾与 P4 准备件新增用例后由 361→384） |
 | 3 | `run build:mp-weixin` | `uni build -p mp-weixin` | ✅ **exit 0** |
 | 4 | `run build:mp-toutiao` | `uni build -p mp-toutiao` | ✅ **exit 0** |
 
