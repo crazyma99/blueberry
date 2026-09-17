@@ -54,7 +54,7 @@
 
 ### Phase 4 准备件（已备、**未开工**，勿误解为 P4 已勾）
 - `phase4-prep.md`：范围（抖音＝客片展示版 11 页/3 tab、AI 六页不注册、零支付）＋产物实证＋P4-01～17 缺口对照＋**三项外部前置**
-- `platform-capability-matrix.md`：**P4-10 草表**（13 能力×2 端，凡未真机验证记 `unknown`）
+- `platform-capability-matrix.md`：**P4-10 草表**（**14 行**能力×2 端，凡未真机验证记 `unknown`；小红书列暂缺）
 - `scan-platform-usage.mjs`＋spec：**P4-12 规则**（敏感平台 API 仅允许 `src/{platform,ui,generated}/**` 或**显式登记例外**；不对 bundle 盲 grep）
 - `verify-target.mjs` 扩展＋spec：**P4-13**（产物级 `forbiddenRoutes`／抖音 `app.ttss` 指纹／appid 占位 `warnings`）
 

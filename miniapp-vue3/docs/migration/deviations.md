@@ -11,3 +11,5 @@
 
 9. **推荐空载荷判失败＝有意比旧端更严（2026-09-17，T9b CR 🟡3）**：旧端判据为 `(code===0||200) && res.data`（`aiRecommendLoading:146`），在 JS 真值语义下 `{}` 与 `{analysis:null,recommendations:[]}` **都算成功**（转场到**空白结果页**）；新端 `application/ai-recommend-flow.ts` 对「整包全空」判 `BUSINESS` 失败并给「推荐结果为空，请重试」。**无误伤**：真正合法的「有 `analysis`＋空 `recommendations`」仍 `ok:true`。**产品理由**：空白结果页对用户是死路，失败提示＋重试入口更可用；如需逐字等价请指示。
 10. **finalScore 数字字符串口径（2026-09-17，T9b CR 🟡5，可选登记）**：旧端 `v-if="rec.finalScore > 0"` 在 `"90"`（字符串）时成立会显示「90分」；新端 `normalizeFinalScore` 仅接受 `number` ⇒ 字符串不显示。现行后端 DTO 为 number，**实务等价**。
+
+11. **字体全局类未定义（2026-09-17 补登，CR 🔴2 触发）**：旧端 `App.uvue` 全局类 `font-noto-serif`／`harmony`（宋体/鸿蒙字族）在新端**未定义**，样式沿用既有口径：字号按旧值**字面量**还原（如旧 `--font-size-body=24rpx` ≠ 新 `tokens.semantic.fontSizeBody=32rpx`，不得混映射），字体族差异由后续主题批次统一处理。**产品依据**：字体族缺失属视觉细节，不阻断功能闭环；**测试**：各批页面单测按字面量断言字号（如 `t22`／`t26`／`t32`），本表 `platform-capability-matrix.md` 引用本条。此条为补齐「矩阵引用不存在的登记」的缺口而补登（此前该偏差**未登记**，违反「偏差必须进 deviations」纪律）。

@@ -16,9 +16,9 @@
 | **客服** | **supported（站内）** | 客服/合作联系为**站内组件** `ServiceContact`（二维码/电话，P2-21）＋`webview` 白名单页；**不依赖平台客服会话 API** | **supported（站内）** | 同微信（`ServiceContact` 已迁、协议页已迁） |
 | **分享**（好友/会话） | **supported** | `aiTryOnResult` 的 `onShareAppMessage`；`ai-share-routing.buildSharePath`（`share_from=tryon_result`＋templateId/shopId/albumId/brandId）；`t40` 九例 | **unknown** | 抖音 `onShareAppMessage` 形态不同（`tt.onShareAppMessage`），**未适配**；客片展示版是否需分享待产品定 |
 | **分享**（朋友圈单页模式） | **supported** | `onShareTimeline`＋`buildShareQuery`（**必须带 taskId＋shareToken**，旧 bug #8）；`scene===1154` **不跳页**改引导（T8 CR 复验） | **unsupported（无对应物）** | 抖音无「朋友圈单页模式」概念 |
-| **订阅消息** | **supported（fail-soft）** | `platform/weixin/capabilities.ts → requestTaskNotify`（`requestSubscribeMessage`；拒绝/不支持**不阻断**提交；`t31`） | **unsupported** | 抖音无订阅消息；AI 页不注册故无调用点 |
-| **防截屏** | **supported（capability 守卫）** | `createCaptureGuard`（`canIUse('setVisualEffectOnCapture')`＋**幂等** enable/disable；三钩子 onShow/onHide/**onUnload**；`t31`＋T8 CR 复验） | **unsupported（无 API）**＋**无调用点** | AI 页不注册 ⇒ 抖音无防截屏需求；已按主人口径「抖音根本没有 AI 相关功能」 |
-| **字体** | **supported（注意偏差）** | 旧全局类 `font-noto-serif`／`harmony` 新端未定义 → 已登记 `deviations`；字号按旧值**字面量**还原（旧 `--font-size-body=24rpx` ≠ `tokens.semantic.fontSizeBody=32rpx`） | **同微信口径** | 同上（不涉及平台 API） |
+| **订阅消息** | **supported（fail-soft）** | `platform/weixin/capabilities.ts → requestTaskNotify`（`requestSubscribeMessage`；拒绝/不支持**不阻断**提交；`t31`） | **unknown** | ⚠️（CR 🔴1 更正）：抖音**有官方 API** `tt.requestSubscribeMessage`（[官方文档](https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/api/open-interface/subscribe-message/tt-request-subscribe-message)）⇒ 属「**有 API、本轮未适配/未验证**」，不得写 `unsupported` |
+| **防截屏** | **supported（capability 守卫）** | `createCaptureGuard`（`canIUse('setVisualEffectOnCapture')`＋**幂等** enable/disable；三钩子 onShow/onHide/**onUnload**；`t31`＋T8 CR 复验） | **unknown**＋**无调用点** | ⚠️（CR 🔴1 更正）：原来写「unsupported（无 API）」**缺官方依据** ⇒ 按本表自定方法降为 `unknown`；事实层面：AI 六页不注册 ⇒ 抖音**无调用点**（需求侧不涉及） |
+| **字体** | **supported（注意偏差）** | 旧全局类 `font-noto-serif`／`harmony` 新端未定义 ⇒ **已登记 `deviations.md` 第 11 条**（CR 🔴2 补登：此前表内引用了不存在的登记）；字号按旧值**字面量**还原（旧 `--font-size-body=24rpx` ≠ `tokens.semantic.fontSizeBody=32rpx`） | **同微信口径** | 同上（不涉及平台 API） |
 | **震动/触感** | **supported（能力降级）** | `application/haptics.ts` 守卫版（无 API 静默降级；P2-18 引入） | **unknown** | 抖音 `uni.vibrateShort` 支持情况待真机确认 |
 | **扫码/客服会话（平台原生）** | **unknown（未使用）** | 现无调用点 | **unknown** | — |
 | **支付（平台）** | **supported** | `platform/weixin/payments.ts`（JSAPI；非微信/无 API→`unsupported`，**fail-closed 不假装成功**；`t31`） | **unsupported（有意）** | 主人拍板「抖音**零支付改造**」；`payment-coordinator` 四张 AI 页均不注册于抖音 |
@@ -36,5 +36,6 @@
 ## 3. 说明
 
 - 本表取值**只据代码落点与既有产物证据**：带用例号的视为已验证；`unknown` 一律是**未验证**，不得据本表宣称支持。
-- 与 `deviations.md` 的关系：字体/主题类差异已在 `deviations` 登记（第 1–10 条），本表不重复。
+- 与 `deviations.md` 的关系：字体/主题类差异已在 **`deviations.md` 第 11 条**登记（CR 🔴2 补登；原「第 1–10 条」引用不实，已更正），本表不重复。
+- ⚠️ 本表**暂无小红书列**（P4-10 要求「逐端」）：小红书整列本轮不做（主人未纳入），按 `P4-17` 需登记批准与范围后再补。
 - 定稿时机：`P4-14` 真机矩阵跑完后，把 `unknown` 收敛为 `supported`/`unsupported` 并补「依据版本」。
