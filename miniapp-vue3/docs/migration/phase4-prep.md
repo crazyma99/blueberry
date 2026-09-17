@@ -31,7 +31,7 @@
 | P4-05 provider 替身测试→真实 provider；旧/新 consumer 合同同跑 | 未开始 | 后端＋测试 |
 | P4-06 各平台管理台合法域名（request/upload/download）、H5 CORS、COS 权限 | 未登记 | **主人/运营**在平台后台配置并回报 |
 | P4-07/08/09 平台实现与 native UI bridge（`MP-WEIXIN/MP-TOUTIAO/MP-XHS`）、tabBar 各端官方方式 | 微信已实现；`src/platform/` 现只有 `uni/` 与 `weixin/`（＋`ui-bridge/AuthNativeButton`）；**抖音/小红书无实现** | 我（待 G3 通过后开工） |
-| P4-10 能力矩阵（媒体/导航/客服/保存/分享/订阅/防截屏/字体/震动 逐端 supported/unsupported/unknown） | **未编制**（可先出草表，真机再定稿） | 我（草表）＋真机（定稿） |
+| P4-10 能力矩阵（媒体/导航/客服/保存/分享/订阅/防截屏/字体/震动 逐端 supported/unsupported/unknown） | **草表已编制**（本轮）：`platform-capability-matrix.md`——逐能力×逐端取值＋代码落点＋「凡未真机验证记 unknown」；列出 5 项待真机定稿 | ✅ 草表完成；**定稿待 `P4-14` 真机** |
 | P4-11 context/env 识别、未知环境失败关闭；平台/AppID/provider 不跨端混用 | 部分（`detectUiPlatform`／`isPlatform` 闭集＋`ctxFactory`）；**但 appid 注入未落地（见 §2）** | 我＋主人提供 appid |
 | P4-12 平台/桥/generated 例外清单与扫描规则 | 未开始 | 我 |
 | P4-13 三端构建并 verify 产物（抖音须自带 tt 前缀文件与 `app.json`+`app.js`） | 抖音产物已含 `app.ttss`/`app.json`/`app.js`；**verify 未覆盖 appid 与能力断言** | 我（扩 `verify-target.mjs` 断言） |
