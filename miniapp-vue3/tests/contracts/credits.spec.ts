@@ -91,4 +91,37 @@ describe("credits 契约（T9a，四端点均需登录）", () => {
       replayPolicy: "never",
     });
   });
+
+  it("⭐P3-01 三池归属：tryon 默认不带 feature；recommend/download 显式带 feature；download 带 taskId 绑定", async () => {
+    // tryon（默认池）：不传 feature → 不带该字段
+    const f1 = fakeClient([{ ok: true, value: {} }]);
+    await createCreditRepository({ client: f1.client }).createRecharge(ctx, { shopId: 1, credits: 1 });
+    expect(f1.seen[0].body).toEqual({ shopId: 1, credits: 1 });
+    // recommend 池
+    const f2 = fakeClient([{ ok: true, value: {} }]);
+    await createCreditRepository({ client: f2.client }).createRecharge(ctx, { shopId: 1, credits: 1, feature: "recommend" });
+    expect(f2.seen[0].body).toEqual({ shopId: 1, credits: 1, feature: "recommend" });
+    // download 池＋任务归属（付款即永久买断该任务）
+    const f3 = fakeClient([{ ok: true, value: {} }]);
+    await createCreditRepository({ client: f3.client }).createRecharge(ctx, {
+      shopId: 1,
+      credits: 1,
+      feature: "download",
+      taskId: 42,
+    });
+    expect(f3.seen[0].body).toEqual({ shopId: 1, credits: 1, feature: "download", taskId: 42 });
+    // 权益确认查询：download 池带 feature+taskId（服务端据此返回 taskBought）
+    const f4 = fakeClient([{ ok: true, value: {} }]);
+    await createCreditRepository({ client: f4.client }).getBalance(ctx, { shopId: 1, feature: "download", taskId: 42 });
+    expect(f4.seen[0].query).toEqual({ shopId: "1", feature: "download", taskId: "42" });
+  });
+
+  it("⭐P3-01 任务归属边界：taskId=0/负数不传；feature='' 不传（不误绑定其它任务）", async () => {
+    const f = fakeClient([{ ok: true, value: {} }]);
+    await createCreditRepository({ client: f.client }).createRecharge(ctx, { shopId: 1, credits: 1, feature: "", taskId: 0 });
+    expect(f.seen[0].body).toEqual({ shopId: 1, credits: 1 });
+    const f2 = fakeClient([{ ok: true, value: {} }]);
+    await createCreditRepository({ client: f2.client }).getBalance(ctx, { shopId: 1, feature: "download", taskId: -5 });
+    expect(f2.seen[0].query).toEqual({ shopId: "1", feature: "download" });
+  });
 });

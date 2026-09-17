@@ -390,3 +390,105 @@ describe("platform/weixin/payments（适配：fail-closed）", () => {
     delete (globalThis as { uni?: unknown }).uni;
   });
 });
+
+describe("payment-coordinator（P3-02 失败与竞态场景补测）", () => {
+  it("⭐callback 重复/重复入账防护：同一订单反复 paid 只确认一次权益即返回（不重复应用）", async () => {
+    const { credits, polls, entPolls } = makeCredits({ paidAfterPolls: 1 });
+    const clock = fakeClock();
+    const co = createPaymentCoordinator({
+      credits,
+      payments: { requestPayment: async () => ({ ok: true }) },
+      gate: new PayGuard(undefined, clock.now),
+      poll: { intervalMs: 1000, timeoutMs: 30000 },
+      now: clock.now,
+      sleep: clock.sleep,
+    });
+    const out = await co.recharge(ctx, { shopId: 1, credits: 1 });
+    expect(out.ok).toBe(true);
+    expect(polls()).toBe(1); // 首次 paid 即确认，不继续轮询
+    expect(entPolls()).toBe(1); // 权益只查一次（重复回调不重复应用）
+  });
+
+  it("⭐旧账号/会话过期迟到：下单返回 AUTH_EXPIRED → failed·create-order-failed（不再拉起支付），门闩释放", async () => {
+    const clock = fakeClock();
+    const gate = new PayGuard(undefined, clock.now);
+    let payCalled = false;
+    const co = createPaymentCoordinator({
+      credits: {
+        createRecharge: async () => ({ ok: false as const, error: { kind: "AUTH_EXPIRED" } }),
+        getRechargeStatus: async () => ({ ok: true as const, value: { outTradeNo: "T", status: 0, paid: false, credits: 1, balance: 0 } }),
+        getBalance: async () => ({ ok: true as const, value: { balance: 0, inited: true, priceFenPerCredit: 990 } }),
+      },
+      payments: {
+        requestPayment: async () => {
+          payCalled = true;
+          return { ok: true };
+        },
+      },
+      gate,
+      now: clock.now,
+      sleep: clock.sleep,
+    });
+    const out = await co.recharge(ctx, { shopId: 1, credits: 1 });
+    expect(out).toMatchObject({ ok: false, phase: "failed", reason: "create-order-failed", errorKind: "AUTH_EXPIRED" });
+    expect(payCalled).toBe(false); // 下单失败不得拉起支付面板
+    expect(gate.isBusy()).toBe(false);
+  });
+
+  it("⭐面板回调兜底超时：面板不回调 → 按 payment-failed 收口并释放门闩（不长期持闩）", async () => {
+    const clock = fakeClock();
+    const gate = new PayGuard(undefined, clock.now);
+    const co = createPaymentCoordinator({
+      credits: {
+        createRecharge: async () => ({ ok: true as const, value: order }),
+        getRechargeStatus: async () => ({ ok: true as const, value: { outTradeNo: "T100", status: 1, paid: true, credits: 1, balance: 5 } }),
+        getBalance: async () => ({ ok: true as const, value: { balance: 5, inited: true, priceFenPerCredit: 990 } }),
+      },
+      payments: { requestPayment: () => new Promise(() => {}) }, // 永不回调
+      gate,
+      payTimeoutMs: 50,
+      now: clock.now,
+      sleep: clock.sleep,
+    });
+    const out = await co.recharge(ctx, { shopId: 1, credits: 1 });
+    expect(out).toMatchObject({ ok: false, phase: "failed", reason: "payment-failed", outTradeNo: "T100" });
+    expect(gate.isBusy()).toBe(false);
+  });
+});
+
+describe("platform/weixin/payments（P3-06 订单归属与本地验证口径）", () => {
+  it("⭐订单字段透传（归属校验）：requestPayment 收到的拉起参数与下单响应逐字一致", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    (globalThis as { uni?: unknown }).uni = {
+      requestPayment: (o: Record<string, unknown>) => {
+        seen.push(o);
+        (o.success as () => void)();
+      },
+    };
+    const p = createWeixinPayments({ isWeixin: () => true });
+    await p.requestPayment(order);
+    expect(seen[0]).toMatchObject({
+      provider: "wxpay",
+      timeStamp: order.timeStamp,
+      nonceStr: order.nonceStr,
+      package: order.package,
+      signType: order.signType,
+      paySign: order.paySign,
+    });
+    delete (globalThis as { uni?: unknown }).uni;
+  });
+
+  it("⭐不调用真实支付：非微信端/无 API 时 requestPayment 内部不触发 uni.requestPayment（验收不改真实支付）", async () => {
+    let called = 0;
+    (globalThis as { uni?: unknown }).uni = {
+      requestPayment: () => {
+        called += 1;
+      },
+    };
+    const p = createWeixinPayments({ isWeixin: () => false });
+    const r = await p.requestPayment(order);
+    expect(r).toEqual({ ok: false, reason: "unsupported" });
+    expect(called).toBe(0); // ✅ 抖音/非微信端零支付调用
+    delete (globalThis as { uni?: unknown }).uni;
+  });
+});

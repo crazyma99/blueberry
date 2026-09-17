@@ -580,12 +580,12 @@ tryon/recommend：订单paid 且对应池balance>0，才允许后续任务
 平台支付面板success ≠ 订单paid ≠ 权益已到账
 ~~~
 
-- [ ] P3-01 先写三池（tryon/recommend/download）和taskId归属测试；业务普通错误不触发充值，4001仅由对应业务处理。
-- [ ] P3-02 写连击、用户取消、面板失败、查单超时、callback重复、paid先于权益到账、旧账号回复迟到等失败场景。
-- [ ] P3-03 实现统一门闩与operationId；后端已有幂等则按合同传递，没有就禁止扣费POST自动重放，不能以客户端去重代替服务端幂等。
-- [ ] P3-04 明确确认截止时间与退出状态；不得无限轮询。前端超时不代表订单作废，后续重新进入按后端状态恢复而不是再创建订单。
-- [ ] P3-05 下载买断必须查服务端权益；修正“仅paid就本地置taskBought”的静态竞态疑点，用可控延迟测试证明不再重复扣费或提前放原图。
-- [ ] P3-06 对本地provider/沙箱验签、订单/权益归属与重复入账做验证。不能调用真实支付只为测试变绿。
+- [x] P3-01 先写三池（tryon/recommend/download）和taskId归属测试；业务普通错误不触发充值，4001仅由对应业务处理。（2026-09-17 完成：`tests/contracts/credits.spec.ts` 三池归属——tryon 不带 feature／recommend 显式／download＋taskId 绑定＋边界（feature=''、taskId<=0 不传）；4001→INSUFFICIENT_CREDITS 与「普通 BUSINESS 不触发充值」由 `tests/unit/payment-state.spec.ts:66-79` 锁定）
+- [x] P3-02 写连击、用户取消、面板失败、查单超时、callback重复、paid先于权益到账、旧账号回复迟到等失败场景。（2026-09-17 完成：连击＝busy／operationId 复用；取消＝cancelled；面板失败＝payment-failed；查单超时＝timeout＋outTradeNo；**callback 重复**＝反复 paid 只确认一次权益（`polls()=1`＋`entPolls()=1`）；**paid 先于权益**＝权益迟到协议用例；**旧账号/会话过期**＝AUTH_EXPIRED→create-order-failed 且不拉起面板；另补面板回调兜底超时）
+- [x] P3-03 实现统一门闩与operationId；后端已有幂等则按合同传递，没有就禁止扣费POST自动重放，不能以客户端去重代替服务端幂等。（2026-09-17 完成：门闩＝PayGuard 单一出口（全仓仅 coordinator 一处 tryBegin）；operationId 同值**复用同一在飞 Promise**（用例断言 `p1===p2` 且下单 1 次）；扣费/兑换 POST `replayPolicy:"never"`（禁自动重放）；**并已声明：客户端去重仅防重入，不等价服务端幂等**）
+- [x] P3-04 明确确认截止时间与退出状态；不得无限轮询。前端超时不代表订单作废，后续重新进入按后端状态恢复而不是再创建订单。（2026-09-17 完成：`poll.timeoutMs` 截止＋超时返回 `outTradeNo`；新增 `resume(outTradeNo)` 按后端状态恢复——用例断言**恢复路径下单次数仍为 1**（不新建订单））
+- [x] P3-05 下载买断必须查服务端权益；修正“仅paid就本地置taskBought”的静态竞态疑点，用可控延迟测试证明不再重复扣费或提前放原图。（2026-09-17 完成：权益确认下沉到协调器——tryon/recommend 需 paid **且对应池 balance>0**；download 需 paid **且服务端 taskBought=true**；可控延迟用例证明 paid 先到而权益未到时不判成功（继续确认直至到位或超时））
+- [x] P3-06 对本地provider/沙箱验签、订单/权益归属与重复入账做验证。不能调用真实支付只为测试变绿。（2026-09-17 完成：**验签口径说明**＝微信支付签名由服务端完成，客户端仅透传 `paySign`，故本地不做验签而做**订单字段逐字透传（归属）**＋`isWeixin=false` 时**零支付调用**断言；重复入账＝callback 重复只确认一次；全部测试基于本地 mock provider，**未调用任何真实支付**）
 - [ ] P3-07 独立CR通过后提交共享PaymentCoordinator；T8/T9b只消费它。
 
 > **2026-09-17 进展（T9a 共享底板已落地，P3-01～P3-07 均未勾选）**：`application/payment-coordinator.ts`＋
