@@ -535,12 +535,12 @@ it('新品牌结果不被迟到的旧品牌响应覆盖', async () => {
 
 **文件**：新增 `N/src/pages/{index,demoDetail,targetPhotoDetail}/index.vue`、`N/src/composables/use-home.ts`、`N/src/components/{PhotoGrid,SkeletonBlock,LoadingBlock,CustomNavBar}.vue`；微信native tabBar在 `N/src/custom-tab-bar/index.{js,json,wxml,wxss}`；对应工具/真机记录 `N/tests/e2e/read-flow.md`。
 
-- [ ] P2-11 先写路由/入参/列表VM测试，再接首页→相册→普通客片详情→返回。targetPhotoDetail不是shareToken作品页，idx/type等原参数不能丢。
-- [ ] P2-12 复刻3Tab路径与选中态；微信每页native TabBar独立实例，按页面onShow同步；不恢复已回滚的背景位移动效。
-- [ ] P2-13 相册列表与搜索两套布局都验：≥7码点显示6+...、emoji、两处间距、AI按钮位置、图片成功/失败时序。
-- [ ] P2-14 点赞/收藏先写乐观更新与乱序失败回滚测试；计数不负数、按下反馈和触感按能力降级；不改变收藏默认全量读取的合同。
-- [ ] P2-15 跑有/无品牌、空/正常/长标题、未登录/过期、弱网/失败/返回场景；记录按device/platform区别的截图或几何结果。
-- [ ] P2-16 通过微信真机与独立CR后提交纵切片；抖音只读流能测试就记录，但不能以此标登录/支付支持。
+- [x] P2-11 先写路由/入参/列表VM测试，再接首页→相册→普通客片详情→返回。targetPhotoDetail不是shareToken作品页，idx/type等原参数不能（2026-09-17 完成：路由/入参/列表 VM 用例 `t19-detail.spec.ts`（详情入参 `albumId+type` 原口径）＋`t21-scenario.spec.ts`（首页→相册→详情→返回纵切）＋`t6-index.spec.ts`；targetPhotoDetail 保持 `idx/type/…` 原参数、**不**当 shareToken 作品页（分享作品页为 `aiTryOnResult`＋`shareToken`，见 P3-13）丢。
+- [x] P2-12 复刻3Tab路径与选中态；微信每页native TabBar独立实例，按页面onShow同步；不恢复已回滚的背景位移动效。（2026-09-17 完成：`application/tabbar.ts` 的 `syncTabBarSelected`＋各页 onShow 同步；用例 `t20-tabbar.spec.ts`；产物实证 `dist/build/mp-weixin/app.json` 的 `tabBar.custom:true`＋四文件、`mp-toutiao/app.json` 原生 list 三 tab；**旧端背景位移动效不恢复**（已回滚项））
+- [x] P2-13 相册列表与搜索两套布局都验：≥7码点显示6+...、emoji、两处间距、AI按钮位置、图片成功/失败时序。（2026-09-17 完成：`domain/album-title.ts` 的 `formatAlbumTitle`（**6 码点＋三个 ASCII 点**）＋`tests/unit/album-title.spec.ts` 六例（含 emoji/代理对不劈半）；相册列表与搜索两套布局由 `demoDetail` 页与 `t21-scenario` 覆盖；AI 按钮位置与图片成功/失败时序随 P2-19 CR 逐条校正（`.pkg-price` 字号、骨架/真图 fade）
+- [x] P2-14 点赞/收藏先写乐观更新与乱序失败回滚测试；计数不负数、按下反馈和触感按能力降级；不改变收藏默认全量读取的合同。（2026-09-17 完成：`t18-like.spec.ts`（点赞乐观更新＋乱序失败回滚＋计数不负数）＋`t26-favorites.spec.ts`（收藏；**默认全量读取合同**由 `repositories.spec.ts`＋t26 双重锁定：默认零分页参数、分页 UI 仅搜索态）；触感按能力降级＝`application/haptics.ts` 守卫版）
+- [ ] P2-15 跑有/无品牌、空/正常/长标题、未登录/过期、弱网/失败/返回场景；记录按device/platform区别的截图或几何结果。**（2026-09-17 部分：单测层已覆盖上列场景的**逻辑**分支（t6/t19/t20/t21/t22/t23/t24/t26/t30/t38/t47 等），但**「按 device/platform 的截图或几何结果」未采集**——属真机证据，未做即不勾）**
+- [ ] P2-16 通过微信真机与独立CR后提交纵切片；抖音只读流能测试就记录，但不能以此标登录/支付支持。**（2026-09-17 部分：独立 CR 已覆盖该纵切涉及的批次（T22 价目页、priceList、P2-18～P2-22、T8、T9b 共七份 CR 报告，均已清零 🔴/🟡）；**微信真机未做**（主人自验）⇒ 未勾；抖音侧未标任何登录/支付能力）**
 
 ### 2.3 普通业务页面扩展（T7）
 
