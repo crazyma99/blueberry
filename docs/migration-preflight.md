@@ -191,6 +191,22 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T4 剩余（下一轮）**：P1-23 门面五件（BaseButton/BaseField/BasePopup/BasePicker/BaseFeedback，写前逐个 `wot info` 查事实源）、P1-24 门面测试（按钮忙态不重复提交/弹层取消/picker 选中清空/图片失败/长标题+token 映射）、P1-25 微信/抖音工具与真机样页证据（**真机部分需主人手机扫码，如实 pending**）、P1-28 审阅提交。
 
+
+## 8.10 T4 门面执行记录（P1-23/24/25 工具侧＋P1-27，2026-09-17 第二批）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| P1-23 事实源纪律 | 写门面前逐个查事实：`wot info Input/Popup/Picker/Toast --version 2.3.2` 各 exit 0 ＋ 从**已装包源码 grep emit 名**（wd-input: input/blur/clear/confirm/focus；wd-popup: close/click-modal；wd-picker: confirm/cancel/update:visible；wd-toast: **无内部 emit、受控 show prop**（types.ts 事实））＋ `ToastIconType` **直接 import 包内真实类型**（`wd-toast/types.ts`：success/error/warning/loading/info，**不含空串**） | ✅ |
+| P1-23 门面五件 | `src/ui/{BaseButton,BaseField,BasePopup,BasePicker,BaseFeedback}.vue`——统一 label/disabled/busy/value 与标准事件；**业务层不接触 Wot 内部对象**（Picker confirm 只回纯值数组；options 用业务平面结构） | ✅ |
+| P1-24 门面测试 12 条 | 按钮**禁用/忙态不放行**（桩触发也不透传——门面守卫）＋忙态连点两次零放行（防重复提交）；弹层 cancel **单一出口去重**（close 与 update:modelValue 同动作只发一次）；picker confirm/cancel/**clearable 清空**（有值才出现清空入口）；反馈受控 show/hide（图片失败态用法） | ✅ 12/12 |
+| P1-25 工具侧 | 探针样页 `src/pages/_probe/wot-sample.vue`（Button/Field/Popup/Picker/Toast/Dialog/Cell＋**图片失败态**＋**长标题码点截断**＋token 映射 chip）已注册 pages.json；**三平台编译产物落地**（mp-weixin wxml/wxss ＋ mp-toutiao ttml/ttss 实测存在） | ✅ 工具侧；**真机扫码 pending（需主人手机）** |
+| ⭐ 接入方式修正（真实踩坑） | 首版门面**显式 import wd-*** → vue-tsc 把 wot 内部 .ts 源码纳入检查，报 **TS1371**（importsNotUsedAsValues）＋**TS7053×3**（node_modules/@wot-ui/ui/common/util.ts 索引 {}）——wot 以 .ts 源码分发、无独立 .d.ts，skipLibCheck 只盖 .d.ts ⇒ **改为 easycom**（uni 官方接入方式，plan §6.1 明确允许）：pages.json 配 `"easycom": {"custom": {"^wd-(.*)": "@wot-ui/ui/components/wd-$1/wd-$1.vue"}}`，门面去显式 import；vitest 无 easycom ⇒ 测试以 `global.components` 注册契约桩（语义等价） | ✅ 切换后 TC=0 |
+| 附带修复 | BaseFeedback 首版自造 `FeedbackIcon` 并集（含空串）≠ 包内 `ToastIconType`（不含空串）致 TS2322 ⇒ 改为 **import type 包内真实类型**（SPEC §6.4 事实源纪律的直接收益） | ✅ |
+| P1-27 | `wot doctor` 5 项 PASS（前批已记） | ✅ |
+| 汇总回归 | vitest **81/81 exit 0**（8 文件）＋typecheck **exit 0**＋三平台构建 **各 exit 0** | ✅ |
+
+**T4 剩余**：P1-25 **真机部分**（微信/抖音真机扫码同一 Wot 样页——**需主人手机**，工具侧已就绪）、P1-26 失败处置（若真机关键场景失败）、P1-28 审阅提交（本轮先提交工具侧证据）。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）

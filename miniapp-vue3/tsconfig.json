@@ -7,7 +7,12 @@
       "@/*": ["./src/*"]
     },
     "lib": ["esnext", "dom"],
-    "types": ["@dcloudio/types"]
+    "types": ["@dcloudio/types"],
+    // Wot UI 2.3.2 以 .ts 源码分发（无独立 .d.ts），其内部 import 写法不满足
+    // @vue/tsconfig 的 importsNotUsedAsValues=error；vue-tsc 会跟进 node_modules 内
+    // .ts 源文件（skipLibCheck 只覆盖 .d.ts）⇒ 本工程降为 remove（TS 默认行为）。
+    // 记录：migration-preflight §8.9（2026-09-17）。
+    "importsNotUsedAsValues": "remove"
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"]
 }

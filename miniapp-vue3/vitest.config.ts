@@ -1,8 +1,12 @@
 import { defineConfig } from "vitest/config";
+import vue from "@vitejs/plugin-vue";
 
-// 独立 vitest 配置：不加载 vite.config.ts 的 uni 插件（工具链测试为纯 Node 侧校验）。
+// 门面/样页走 uni easycom（pages.json）解析 wd-*；vitest 环境无 easycom，
+// 测试内以 global.components 注册契约桩（见 tests/components/ui-contract.spec.ts）。
 export default defineConfig({
+  plugins: [vue()],
   test: {
     include: ["tests/**/*.spec.ts"],
+    environment: "happy-dom",
   },
 });
