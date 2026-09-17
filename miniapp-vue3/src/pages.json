@@ -43,6 +43,15 @@
 			}
 		},
 		{
+			"path": "pages/priceList/index",
+			"style": {
+				// #ifdef MP-WEIXIN
+				"navigationStyle": "custom",
+				// #endif
+				"navigationBarTitleText": "价目表"
+			}
+		},
+		{
 			"path": "pages/mine/index",
 			"style": {
 				// #ifdef MP-WEIXIN

@@ -546,7 +546,7 @@ it('新品牌结果不被迟到的旧品牌响应覆盖', async () => {
 
 **文件**：新增 `N/src/pages/{priceHomePage,priceList,mine,favorites,brandHub,webview}/index.vue`；`N/src/components/{AppFooter,ServiceContact,LoginPopup,ProfilePopup,BottomActionBar,BottomActionBarSecondary}.vue`；`N/tests/e2e/account-content.md`。
 
-- [ ] P2-17 迁价目两页，保业务数据和无数据状态，不恢复旧端已下线的店铺轮播。
+- [x] P2-17 迁价目两页，保业务数据和无数据状态，不恢复旧端已下线的店铺轮播。（2026-09-17 完成：priceHomePage `13c061c` 独立CR 三🔴全清；priceList 页＋packages 仓储＋pages.json 注册＋t23 四用例；vitest 193/193+3 skipped＋TC 0＋三平台构建0＋双端产物注册实证；honghe-price.png 死引用与旧端保持一致已声明）
 - [ ] P2-18 迁我的页登录两态、头像昵称非空合并和退出；协议两页只做集成回归，不在T7重新实现T5逻辑。
 - [ ] P2-19 迁收藏：**默认一次获取全量，搜索才分页**；取消收藏、回退/空态/计数对齐。别在迁移里偷偷引入默认分页。
 - [ ] P2-20 迁品牌馆页面自守卫、过滤PLATFORM、品牌持久化和缓存隔离；统一消费同一开关repository，不能入口显示但进入又被错误拦回。
