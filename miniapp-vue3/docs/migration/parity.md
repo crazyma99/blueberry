@@ -23,18 +23,22 @@
 
 > 说明：上表 11 条与抖音 Profile 的 `pageRegistry`（`scripts/profile-schema.mjs` PAGES_ALL 前 11 项）同集合。
 
-### AI 闭环 6 页（T8/T9 批次，未开始）
+### AI 闭环 6 页（T8 全部完成；T9b 进行中）
 
 | # | path | 状态 | 备注 |
 |---|---|---|---|
-| 12 | `pages/aiTryOnHistory` | ported | T8 首片（2026-09-17）：记录页＋AI 仓储 getTasks；`pages.json` 以 `#ifdef MP-WEIXIN` 注册（产物实证：微信 13 页含本页／抖音 12 页不含）；t30 四例 |
-| 13 | `pages/aiTryOn` | ported | T8 装配完成：模板双入口（travel/album＋相册空回退）／选图·质量检测·上传／提交守卫与 4001→共享协调器／防截屏 onShow-onHide-onUnload；`#ifdef MP-WEIXIN` 注册（产物实证微信 14 页含／抖音 12 页不含）；t38 三例 |
-| 14 | `pages/aiTryOnResult` | not_started | T8 末片（结果轮询＋下载买断 `taskBought` 权益）；抖音侧**不注册** |
-| 17 | `pages/aiRecommendResult` | ported | T9b 首片（518 行）：推荐结果页；**P3-18** 只渲染 `shouldShowScore` 为真的 `finalScore`（经 `normalizeFinalScore`，且指出旧类型 `AiRecommendation` 漏 `finalScore` 字段——按现行 DTO 显式收，兼容 `final_score`）；`#ifdef MP-WEIXIN` 注册（产物实证微信 16 页含／抖音 12 页不含） |
-| 16 | `pages/aiRecommendLoading` | ported | T9b 次片（584 行）：等待页；**P3-16** 单次 POST（内核 `inFlight` 同 op 复用）＋**绝不用重复 POST 当轮询**＋180s 只切 failed 不自动重发；**P3-17** 充值走共享 `payment-coordinator`（**旧端自建 2.5s×48 次轮询整段删除**）＋`resumeAfterCredit` 先清后调只续跑一次＋失败给「重试/返回」恢复入口；`#ifdef MP-WEIXIN` 注册（产物实证微信 17 页含） |
-| 15 | `pages/aiRecommend` | not_started | T9b 末片；抖音侧**不注册** |
+| 12 | `pages/aiTryOn` | ported | T8 装配完成（`698fd09`）：模板双入口（travel/album＋相册空回退）／选图·质量检测·上传／提交守卫与 4001→共享协调器／防截屏 onShow-onHide-onUnload；`#ifdef MP-WEIXIN` 注册；t38 三例 |
+| 13 | `pages/aiTryOnResult` | ported | T8 末片（**1409 行**，`cf83763`）：结果轮询（自适应间隔/180s/抖动容忍＋**代次守卫停旧回调**）／24 片水印**仅覆盖预览**／付费原图／**买断以服务端 `taskBought` 为准**／匿名只读 `shareReadOnly` **无付费下载入口**；`#ifdef MP-WEIXIN` 注册 |
+| 14 | `pages/aiTryOnHistory` | ported | T8 首片（`d002d7c`）：记录页（**一次取全量、无分页**）＋AI 仓储 `getTasks`；t30 四例 |
+| 15 | `pages/aiRecommend` | not_started | T9b 末片（665 行）；抖音侧**不注册** |
+| 16 | `pages/aiRecommendLoading` | ported | T9b 次片（**584 行**，`204add7`）：**P3-16** 单次 POST（内核 `inFlight` 同 op 复用）＋**绝不用重复 POST 当轮询**＋180s 只切 failed 不自动重发；**P3-17** 充值走共享 `payment-coordinator`（**旧端自建 2.5s×48 次轮询整段删除**）＋`resumeAfterCredit` 先清后调只续跑一次＋失败给「重试/返回」入口 |
+| 17 | `pages/aiRecommendResult` | ported | T9b 首片（**518 行**，`1351a13`）：**P3-18** 只渲染 `shouldShowScore` 为真的 `finalScore`（经 `normalizeFinalScore`；并指出旧类型 `AiRecommendation` **漏 `finalScore` 字段**，按现行 DTO 显式收、兼容 `final_score`） |
+
+> **产物页数口径**（易过期，故只记「当时实证」）：`aiTryOnHistory` 落地时微信 13 页；`aiTryOn` 14 页；`aiTryOnResult` 15 页；`aiRecommendResult` 16 页；`aiRecommendLoading` 17 页；**抖音侧恒 12 页且不含任何 AI 页**。当前值请以 `dist/build/mp-*/app.json` 实测为准。
 
 ## 组件（15）
+
+> ⚠️ 口径说明：本表为**旧端 15 个组件**台账；新端另有本批**新增**组件 `AiTemplatePicker`（T8 S2 拆出的模板与身形/年龄选择块，`39f6d32`），**不属旧端 15 件**，故不占本表行位。
 
 | 组件 | 状态 | 去向 / 证据 |
 |---|---|---|
