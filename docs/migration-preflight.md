@@ -176,6 +176,21 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T3a 状态：P1-14~19 全部完成**；**Phase 1 剩余：T4 Token 与 UI 门面（P1-20 起）＋ T3b 完整构建集成**。T4 需装 Wot UI 2.3.2＋Sass 锁版实编译（SPEC §6.4 纪律），属下一轮。
 
+
+## 8.9 T4 执行记录（P1-20~22＋P1-27 部分，2026-09-17）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| P1-20 Token 单源 | `tokens/source.json` 三层（primitive 24 项/semantic 21 项/component 8 项）——**全部来自旧端实测盘点**：颜色词频（#F1CD91 金/#160F04 墨/#FF3B30 错误红等）、尺寸（88rpx 11 处·96rpx·140rpx 相册避让·100/120rpx）、动效（220/300/350ms）、字号（32rpx 主体 18 处/26/36/40rpx）；**不套用旧文档 4/8/6 档数字** | ✅ |
+| P1-21 生成器＋失败用例 | `scripts/generate-tokens.mjs`（`generateTokens({sourceFile,outputDir})`）；测试 7 条＝真实源解析（semantic 引用解析到 primitive 实值）＋幂等（两次字节一致/digest 64hex）＋只写 outputDir（sentinel 未动）＋**循环引用/未知引用/错误单位（px 拒）/缺层 四类必须报错** | ✅ 先红后绿；**首版抓出真 bug**＝内部解析函数命名 `resolve` 遮蔽 `node:path` 的 `resolve` 触发 TDZ（Cannot access "memo" before initialization），改名 `resolveRef` 后 7/7 绿 |
+| P1-20b 产物生成 | `src/generated/{tokens.ts,theme.css,theme.scss}` 实际生成，digest `55a65558fc17d811…` | ✅ |
+| P1-22 锁版配套 | `@wot-ui/ui@2.3.2`＋`@wot-ui/cli@1.1.0`＋`sass@1.104.1`（>1.78 满足 Wot v2 要求）全 `--save-exact`；**踩坑留痕**＝pnpm 11 给新依赖自动写入 `allowBuilds` 占位行（`set this to true or false`），须手工改 true 才能跑 postinstall（`@parcel/watcher`）——与 T1 esbuild 同类坑第二例 | ✅ |
+| P1-23 起步·事实源 | `pnpm exec wot info Button --version 2.3.2` **exit 0**（props：type/variant/size/round/disabled/hairline/block/loading/text/icon…）——按 SPEC §6.4「禁凭记忆写 API」纪律，门面实现前逐组件查事实源 | ✅ Button 已查 |
+| P1-27 辅助证据 | `wot doctor` **exit 0**：wot-ui-installed 2.3.2／vue ^3.4.21／uni-app 3.0.0-5020420260813003／typescript ^4.9.4／node_modules 五项 PASS | ✅ |
+| 装依赖后回归 | 三平台构建 **WX/TT/XHS 各 exit 0**＋vitest **69/69**＋typecheck 0 | ✅ |
+
+**T4 剩余（下一轮）**：P1-23 门面五件（BaseButton/BaseField/BasePopup/BasePicker/BaseFeedback，写前逐个 `wot info` 查事实源）、P1-24 门面测试（按钮忙态不重复提交/弹层取消/picker 选中清空/图片失败/长标题+token 映射）、P1-25 微信/抖音工具与真机样页证据（**真机部分需主人手机扫码，如实 pending**）、P1-28 审阅提交。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
