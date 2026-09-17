@@ -54,6 +54,28 @@
 | **S4** 提交与扣费 | `runSubmitFlow` 接 **coordinator**（禁自建轮询）：`balance>0` 直接提交；4001 → `recharge`（`operationId`＝task 维度）→ 成功后重试提交；超时 → `resume(outTradeNo)` | 单测：4001→充值→重试成功；取消不提交；超时不重复扣费；**页面零自建轮询**（grep 断言） |
 | **S5** 结果页 | `aiTryOnResult`：轮询任务态＋进度；**下载买断用 `taskBought` 权益**（禁用「仅 paid 即解锁」） | 单测：paid≠权益、买断后放行原图、失败可重试 |
 
+## 3.1 实施进度（2026-09-17 实时）
+
+| 片 | 状态 | 产物／提交 |
+|---|---|---|
+| 基建 | ✅ | AI 仓储＋契约（`d3a2dd8`） |
+| S1 适配层 | ✅ | 上传端口／截屏保护／订阅消息（`0d3806d`＋拍板 `17fd491`） |
+| S2 组件 | ✅ | AppSegment／AppSelector／AppPhotoPicker／BottomActionBar（`be1c100`）＋AiTemplatePicker（`39f6d32`） |
+| S3 选图·检测·上传 | ✅ | 选图适配＋上传用例（`89676de`）／判定域层（`43114c0`）／微信管线（`960ebd0`） |
+| S4 提交 | ✅ | `ai-tryon-submit` 用例（`27e3ad8`） |
+| S2尾 页装配 | ✅ | `pages/aiTryOn/index.vue`＋注册（`698fd09`；产物实证微信 14 页含／抖音 12 页不含） |
+| **S5-1 结果内核** | ✅ | `ai-result-flow`（轮询＋买断权益）（`2821c10`） |
+| S5-2 结果页装配 | ⏳ | 结果页 `pages/aiTryOnResult/index.vue`（进行中） |
+| T9b 推荐三页 | ⏳ | 待 S5 完成后 |
+
+## 3.2 已踩坑留痕（后续务必遵守）
+
+1. **CSS 注释勿以 `*` 收尾**：style 内写 `.gen-btn-*/` 会让 `*/` 提前闭合注释，postcss 报「Expected a pseudo-class or pseudo-element」构建失败（`698fd09` 修复）。
+2. **守卫顺序不可调换**：登录先于照片（未登录时点生成拉登录弹窗，而非提示上传）——t37 逐条锁定。
+3. **失败提示勿只写 catch**：新端 client/仓储只返回 Result、从不抛（同 brandHub CR 🔴2 教训）⇒ 提示必须落在 `!res.ok` 分支。
+4. **`uni.chooseImage`/`uploadFile` 等类型更严**：按 Record 收窄后自行解析 res（`@dcloudio/types` 与实际容器不一致）。
+5. **`AlbumBrief.tryonDisabled`**：P2-09 取样未见该键，但旧端随机相册按此过滤 ⇒ 保留为可选字段。
+
 ## 4. 待拍板项与结论（2026-09-17 主人已拍板）
 
 | # | 事项 | 结论 |
