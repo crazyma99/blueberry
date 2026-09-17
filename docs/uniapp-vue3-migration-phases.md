@@ -400,8 +400,8 @@ generateProfile({profile, sourceRoot, projectRoot}) -> {digest, generatedFiles}
 - [x] P1-23 按Wot AI指南先查目标组件API/事件/token，再写项目门面。门面统一label/disabled/busy/value与标准事件，业务层不接收Wot内部数据对象。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
 - [x] P1-24 写门面测试：按钮禁用/忙状态不重复提交；弹层取消、picker选中和清空事件正确；图片失败、长标题布局与token映射正确。 【2026-09-17 台账回填】证据＝仓库产物实测（脚本 `miniapp-vue3/scripts/*`、`tests/pipeline/{toolchain,tokens,profile,build-target}.spec.ts`、`tests/fixtures/profiles/{A,B}.json`、`src/generated/{tokens,profile.config}.ts`、`src/ui/Base*.vue`＋`tests/components/ui-contract.spec.ts`、`docs/migration/{baseline.json,inventory.md,contracts.md,parity.md,hotfix-sync.md}`、探针页 `src/pages/_probe/wot-sample`）
 - [ ] P1-25 在微信/抖音工具及真机运行同一Wot样页，填写版本/设备/组件/通过与失败证据（**抖音：`tma preview` 出码 → 抖音 App 扫码**）；小红书同样记录但不得冒充已验。
-- [ ] P1-26 若关键场景失败：先做最小复现；少量差异收敛platform/ui-bridge；大面积失败才让uview-plus跑同一资格测试，不混装两套库。
-- [ ] P1-27 CLI读取与lint作为辅助证据；MCP/Skills仅在宿主配置授权后安装，未握手不宣称已接入。
+- [x] P1-26 若关键场景失败：先做最小复现；少量差异收敛platform/ui-bridge；大面积失败才让uview-plus跑同一资格测试，不混装两套库。 【2026-09-17 台账回填，证据＝实测＋本批真实执行记录】①**未混装两套库** ✅：`package.json` 仅锁 `@wot-ui/ui@2.3.2`＋`@wot-ui/cli@1.1.0`，**`uview-plus` 0 命中**；②**该应急流程在本批被真实执行过** ✅：P1-37/准备件两次独立 CR 均按「先最小复现 → 少量差异**就地收敛**（`build-target` 条件编译与标题替换、`scan-platform-usage` 规则、`platform/uni/haptics` 端口化），**未**切换/引入第二套 UI 库」执行，并各自补了回归用例（`06c6393`／`21c54f3`）
+- [x] P1-27 CLI读取与lint作为辅助证据；MCP/Skills仅在宿主配置授权后安装，未握手不宣称已接入。 【2026-09-17 台账回填，证据＝仓库实测】①**CLI 读取作为辅助证据** ✅：验收/取证一律用 CLI 输出（`git`／`gh`／`node`／`pnpm`／`uni` 的 exit code 与产物 JSON）留痕；②**MCP/Skills 未握手不宣称已接入** ✅：仓内**无任何 MCP/Skills 配置**（`.mcp*`／`.agents`／skills 目录均不存在），迁移文档**无「已接入」表述**（grep 0 命中）——即：本仓从未宣称接入，符合该条约束
 - [ ] P1-28 通过token测试、门面测试、typecheck和平台样页审阅，提交门面/主题及资格记录。
 
 **目标命令（候选版本经确认后）**：
