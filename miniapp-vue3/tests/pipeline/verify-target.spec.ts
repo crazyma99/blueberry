@@ -48,15 +48,52 @@ describe("verify-target（P4-07/P4-13 平台作用域断言）", () => {
     expect(ro.checked).toContain("platform:mp-toutiao(tt-files)");
   });
 
-  it("⭐appid 占位（testAppId）→ **告警不伪装通过**：结果 ok 但 warnings 非空（该产物不可真机出码）", () => {
+  it("⭐appid 占位（testAppId）→ **阻断（ok=false）**，不伪装通过（CR 🟡：下游只读 ok，warnings 会被误读）", () => {
     const dir = makeArtifact({ pages: ["pages/index/index"], appid: "testAppId", withTtss: true });
     const r = verifyTarget({
       artifactDir: dir,
-      manifest: { platform: "mp-toutiao", expectedRoutes: ["pages/index/index"], navTitle: "AI试衣", forbiddenRoutes: [] },
+      manifest: { platform: "mp-toutiao", expectedRoutes: ["pages/index/index"], appid: "ttreal", navTitle: "AI试衣", forbiddenRoutes: [] },
     });
-    expect(r.ok).toBe(true);
-    expect(r.warnings.join(" ")).toContain("placeholder");
+    expect(r.ok).toBe(false);
+    expect(r.errors.join(" ")).toContain("placeholder");
   });
+
+  it("⭐隔离干扰：同为合法 appid、**仅多一条禁用路由** → 仍失败（证明失败直接挂钩新断言）", () => {
+    const dir = makeArtifact({ pages: ["pages/index/index", "pages/aiRecommend/index"], appid: "ttreal", withTtss: true });
+    const r = verifyTarget({
+      artifactDir: dir,
+      manifest: { platform: "mp-toutiao", expectedRoutes: ["pages/aiRecommend/index", "pages/index/index"], appid: "ttreal", navTitle: "AI试衣", forbiddenRoutes: ["pages/aiRecommend"] },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.errors.join(" ")).toContain("forbidden route present: pages/aiRecommend/index");
+  });
+
+  it("⭐subPackages 内的禁用页也要拦（CR 🟡：只扫 pages 会漏判）", () => {
+    const dir = mkdtempSync(join(tmpdir(), "verify-"));
+    mkdirSync(join(dir, "common"), { recursive: true });
+    writeFileSync(join(dir, "app.js"), "// app");
+    writeFileSync(
+      join(dir, "app.json"),
+      JSON.stringify({
+        pages: ["pages/index/index"],
+        subPackages: [{ root: "pages/ai/", pages: ["tryOn/index"] }],
+        window: { navigationBarTitleText: "AI试衣" },
+      }),
+    );
+    writeFileSync(join(dir, "project.config.json"), JSON.stringify({ appid: "ttreal" }));
+    writeFileSync(join(dir, "common", "vendor.js"), "/* createApp */");
+    writeFileSync(join(dir, "app.ttss"), ".a{}");
+    const r = verifyTarget({
+      artifactDir: dir,
+      manifest: { platform: "mp-toutiao", expectedRoutes: ["pages/index/index"], appid: "ttreal", navTitle: "AI试衣", forbiddenRoutes: ["pages/ai/"] },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.errors.join(" ")).toContain("pages/ai/tryOn/index");
+  });
+
+  // CLI 入口已手工验证（`node scripts/verify-target.mjs --manifest … --artifact …` 通过→exit 0、缺产物→exit 1）；
+  // 此处不做进程级冒烟，避免测试脚手架脆性（CR 建议项，已在 phase4-prep 记录）。
+
 
   it("微信：无禁用路由 ⇒ 不因平台作用域断言失败", () => {
     const dir = makeArtifact({ pages: ["pages/index/index", "pages/aiTryOn/index"] });

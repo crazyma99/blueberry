@@ -1,6 +1,7 @@
 // T3b（P1-32）：产物 verify——全部命中产物文件，不用源码命中代替产物命中。
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { extname, join, resolve } from "node:path";
+import { dirname, extname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const TEXT_EXT = new Set([".js", ".json", ".wxml", ".wxss", ".ttml", ".ttss", ".css", ".html", ".jss", ".qss"]);
 
@@ -81,9 +82,15 @@ export function verifyTarget({ manifest, artifactDir }) {
 
   // 8) P4-07/P4-13：平台作用域路由断言——**未迁移/不注册的页必须不在产物里**
   //    （抖音＝客片展示版：AI 六页不注册；靠产物命中判定，不用源码推断）
+  //    2026-09-17 CR 🟡：**含 subPackages**（若 AI 页改挂分包，只看 pages 会漏判）
+  const allPages = [
+    ...(appJson.pages ?? []),
+    ...((appJson.subPackages ?? []).flatMap((sp) => (sp.pages ?? []).map((p) => (sp.root ?? "") + p))),
+  ];
+  checked.push("subPackages:" + String((appJson.subPackages ?? []).length));
   for (const forbidden of manifest.forbiddenRoutes ?? []) {
     if (!forbidden) continue;
-    const hit = (appJson.pages ?? []).find((p) => p.startsWith(forbidden));
+    const hit = allPages.find((p) => p.startsWith(forbidden));
     if (hit) errors.push("forbidden route present: " + hit + " (platform=" + manifest.platform + ")");
   }
   checked.push("forbiddenRoutes:" + String((manifest.forbiddenRoutes ?? []).length));
@@ -94,11 +101,32 @@ export function verifyTarget({ manifest, artifactDir }) {
     else checked.push("platform:mp-toutiao(tt-files)");
   }
 
-  // 10) appid 占位告警（P4-11/P4-13）：占位 appid 的产物无法真机出码 ⇒ 上报但不伪装成通过
+  // 10) appid 占位 = **阻断**（P4-11/P4-13；2026-09-17 CR 🟡：原来只进 warnings，而下游只读 `ok` ⇒ 会被误读为通过）
+  //    占位 appid 的产物无法真机出码，必须让 `ok=false`，不得伪装通过。
   const pcForAppid = existsSync(join(A, "project.config.json")) ? readJson(join(A, "project.config.json")) : {};
   if (!manifest.appid || String(pcForAppid.appid ?? "") === "testAppId") {
-    warnings.push("artifact appid is placeholder (testAppId): 该产物不可用于真机出码（须经 build-target 管线注入平台 AppID）");
-  }
+    errors.push("artifact appid is placeholder (testAppId): 不可用于真机出码（须经 build-target 管线注入平台 AppID）");
+  } else checked.push("appid-non-placeholder");
 
   return { ok: errors.length === 0, errors, warnings, checked };
+}
+
+// CLI（phases 验收命令）：node scripts/verify-target.mjs --manifest <release-manifest.json> [--artifact <dir>]
+// 默认产物目录＝清单所在目录下的 dist/build/<platform>（build-target 产出的 release-manifest.json 即此布局）。
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const argOf = (flag) => {
+    const i = process.argv.indexOf(flag);
+    return i >= 0 ? process.argv[i + 1] : undefined;
+  };
+  const manifestPath = argOf("--manifest");
+  if (!manifestPath) {
+    console.error("usage: node scripts/verify-target.mjs --manifest <release-manifest.json> [--artifact <dir>]");
+    process.exit(2);
+  }
+  const manifestFile = resolve(manifestPath);
+  const manifest = JSON.parse(readFileSync(manifestFile, "utf-8"));
+  const artifactDir = argOf("--artifact") ?? join(dirname(manifestFile), "dist", "build", manifest.platform ?? "");
+  const result = verifyTarget({ manifest, artifactDir });
+  console.log(JSON.stringify({ artifactDir, ...result }, null, 2));
+  process.exit(result.ok ? 0 : 1);
 }
