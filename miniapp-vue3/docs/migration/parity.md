@@ -50,7 +50,7 @@
 | AppSegment | ported | 等价实现（T8 S2；`change` 载荷＝纯下标 number，与旧端逐字） |
 | AppSelector | ported | 等价实现（T8 S2；原生 `picker` 保真，未走 wot 统一口径——待对齐批次；`change`＝`e.detail.value`） |
 | BottomActionBar | ported | 等价实现（T8 S2；⚠️ 唯一偏差：新增 `footerMainLine`/`footerSupportLine` 透传 props——新端 AppFooter 已 props 化；渐变底沿用旧 `#160F04`） |
-| GenerationProgress | not_started | AI 批次 |
+| GenerationProgress | ported | 等价实现（T8 S5-2，196 行；纯展示无 emit，父级单向驱动 steps/iconPaths/activeIndex/percent；白勾仅已完成节点，t41 四例） |
 
 ## native tabBar
 
