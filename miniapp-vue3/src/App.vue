@@ -10,4 +10,274 @@ onHide(() => {
   console.log("App Hide");
 });
 </script>
-<style></style>
+
+<!--
+  全局样式＝**旧端 `src/App.uvue` <style> 块的忠实移植**（旧端 :1-140 左右的「每个页面公共css」＋
+  「Design Token 全局 CSS 变量（来源 design-token.md，2026-09-03）」与圆角/字号/间距/弹窗等全套变量）。
+  ⚠️ 2026-09-17 修复（体验版「UI 错乱/布局错乱」根因）：此前本文件 `<style>` 为空 ⇒ 构建产物 `app.wxss` 仅 191B，
+  **页面里 46 处 `var(--color-*)` 等变量全部无定义** ⇒ 真机颜色/背景/圆角/字号全失效。
+  保持旧端 `page{...}` 选择器（**微信 wxss 不支持 `:root`**，旧端写法在 wxss 下同样成立）。
+  注意：`src/generated/theme.css`（tokens 管线产物，`:root` + `--color-action` 命名）**与本块命名不同且当前无人引用**，
+  两者的归并与 tokens 口径统一列为待办（见 docs/migration/deviations.md 与 HANDOFF 挂账）。
+-->
+<style>
+/*每个页面公共css */
+	.uni-row {
+		flex-direction: row;
+	}
+
+/* ========== Design Token 全局 CSS 变量（来源 design-token.md，2026-09-03） ========== */
+/* 用法：color: var(--color-primary); 等，逐步替换各页面硬编码值 */
+page {
+	/* 颜色 */
+	--color-bg: #160F04;
+	--color-primary: #F1CD91;
+	--color-primary-deep: #B28A56;
+	--color-surface: #1D1105;
+	--color-primary-70: rgba(241, 205, 145, 0.7);
+	--color-primary-50: rgba(241, 205, 145, 0.5);
+	--color-primary-30: rgba(241, 205, 145, 0.3);
+	--color-primary-20: rgba(241, 205, 145, 0.2);
+	--color-primary-10: rgba(241, 205, 145, 0.1);
+	--color-primary-06: rgba(241, 205, 145, 0.06);
+	--color-border-soft: rgba(255, 255, 221, 0.3);
+	--color-topbar-bg: rgba(0, 0, 0, 0.2);
+	/* 弹窗（中性深色面板） */
+	--color-popup: #1A1A1A;
+	--color-popup-card: #262626;
+	/* 渐变（金色主按钮高光：左上亮 → 右下深，营造立体按压面） */
+	--gradient-btn-primary: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);
+	/* 圆角 */
+	--radius-2xs: 4rpx;
+	--radius-xs: 8rpx;
+	--radius-card: 14rpx;
+	--radius-sm: 16rpx;
+	--radius-item: 18rpx;
+	--radius-md: 20rpx;
+	--radius-container: 24rpx;
+	--radius-lg: 32rpx;
+	--radius-pill: 39rpx;
+	--radius-xl: 44rpx;
+	--radius-2xl: 48rpx;
+	--radius-avatar: 64rpx;
+	--radius-full: 999rpx;
+	/* 图标尺寸 */
+	--icon-xs: 32rpx;
+	--icon-sm: 40rpx;
+	--icon-md: 48rpx;
+	/* 间距 */
+	--spacing-2xs: 6rpx;
+	--spacing-xs: 10rpx;
+	--spacing-sm: 20rpx;
+	/* 设计 token 4.1 间距刻度（t-shirt 档位之外的 24rpx，等待页 Tips 距标题栏 / 页面左右留白用） */
+	--spacing-24: 24rpx;
+	--spacing-md: 28rpx;
+	--spacing-lg: 32rpx;
+	/* 字体族（由 App onLaunch loadFontFace 全局加载） */
+	--font-display: 'NotoSerifSC-Bold', serif;
+	--font-body: 'HarmonyOS-Sans-SC', sans-serif;
+	/* 字号（design-token.md 字体阶梯） */
+	--font-size-display-xl: 46rpx;
+	--font-size-display: 38rpx;
+	--font-size-slogan: 34rpx;
+	--font-size-body-lg: 26rpx;
+	--font-size-body-plus: 28rpx;
+	--font-size-body: 24rpx;
+	--font-size-body-sm: 22rpx;
+	--font-size-body-xs: 20rpx;
+	--font-size-caption-md: 18rpx;
+	--font-size-caption: 14rpx;
+}
+
+/* ========== 全局自定义字体（在 App onLaunch 中通过 uni.loadFontFace 全局加载） ========== */
+/* 宋体标题：font-family: 'NotoSerifSC-Bold' */
+/* ========== 全局按压反馈（hover-class 引用） ========== */
+/* 可点击元素加 hover-class="press-dim"，按压时降透明度 + 轻微变亮，不改变布局 */
+.press-dim {
+  opacity: 0.82;
+}
+/* 列表行按压：背景加深（与 press-dim 二选一） */
+.press-row {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 金色主按钮统一类（Phase4）：各页面主按钮引用，样式一处收敛 */
+.btn-primary {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 26rpx 40rpx;
+  font-size: 32rpx;
+  line-height: 1.2;
+  font-weight: 400;
+  color: var(--color-bg);
+  background: var(--gradient-btn-primary);
+  border: 1rpx solid var(--color-bg);
+  border-radius: var(--radius-full);
+  transition: opacity 0.15s ease-out;
+}
+
+/* 金色次要按钮统一类（Phase4）：与 btn-primary 同尺寸，金描边+金文字+微底，操作栏次按钮用 */
+.btn-secondary {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 26rpx 40rpx;
+  font-size: 32rpx;
+  line-height: 1.2;
+  font-weight: 400;
+  color: var(--color-primary);
+  background: var(--color-primary-10);
+  border: 1rpx solid var(--color-primary-50);
+  border-radius: var(--radius-full);
+  transition: opacity 0.15s ease-out;
+}
+
+/* 全局过渡规范（Phase3）：快速反馈 150ms / 常规过渡 250ms / 图片渐显 */
+.transition-fast {
+  transition: opacity 0.15s ease-out;
+}
+.transition-base {
+  transition: opacity 0.25s ease;
+}
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.font-noto-serif {
+  font-family: 'NotoSerifSC-Bold';
+}
+/* 正文/界面文字：font-family: 'HarmonyOS-Sans-SC' */
+.font-harmony {
+  font-family: 'HarmonyOS-Sans-SC';
+}
+
+/* 全局默认字体：HarmonyOS Sans SC（个别标题可用 font-noto-serif 覆盖） */
+/* 页面底色：深色主题必须显式设置，否则 tab 切换重绘间隙会透出默认白底（闪白） */
+page {
+  font-family: 'HarmonyOS-Sans-SC';
+  background-color: var(--color-bg);
+}
+
+/* 自定义底部 tabbar 的页面占位（高度需与 src/custom-tab-bar 保持一致：116rpx + 底部安全区） */
+.tabbar-safe-spacer {
+  height: 116rpx;
+  height: calc(116rpx + constant(safe-area-inset-bottom));
+  height: calc(116rpx + env(safe-area-inset-bottom));
+}
+/* 隐藏所有页面的滚动条 */
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+  color: transparent;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========== 统一骨架屏样式 ========== */
+@keyframes skeletonPulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+.sk-animate {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+/* 骨架屏容器 */
+.sk-container {
+  padding: var(--spacing-lg);
+}
+/* 通用矩形块 */
+.sk-block {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xs);
+}
+/* 圆形（头像等） */
+.sk-circle {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+/* 横向排列 */
+.sk-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+/* 常用尺寸 */
+.sk-banner {
+  width: 100%;
+  height: 384rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xs);
+  margin-bottom: var(--spacing-lg);
+}
+.sk-title {
+  width: 200rpx;
+  height: 24rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-2xs);
+  margin: 0 auto 16rpx;
+}
+.sk-subtitle {
+  width: 140rpx;
+  height: 36rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-2xs);
+  margin: 0 auto var(--spacing-lg);
+}
+.sk-text {
+  height: 28rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-2xs);
+}
+.sk-photo-card {
+  width: 364rpx;
+  height: 226rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xs);
+  margin-right: 8rpx;
+}
+.sk-photo-card:last-child {
+  margin-right: 0;
+}
+.sk-photo-item {
+  width: 340rpx;
+  height: 482rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xs);
+  margin: 0 8rpx 8rpx 0;
+}
+.sk-photo-item:nth-child(2n) {
+  margin: 0 0 8rpx;
+}
+.sk-tab {
+  width: 128rpx;
+  height: 42rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xs);
+  margin-right: 16rpx;
+}
+.sk-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+.sk-menu {
+  width: 100%;
+  height: 200rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-lg);
+}
+</style>
