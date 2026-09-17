@@ -9,6 +9,7 @@ const read = (rel: string) => readFileSync(resolve(root, rel), "utf-8");
 
 const loading = read("src/pages/aiRecommendLoading/index.vue");
 const result = read("src/pages/aiRecommendResult/index.vue");
+const entry = read("src/pages/aiRecommend/index.vue");
 const pagesJson = read("src/pages.json");
 
 describe("T9b 纪律守卫（P3-16/17/18）", () => {
@@ -45,6 +46,18 @@ describe("T9b 纪律守卫（P3-16/17/18）", () => {
     // 允许出现 score（DTO 字段原样保留），但不得出现在展示表达式里与「分」字拼接
     expect(/item\.score\s*\}\}\s*分/.test(result)).toBe(false);
     expect(/finalScore\s*\}\}\s*分/.test(result) || result.includes("shouldShowScore")).toBe(true);
+  });
+
+  it("⭐入口页（T9b CR 🟡4 补）：零 `uni.request(`、零自建到账轮询；onHide **与** onUnload 均清一次性续跑标记", () => {
+    const code = entry.replace(/\/\/[^\n]*/g, "");
+    expect(code).not.toContain("uni.request(");
+    expect(code).not.toContain("getRechargeStatus(");
+    expect(code).not.toContain("pollRechargeStatus(");
+    // onHide / onUnload 各自都要清标记：hide 段与 unload 段各至少一次
+    const hideBlock = code.slice(code.indexOf("onHide(() =>"), code.indexOf("onUnload(() =>"));
+    const unloadBlock = code.slice(code.indexOf("onUnload(() =>"));
+    expect(hideBlock).toContain("resumeAnalyzeAfterCredit.value = false");
+    expect(unloadBlock).toContain("resumeAnalyzeAfterCredit.value = false");
   });
 
   it("⭐注册守卫：三张 T9b 页均在**同一个** MP-WEIXIN 块内（AI 页不新增第二个 #ifdef 块）", () => {

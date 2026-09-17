@@ -213,6 +213,9 @@ onHide(() => {
   captureGuard.disable();
   // 旧端 :178-183：作废到账轮询会话并复位支付门闩，回到页面可再次操作
   isPaying.value = false;
+  // T9b CR 🟡2：隐藏态也必须关闭「到账后自动续跑」一次性标记（对齐旧端 :177-183 的 payPollToken++/guard.end() 语义）——
+  // 否则页面隐藏未销毁时，协调器的迟到成功终态仍会 resumeAnalyzeIfNeeded → 可能非预期导航。
+  resumeAnalyzeAfterCredit.value = false;
 });
 
 onUnload(() => {

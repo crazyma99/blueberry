@@ -20,6 +20,7 @@
 //  · **P3-16（同步 180 秒请求合同）**：请求一律走内核 `createRecommendRunner(...).run(...)` ——
 //    ①**单次 POST**（内核 `inFlight` 同 `operationId` 复用同一 Promise）；②**等待页绝不用重复 POST 当轮询**
 //    （本页除 `startAnalysis` 外无任何再次请求路径，伪进度只由本地计时器推进）；③**超时（180s，页面计时器与
+//    ⚠️ T9b CR 登记：**超时后用户点「重试」会复用同一在飞 Promise**（同 `operationId`）⇒ 该在飞请求迟到成功时按当前代次回写并转场结果页
 //    内核 `RECOMMEND_REQUEST_TIMEOUT_MS` 同值）只切 failed 态，绝不自动重发/再扣第二次**，重发必须由用户
 //    显式点「重试」；④**页面零 `uni.request`**，仓储已含 180s 超时＋`replayPolicy:"never"`。
 //  · **P3-17（复用共享支付/登录/上传 + 只续跑一次 + 恢复入口）**：充值走共享
