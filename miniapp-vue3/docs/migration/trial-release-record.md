@@ -31,6 +31,7 @@ wechat-devtools-cli upload --project "$PWD/dist/build/mp-weixin" -v "v1.0.25" -d
 | 3 | 2026-09-17 19:0x | **v1.0.25** | `[gc0ed7b4] 迁移试运行` | ✅ **成功** | **重启工具服务**后重试即通过：`✔ Using AppID: wxb19ad7426dfb8bd4`｜`TOTAL 1.5 MB (1,542,072 B)`｜`✔ upload`｜exit 0 |
 
 | 4 | 2026-09-17 19:3x | **v1.0.26** | `[g4c89642] 修复主题变量+字体+接口地址` | ✅ **成功** | 主人体感「布局错乱/UI 错乱/字体失效/接口失败/主页 navbar 不可用」⇒ 定位并修 **两处致命遗漏**：①`App.vue` 全局样式块未移植（`app.wxss` 仅 191B，46 处 `var(--color-*)`＋字体族＋10 个 `--font-size-*` 全空，deviations 待补）②`transport` 拼出双斜杠 `…xyz//api/…`（接口 404）。`TOTAL 1.5 MB (1,546,403 B)` |
+| 5 | 2026-09-17 19:5x | **v1.0.27** | `[g3ea8b95] 修 tabbar uni 未定义崩溃` | ✅ **成功** | 真机 vconsole 实测 `ReferenceError: uni is not defined at ci.attached` ⇒ **custom-tab-bar 是原生组件、上下文只有 `wx`**，我误写 `uni.loadFontFace/switchTab/vibrateShort` ⇒ 启动即崩（页面全废/数据兜底/navbar 不可用）。修法＝**逐字照抄旧端 `src/custom-tab-bar/*` 四文件**。`TOTAL 1.5 MB` |
 
 ## 4. 两个必踩的坑（已固化）
 1. **通配选择器 `*` 在微信 wxss 非法**（`uni build` 不报，上传时才炸）⇒ 一律改用「包裹 view + class」（deviations #13）
