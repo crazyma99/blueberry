@@ -57,3 +57,5 @@ project.private.config.json
 package-lock.json
 
 dist
+
+.work

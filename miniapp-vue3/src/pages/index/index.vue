@@ -5,6 +5,7 @@
       <text class="title">{{ title }}</text>
     </view>
   </view>
+<navigator class="probe-link" url="/pages/_probe/wot-sample">打开 Wot 资格样页（P1-25）</navigator>
 </template>
 
 <script setup lang="ts">

@@ -62,6 +62,14 @@ describe("validateProfile（P1-14 旧字段对齐＋平台 appid；P1-15 env 语
     expect(validateProfile(rawA, { platform: "mp-weixin", environment: "production" }).ok).toBe(false);
     expect(validateProfile(rawA, { platform: "mp-weixin", environment: "prod" }).ok).toBe(false);
   });
+  it("CONTACT_QR_SRC：包内 static/ 路径合法（huahua 实况）；../ 穿越与非白名单 host 拒绝", () => {
+    const staticQr = { ...rawA, CONTACT_QR_SRC: "/static/contactQRCode.jpg" };
+    expect(validateProfile(staticQr, { platform: "mp-weixin", environment: "release" }).ok).toBe(true);
+    const traversal = { ...rawA, CONTACT_QR_SRC: "../../etc/passwd" };
+    expect(validateProfile(traversal, { platform: "mp-weixin", environment: "release" }).ok).toBe(false);
+    const evil = { ...rawA, CONTACT_QR_SRC: "https://evil.example.com/x.jpg" };
+    expect(validateProfile(evil, { platform: "mp-weixin", environment: "release" }).ok).toBe(false);
+  });
   it("缺 APP_CODE／非法 host／路径穿越 PROJECT_KEY／注入值 均拒绝（P1-16）", () => {
     const noCode: Record<string, unknown> = { ...rawA }; delete noCode.APP_CODE;
     expect(validateProfile(noCode, { platform: "mp-weixin", environment: "release" }).ok).toBe(false);

@@ -41,6 +41,15 @@ export function parseProfileText(text) {
   return out;
 }
 
+// 包内静态资源路径（huahua profile 实测使用 /static/contactQRCode.jpg）：
+// 只允许 static/ 前缀、无 .. 穿越、字符集受限；https URL 仍走 host 白名单。
+function isStaticAssetPath(v) {
+  if (v.includes("..")) return false;
+  return /^\/?static\/[A-Za-z0-9._\-/]+$/.test(v);
+}
+function qrSrcOk(v) {
+  return httpsHostOk(v, QR_HOSTS) || isStaticAssetPath(v);
+}
 function httpsHostOk(url, allow) {
   let u;
   try { u = new URL(url); } catch { return false; }
@@ -87,8 +96,8 @@ export function validateProfile(raw, target) {
   if (typeof raw.API_BASE_URL === "string" && raw.API_BASE_URL.length > 0 && !httpsHostOk(raw.API_BASE_URL, API_HOSTS)) {
     errors.push("API_BASE_URL host not allowlisted: " + raw.API_BASE_URL);
   }
-  if (typeof raw.CONTACT_QR_SRC === "string" && raw.CONTACT_QR_SRC.length > 0 && !httpsHostOk(raw.CONTACT_QR_SRC, QR_HOSTS)) {
-    errors.push("CONTACT_QR_SRC host not allowlisted: " + raw.CONTACT_QR_SRC);
+  if (typeof raw.CONTACT_QR_SRC === "string" && raw.CONTACT_QR_SRC.length > 0 && !qrSrcOk(raw.CONTACT_QR_SRC)) {
+    errors.push("CONTACT_QR_SRC not allowlisted (https 白名单 ∪ static/ 包内路径): " + raw.CONTACT_QR_SRC);
   }
 
   if (errors.length > 0) return { ok: false, errors };
