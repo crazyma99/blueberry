@@ -55,10 +55,11 @@ import { createPageConfigRepository } from "../../infrastructure/repositories/pa
 import { createPaymentCoordinator } from "../../application/payment-coordinator";
 import { PayGuard } from "../../domain/payment-state";
 import {
+  canSaveOriginal,
   createResultPoller,
   loadTaskEntitlement,
-  saveBadgeText,
   RESULT_COMPLETED_DELAY_MS,
+  saveBadgeText,
   type ResultPollState,
 } from "../../application/ai-result-flow";
 import { cosThumb } from "../../application/image";
@@ -312,7 +313,8 @@ function startPolling(skipFirstPoll = false): void {
     getResult: async (context, id) => {
       const res = await aiResultRepo.getResult(context, id);
       // completed 时内核只回传状态，不回传正文 → 在此留存最近一次快照供 applyCompleted 使用（旧 :474-477）
-      if (res.ok && res.value != null) lastSnapshot = res.value;
+      // ⚠️ T8 CR 🟡P1：**必须过代次守卫**——旧代次迟到的响应不得污染快照（否则 260ms 完成窗口内可能用旧快照渲染）
+      if (gen === pollGeneration && res.ok && res.value != null) lastSnapshot = res.value;
       return res;
     },
     nextContext: () => ctxFactory.next(),
@@ -585,7 +587,14 @@ async function saveToAlbum(): Promise<void> {
   }
   if (isSaving.value) return;
   // 付费模式且已知无剩余次数且未买断：直接拉起支付，省一次必败请求（已买断永久免费保存）
-  if (isPaidMode.value && creditBalance.value <= 0 && !taskBought.value) {
+  // ⭐T8 CR 🟡P1：此处**接线内核 `canSaveOriginal`**（旧 :71-87 三个 v-if 的合取，单一事实源＋已有 t39 单测），
+  // 取代原先「台账声称已消费、代码却内联等价条件」的不实——语义不变：非付费∨余额>0∨已买断 三者之一即可保存。
+  const savedByEntitlement = canSaveOriginal({
+    isPaidMode: isPaidMode.value,
+    balance: creditBalance.value,
+    taskBought: taskBought.value,
+  });
+  if (!savedByEntitlement) {
     resumeSaveAfterCredit.value = true;
     void handleRecharge();
     return;
@@ -734,6 +743,8 @@ async function chargeDownloadCredit(): Promise<string> {
     if (res.ok && res.value != null) {
       // 扣费成功，本地余额同步 -1（角标实时刷新）
       if (isPaidMode.value && creditBalance.value > 0) creditBalance.value = creditBalance.value - 1;
+      // T8 CR 🟡P3 说明：此处本地置位仅为即时 UI 反馈；**到账/重进后一律以服务端权益回读为准**
+      // （下方 handleRecharge 成功分支与 loadTaskEntitlement 会重读 `taskBought`），故不存在「仅本地即解锁」的静态竞态。
       taskBought.value = true;
       return res.value.url;
     }
