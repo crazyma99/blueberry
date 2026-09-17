@@ -17,6 +17,18 @@
 			"style": {
 				"navigationBarTitleText": "Wot 资格样页"
 			}
+		},
+		{
+			"path": "pages/policies/user",
+			"style": {
+				"navigationBarTitleText": "用户协议"
+			}
+		},
+		{
+			"path": "pages/policies/privacy",
+			"style": {
+				"navigationBarTitleText": "隐私政策"
+			}
 		}
 	],
 	"globalStyle": {

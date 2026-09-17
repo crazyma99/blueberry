@@ -324,6 +324,21 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T5 剩余**：P2-05 重放策略落调用侧细则、P2-08 授权按钮 ui-bridge＋协议两页（B0）、P2-09 provider 验证、P2-10 独立 CR；B2-B4 批次 26 个 wrapper 随 T6/T7 各批迁移补齐。
 
+
+## 8.17 T5 执行记录（P2-08，2026-09-17 第五批）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| 协议两页（B0 首批页面） | `src/pages/policies/{user,privacy}.vue`——旧端 162/261 行协议全文**忠实搬运**（脚本化转换：去 CustomNavBar 改系统导航、miniAppName 由 `generated/profile` 注入替代旧 legal.uts 硬编码），pages.json 注册两页（用户协议/隐私政策） | ✅ |
+| dev 默认 Profile 生成 | `src/generated/{profile.json,profile.config.ts}`（blueberry/trial，digest `f649e40e…`；构建流水线按目标 Profile 覆盖） | ✅ |
+| 登录同意门 | `application/use-consent.ts`（`createConsentGate`：agree/reject/ensure，复刻旧端 mine:263「请先同意用户协议和隐私政策」阻断语义；运行态内存，不持久化） | ✅ 1 条测试 |
+| 原生授权桥 | `platform/ui-bridge/AuthNativeButton.vue`（plan §4：手机号/头像授权必须借平台原生 UI）——微信 `open-type=getPhoneNumber/chooseAvatar`，detail.code/avatarUrl→authorized、缺失→denied；**抖音无对应原生能力⇒fallback 插槽＋unsupported**（不假装成功） | ✅ 3 条测试 |
+| ⭐ 生成器真 bug 修复 | `generate-profile.mjs` 把带尾换行的 json 拼进 ts 行 ⇒ 产物 `}\n as const;` **esbuild 解析失败**（tokens 生成器无此问题——其 JSON 不带尾换行）⇒ 一行修复（ts 组装处剥尾换行），`profile.config.ts` 尾部恢复 `} as const;` 同行 | ✅ node --check＋重新生成实证 |
+| ⚠️ 本轮自查更正（如实留痕） | 上一批次的「修复」实为**假应用**：锚点转义不匹配致 python assert 失败、traceback 只进 stderr 未被捕获、且误读第 11 轮的陈旧 `/tmp/vt.txt`（8 passed）为本轮通过——本轮用**新日志文件名＋打印真实文件清单**重验，并以 chr(92) 拼接反斜杠根治转义族问题 | ✅ |
+| 汇总 | vitest **152/152 exit 0**（16 文件）＋typecheck **exit 0**＋三平台构建各 exit 0 | ✅ |
+
+**T5 剩余**：P2-09 provider 验证、P2-10 独立 CR（P2-05 调用侧细则并入 T6 一起落）。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
