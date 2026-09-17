@@ -441,6 +441,21 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **T6 剩余**：P2-12 3Tab 复刻（custom-tab-bar 四文件）、P2-13 两套布局样页验证、P2-15 场景矩阵、P2-16 微信真机＋独立 CR。
 
+
+## 8.25 T6 执行记录（P2-12 3Tab 复刻，2026-09-17 第十三批）
+
+| 项 | 内容 |
+|---|---|
+| custom-tab-bar 四文件 | `src/custom-tab-bar/index.{js,wxml,wxss,json}`（旧端 107/22/61/4 行忠实移植，uni.* API 名）——模块级 `sharedSelected` 共享选中下标（各 tab 页独立实例）；图标线性/面性双态＋未选中压暗 rgba(241,205,145,.55)＋选中 #F1CD91；**每 tab 静态淡金渐变背景（2026-09-15 主人指示回滚位移动效后的形态，不恢复动画）**；116rpx＋底部安全区；attached 注册 NotoSerifSC-Bold 字体（CR 🟡 不排 nextTick 后）；onTap 轻振反馈＋只写共享变量不 setData（防双渲染闪烁） |
+| 同步工具 | `application/tabbar.ts`（`syncTabBarSelected`，旧端 utils/tabbar.uts 移植＋容器守卫）——**页面 onShow 是唯一必然入口**（webview 渲染器下自定义 tabbar 独立元素树收不到 pageLifetimes）；setSelected 优先（守卫幂等）、旧组件退化为守卫 setData（值同不写防无谓重绘）；异常静默 |
+| **pages.json tabBar（⭐产物级实证）** | tabBar 块 **`custom: true` 仅 `#ifdef MP-WEIXIN`**——构建产物实证：**微信 app.json `custom: True`＋custom-tab-bar 四文件产物齐全；抖音 app.json 无 custom（原生 tabBar ✓）且 list＝首页/价目表/我的**——一份 pages.json 双平台各得其所（抖音原生 tabBar 定案正式落地） |
+| tab 占位页 | `pages/{priceHomePage,mine}/index.vue`——B2/T7 批次占位（tabBar list 必需注册），**仅承担 tab 路由与选中态同步、明示「随 T7 迁移接入」不伪装完成度**（parity.md 记 not_started） |
+| index 接线 | `onShow → syncTabBarSelected(0)`（P2-12：每页 native 独立实例按 onShow 同步）；t6-index.spec 补 vi.mock（uni 生命周期非页面容器崩溃纪律） |
+| 测试 | tabbar 工具 3 条（setSelected 优先／守卫 setData 幂等／容器五态静默）＋index 冒烟回归；资产 9 件入新端（tabBar 三 PNG 注意 mine＝my-bar.png＋iconpark 6 SVG） |
+| 汇总 | vitest **184/184＋3 skipped** exit 0＋typecheck **exit 0**＋三平台构建各 exit 0 |
+
+**T6 剩余（验证类收口）**：P2-13 两套布局样页验证、P2-15 场景矩阵、P2-16 微信真机＋独立 CR（真机需主人手机配合）。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）

@@ -1,6 +1,12 @@
 // T6 首页冒烟：初始骨架→加载收敛（容器无 uni ⇒ 网络失败路径）→错误态可重试；品牌馆入口默认不渲染。
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+
+// uni 生命周期在非页面容器不可用（vue.injectHook 崩溃）——mock 后页面可挂载
+vi.mock("@dcloudio/uni-app", () => ({
+  onShow: () => {},
+}));
+
 import IndexPage from "../../src/pages/index/index.vue";
 
 const flush = () => new Promise((r) => setTimeout(r, 20));

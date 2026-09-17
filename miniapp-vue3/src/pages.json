@@ -34,6 +34,24 @@
 			}
 		},
 		{
+			"path": "pages/priceHomePage/index",
+			"style": {
+				// #ifdef MP-WEIXIN
+				"navigationStyle": "custom",
+				// #endif
+				"navigationBarTitleText": "价目表"
+			}
+		},
+		{
+			"path": "pages/mine/index",
+			"style": {
+				// #ifdef MP-WEIXIN
+				"navigationStyle": "custom",
+				// #endif
+				"navigationBarTitleText": "我的"
+			}
+		},
+		{
 			"path": "pages/_probe/wot-sample",
 			"style": {
 				"navigationBarTitleText": "Wot 资格样页"
@@ -52,6 +70,35 @@
 			}
 		}
 	],
+	"tabBar": {
+		// #ifdef MP-WEIXIN
+		"custom": true,
+		// #endif
+		"color": "#F1CD91",
+		"selectedColor": "#F1CD91",
+		"backgroundColor": "#160F04",
+		"borderStyle": "black",
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"iconPath": "static/home-bar.png",
+				"selectedIconPath": "static/home-bar.png",
+				"text": "首页"
+			},
+			{
+				"pagePath": "pages/priceHomePage/index",
+				"iconPath": "static/price-bar.png",
+				"selectedIconPath": "static/price-bar.png",
+				"text": "价目表"
+			},
+			{
+				"pagePath": "pages/mine/index",
+				"iconPath": "static/my-bar.png",
+				"selectedIconPath": "static/my-bar.png",
+				"text": "我的"
+			}
+		]
+	},
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "uni-app",

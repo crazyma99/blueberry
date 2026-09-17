@@ -5,6 +5,7 @@
 // demo 卡点击 → /pages/demoDetail/index?from=banner&idx=N（index:578-582）；店铺点击 → demoDetail?idx=店铺id。
 // 替换原模板 Hello 页；探针样页仍注册于 pages/_probe/wot-sample（devtools 直达，P1-08 不入生产包）。
 import { computed, onMounted, ref } from "vue";
+import { onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
@@ -21,6 +22,7 @@ import { createHttpClient } from "../../infrastructure/http/client";
 import { createCarouselRepository, type CarouselItem } from "../../infrastructure/repositories/carousels";
 import { createShopRepository } from "../../infrastructure/repositories/shops";
 import { createHomeViewModel } from "../../composables/use-home";
+import { syncTabBarSelected } from "../../application/tabbar";
 import PhotoGrid from "../../components/PhotoGrid/PhotoGrid.vue";
 import type { PhotoGridShop } from "../../components/PhotoGrid/PhotoGrid.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
@@ -126,6 +128,11 @@ function goBrandHub(): void {
     uni.navigateTo({ url: "/pages/brandHub/index" });
   }
 }
+
+onShow(() => {
+  // P2-12：自定义 tabBar 选中态由页面 onShow 同步（唯一必然触发的入口）
+  syncTabBarSelected(0);
+});
 
 onMounted(() => {
   void init();
