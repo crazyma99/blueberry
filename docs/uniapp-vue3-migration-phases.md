@@ -210,6 +210,7 @@ D1–D5 只说「怎么迁」，不说「每页业务该是什么样」。页面
 | 微信账号 | 齐全（现有能力） | Phase 2／3 的微信真实闭环可正常验收 |
 | 抖音账号 | **AppID `ttd6aba01648cc1bf701` 已提供**；**CLI（`tma`）已登录并实测跑通「登录→打包→远程预览→真机扫码显示」（Linux 无 IDE，2026-09-15）**；**测试设备白名单已绑定（2026-09-15，主人手机抖音 UID／DID，标识值未登记）**；渠道（类目/主体）备案进行中 | Phase 1 抖音样页可做**编译 + CLI 预览 + 真机扫码**；**类目资质、支付与发布门禁在备案完成前保持 `blocked`** |
 | 仍需主人提供 | ①抖音渠道备案结果 ②类目与支付资质 ③抖音真机 ④Phase 5 上传与 prod 部署授权 | 缺失时按上表降级或停在上一门禁，**不得写成「支持上线」** |
+| 抖音 Profile 范围（**2026-09-17 主人拍板**） | **客片展示版＝11 页/3 tab**（客片展示 9 ＋ 价目 2；价目纯展示，微信端本无下单支付能力）；**AI 试衣 3 页＋AI 推荐 3 页＝6 页不注册**；「我的」页菜单只留「我的喜欢」、顶部文案去「体验AI试衣」 | Phase 1 的 Profile 生成器（T3a）须支持 `PAGE_REGISTRY` 闭集与功能块开关；Phase 4 抖音验收按 11 页范围执行；**微信全量 17 页不受影响** |
 
 **提问方式**：一句话说明「卡在哪、需要什么、没有它我最多能做到什么」，不夹带技术选择题，不把决策反推给主人。
 
@@ -376,7 +377,7 @@ validateProfile(raw, {platform, environment}) -> NormalizedProfile 或明确校�
 generateProfile({profile, sourceRoot, projectRoot}) -> {digest, generatedFiles}
 ~~~
 
-`NormalizedProfile`必须含profileKey、packageName、manifestName、description、目标appid、appCode、各环境apiBases、导航/品牌/版权/联系方式/协议名/价目fallback字段；每项旧输入到输出的映射写入profile-map.json，不暗中弃字段。
+`NormalizedProfile`必须含profileKey、packageName、manifestName、description、目标appid、appCode、各环境apiBases、导航/品牌/版权/联系方式/协议名/价目fallback字段；每项旧输入到输出的映射写入profile-map.json，不暗中弃字段。**新增（2026-09-17 主人拍板）**：`PAGE_REGISTRY`（该平台注册路径闭集：微信＝17 页、抖音＝11 页）与「我的」页菜单/文案功能块开关（抖音菜单仅「我的喜欢」）。
 
 - [ ] P1-14 对齐母方案5.2列出的全部旧字段；新增抖音/小红书appid仅在目标构建时必填，不用微信appid兜底。
 - [ ] P1-15 明确 `API_BASE_URL`仍指release地址；测试地址走受控映射。未知env不落到生产也不默认为trial。
@@ -640,6 +641,8 @@ pnpm --dir miniapp-vue3 run build:mp-toutiao
 **对应：T10 / G4。负责人：平台适配负责人 + 后端负责人；产品确认资质与账号共享规则。**
 
 **入口条件**：G3通过；每端AppID/权限/类目/支付资格有状态记录。先离线实现与合同测试，真实平台调用按获准测试范围进行。
+
+- **抖音验收范围（2026-09-17 主人拍板）**：抖音端＝客片展示版（**11 页/3 tab**，AI 六页不注册，「我的」页只留「我的喜欢」，**零支付改造**）⇒ Phase 4 的抖音真机/工具验收按此范围执行，产物校验须断言「AI 六页未在 `pages.json` 注册」；AI 试衣/推荐的跨端适配**不在本轮抖音范围**（微信端照常验收）。
 
 ### 4.1 冻结平台身份与支付合同
 
