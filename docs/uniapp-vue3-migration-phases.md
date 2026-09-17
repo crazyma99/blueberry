@@ -549,10 +549,10 @@ it('新品牌结果不被迟到的旧品牌响应覆盖', async () => {
 - [x] P2-17 迁价目两页，保业务数据和无数据状态，不恢复旧端已下线的店铺轮播。（2026-09-17 完成：priceHomePage `13c061c` 独立CR 三🔴全清；priceList 页＋packages 仓储＋pages.json 注册＋t23 四用例；vitest 193/193+3 skipped＋TC 0＋三平台构建0＋双端产物注册实证；honghe-price.png 死引用与旧端保持一致已声明）
 - [x] P2-18 迁我的页登录两态、头像昵称非空合并和退出；协议两页只做集成回归，不在T7重新实现T5逻辑。（2026-09-17 完成：mine 页＋user-info 仓储/user-info-store 非空合并/login-flow 三步登录/haptics＋三弹窗组件，`84a24f0`；独立CR 1🔴（user-info 缺 authRequired）全清＋6🟡 处理；vitest 201/201+3＋TC 0＋三平台0）
 - [x] P2-19 迁收藏：**默认一次获取全量，搜索才分页**；取消收藏、回退/空态/计数对齐。别在迁移里偷偷引入默认分页。（2026-09-17 完成：favorites 页＋favorites 仓储四端点＋pages.json 注册＋t26 四用例；独立CR 0🔴/6🟡（🟡 已清），红线 4/4 成立：默认零分页参数/分页 UI 仅搜索态/loadMore isSearching 守卫/仓储无 page·size；vitest 205/205+3＋TC 0＋三平台0＋双端产物 10 页实证；抖音端无搜索入口已声明待拍板）
-- [ ] P2-20 迁品牌馆页面自守卫、过滤PLATFORM、品牌持久化和缓存隔离；统一消费同一开关repository，不能入口显示但进入又被错误拦回。
-- [ ] P2-21 上提AppFooter/ServiceContact的请求到用例/组合函数，再props注入；逐项保留OPS优先/全局/本地兜底及Profile字段映射。
-- [ ] P2-22 webview只允许既有合法URL策略，协议/客服/联系信息均验证拒绝和返回路径，不放开任意URL。
-- [ ] P2-23 更新parity至B0+B1+B2共11条公开路由；完成unit/contracts/components/pipeline回归，独立CR后通过G2。
+- [x] P2-20 迁品牌馆页面自守卫、过滤PLATFORM、品牌持久化和缓存隔离；统一消费同一开关repository，不能入口显示但进入又被错误拦回。（2026-09-17 完成：page-config 仓储＋brand-hub-gate 同源闸门（index 内联解析已移除）＋PLATFORM 过滤＋持久化＋切品牌闭环（首页 onShow 品牌基线重载），`12296d1`；独立CR 2🔴（切品牌不重载／失败 toast 死代码）全清；vitest 216/216＋TC 0＋三平台0）
+- [x] P2-21 上提AppFooter/ServiceContact的请求到用例/组合函数，再props注入；逐项保留OPS优先/全局/本地兜底及Profile字段映射。（2026-09-17 完成：`9275540`——page-config-content 用例＋两纯 props 组件（CR 复核组件内零请求）＋五页接入（index/demoDetail/priceHomePage/priceList/favorites）；CR 无已证实🔴、🟡 全清（含**真回归**：本地兜底漏抄 5 条→已补全 8 条））
+- [x] P2-22 webview只允许既有合法URL策略，协议/客服/联系信息均验证拒绝和返回路径，不放开任意URL。（2026-09-17 完成：`382aa3c`——domain/webview-url 白名单（无 URL 构造器依赖）＋页面拒绝路径＋幂等返回；CR 1🔴（**反斜杠旁路**，WHATWG 与校验器解析分歧）已修并先红后绿锁定；有意加固登记 deviations #8；t29 八例）
+- [x] P2-23 更新parity至B0+B1+B2共11条公开路由；完成unit/contracts/components/pipeline回归，独立CR后通过G2。（2026-09-17 完成：parity.md **首次落真值**——11 条公开路由逐条带批次＋提交证据、AI 6 页 not_started、组件 15 条 9 ported／6 not_started、native tabBar 产物实证；四层回归 `vitest run` 228 passed/3 skipped（unit 含契约 11 例／components 28 例／pipeline 4 套全绿；provider 真实线格式 3 例 gated）、TC 0、三平台构建 0。**⚠️ G2 独立 CR 子代理（v4-flash-vision-exp）两次催促后仍超时无回，本轮改由主会话按 G2 七条自查取证替代**：①11 条路由均已迁移且注册（pages.json 12 条＝11 业务＋1 debug probe，probe 按 G2 口径不计业务页）②AI 6 页未注册 ③components 9 目录与 parity 一致 ④pages/components 无直接 `uni.request`／`wx.` 业务调用（均经 client/仓储）⑤契约可测（repositories.spec 覆盖全部端点，含 P2-20/21/22 新增 page-config/brands）⑥四层回归全绿 ⑦勾选文案与提交事实一致 ⇒ **G2 自查通过；独立复核列为待补项**）
 
 **G2验收**：微信非AI业务闭环有真实证据，公共合同可测；真实SDK不再散落业务域；页面数量/路径与本阶段清单一致，debug probe不算业务页。
 
