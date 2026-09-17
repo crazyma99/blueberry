@@ -38,10 +38,13 @@ const showPlaceholder = computed(() => {
       :class="shopList.length === 1 ? 'shopCard full-width' : 'shopCard'"
       @click="emit('shop-click', shop)"
     >
+      <!-- 2026-09-17 性能偏差（见 deviations #12）：旧端此处无 lazy-load，但首页会一次性渲染全部店铺封面，
+           模拟器/低端机首屏易卡顿 ⇒ 追加 lazy-load（仅改变**加载时机**，不影响布局、尺寸与交互） -->
       <image
         :class="shopList.length === 1 ? 'demoPhoto full-width' : 'demoPhoto'"
         :src="shop.homeImage"
         mode="aspectFill"
+        lazy-load
       />
       <view class="shopName">
         <view class="font-noto-serif">{{ shop.displayName }}</view>

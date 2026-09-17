@@ -13,3 +13,5 @@
 10. **finalScore 数字字符串口径（2026-09-17，T9b CR 🟡5，可选登记）**：旧端 `v-if="rec.finalScore > 0"` 在 `"90"`（字符串）时成立会显示「90分」；新端 `normalizeFinalScore` 仅接受 `number` ⇒ 字符串不显示。现行后端 DTO 为 number，**实务等价**。
 
 11. **字体全局类未定义（2026-09-17 补登，CR 🔴2 触发）**：旧端 `App.uvue` 全局类 `font-noto-serif`／`harmony`（宋体/鸿蒙字族）在新端**未定义**，样式沿用既有口径：字号按旧值**字面量**还原（如旧 `--font-size-body=24rpx` ≠ 新 `tokens.semantic.fontSizeBody=32rpx`，不得混映射），字体族差异由后续主题批次统一处理。**产品依据**：字体族缺失属视觉细节，不阻断功能闭环；**测试**：各批页面单测按字面量断言字号（如 `t22`／`t26`／`t32`），本表 `platform-capability-matrix.md` 引用本条。此条为补齐「矩阵引用不存在的登记」的缺口而补登（此前该偏差**未登记**，违反「偏差必须进 deviations」纪律）。
+
+12. **店铺封面追加 `lazy-load`（2026-09-17，性能偏差；排查「模拟器卡死」时引入）**：旧端 `components/PhotoGrid/PhotoGrid.uvue` 的店铺封面（`<image mode="aspectFill">`）**无懒加载**（`grep lazy-load` = 0），新端初版按忠实移植同样未加；但首页会**一次性渲染全部店铺封面**，在微信模拟器/低端机上首屏容易长卡。**改法**：仅给该 `<image>` 追加 `lazy-load`——**只改变加载时机**，不改布局类名、尺寸、圆角与点击行为。**产品依据**：性能与可感知卡顿；**测试**：`tests/components/ui-contract.spec.ts`、`t6-index.spec.ts` 与三平台构建均通过（无断言依赖图片加载时机）。
