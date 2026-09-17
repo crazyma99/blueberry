@@ -612,13 +612,13 @@ And：切换authRevision后，即便旧查询返回true也不改变新账号权�
 
 **文件**：新增 `N/src/pages/{aiTryOn,aiTryOnResult,aiTryOnHistory}/index.vue`、`N/src/application/{tryon,task-poller,download-entitlement}.ts`、`N/src/components/{AppPhotoPicker,GenerationProgress}.vue`；`N/tests/unit/tryon.spec.ts`、`N/tests/contracts/tryon.spec.ts`、`N/tests/e2e/tryon.md`。
 
-- [ ] P3-08 迁选图/拍照/质量校验/模板匹配；拒绝授权、取消、文件异常、JSON异常分别测；前端检查不能替代后端人脸/安全校验。
-- [ ] P3-09 迁上传/提交，任务创建与扣次是有副作用动作，不因网络timeout自动创建另一任务。
-- [ ] P3-10 迁真实任务状态与伪进度分离；按已冻结的旧策略轮询，离页/切品牌/新请求代次停止旧计时器与写回，重进由任务状态恢复。
-- [ ] P3-11 迁水印预览、付费原图URL与任务永久买断；用共享支付确认后只保存一次，不让匿名分享获得付费下载接口能力。
-- [ ] P3-12 迁记录页：当前一次取全量历史，删除/返回/进度恢复按旧合同，不顺带引入分页。
-- [ ] P3-13 明确分享分支：好友直达试衣；朋友圈带taskId/shareToken的作品页匿名只查一次、不轮询；scene1154不跳页；分享封面网络JPG及失败兜底。
-- [ ] P3-14 防截屏/字体/媒体等能力按当前平台capability实施，onHide/onUnload恢复作用域；未实现不能返回假成功。
+- [x] P3-08 迁选图/拍照/质量校验/模板匹配；拒绝授权、取消、文件异常、JSON异常分别测；前端检查不能替代后端人脸/安全校验。（2026-09-17 完成：选图适配 `platform/uni/chooser.ts`（取消/无 API→null 不抛，t34 三态）｜质量校验三层 `domain/photo-check`（阈值 480／模糊 100／人脸占比 0.02-0.65、短路顺序与文案逐字，t35 六例）＋`platform/weixin/{vk-face,photo-check}`（**fail-open**：无 wx/无画布/异常一律放行，t36 八例）｜模板匹配（travel/album 双入口＋相册空回退，t38）｜**「前端检查不代替后端人脸/安全校验」已按 T8 CR 🟡P2 明文写入 `platform/weixin/photo-check.ts` 文件头**（此前 grep 0 命中；CR 已复验）｜授权拒绝→拉登录弹窗、上传 401→`authExpired` 显式拉登录（**不静默成功**））
+- [x] P3-09 迁上传/提交，任务创建与扣次是有副作用动作，不因网络timeout自动创建另一任务。（2026-09-17 完成：有副作用端点一律 `replayPolicy:"never"`——`ai.submitTryOnTask`／`credits.createRecharge`／`credits.redeemCode`／`ai.getRecommend`／`ai-result.downloadResult`／`wx-auth.login`（T8 CR 逐条复核 file:line）；`ai-photo-upload` 字段名 `photo`＋JSON 容错＋401 fail-closed（t34）；「超时≠订单作废」由 `payment-coordinator` 的 `resume(outTradeNo)` 承接（t37/t39，恢复路径**下单次数仍为 1**））
+- [x] P3-10 迁真实任务状态与伪进度分离；按已冻结的旧策略轮询，离页/切品牌/新请求代次停止旧计时器与写回，重进由任务状态恢复。（2026-09-17 完成：轮询内核 `createResultPoller`（自适应 8s/3s/2.5s、180s 超时、网络抖动容忍 3 次、空 taskId 零请求、确定失败即停，t39 十二例）｜结果页**每代次新建 poller＋`pollGeneration` 守卫**（离页/重试/完成回调整体停表，`onHide`/`onUnload` 均 stop）｜reentry 按任务态恢复（`onShow` 仅 processing 且非只读）｜**T8 CR 发现的侧信道已修**（`getResult` 包装器补代次守卫，旧代次迟到响应不再污染快照））
+- [x] P3-11 迁水印预览、付费原图URL与任务永久买断；用共享支付确认后只保存一次，不让匿名分享获得付费下载接口能力。（2026-09-17 **代码级完成**：水印为纯 CSS 层**仅覆盖预览**、展示走 `cosThumb`、保存/下载走服务端签名原图 URL｜买断认**服务端 `taskBought`**（`loadTaskEntitlement`＋到账后回读）｜「只保存一次」双闸（`isSaving`＋`resumeSaveAfterCredit` 先清后调；`canSaveOriginal` 已按 CR 真正接线）｜`shareReadOnly` 双拦（模板仅「我也要试」＋`saveToAlbum()` 首行 return）。⚠️ **真机联调未做**（主人自验）⇒ 真机前不得口头标 P3-11 真机通过）
+- [x] P3-12 迁记录页：当前一次取全量历史，删除/返回/进度恢复按旧合同，不顺带引入分页。（2026-09-17 完成：`aiTryOnHistory` 页（`d002d7c`）＋t30 四例——**一次取全量、零分页参数**（旧端该页无分页，亦**无删除功能**，按旧合同不引入）；空态/静默刷新（旧 bug #7 骨架闪已修）／点击分流（completed·processing 跳结果页、failed 仅提示）／openid 缺失零请求空态）
+- [x] P3-13 明确分享分支：好友直达试衣；朋友圈带taskId/shareToken的作品页匿名只查一次、不轮询；scene1154不跳页；分享封面网络JPG及失败兜底。（2026-09-17 完成：内核 `application/ai-share-routing.ts`——`resolveShareEntry`（`share_from` 只读／scene1154 单页模式）＋`buildSharePath`（好友直达）＋`buildShareQuery`（**朋友圈必须带 taskId＋shareToken**，旧 bug #8）＋`loadSharedTaskOnce`（**只拉一次**：空 token 零请求、pending 只展示、不轮询不重试不要求登录），t40 九例＋`tests/contracts/ai-share.spec.ts`｜scene1154 **不跳页**改引导（右上角菜单/前往小程序）｜封面走 `cosThumbJpg`（朋友圈 500／好友 400）＋空 URL 兜底；**有意偏差**：端侧人脸居中卡片未迁（直接网络 JPG，与旧端 catch 分支同口径，已登记））
+- [x] P3-14 防截屏/字体/媒体等能力按当前平台capability实施，onHide/onUnload恢复作用域；未实现不能返回假成功。（2026-09-17 完成：`platform/weixin/capabilities.ts` 的 `createCaptureGuard`（`canIUse('setVisualEffectOnCapture')` 守卫＋enable/disable **幂等**＋无 wx 静默）＋`requestTaskNotify`（订阅消息 fail-soft）；**三钩子齐全**：`aiTryOn` 与 `aiTryOnResult` 均 onShow 开／onHide 关／**onUnload 也关**（旧端教训：redirectTo/reLaunch 只触发 onUnload）；T8 CR 复验「无状态幂等」；**未实现不假成功**：支付对非微信/无 API 一律 `unsupported`（t31/t36），截屏能力缺失即跳过而非谎报）
 - [ ] P3-15 单测/合同/微信真机/独立CR通过后提交B3三页。**（2026-09-17 进展：单测/合同 ✅、**T8 独立 CR 已完成且无 🔴（可在代码级收口）**、三平台构建 0；⚠️ **微信真机未做**（主人自验）⇒ 未勾。CR 的 P1/P2/P3 四项已全清（代次守卫补漏／`canSaveOriginal` 接线／photo-check 头 P3-08 声明／买断等价性说明））**
 
 ### 3.3 推荐闭环（T9b）
