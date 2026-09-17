@@ -37,9 +37,20 @@ const appJson = JSON.parse(readFileSync(join(projectPath, "app.json"), "utf-8"))
 console.log("[upload-trial] 产物 pages=" + (appJson.pages ?? []).length + " lazyCodeLoading=" + (appJson.lazyCodeLoading ?? "<无>"));
 console.log("[upload-trial] appid=" + appid + " version=" + version + " desc=" + desc);
 
-const { default: ci } = await import("miniprogram-ci").catch(() => ({ default: null }));
+// 模块解析顺序：--ci <路径> → 环境变量 MINIPROGRAM_CI_PATH → 裸包名
+// （本机把 miniprogram-ci 装在**仓库外** ~/.dsh/tools/mpci，避免污染 lockfile）
+const ciCandidates = [arg("ci"), process.env.MINIPROGRAM_CI_PATH, "miniprogram-ci"].filter(Boolean);
+let ci = null;
+for (const spec of ciCandidates) {
+  const mod = await import(spec).catch(() => null);
+  if (mod?.default) {
+    ci = mod.default;
+    break;
+  }
+}
 if (!ci) {
-  console.error("[upload-trial] 未安装 miniprogram-ci：请先 `npm i -D miniprogram-ci`（本机 npm 源可达，最新 2.1.31）");
+  console.error("[upload-trial] 未找到 miniprogram-ci：用 --ci <模块目录> 或设 MINIPROGRAM_CI_PATH，例如");
+  console.error("  npm i --prefix ~/.dsh/tools/mpci miniprogram-ci  然后 --ci ~/.dsh/tools/mpci/node_modules/miniprogram-ci");
   process.exit(3);
 }
 
