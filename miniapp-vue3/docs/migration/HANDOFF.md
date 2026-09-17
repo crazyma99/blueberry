@@ -17,6 +17,7 @@
 | `g3-acceptance.md` | **G3（Phase 3 出口）对账**：四条验收命令＋「17 路由/三池/买断/分享」＋未达成项 |
 | `device-acceptance-checklist.md` | **微信真机自验清单**（当前唯一卡口的可执行表） |
 | `phase4-prep.md`＋`platform-capability-matrix.md` | Phase 4 准备件（范围/缺口/能力矩阵草表） |
+| `trial-release-record.md` | **体验版发布记录**（CLI 通路／两个必踩坑／每次上传留痕） |
 | `profile-build-records.md` | Profile 整包构建留档（P1-35 的 manifest/hash 表，自动汇总） |
 | `scripts/e2e-build.mjs` | 合成 Profile 端到端管线（`node scripts/e2e-build.mjs mp-toutiao both`），已入 CI 新端车道 |
 | `miniapp-vue3/docs/migration/parity.md` | 17 页 × 15 组件去向台账（ported／not_started） |
