@@ -65,7 +65,7 @@
 | S4 提交 | ✅ | `ai-tryon-submit` 用例（`27e3ad8`） |
 | S2尾 页装配 | ✅ | `pages/aiTryOn/index.vue`＋注册（`698fd09`；产物实证微信 14 页含／抖音 12 页不含） |
 | **S5-1 结果内核** | ✅ | `ai-result-flow`（轮询＋买断权益）（`2821c10`） |
-| S5-2 结果页装配 | ⏳ | 结果页 `pages/aiTryOnResult/index.vue`（进行中） |
+| S5-2 结果页装配 | ✅ | `pages/aiTryOnResult/index.vue`（1409 行）＋`GenerationProgress`＋注册（本笔；产物实证微信 15 页含三 AI 页／抖音 12 页不含） |
 | T9b 推荐三页 | ⏳ | 待 S5 完成后 |
 
 ## 3.2 已踩坑留痕（后续务必遵守）
@@ -111,10 +111,10 @@
 |---|---|---|
 | P3-08 选图/拍照/质量校验/模板匹配；拒绝授权、取消、文件异常、JSON 异常分别测；**前端检查不替代后端人脸/安全校验** | 🟡 主要达成 | 选图（t34 三态）／质量校验（t35 判定＋t36 管线：分辨率·模糊·人脸 0/多/占比·异常 fail-open）／模板匹配（t38 双入口＋回退）；**声明**：前端质量检查仅为体验拦截，后端人脸/安全校验仍是唯一裁决（前端 fail-open 不阻断上传） |
 | P3-09 上传/提交：创建任务与扣次是**有副作用**动作，**不因网络 timeout 自动创建另一任务** | ✅ | `submitTryOnTask`/`recharge`/`redeem` 均 `replayPolicy:"never"`（t37 断言提交形状与守卫）；支付超时语义＝`timeout≠作废`＋`resume(outTradeNo)` 不新建订单（t39/t37） |
-| P3-10 真实任务状态与伪进度分离；按旧策略轮询；**离页/切品牌/新请求代次停止旧计时器与写回**；重进按任务状态恢复 | 🟡 内核达成，页面接线待验 | 轮询内核（t39：自适应间隔/180s/抖动容忍/空任务零请求/确定失败即停/`stop()` 清理定时器）已就绪；**页面 onHide/onUnload 调 `stop()` 与「切品牌代次失效」需在 S5-2 装配中落实并补测** |
-| P3-11 水印预览／付费原图 URL／任务永久买断；**共享支付确认后只保存一次**；**匿名分享不得获得付费下载能力** | 🟡 内核达成，页面装配待完成 | `loadTaskEntitlement`＋`canSaveOriginal`（t39：paid≠权益、买断放行）已就绪；「只保存一次」与「匿名分享无付费下载」属页面/后端约束，页面装配时补测 |
+| P3-10 真实任务状态与伪进度分离；按旧策略轮询；**离页/切品牌/新请求代次停止旧计时器与写回**；重进按任务状态恢复 | ✅ 已落实（页面级测试待补） | 内核 t39；页面：onHide/onUnload 均 `stopPolling()`＋**每代次新建 poller 实例**（`pollGeneration` 守卫丢弃旧代次 in-flight 回调）＋onShow 按任务态恢复轮询；`start()` 首发 pending 已按旧端归一为 processing |
+| P3-11 水印预览／付费原图 URL／任务永久买断；**共享支付确认后只保存一次**；**匿名分享不得获得付费下载能力** | 🟡 代码落实，**但受 T7 阻塞** | 页面：水印仅覆盖预览（保存走原图 URL）＋买断以服务端 `taskBought` 为准＋`resumeSaveAfterCredit` 先清后调＋`isSaving` 防重入＋`saveToAlbum()` 首行 `if (shareReadOnly) return` 兜底＋只读模板仅「我也要试」；⚠️ **`downloadResult`/权益查询是 authRequired，而 T7 登录未接入（`exchangeIdentity` 仍 stub）⇒ 真机保存当前会以 AUTH_EXPIRED 收口** |
 | P3-12 记录页一次取全量历史（**不顺带分页**）、删除/返回/进度恢复按旧合同 | 🟡 达成但需对照 | 记录页已迁（`d002d7c`＋t30，**一次全量、无分页**）；旧端该页**无删除功能**（旧 344 行实测）⇒「删除」按旧合同＝不存在，需在收口说明中明确 |
-| P3-13 分享分支：好友直达试衣／朋友圈 taskId+shareToken 匿名**只查一次不轮询**／scene1154 不跳页／分享封面网络 JPG 及失败兜底 | ❌ **未覆盖** | 本批未迁分享链路（`getSharedAiTryOnResult`/分享封面等）；**须作为 T8 剩余明确项**，不得标记 T8 完成 |
+| P3-13 分享分支：好友直达试衣／朋友圈 taskId+shareToken 匿名**只查一次不轮询**／scene1154 不跳页／分享封面网络 JPG 及失败兜底 | ✅ 达成（除端侧人脸卡片） | 内核 `ai-share-routing`（t40：入口/路径/单页 query/只拉一次）＋页面接线；封面 `cosThumbJpg`（朋友圈 500／好友 400）＋空 URL 兜底；**有意偏差②**：端侧人脸居中卡片（`faceShareCard.uts`）未迁，直接走网络 JPG 兜底（旧端 catch 分支同口径） |
 | P3-14 防截屏/字体/媒体按平台 capability；onHide/onUnload 恢复作用域；**未实现不能返回假成功** | ✅ | `createCaptureGuard`（canIUse 守卫＋enable/disable 幂等，t31）＋主流程页 onShow/onHide/onUnload 接线（`698fd09`）；语义沿用旧端 **fail-open**（无 API 即跳过），非「假成功」——已在 S1 文档声明 |
 | P3-15 单测/合同/**微信真机**/独立 CR 通过后提交 B3 三页 | ❌ 未达成 | 单测 322 passed/3 skipped、TC 0、三平台构建 0、双端产物页数实证；**微信真机验证与 T8 独立 CR 未做**（真机需真机环境；CR 子代理此前多次超时）⇒ 收口前必补 |
 

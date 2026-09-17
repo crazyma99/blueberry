@@ -49,7 +49,8 @@ export interface ShareContextInput {
   templateId: number;
   shopId: string;
   albumId: string;
-  brandId: string;
+  /** 品牌上下文：`versioned.loadBrandId()` 在无品牌时返回 null ⇒ 本模块容忍 null 并视为「未设品牌」 */
+  brandId: string | null;
 }
 
 /** 好友直达试衣的分享路径（旧 :552-560 逐条顺序） */
@@ -58,7 +59,7 @@ export function buildSharePath(input: ShareContextInput): string {
   if (input.templateId > 0) path += `&templateId=${input.templateId}`;
   if (input.shopId !== "") path += `&shopId=${input.shopId}`;
   if (input.albumId !== "") path += `&albumId=${input.albumId}`;
-  if (input.brandId !== "") path += `&brandId=${input.brandId}`;
+  if (input.brandId != null && input.brandId !== "") path += `&brandId=${input.brandId}`;
   return path;
 }
 

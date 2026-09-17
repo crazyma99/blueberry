@@ -103,6 +103,15 @@
 				"navigationBarTitleText": "AI试衣记录"
 			}
 		},
+		// 结果页：旧端 pages.json 仅注册 path（可见标题由 CustomNavBar 动态渲染「正在生成 → AI试衣结果」），
+		// 新端按 AI 批次口径补 navigationStyle custom；navigationBarTitleText 取页面自身标题
+		{
+			"path": "pages/aiTryOnResult/index",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "AI试衣结果"
+			}
+		},
 		// #endif
 		{
 			"path": "pages/_probe/wot-sample",

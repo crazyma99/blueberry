@@ -58,6 +58,15 @@ describe("ai-share-routing · 分享路径与单页模式 query（旧 :537-560�
     );
   });
 
+  it("brandId=null（无品牌）不得产出 `brandId=null` 段；视为未设品牌", () => {
+    expect(buildSharePath({ templateId: 11, shopId: "7", albumId: "", brandId: null })).toBe(
+      "/pages/aiTryOn/index?share_from=tryon_result&templateId=11&shopId=7",
+    );
+    expect(buildShareQuery({ templateId: 0, shopId: "", albumId: "", brandId: null, taskId: "42", shareToken: "tk" })).toBe(
+      "share_from=tryon_result&taskId=42&shareToken=tk",
+    );
+  });
+
   it("⭐朋友圈单页模式 query：必须追加 taskId＋shareToken（bug #8 根因修复）", () => {
     expect(buildShareQuery({ ...base, taskId: "42", shareToken: "tk" })).toBe(
       "share_from=tryon_result&templateId=11&shopId=7&albumId=5&brandId=lanmei&taskId=42&shareToken=tk",
