@@ -38,6 +38,7 @@ import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
+import { createAlbumSaver } from "../../platform/uni/album-save";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
@@ -599,7 +600,7 @@ async function saveToAlbum(): Promise<void> {
     void handleRecharge();
     return;
   }
-  const authed = await ensureAlbumAuth();
+  const authed = await albumSaver.ensureAuth();
   if (!authed) return;
   isSaving.value = true;
   // 扣下载次数池 1 次并取签名下载 URL；4001 → 拉起充值支付，到账后自动重试保存
@@ -611,8 +612,7 @@ async function saveToAlbum(): Promise<void> {
   try {
     showLoading("保存中...");
     // 用扣费接口返回的 5 分钟签名 URL 下载（超时需重新走扣费接口获取）
-    const tempFilePath = await downloadToTempFile(downloadUrl);
-    await saveImageToPhotosAlbum(tempFilePath);
+    await albumSaver.saveFromUrl(downloadUrl);
     hideLoading();
     isSaving.value = false;
     toast("已保存到相册", "success");
@@ -624,80 +624,10 @@ async function saveToAlbum(): Promise<void> {
   }
 }
 
-// 保存前申请相册写入授权：已授权直接通过；拒绝过则引导去设置页开启；最终未授权返回 false（不扣费；旧 :792-822）
-async function ensureAlbumAuth(): Promise<boolean> {
-  // 容器缺 authorize（非微信运行时/测试）：fail-closed —— 不扣费、不假装保存成功
-  if (typeof uni === "undefined" || typeof uni.authorize !== "function") return false;
-  const granted = await new Promise<boolean>((resolve) => {
-    uni.authorize({
-      scope: "scope.writePhotosAlbum",
-      success: () => resolve(true),
-      fail: () => resolve(false),
-    });
-  });
-  if (granted) return true;
-  return await new Promise<boolean>((resolve) => {
-    if (typeof uni.showModal !== "function") {
-      resolve(false);
-      return;
-    }
-    uni.showModal({
-      title: "提示",
-      content: "需要您授权保存图片到相册",
-      confirmText: "去设置",
-      success: (modalRes: unknown) => {
-        const confirmed = (modalRes as { confirm?: boolean } | null)?.confirm === true;
-        if (!confirmed) {
-          resolve(false);
-          return;
-        }
-        if (typeof uni.openSetting !== "function") {
-          resolve(false);
-          return;
-        }
-        uni.openSetting({
-          success: (settingRes: unknown) => {
-            const authSetting = (settingRes as { authSetting?: Record<string, unknown> } | null)?.authSetting ?? {};
-            resolve(authSetting["scope.writePhotosAlbum"] === true);
-          },
-          fail: () => resolve(false),
-        });
-      },
-    });
-  });
-}
+// ⭐G2 复核 🟡①：相册管线（授权/下载/保存，旧 :792-822）已下沉 `platform/uni/album-save.ts`，
+// 页面只表达业务意图（先授权→再扣费→再保存），此处为端口实例：
+const albumSaver = createAlbumSaver();
 
-function downloadToTempFile(url: string): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    if (typeof uni === "undefined" || typeof uni.downloadFile !== "function") {
-      reject(new Error("downloadFile unavailable"));
-      return;
-    }
-    uni.downloadFile({
-      url,
-      success: (res: unknown) => {
-        const r = res as { statusCode?: number; tempFilePath?: string } | null;
-        if (r != null && r.statusCode === 200 && r.tempFilePath != null) resolve(r.tempFilePath);
-        else reject(new Error("下载失败"));
-      },
-      fail: (err: unknown) => reject(err),
-    });
-  });
-}
-
-function saveImageToPhotosAlbum(filePath: string): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    if (typeof uni === "undefined" || typeof uni.saveImageToPhotosAlbum !== "function") {
-      reject(new Error("saveImageToPhotosAlbum unavailable"));
-      return;
-    }
-    uni.saveImageToPhotosAlbum({
-      filePath,
-      success: () => resolve(),
-      fail: (err: unknown) => reject(err),
-    });
-  });
-}
 
 // —— 店铺与下载权益（旧 :824-856）——
 // 获取店铺 ID：页面参数缺失时（历史记录入口）取首个启用店铺兜底，返回 0 表示无可用店铺

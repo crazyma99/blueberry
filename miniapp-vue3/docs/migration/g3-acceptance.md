@@ -46,7 +46,7 @@
 | 1 | `P3-11` 结果页保存/买断**真机**联调 | ❌ | 需微信真机（主人自验） |
 | 2 | `P3-15` **微信真机**证据 ＋ **T8 独立 CR** | 🟡（**CR 已完成**） | ✅ **T8 独立 CR 已完成（结论：无 🔴、可在代码级收口）**，其 P1/P2/P3 四项已全清：①`getResult` 包装器补**代次守卫**（旧代次迟到响应不再污染快照）②`canSaveOriginal` **真正接线**（消除「声称已消费而实测未用」）③`platform/weixin/photo-check.ts` 头补 **P3-08 明文声明**「前端检查不代替后端人脸/安全校验」④买断本地置位补等价性说明；**仅剩 `P3-15` 微信真机（主人自验）** |
 | 3 | `P3-20` 页级场景测试 ＋ **T9b 独立 CR** | ✅ | `t44`（连点/同 op 复用/失败不重发/分类）＋`t45`（禁自建轮询、入口页 onHide·onUnload 双清、分数口径、`#ifdef` 单块）＋`t46`（结果页渲染与脏数据）＋**`t47`（页级七例：单次 POST／无 filename 零请求／4001／弱网／业务错／401／180s 超时，均断言不自动重发）**；**T9b 独立 CR 无 🔴**（6 条 🟡 已清） |
-| 4 | G2 复核 🟡 两条 | 🟡（**②已完成**） | ✅②`share` 端点契约已并入 `tests/contracts/ai-share.spec.ts`（本笔）；❌①`aiTryOnResult` 的 `downloadFile`／`saveImageToPhotosAlbum`／`authorize`（旧端 :600-700 约 90 行 wx 管线）下沉 `platform/uni/*` 端口——**列为独立小批次**（改动面含页面保存流程，不与 CR 批次混做） |
+| 4 | G2 复核 🟡 两条 | ✅ **均已闭合** | ②`share` 端点契约已入 `tests/contracts/ai-share.spec.ts`；①**相册管线下沉完成**——新增 `platform/uni/album-save.ts`（授权/下载/保存三段，语义与旧 :792-822 逐字一致、**容器 fail-closed 不假装成功**），`aiTryOnResult` 移除内联实现约 73 行改为消费端口，`t48` 五例覆盖 |
 
 ## 4. 结论
 
