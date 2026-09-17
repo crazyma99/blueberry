@@ -102,6 +102,41 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 | D4 | docs/uniapp-vue3-migration-phases.md | `4668f953cb360746a0ebcc62a672201072bac02d6d4a398bd1d346a1d2539c4e` |
 | D5 | docs/uniapp-x迁移uniapp-vue3_实施细则&流水线参考.txt（仅溯源） | `31d827462c281a23c78daddb06da1a91c4b1e185fd06268174bbb64fad8d9fe7` |
 
+## 8.5 工具链冻结记录（P1-01，2026-09-17 实测）
+
+| 项 | 冻结值 | 来源 |
+|---|---|---|
+| 官方模板 | `dcloudio/uni-preset-vue` 分支 **`vite-ts`** | `git ls-remote --heads` 实测 |
+| 模板固定 commit | `6fb81ac3c5736b8b0a83e667b3ed90223d458dd8` | 分支 HEAD；committer date 2026-08-17T02:14:47Z，msg「chore: v3.0.0-5020420260813003」 |
+| DCloud 发行线 | `3.0.0-5020420260813003`（uni-app／uni-components／uni-h5／uni-mp-weixin／uni-mp-toutiao／uni-mp-xhs／vite-plugin-uni 等同线） | 模板 package.json 实测 |
+| Vue | `^3.4.21` | 模板 package.json |
+| Vite | `5.2.8`（钉死；安装实测解析 5.2.8） | 模板 package.json＋pnpm 安装输出 |
+| TypeScript | `^4.9.4`（**不把旧端 TS5 覆盖官方配套**） | 模板 package.json |
+| vue-tsc | 声明 `^1.0.24`，安装解析 **1.8.27** | pnpm 安装输出实测 |
+| Node | `v24.14.0` | `node -v` |
+| pnpm | `11.7.0` | `pnpm -v` |
+| degit | `3.10.0`（`npx --yes degit` 实测输出） | 命令输出 |
+| Sass | 模板未含；Wot v2 要求 **>1.78**（官方推荐 1.98+）⇒ T4 装 Wot 时**锁版安装并实编译验证** | plan §6.1 |
+
+> ⚠️ pnpm 11 默认**拦截依赖 postinstall 脚本**（首装报 `ERR_PNPM_IGNORED_BUILDS`：esbuild/core-js/core-js-pure，exit 1）。**踩坑与修正**：先写 `package.json` 的 `pnpm.onlyBuiltDependencies` → pnpm 11 明确警告「package.json 的 pnpm 字段已不读取」⇒ 最终落点＝**`pnpm-workspace.yaml` 的 `allowBuilds`**（三者置 true）＋删除 package.json 内失效字段，重装后 postinstall 全部执行（esbuild 0.20.2 二进制就位）。该决定**写入工程可复现**，未改全局配置。
+
+
+## 8.6 T1 执行记录（P1-01~08，2026-09-17）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| P1-01 | 冻结模板/工具链组合（见 §8.5 表） | ✅ `vite-ts@6fb81ac3`、DCloud `3.0.0-5020420260813003`、Vite 5.2.8、TS ^4.9.4、vue-tsc 解析 1.8.27 |
+| P1-02 | `npx degit dcloudio/uni-preset-vue#6fb81ac3… miniapp-vue3`（degit 3.10.0） | ✅ DEGIT_OK；目标目录事前不存在校验通过；**未复制旧 mp-vue3/、未批量改后缀** |
+| P1-02b | `pnpm install` 首装 | ⚠️ 报 `ERR_PNPM_IGNORED_BUILDS` exit 1 → 按 §8.5 尾注修正（`pnpm-workspace.yaml` allowBuilds）→ 重装 **Done in 969ms**、esbuild postinstall Done |
+| P1-04 | 保留模板最小入口；补 `typecheck` 脚本（`vue-tsc --noEmit`） | ✅ typecheck **exit 0**（无输出即零错误） |
+| P1-06 | 三平台最小样例构建 | ✅ `build:mp-weixin`／`build:mp-toutiao`／`build:mp-xhs` **各 exit 0（DONE）** |
+| P1-06b | 产物健全性 | ✅ 三端各 **11 文件**，且 **`app.json`+`app.js` 均存在**（抖音硬规则满足） |
+| P1-07 | lockfile 来源 | ✅ 首装生成 `pnpm-lock.yaml`（非复制旧锁）；`--frozen-lockfile` 复装验证见下 |
+
+**探针页边界**：模板自带首页仅用于工具链资格验证，**不进入最终生产包**（P1-08 口径）；路由总表以旧端 17 条为准（§1），未迁移页面**不生成空壳**。
+
+**待补（下一轮）**：P1-05 工具链测试（`tests/pipeline/toolchain.spec.ts`：DCloud 同发行线/Vue 运行时与类型一致/目标平台闭集/lockfile 与 manifest 一致，先令不一致 fixture 变红）、P1-07 `--frozen-lockfile` 复装实测、P1-03 R 目录文档集（baseline/inventory/contracts/parity/hotfix-sync/deviations）。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）
