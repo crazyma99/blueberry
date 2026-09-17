@@ -7,9 +7,8 @@
 // onGetPhoneNumber 协议校验→runPhoneLogin→缺 profile 弹补齐（:275-333）；
 // submitProfile 乐观合并→PUT→finishProfile（:354-390，profileFromLogin 才 toast 登录成功）；
 // confirmLogout showModal→logout→刷新（:397-414）；菜单 needLogin 守卫＋hapticTap（:449-465）。
-// 菜单范围按 PROFILE.pageRegistry 过滤（2026-09-17 主人拍板：抖音我的页只留「我的喜欢」，AI 试衣 6 页不注册）。
-// ⚠️ 当前生成的 profile（blueberry/mP-weixin，17 页）pageRegistry 含 favorites 与 aiTryOnHistory ⇒ 本 filter
-// 对微信 profile 是空操作（两项都渲染，与旧端一致）；抖音 profile 生成时 pageRegistry 不含 AI 页才真正生效。
+// 菜单范围与未登录引导文案由 PROFILE.features 驱动（2026-09-17 主人拍板：抖音我的页只留「我的喜欢」、
+// mineHintText＝「登录后可收藏」；微信两项全留、文案含 AI 试衣）——单一事实源＝profile 生成期 features。
 // 有意偏差（已声明）：①uni.$on('login-required') 401 事件监听未移植——新端 client 401 返回 AUTH_EXPIRED
 // 错误给调用方，无事件总线（T5 合同），页面侧显式处理；②list-view/list-item（uni-app x 组件）→普通 view 容器；
 // ③aiTryOnHistory 页尚未迁移（AI 批次），「AI试衣」菜单点击在 pages.json 注册前会导航失败；favorites 页已由
@@ -104,19 +103,21 @@ const displayNickname = computed(() => {
   if (userNickname.value === "") return "点击获取用户信息";
   return userNickname.value;
 });
-// 副标题三态（旧端 :38）
+// 副标题三态（旧端 :38）；未登录文案随 Profile（微信「登录后可收藏与体验AI试衣」/抖音「登录后可收藏」）
 const userSub = computed(() => {
-  if (!isLoggedIn.value) return "登录后可收藏与体验AI试衣";
+  if (!isLoggedIn.value) return PROFILE.features.mineHintText;
   return userNickname.value === "" ? "完善头像昵称，获得完整体验" : "欢迎回来，蓝梅旅拍";
 });
 
-// 默认菜单（旧端 :216-221）＋pageRegistry 过滤（抖音只留我的喜欢）
+// 默认菜单（旧端 :216-221）＋Profile 功能块过滤（features.mineMenu：抖音只留 favorites，
+// 2026-09-17 主人拍板；微信两项全留）——单一事实源＝profile 生成期 features，不再用 pageRegistry 推断
 function getDefaultMenuItems(): MenuItem[] {
-  const all: MenuItem[] = [
-    { title: "我的喜欢", linkUrl: "/pages/favorites/index", needLogin: true },
-    { title: "AI试衣", linkUrl: "/pages/aiTryOnHistory/index", needLogin: true, specialFont: true },
+  const all: (MenuItem & { key: string })[] = [
+    { key: "favorites", title: "我的喜欢", linkUrl: "/pages/favorites/index", needLogin: true },
+    { key: "aiTryOnHistory", title: "AI试衣", linkUrl: "/pages/aiTryOnHistory/index", needLogin: true, specialFont: true },
   ];
-  return all.filter((m) => (PROFILE.pageRegistry as readonly string[]).includes(m.linkUrl.slice(1)));
+  const allowed = PROFILE.features.mineMenu as readonly string[];
+  return all.filter((m) => allowed.includes(m.key));
 }
 
 function updateLoginState(): void {
