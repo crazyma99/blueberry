@@ -279,6 +279,16 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 
 **剩余待真机验证**（需主人抖音扫码）：自绘 popup/picker 的 fixed 定位与开合、uni.showToast 原生兜底表现、useDialog 弹窗在抖音端的渲染与回调——工具侧全部就绪，属第 1/4/5 项的真机收口。
 
+
+## 8.13 对话框抖音自绘降级（方案 A 收尾，2026-09-17 · 主人指定秘书自行完成）
+
+- **背景**：主人第三次前真机回执「除了对话框按钮点击没响应其他的都没问题了」；根因＝`wd-dialog.vue:1-12` 内部包裹 wd-popup，按钮处于抖音失效的 fixed 链内。原派收尾子 Agent（`96b3a3d5`）**模型请求失败未产出**（主人确认），改由秘书本 run 内联完成。
+- **修复**：新增 `src/ui/BaseDialog.vue` 双平台门面——对外合同 `confirm(options: {title?, msg?, showCancel?}): Promise<"confirm"|"cancel">` 两平台一致；**抖音分支**＝自绘（fixed 蒙层＋居中卡片＋标题/正文＋底部按钮行，蒙层点击默认不关闭，样式用 tokens，照搬 BasePopup 已真机验证模式）；**非抖音分支**＝保留 wot 链（`<wd-dialog root-portal>` 挂载点＋`useDialog()` 驱动，resolve→confirm／reject→cancel 映射，showCancel 语义由 wot confirm 天然满足）；平台分支键＝`isToutiaoPlatform()`（0 处新增 #ifdef）。
+- **探针页**：`wot-sample.vue` 改挂 `<BaseDialog ref="dialogRef" />`，「对话框」按钮调 `confirm({title, msg, showCancel: true})`，结果显示至 dialogResult。
+- **测试**：ui-contract.spec.ts 新增 4 条（抖音：确认 resolve＋状态复位／取消 resolve＋蒙层不关闭／showCancel=false 单按钮＋连续两次复位；非抖音：useDialog 桩注入链 confirm/cancel 映射）——**合同测试 24→28，全量 110→114**。
+- **验证**：vitest **114/114 exit 0**（9 文件）＋typecheck exit 0＋三平台构建各 exit 0。
+- **真机待验点（第三次扫码）**：抖音对话框弹出形态／确认与取消按钮响应与 Promise 映射（dialogResult 显示）；另复验弹层/Picker/Toast 未回归。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）

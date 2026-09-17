@@ -13,6 +13,7 @@ import BaseField from "../../src/ui/BaseField.vue";
 import BasePopup from "../../src/ui/BasePopup.vue";
 import BasePicker from "../../src/ui/BasePicker.vue";
 import BaseFeedback from "../../src/ui/BaseFeedback.vue";
+import BaseDialog from "../../src/ui/BaseDialog.vue";
 import { setUiPlatformOverride } from "../../src/ui/ui-platform";
 import { useDialog } from "../../src/ui/wot-composables";
 import type { WotDialogApi } from "../../src/ui/wot-composables";
@@ -277,5 +278,64 @@ describe("Dialog：useDialog 函数式驱动（2.3.2 唯一正确通道）", () 
     await w.vm.$nextTick();
     expect(w.find(".stub-wd-dialog").exists()).toBe(false);
     await expect(p).resolves.toBeTruthy();
+  });
+});
+
+
+describe("BaseDialog（对话框双平台门面，方案A收尾 §8.13）", () => {
+  type DialogVm = { confirm: (o?: unknown) => Promise<string> };
+  it("抖音分支：确认按钮 resolve('confirm') 且状态复位", async () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BaseDialog, { global: globalWith });
+    const p = (w.vm as unknown as DialogVm).confirm({ title: "确认操作", msg: "内容", showCancel: true });
+    await w.vm.$nextTick();
+    expect(w.find(".base-dialog-native__box").exists()).toBe(true);
+    expect(w.find(".base-dialog-native__title").text()).toContain("确认操作");
+    await w.find(".base-dialog-native__btn--confirm").trigger("click");
+    await expect(p).resolves.toBe("confirm");
+    await w.vm.$nextTick();
+    expect(w.find(".base-dialog-native__box").exists()).toBe(false);
+  });
+  it("抖音分支：取消按钮 resolve('cancel')；蒙层点击不关闭", async () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BaseDialog, { global: globalWith });
+    const p = (w.vm as unknown as DialogVm).confirm({ msg: "内容" });
+    await w.vm.$nextTick();
+    await w.find(".base-dialog-native__mask").trigger("click");
+    await w.vm.$nextTick();
+    expect(w.find(".base-dialog-native__box").exists()).toBe(true); // 蒙层不关闭
+    await w.find(".base-dialog-native__btn--cancel").trigger("click");
+    await expect(p).resolves.toBe("cancel");
+  });
+  it("抖音分支：showCancel=false 只渲染确认；连续两次调用状态复位", async () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BaseDialog, { global: globalWith });
+    const vm = w.vm as unknown as DialogVm;
+    const p1 = vm.confirm({ msg: "a", showCancel: false });
+    await w.vm.$nextTick();
+    expect(w.find(".base-dialog-native__btn--cancel").exists()).toBe(false);
+    await w.find(".base-dialog-native__btn--confirm").trigger("click");
+    await expect(p1).resolves.toBe("confirm");
+    const p2 = vm.confirm({ msg: "b", showCancel: true });
+    await w.vm.$nextTick();
+    expect(w.find(".base-dialog-native__box").exists()).toBe(true); // 第二次可再弹
+    expect(w.find(".base-dialog-native__btn--cancel").exists()).toBe(true);
+    await w.find(".base-dialog-native__btn--cancel").trigger("click");
+    await expect(p2).resolves.toBe("cancel");
+  });
+  it("非抖音分支：走 useDialog 通道（桩注入链），confirm/cancel 正确映射", async () => {
+    setUiPlatformOverride("mp-weixin");
+    const w = mount(BaseDialog, { global: globalWith });
+    const vm = w.vm as unknown as DialogVm;
+    const p1 = vm.confirm({ title: "t", msg: "m" });
+    await w.vm.$nextTick();
+    const stub = w.findComponent(StubDialog);
+    expect(stub.find(".stub-wd-dialog").exists()).toBe(true); // useDialog 驱动 show
+    await stub.find(".stub-dialog-confirm").trigger("click");
+    await expect(p1).resolves.toBe("confirm");
+    const p2 = vm.confirm({ title: "t2" });
+    await w.vm.$nextTick();
+    await stub.find(".stub-dialog-cancel").trigger("click");
+    await expect(p2).resolves.toBe("cancel");
   });
 });
