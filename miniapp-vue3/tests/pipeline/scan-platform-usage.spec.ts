@@ -41,6 +41,23 @@ describe("P4-12 平台用法扫描规则", () => {
     expect(scanSource("src/platform/uni/transport.ts", "const w = wx; w.request({})")).toEqual([]);
   });
 
+  it("⭐CR 🔴3 回归：同行字符串含 `//` 不得吞掉其后真实调用；globalThis 方括号形式必拦", () => {
+    // 曾漏报：字符串里的 // 把整行其后当真注释
+    expect(scanSource("src/pages/index/index.vue", 'const u = "https://x.com"; tt.login({})')).toContain("tt.login");
+    expect(scanSource("src/pages/index/index.vue", 'const b = "https://api.lanmei66.cloud"; wx.setVisualEffectOnCapture({})')).toContain("wx.setVisualEffectOnCapture");
+    // 第 5 类：globalThis 方括号取值
+    expect(scanSource("src/pages/index/index.vue", 'globalThis["wx"].request({})')).toContain("bypass:bracket-access");
+    expect(scanSource("src/pages/index/index.vue", "const w = globalThis['wx']; w.request({})")).toContain("bypass:bracket-access");
+  });
+
+  it("⭐CR 抓到的真实越界已下沉：`application/haptics.ts` 不再直触平台（`platform/uni/haptics.ts` 承接）", () => {
+    const root = resolve(__dirname, "../..");
+    const app = readFileSync(join(root, "src/application/haptics.ts"), "utf-8");
+    const plat = readFileSync(join(root, "src/platform/uni/haptics.ts"), "utf-8");
+    expect(scanSource("src/application/haptics.ts", app)).toEqual([]); // 本层零平台 API
+    expect(plat).toContain("uni.vibrateShort"); // 平台层承接
+  });
+
   it("UI 类 API（toast/导航/getSystemInfoSync）与注释提及**不算违规**", () => {
     const uiOnly = "uni.showToast({}); uni.navigateTo({url:'/x'}); uni.showLoading({}); uni.hideLoading(); uni.getSystemInfoSync(); uni.switchTab({});";
     expect(scanSource("src/pages/index/index.vue", uiOnly)).toEqual([]);

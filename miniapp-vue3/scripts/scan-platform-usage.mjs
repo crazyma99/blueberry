@@ -8,7 +8,7 @@
 import { readFileSync } from "node:fs";
 import { extname, join } from "node:path";
 
-const SENSITIVE = /\bwx\.[a-zA-Z]\w*|\btt\.[a-zA-Z]\w*|uni\.(request|uploadFile|downloadFile|login|authorize|openSetting|getImageInfo|chooseImage|saveImageToPhotosAlbum|getEnterOptionsSync|requestSubscribeMessage|requestPayment)\b/g;
+const SENSITIVE = /\bwx\.[a-zA-Z]\w*|\btt\.[a-zA-Z]\w*|uni\.(request|uploadFile|downloadFile|login|authorize|openSetting|getImageInfo|chooseImage|saveImageToPhotosAlbum|getEnterOptionsSync|requestSubscribeMessage|requestPayment|vibrateShort|canIUse|getProvider|getUserProfile|createVKSession|setVisualEffectOnCapture)\b/g;
 
 /** 已登记的例外（P4-12：例外必须显式登记并说明理由） */
 export const REGISTERED_EXCEPTIONS = [
@@ -27,13 +27,42 @@ const BYPASS_PATTERNS = [
   { name: "globalThis-access", re: /\bglobalThis\s*\.\s*(wx|uni)\b/g },
   { name: "alias-assignment", re: /=\s*(wx|uni)\b(?![\w.$])/g },
   { name: "destructure", re: /\{[^}]*\}\s*=\s*(wx|uni)\b/g },
-  { name: "bracket-access", re: /\b(wx|uni)\s*\[/g },
+  { name: "bracket-access", re: /\b(wx|uni)\s*\[|\bglobalThis\s*\[\s*["'](wx|uni)["']\s*\]/g },
 ];
 
+/** 去注释（**单遍状态机，字符串感知**）：
+ *  · 只把「注释」替换为空格，**字符串/模板字面量原样保留** —— 既避免字符串里的 `//` 把其后真实代码当注释吞掉
+ *    （CR 🔴3 实测漏报），又保证 `globalThis["wx"]` 这类**方括号取值**仍能被后续规则匹配。
+ *  · 取舍：字符串里逐字写出 `wx.request(` 的极端情形会误报（宁可误报，不可漏报）。 */
 function stripComments(src) {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  let out = "";
+  let i = 0;
+  const n = src.length;
+  let state = "code"; // code | line | block | sq | dq | tpl
+  while (i < n) {
+    const c = src[i];
+    const c2 = src[i + 1];
+    if (state === "code") {
+      if (c === "/" && c2 === "/") { state = "line"; i += 2; continue; }
+      if (c === "/" && c2 === "*") { state = "block"; i += 2; continue; }
+      if (c === "'" || c === '"' || c === "`") { state = c === "'" ? "sq" : c === '"' ? "dq" : "tpl"; out += c; i++; continue; }
+      out += c; i++; continue;
+    }
+    if (state === "line") {
+      if (c === "\n") { state = "code"; out += c; }
+      i++; continue;
+    }
+    if (state === "block") {
+      if (c === "*" && c2 === "/") { state = "code"; i += 2; out += " "; continue; }
+      i++; continue;
+    }
+    // 字符串/模板：原样保留（含转义）
+    if (c === "\\") { out += c + (c2 ?? ""); i += 2; continue; }
+    if ((state === "sq" && c === "'") || (state === "dq" && c === '"') || (state === "tpl" && c === "`")) state = "code";
+    out += c; i++; continue;
+  }
+  return out;
 }
-
 /** 扫描单个文件内容，返回命中的敏感 API 列表 */
 export function scanSource(file, src, exceptions = REGISTERED_EXCEPTIONS) {
   if (ALLOWED_DIRS.some((d) => file.startsWith(d))) return [];
