@@ -289,6 +289,19 @@ Tab：`pages/index/index`、`pages/priceHomePage/index`、`pages/mine/index`。
 - **验证**：vitest **114/114 exit 0**（9 文件）＋typecheck exit 0＋三平台构建各 exit 0。
 - **真机待验点（第三次扫码）**：抖音对话框弹出形态／确认与取消按钮响应与 Promise 映射（dialogResult 显示）；另复验弹层/Picker/Toast 未回归。
 
+
+## 8.14 T5 执行记录（P2-03/07，2026-09-17 第二批）
+
+| 步骤 | 动作 | 结果 |
+|---|---|---|
+| P2-03 AuthCoordinator | `application/auth-coordinator.ts`（`createAuthCoordinator({exchangeIdentity, storage, clock})`）——**并发 waitForLogin 只发起一次换票**、completeLogin 唤醒全部等待者并递增 authRevision 持久化、**cancelLogin 全部 reject（不悬挂）**、**logout 作废旧会话＋清净区＋后续 waitForLogin 重新发起（二次 401 场景）**、可选 timeoutMs 防无限等待、启动兼容读 versioned 存储键（损坏内容安全失败＝视为未登录） | ✅ 5 条行为测试 |
+| P2-07 品牌馆 controller | `application/brand-hub-controller.ts`（`createBrandHubController({loadConfig})`）——解析复用 domain `brandHubEnabled` 单一事实源；**迟到旧 scope 响应不写入**（切品牌治理，phases 行为测试例子两条变体均落地）；**同 scope 在飞去重**（onLoad/onShow 重叠只查一次）；**成功后热恢复必须重查**（不缓存结果）；坏 JSON／loadConfig 拒绝→**隐藏不抛**；**invalidate 作废在飞请求＋复位安全默认**（epoch 治理） | ✅ 6 条行为测试 |
+| 附带修正 | `client.ts` 会话代次判定 `!==` → **`<`**：排队唤醒后新登录代次大于请求代次属正常，仅「会话代次落后于请求代次」判 stale | ✅ http-client 7 条测试保持绿 |
+| ⭐ 实现期自纠 | brand-hub-controller 的 finally 清理原引用自身 promise（TS2448/2454 TDZ 静态违规）→ 改**按 scope 判定清理**（语义等价：被更新 scope 接管时不误清） | ✅ TC=0 |
+| 汇总 | vitest **132/132 exit 0**（12 文件）＋typecheck **exit 0**＋三平台构建各 exit 0 | ✅ |
+
+**T5 剩余**：P2-01 34 wrapper 落 repositories（8 条切片合同已冻结）、P2-04 上传 multipart `photo`、P2-05 重放策略细则落 client 调用侧、P2-06 versioned storage 完整实现（含旧键兼容读）、P2-08 授权按钮 ui-bridge＋协议两页、P2-09 provider 验证、P2-10 独立 CR。
+
 ## 9. G0 验收自查
 
 - [x] 基线可定位（§0，SHA/树/锁哈希齐）

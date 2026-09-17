@@ -72,8 +72,8 @@ export function createHttpClient(deps: {
           },
         };
       }
-      // 会话登录代次与请求代次不符＝请求发起于登出前，按作废处理（P2-03 语义）
-      if (session.value.authRevision !== ctx.authRevision) {
+      // 会话代次落后于请求代次＝会话已被登出/轮换，按作废处理（新登录代次大于请求代次属正常排队唤醒）
+      if (session.value.authRevision < ctx.authRevision) {
         return {
           ok: false,
           error: {
