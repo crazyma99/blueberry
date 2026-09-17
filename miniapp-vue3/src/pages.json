@@ -79,6 +79,15 @@
 			}
 		},
 		{
+			"path": "pages/webview/index",
+			"style": {
+				// #ifdef MP-WEIXIN
+				"navigationStyle": "custom",
+				// #endif
+				"navigationBarTitleText": "详情"
+			}
+		},
+		{
 			"path": "pages/_probe/wot-sample",
 			"style": {
 				"navigationBarTitleText": "Wot 资格样页"
