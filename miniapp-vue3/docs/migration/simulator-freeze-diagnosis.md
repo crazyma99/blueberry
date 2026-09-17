@@ -79,3 +79,34 @@
 - ⚠️ **未触碰** `dist/build/mp-weixin`（主人若仍打开着该项目，重建会触发连续重编译）；**带 `lazyCodeLoading` 的干净产物在 `dist/trial-lazy/mp-weixin`**
 - 说明：`lazyCodeLoading` 只写进 **`mp-weixin`** 段 ⇒ 仅微信产物带该字段（抖音产物 12 页，无此字段且不需要）
 - 实验记录：`usingComponents:false` 试过并**已完全还原**（`git diff src/manifest.json` 干净）；该开关**不消除** `node-modules/@wot-ui` 内联
+
+---
+
+## 7. 【2026-09-17 18:35 主人贴出开发者工具报错】模拟器看门狗：**「模拟器长时间没有响应，请确认你的业务逻辑中是否有复杂运算，或者死循环」**
+
+报文关键信息：`appid: wxb19ad7426dfb8bd4`（＝我们 Profile 注入的微信 AppID ✓）｜`ideVersion: 2.01.2510290`｜**`osType: linux-x64`**｜time 2026-09-17 18:35。
+⇒ 这条是**运行期**看门狗（逻辑层长时间无响应），非编译期；排查方向回到**运行期同步阻塞/死循环**。
+
+### 7.1 运行期再审计（本轮，结论仍为「未发现死循环」）
+| 检查 | 结果 |
+|---|---|
+| `while(true)`／无界同步循环 | **0**；唯一 `for(;;)` 在 `payment-coordinator`，内含 `await sleep` 且有时限（不阻塞主线程） |
+| `watch(` 自改写（无限更新循环） | **0** |
+| 定时器重复启动 | **有防重入**：`aiRecommendLoading.startAnalysis()` 首行即 `stopAll()`（清计时器＋递增代次）；`aiTryOnResult` 在 onHide/onUnload 均 `stopPolling()`，onShow 仅按任务态恢复 |
+| 最大 `v-for` | 24（结果页水印） |
+| 最重同步运算 | 照片质量检测（≤256px 降采样，≈6.5 万像素）——**仅在选图后**，且已加 **6s 超时** |
+| 潜在慢渲染 | 首页店铺封面已加 `lazy-load`（deviations #12）；列表页多数已带 |
+
+### 7.2 ⚠️ 环境侧高度可疑：**Linux 上的开发者工具**
+`osType: linux-x64`——**微信官方开发者工具只提供 Windows/macOS**，Linux 上通常为 wine／社区移植版，**模拟器无响应是其常见问题**（与本仓代码无关的场景极多）。
+**建议对照**：①同一台机器打开**旧端产物**（`~/blueberry/dist/build/mp-weixin`）看是否同样「长时间无响应」；②改用「**真机调试**」（扫码在手机微信里跑）绕开模拟器；③若条件允许，换 Windows/macOS 机器开同一产物。
+
+### 7.3 三级对照产物（本轮已构建，供**逐级二分**）
+| 级别 | 目录 | 页数 | 体积 | 用途 |
+|---|---|---|---|---|
+| ① 最小 | `dist/trial-min/mp-weixin` | **2**（首页＋我的，含 tabBar） | 1.3M | 若此包**也**无响应 ⇒ 工具/机器/环境侧（与页面代码无关） |
+| ② 无 AI | `dist/trial-noai/mp-weixin` | **11**（公开路由，**无 AI 页与探针页**） | 1.6M | 若 ①正常、②无响应 ⇒ 问题在公开页；②正常 ⇒ 指向 AI 页 |
+| ③ 全量 | `dist/trial-lazy/mp-weixin` | **18**（含 AI 六页＋探针，带 `lazyCodeLoading`） | 2.4M | 若 ③无响应而①②正常 ⇒ **AI 页/T9b 链路**（含定时器、VK、canvas、支付协调器） |
+
+**测试顺序**：① → ② → ③，每级**强退工具 → 清缓存 → 打开该目录 → 只点一次编译**，记录「哪一级开始无响应」。
+> 构建方式（未触碰 `dist/build/mp-weixin`）：临时替换 `src/pages.json` 后用 `UNI_OUTPUT_DIR=dist/trial-*/mp-weixin npx uni build -p mp-weixin`，**构建后已用 `git checkout` 还原**（`git diff src/pages.json` 为空）。
