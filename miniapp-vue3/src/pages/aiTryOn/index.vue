@@ -22,12 +22,14 @@ import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
+import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
 import { createCaptureGuard, requestTaskNotify } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
+import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
 import { createVersionedStorage } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
@@ -63,7 +65,13 @@ const uniStorage = createUniStorage();
 const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });
 const userStore = createUserInfoStore({ backend: uniStorage });
 const authCoordinator = createAuthCoordinator({
-  exchangeIdentity: async () => ({ ok: false, reason: "wx-login-pending-T7" }),
+  exchangeIdentity: createSilentIdentityExchange({
+    // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
+    getWxAuth: () => wxAuth,
+    loginCode: createUniLoginCode(),
+    platform,
+    profileKey: PROFILE.profileKey,
+  }),
   storage: uniStorage,
   clock: systemClock,
 });

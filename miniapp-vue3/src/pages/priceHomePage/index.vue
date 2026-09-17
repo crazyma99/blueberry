@@ -19,10 +19,13 @@ import { systemClock } from "../../ports/clock";
 import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
+import { createUniLoginCode } from "../../platform/uni/login";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
+import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
 import { createVersionedStorage } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
+import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import { createShopRepository, type ShopBrief } from "../../infrastructure/repositories/shops";
 import { cosThumb } from "../../application/image";
 import { syncTabBarSelected } from "../../application/tabbar";
@@ -51,11 +54,18 @@ const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
 const uniStorage = createUniStorage();
 const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });
 const authCoordinator = createAuthCoordinator({
-  exchangeIdentity: async () => ({ ok: false, reason: "wx-login-pending-T7" }),
+  exchangeIdentity: createSilentIdentityExchange({
+    // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
+    getWxAuth: () => wxAuth,
+    loginCode: createUniLoginCode(),
+    platform,
+    profileKey: PROFILE.profileKey,
+  }),
   storage: uniStorage,
   clock: systemClock,
 });
 const client = createHttpClient({ transport, authCoordinator });
+const wxAuth = createWxAuthRepository({ client });
 const shopRepo = createShopRepository({ client });
 // P2-21：服务保障/联系我们＋页脚内容经用例取数（组件纯 props，不再 mounted 自请求）
 const pageContent = createPageConfigContent({

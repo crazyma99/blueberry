@@ -37,12 +37,15 @@ import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
+import { createUniLoginCode } from "../../platform/uni/login";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
+import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
 import { createVersionedStorage } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
+import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import { createAiRepository } from "../../infrastructure/repositories/ai";
 import { createAiResultRepository, type AiResultTask } from "../../infrastructure/repositories/ai-result";
 import { createCreditRepository } from "../../infrastructure/repositories/credits";
@@ -80,11 +83,18 @@ const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
 const uniStorage = createUniStorage();
 const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });
 const authCoordinator = createAuthCoordinator({
-  exchangeIdentity: async () => ({ ok: false, reason: "wx-login-pending-T7" }),
+  exchangeIdentity: createSilentIdentityExchange({
+    // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
+    getWxAuth: () => wxAuth,
+    loginCode: createUniLoginCode(),
+    platform,
+    profileKey: PROFILE.profileKey,
+  }),
   storage: uniStorage,
   clock: systemClock,
 });
 const client = createHttpClient({ transport, authCoordinator });
+const wxAuth = createWxAuthRepository({ client });
 const aiRepo = createAiRepository({ client });
 const aiResultRepo = createAiResultRepository({ client });
 const creditRepo = createCreditRepository({ client });

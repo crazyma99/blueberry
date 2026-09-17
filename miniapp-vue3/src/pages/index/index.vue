@@ -14,11 +14,14 @@ import { systemClock } from "../../ports/clock";
 import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
+import { createUniLoginCode } from "../../platform/uni/login";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
+import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createBrandHubGate } from "../../application/brand-hub-gate";
 import { createContextFactory } from "../../application/request-context";
 import { createVersionedStorage } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
+import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import { createCarouselRepository, type CarouselItem } from "../../infrastructure/repositories/carousels";
 import { createShopRepository } from "../../infrastructure/repositories/shops";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
@@ -48,11 +51,18 @@ const uniStorage = createUniStorage();
 const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });
 const authCoordinator = createAuthCoordinator({
   // 微信登录换票链路随 T7 登录页接入（P2-08 授权桥已就位）；占位不假装成功
-  exchangeIdentity: async () => ({ ok: false, reason: "wx-login-pending-T7" }),
+  exchangeIdentity: createSilentIdentityExchange({
+    // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
+    getWxAuth: () => wxAuth,
+    loginCode: createUniLoginCode(),
+    platform,
+    profileKey: PROFILE.profileKey,
+  }),
   storage: uniStorage,
   clock: systemClock,
 });
 const client = createHttpClient({ transport, authCoordinator });
+const wxAuth = createWxAuthRepository({ client });
 const brandHub = createBrandHubGate({
   // ⭐ P2-20：与品牌馆页自守卫共用同一 page-config 仓储（旧端 pageConfig.uts 公共工具同义）——
   // 入口显隐与页内自守卫不得各写一套 /api/page-config 解析
