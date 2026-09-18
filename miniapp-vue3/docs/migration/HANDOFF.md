@@ -40,7 +40,7 @@
 | 待验 | 清单 | 谁做 |
 |---|---|---|
 | `P3-11` 保存/买断、`P3-15` 纵切、`P3-13` 分享三分支、T9b 同步扣费、`P0-11` 基准 | **`device-acceptance-checklist.md`**（逐条「操作步骤／预期结果／记录项」，照做即可） | **主人或测试同学** |
-| 抖音真机（`P4-14`） | 需先解决 **AppID 占位**（真机出码必须走 `build-target` 管线） | 主人提供 AppID |
+| 抖音真机（`P4-14`） | ~~需先解决 **AppID 占位**~~ **AppID 已注入并出包验证（2026-09-18）**；剩 `tma preview` 出码＋主人手机扫码逐项验 | 主人手机＋装有 `tma` 的机器 |
 
 ### 台账（`phases.md` 为唯一来源；**计数入口：`python3` 按 Phase 段统计 `- [x]`**）
 
@@ -63,7 +63,7 @@
 
 ### 外部前置（需主人/后端/运营）
 1. `P0-12`／`P4-01` 书面口径（跨平台账号·手机号·余额·买断能否共用；不确定则保持 provider 隔离）
-2. 各平台 **AppID**/权限/类目/支付资格证据（抖音现为 `testAppId` 占位）
+2. 各平台 **AppID**/权限/类目/支付资格证据（~~抖音现为 `testAppId` 占位~~ **抖音真实 AppID `ttd6aba01648cc1bf701` 已于 2026-09-18 由主人提供并写入 `profiles/blueberry/project.env`，build-target 实测出包 verify 全绿**；仍缺类目/支付资格证据）
 3. 各平台后台**合法域名**（request/upload/download、H5 CORS、COS 权限）（`P4-06`）
 
 ## 5. 踩坑留痕（**务必先读，能省数小时**）
@@ -76,11 +76,12 @@
 6. **AI 页注册**：`pages.json` 里只加进**既有 `#ifdef MP-WEIXIN` 块**，勿新增第二个块（抖音不注册 AI 六页）。
 7. **扣费类接口**（recharge／redeem／submitTryOn／recommend／download／wx.login）一律 `replayPolicy:"never"`；**等待页不得用重复 POST 当轮询**。
 8. **子代理易空转**：宽任务（多页）常多轮无产出；**窄任务（单页、限时、先写后读）成功率更高**，且宽任务超时后应 `interrupt_agent` 再窄派。
-
-## 6. 纪律（不可让步）
-
-开发 → **单测** → **独立 CR** → **三平台构建**，逐任务一笔提交、**路径精确暂存**、**绝不混单**、**绝不 `--no-verify`**；偏差必须写进文件头注释＋`deviations.md`；**未完成不得标记完成**（台账以证据为准）。
 9. **写文件的脚本必须「先构造字符串、再写」——且优先写临时文件再替换**（2026-09-17 真实事故）：`open(path,'w').write(list)` 会在
    `write()` 抛错前**先把文件截断**，紧接着的 `git add` 会把「空文件」提交成大规模误删（本项目曾因此提交出「phases.md −836 行」）。
    正确姿势：`text = '\n'.join(lines)` → 必要时 `write(tmp)` → `os.replace(tmp, path)`；**提交前先 `git diff --stat` 复核增删行数**。
    事故处置留痕见 commit `1b4ad0c`（从历史恢复＋差异校验为 1 insert/1 delete）。
+10. **macOS 本机工具链（2026-09-18 实测）**：系统 `pnpm@9.6` 不认 `pnpm-workspace.yaml` 的 `allowBuilds`（报 `packages field missing or empty`），且 `pnpm@11.7` 在 Node v20.20 下起不来（`ERR_UNKNOWN_BUILTIN_MODULE`）⇒ 一律用 **Node v22.22（nvm）＋ pnpm 11.7 shim**（`/tmp/pnpm11-shim/pnpm`，或 `npx pnpm@11.7.0`）；`build-target` 内部调 `pnpm`，跑管线前把 shim 目录放 PATH 最前。
+
+## 6. 纪律（不可让步）
+
+开发 → **单测** → **独立 CR** → **三平台构建**，逐任务一笔提交、**路径精确暂存**、**绝不混单**、**绝不 `--no-verify`**；偏差必须写进文件头注释＋`deviations.md`；**未完成不得标记完成**（台账以证据为准）。

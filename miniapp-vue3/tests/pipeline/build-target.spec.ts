@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, resolve, dirname } from "node:path";
 import {
   validateBuildRequest, allocateWorkDir, applyProfile, profileDigestOf, expectedRoutesForPlatform, stripJsonc,
 } from "../../scripts/build-target.mjs";
@@ -62,7 +62,16 @@ describe("validateBuildRequest（P1-29 闭集＋realpath 隔离；P1-33 新端�
     expect(r.errors.join(" ")).toContain("profileDigest mismatch");
   });
   it("抖音构建缺 MP_TOUTIAO_APPID 拒绝（P1-14 不回落微信）", () => {
-    const r = validateBuildRequest(baseReq({ platform: "mp-toutiao" }), { repoRoot });
+    // 真实 profile 已登记抖音 AppID（2026-09-18 主人提供 ttd6aba01648cc1bf701）；
+    // 本用例改用「剥掉该字段」的临时副本，继续验证「缺字段拒绝、不回落微信 appid」语义。
+    const stripped = readFileSync(profilePath, "utf-8").split("\n").filter((l) => !l.startsWith("MP_TOUTIAO_APPID=")).join("\n");
+    const noAppidPath = join(repoRoot, ".work", "test", "no-tt-appid-" + Math.random().toString(36).slice(2) + ".env");
+    mkdirSync(dirname(noAppidPath), { recursive: true });
+    writeFileSync(noAppidPath, stripped);
+    const r = validateBuildRequest(
+      baseReq({ platform: "mp-toutiao", profilePath: noAppidPath, profileDigest: profileDigestOf(noAppidPath) }),
+      { repoRoot },
+    );
     expect(r.ok).toBe(false);
     expect(r.errors.join(" ")).toContain("MP_TOUTIAO_APPID");
   });

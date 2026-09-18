@@ -55,6 +55,12 @@ describe("validateProfile（P1-14 旧字段对齐＋平台 appid；P1-15 env 语
     expect(r.profile.features.mineMenu).toEqual(["favorites"]);
     expect(r.profile.features.navStyle).toBe("default");
   });
+  it("抖音真实 AppID（tt+18 位 ttd6aba01648cc1bf701，baseline.json accounts 登记值）通过校验", () => {
+    const real = { ...rawA, MP_TOUTIAO_APPID: "ttd6aba01648cc1bf701" };
+    const r = validateProfile(real, { platform: "mp-toutiao", environment: "trial" });
+    expect(r.ok).toBe(true);
+    expect(r.profile.appid).toBe("ttd6aba01648cc1bf701");
+  });
   it("小红书缺 MP_XHS_APPID 拒绝", () => {
     expect(validateProfile(rawA, { platform: "mp-xhs", environment: "release" }).ok).toBe(false);
   });

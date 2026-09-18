@@ -18,7 +18,7 @@
 | AI 页注册 | 产物内 `pages` 无任何 `aiRecommend*`／`aiTryOn*` | ✅ 满足拍板口径 |
 | tabBar | `app.json.tabBar.list` = `index`／`priceHomePage`／`mine`（3 tab） | ✅ |
 | 抖音专用产物 | 含 `app.json`＋`app.js`＋**`app.ttss`**（tt 前缀样式）＋`project.config.json` | ✅ 基本齐 |
-| ⚠️ **AppID 注入** | **绕过管线**直接 `npx uni build -p mp-toutiao` 时产物 `project.config.json.appid` = `testAppId`（占位）；**但 `build-target` 管线已强制**——`validateProfile` 对抖音缺 `MP_TOUTIAO_APPID` 直接拒绝（既有用例「抖音构建缺 MP_TOUTIAO_APPID 拒绝（P1-14 不回落微信）」），且 `manifest.appid` 取自 profile | 🟡 **管线安全、直跑不安全**：真机出码必须走 `build-target`（勿直接 `uni build`） |
+| ⚠️ **AppID 注入** | ~~产物 `project.config.json.appid` = `testAppId`（占位）~~ **2026-09-18 已解决**：主人提供真实 AppID `ttd6aba01648cc1bf701` → 写入 `profiles/blueberry/project.env` 的 `MP_TOUTIAO_APPID`；同步修复 `profile-schema.mjs` 校验正则（实测真实 AppID 为 tt+**18** 位，原 `tt+16` 过严拒绝）＋2 条回归用例。**build-target 全管线实测**：`runId=real-tt-mu739koz`（sourceCommit `0e999b96fc87`）→ verify 全绿（routes:12／appid／forbiddenRoutes:4／appid-non-placeholder），产物 `project.config.json.appid` = 真实值、AI 六页未注册、3 tab、app.js+app.ttss 齐 | ✅ 管线+真实 AppID 已通（真机出码仍需 `tma`，本机未装） |
 | 账号证据记录 | `docs/migration/baseline.json → accounts`（微信/抖音 AppID 与 status） | ✅ 记录在案 |
 | 抖音支付/登录能力 | 本仓**未声明**任何抖音支付/身份能力；`platform/weixin/payments.ts` 对非微信一律 `unsupported`（fail-closed） | ✅ 未越界（符合「零支付改造」） |
 
@@ -43,7 +43,7 @@
 ## 4. 开工前需要主人/外部拍板或准备的三件事
 
 1. **`P0-12`／`P4-01` 书面口径**：默认品牌/商户开关＋跨平台账号·手机号·余额·买断**能否共用**与绑定/解绑规则（不确定则按母方案**保持 provider 隔离**）。
-2. **各平台 AppID/权限/类目/支付资格证据**（`baseline.json` 有记录，但需确认可用于构建注入）：尤其**抖音 AppID**——现在产物是 `testAppId` 占位，无法真机预览。
+2. **各平台 AppID/权限/类目/支付资格证据**（`baseline.json` 有记录，但需确认可用于构建注入）：~~尤其**抖音 AppID**——现在产物是 `testAppId` 占位，无法真机预览~~ **抖音 AppID 已由主人提供并注入（2026-09-18，见 §2 表）**；仍待：类目/支付资格、其他平台 AppID。
 3. **各平台后台合法域名配置**（P4-06）：request/upload/download 域名与 H5 CORS／COS 权限。
 
 ## 5. G3 与 Phase 4 的关系（门禁不变）

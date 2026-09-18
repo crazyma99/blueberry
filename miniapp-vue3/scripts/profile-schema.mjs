@@ -103,7 +103,8 @@ export function validateProfile(raw, target) {
   } else if (platform === "mp-toutiao") {
     appid = raw.MP_TOUTIAO_APPID ?? null;
     if (typeof appid !== "string" || appid.length === 0) errors.push("missing required field: MP_TOUTIAO_APPID");
-    else if (!/^tt[0-9a-zA-Z]{16}$/.test(appid)) errors.push("invalid MP_TOUTIAO_APPID format");
+    // 抖音 AppID 实测为 tt+18 位（真实 appid ttd6aba01648cc1bf701，见 baseline.json accounts），旧假设 tt+16 过严
+    else if (!/^tt[0-9a-zA-Z]{16,18}$/.test(appid)) errors.push("invalid MP_TOUTIAO_APPID format");
   } else if (platform === "mp-xhs") {
     appid = raw.MP_XHS_APPID ?? null;
     if (typeof appid !== "string" || appid.length === 0) errors.push("missing required field: MP_XHS_APPID");
