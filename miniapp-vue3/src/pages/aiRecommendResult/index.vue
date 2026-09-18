@@ -64,7 +64,7 @@ import { createPageConfigRepository } from "../../infrastructure/repositories/pa
 import { cosThumb } from "../../application/image";
 import { normalizeFinalScore, shouldShowScore } from "../../application/ai-recommend-flow";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
-import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
 const detected = detectUiPlatform();
@@ -321,11 +321,8 @@ function safeDecode(value: string): string {
     <!-- 底部占位（旧端 :67） -->
     <view class="bottom-spacer"></view>
 
-    <!-- 底部 Copyright（旧端 :70-73） -->
-    <view class="page-footer">
-      <view class="divide"></view>
-      <view class="bottomdesc"><AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" /></view>
-    </view>
+    <!-- 底部 Copyright（旧端 :70-73；PageFooter 共享组件收敛 page-footer > divide + bottomdesc 块，深色变体） -->
+    <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="bottomdesc-dark" />
   </view>
 </template>
 
@@ -495,19 +492,5 @@ function safeDecode(value: string): string {
 /* 底部（旧端 :317-333 逐值） */
 .bottom-spacer {
   height: 120rpx;
-}
-.page-footer {
-  margin-top: auto;
-}
-.divide {
-  height: 2rpx;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.15);
-}
-.bottomdesc {
-  margin: 32rpx auto; /* 旧 --spacing-lg */
-  font-size: 18rpx; /* 旧 --font-size-caption-md */
-  color: rgba(241, 205, 145, 0.5); /* 旧 --color-primary-50 */
-  font-weight: 400;
 }
 </style>

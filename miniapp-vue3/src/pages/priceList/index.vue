@@ -33,7 +33,7 @@ import {
 } from "../../infrastructure/repositories/packages";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
-import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 
@@ -166,11 +166,8 @@ async function loadPackages(shopId: string): Promise<void> {
           </view>
         </view>
       </view>
-      <view class="divide"></view>
-      <!-- P2-21：AppFooter 接入（旧 :41）——内容经 page-config 用例上提后 props 注入 -->
-      <view class="bottomdesc">
-        <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
-      </view>
+      <!-- 页脚：PageFooter 共享组件（原 :169-173 divide + bottomdesc 块收敛，本页无外层 page-footer 包裹） -->
+      <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" :wrapped="false" />
     </view>
   </view>
 </template>
@@ -286,17 +283,5 @@ async function loadPackages(shopId: string): Promise<void> {
   font-weight: 400;
   color: v-bind("tokens.semantic.colorAction");
   margin-left: 2rpx;
-}
-.divide {
-  height: 2rpx;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.15);
-}
-/* 页脚包裹（旧 :211-216 .bottomdesc：margin 32rpx auto） */
-.bottomdesc {
-  margin: 32rpx auto;
-  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx（App.uvue:131，CR 🟡2 纠错） */
-  font-weight: 400;
-  text-align: center;
 }
 </style>

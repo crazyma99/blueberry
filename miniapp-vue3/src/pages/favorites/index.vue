@@ -41,7 +41,7 @@ import { cosThumb } from "../../application/image";
 import { formatAlbumTitle } from "../../domain/album-title";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
-import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 
@@ -316,13 +316,8 @@ function coverThumb(url: string): string {
       </view>
     </view>
 
-    <view class="page-footer">
-      <view class="divide"></view>
-      <!-- P2-21：AppFooter 接入（旧 :75）——内容经 page-config 用例 props 注入 -->
-      <view class="copyright">
-        <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
-      </view>
-    </view>
+    <!-- 页脚：PageFooter 共享组件（原 :319-325 page-footer > divide + copyright 块收敛；样式随之入组件） -->
+    <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="copyright" />
   </view>
 </template>
 
@@ -335,21 +330,6 @@ function coverThumb(url: string): string {
 }
 .main-content {
   flex: 1;
-}
-.page-footer {
-  margin-top: auto;
-}
-.divide {
-  height: 2rpx;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.15);
-}
-/* 页脚包裹（旧 :418-424 .copyright） */
-.copyright {
-  margin: 32rpx auto;
-  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx（App.uvue:131，CR 🟡2 纠错） */
-  font-weight: 400;
-  text-align: center;
 }
 /* 自定义导航栏内搜索框（旧端 :277-305） */
 .search-bar-wrap {

@@ -74,7 +74,12 @@ import { createHttpClient } from "../../infrastructure/http/client";
 import { createAiRepository } from "../../infrastructure/repositories/ai";
 import { createCreditRepository } from "../../infrastructure/repositories/credits";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
-import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
+import {
+  createPageConfigContent,
+  FOOTER_WAITING_MAIN,
+  FOOTER_WAITING_SUPPORT,
+  type FooterContent,
+} from "../../application/page-config-content";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
 import { createPaymentCoordinator } from "../../application/payment-coordinator";
 import { PayGuard } from "../../domain/payment-state";
@@ -85,7 +90,7 @@ import {
 } from "../../application/ai-recommend-flow";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
-import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
 const detected = detectUiPlatform();
@@ -132,8 +137,7 @@ const pageContent = createPageConfigContent({
 });
 
 // —— 等待态页脚覆盖文案（旧端 :76-81 逐字）——
-const FOOTER_WAITING_MAIN = "内容由 AI 生成，相关图片、文字结果均为 AI 创作，仅供参考";
-const FOOTER_WAITING_SUPPORT = "小程序与AI技术能力由 蓝梅网络 提供支持";
+// FOOTER_WAITING_MAIN/FOOTER_WAITING_SUPPORT 已下沉 application/page-config-content（原与 aiTryOnResult 逐字重复）
 
 /** 页面计时器口径（旧端 :128-132）＝内核 `RECOMMEND_REQUEST_TIMEOUT_MS`(180000ms)/1000 */
 const RECOMMEND_UI_TIMEOUT_SECONDS = 180;
@@ -477,14 +481,10 @@ function redirectTo(url: string): void {
       </view>
     </view>
 
-    <!-- 底部 footer：第一行 AI 生成提示，第二行版权文字（跟随 OPS copyright 配置；旧端 :28-36） -->
-    <view class="page-footer">
-      <view class="divide"></view>
-      <view class="bottomdesc">
-        <!-- 单实例 + 动态 props（旧端 CR 🟡：避免 v-if/v-else 重建组件、重复拉取 OPS 版权配置） -->
-        <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
-      </view>
-    </view>
+    <!-- 底部 footer：第一行 AI 生成提示，第二行版权文字（跟随 OPS copyright 配置；旧端 :28-36；
+         PageFooter 共享组件收敛 page-footer > divide + bottomdesc 块——深色变体 + safe-area 内边距） -->
+    <!-- 单实例 + 动态 props（旧端 CR 🟡：避免 v-if/v-else 重建组件、重复拉取 OPS 版权配置） -->
+    <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="bottomdesc-dark" safe-area />
   </view>
 </template>
 
@@ -559,22 +559,5 @@ function redirectTo(url: string): void {
 .back-btn-text {
   font-size: 28rpx; /* 旧 --font-size-body-plus=28rpx */
   color: rgba(241, 205, 145, 0.9); /* 旧端字面值（金 90%） */
-}
-
-/* 底部（旧端 :379-394 逐值） */
-.page-footer {
-  margin-top: auto;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.divide {
-  height: 2rpx;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.15);
-}
-.bottomdesc {
-  margin: 32rpx auto; /* 旧 --spacing-lg */
-  font-size: 18rpx; /* 旧 --font-size-caption-md */
-  color: rgba(241, 205, 145, 0.5); /* 旧 --color-primary-50 */
-  font-weight: 400;
 }
 </style>

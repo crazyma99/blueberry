@@ -52,7 +52,12 @@ import { createAiRepository } from "../../infrastructure/repositories/ai";
 import { createAiResultRepository, type AiResultTask } from "../../infrastructure/repositories/ai-result";
 import { createCreditRepository } from "../../infrastructure/repositories/credits";
 import { createShopRepository } from "../../infrastructure/repositories/shops";
-import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
+import {
+  createPageConfigContent,
+  FOOTER_WAITING_MAIN,
+  FOOTER_WAITING_SUPPORT,
+  type FooterContent,
+} from "../../application/page-config-content";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
 import { createPaymentCoordinator } from "../../application/payment-coordinator";
 import { PayGuard } from "../../domain/payment-state";
@@ -75,7 +80,7 @@ import {
 } from "../../application/ai-share-routing";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
-import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import LoadingBlock from "../../components/LoadingBlock/LoadingBlock.vue";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue 完全同口径）——
@@ -159,8 +164,7 @@ const footerIdle = ref<FooterContent>({ mainLine: "", supportLine: "" });
 const footerWaiting = ref<FooterContent>({ mainLine: "", supportLine: "" });
 
 // 等待态 footer 文案（旧 :189-194；其余状态走 OPS/Profile 版权链，故两套预取一次，模板按状态取用）
-const FOOTER_WAITING_MAIN = "内容由 AI 生成，相关图片、文字结果均为 AI 创作，仅供参考";
-const FOOTER_WAITING_SUPPORT = "小程序与AI技术能力由 蓝梅网络 提供支持";
+// FOOTER_WAITING_MAIN/FOOTER_WAITING_SUPPORT 已下沉 application/page-config-content（原与 aiRecommendLoading 逐字重复）
 
 // —— computed（旧端 :187-254）——
 const footerLines = computed<FooterContent>(() =>
@@ -919,15 +923,11 @@ async function loadFooterPair(): Promise<void> {
       </view>
     </view>
 
-    <!-- 底部 footer：第一行 AI 生成提示，第二行版权文字（复用版权 footer，跟随 OPS copyright 配置） -->
-    <view class="page-footer">
-      <view class="divide"></view>
-      <view class="bottomdesc">
-        <!-- 等待态（主人更正口径）：第一行 AI 生成提示、第二行技术支持；其余状态保持版权行 + 技术支持。
-             单实例 + 动态 props（CR 🟡：避免 v-if/v-else 重建组件、重复拉取 OPS 版权配置） -->
-        <AppFooter :main-line="footerLines.mainLine" :support-line="footerLines.supportLine" />
-      </view>
-    </view>
+    <!-- 底部 footer：第一行 AI 生成提示，第二行版权文字（复用版权 footer，跟随 OPS copyright 配置；
+         PageFooter 共享组件收敛 page-footer > divide + bottomdesc 块——深色变体 + safe-area 内边距） -->
+    <!-- 等待态（主人更正口径）：第一行 AI 生成提示、第二行技术支持；其余状态保持版权行 + 技术支持。
+         单实例 + 动态 props（CR 🟡：避免 v-if/v-else 重建组件、重复拉取 OPS 版权配置） -->
+    <PageFooter :main-line="footerLines.mainLine" :support-line="footerLines.supportLine" variant="bottomdesc-dark" safe-area />
 
     <!-- 分享准备中 loading（点击分享后生成封面期间展示） -->
     <view v-if="sharePreparing" class="share-preparing-mask">
@@ -1256,23 +1256,7 @@ async function loadFooterPair(): Promise<void> {
   color: rgba(241, 205, 145, 0.9); /* 旧 var(--color-primary) 90% 派生字面值 */
 }
 
-/* 底部（旧 :1302-1318） */
-.page-footer {
-  margin-top: auto;
-  /* CR 🟡 修复：按钮改文档流后，底部仍需避让手机 Home Indicator（原固定条自带 safe-area） */
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.divide {
-  height: 2rpx;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.15);
-}
-.bottomdesc {
-  margin: 32rpx auto; /* 旧 var(--spacing-lg) */
-  font-size: 18rpx; /* 旧 var(--font-size-caption-md)=18rpx */
-  color: rgba(241, 205, 145, 0.5); /* 旧 var(--color-primary-50) */
-  font-weight: 400;
-}
+/* 底部页脚（旧 :1302-1318 .page-footer/.divide/.bottomdesc）已收敛入 PageFooter 共享组件（深色变体 + safe-area） */
 
 /* 分享准备中 loading 遮罩（旧 :1320-1347） */
 .share-preparing-mask {

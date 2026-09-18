@@ -29,7 +29,7 @@ import { formatAlbumTitle } from "../../domain/album-title";
 import { cosThumb } from "../../application/image";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
-import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 import LoadingBlock from "../../components/LoadingBlock/LoadingBlock.vue";
@@ -289,13 +289,8 @@ onMounted(() => {
       </view>
     </template>
 
-    <!-- P2-21：页脚（旧 :184-187 divide＋bottomdesc AppFooter；内容经用例 props 注入） -->
-    <view class="page-footer">
-      <view class="divide"></view>
-      <view class="bottomdesc">
-        <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
-      </view>
-    </view>
+    <!-- 页脚：PageFooter 共享组件（原 :292-298 page-footer > divide + bottomdesc 块收敛；样式随之入组件） -->
+    <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
 
     <BaseFeedback ref="feedbackRef" />
   </view>
@@ -446,20 +441,5 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 16rpx;
-}
-/* P2-21 页脚包裹（旧 demoDetail :184-187） */
-.page-footer {
-  margin-top: auto;
-}
-.divide {
-  height: 2rpx;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.15);
-}
-.bottomdesc {
-  margin: 32rpx auto;
-  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx */
-  font-weight: 400;
-  text-align: center;
 }
 </style>

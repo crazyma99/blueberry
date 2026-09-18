@@ -30,7 +30,7 @@ import { syncTabBarSelected } from "../../application/tabbar";
 import PhotoGrid from "../../components/PhotoGrid/PhotoGrid.vue";
 import type { PhotoGridShop } from "../../components/PhotoGrid/PhotoGrid.vue";
 import ServiceContact from "../../components/ServiceContact/ServiceContact.vue";
-import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import {
   createPageConfigContent,
   type FooterContent,
@@ -246,11 +246,8 @@ onMounted(() => {
         :phone="contact.phone"
         :coop-phone="contact.coopPhone"
       />
-      <view class="page-footer">
-        <view class="beian">
-          <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
-        </view>
-      </view>
+      <!-- 页脚：PageFooter 共享组件（原 :249-253 page-footer > beian 块收敛——beian 变体、无分隔线） -->
+      <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="beian" :with-divide="false" />
 
       <view v-if="vm.error.value !== null" class="home-error">
         <text class="home-error-text">{{ vm.error.value }}</text>
@@ -317,15 +314,5 @@ onMounted(() => {
 .home-error-text {
   font-size: v-bind("tokens.semantic.fontSizeBody");
   color: v-bind("tokens.semantic.colorTextSecondary");
-}
-/* P2-21 页脚包裹（旧 index :110-113 page-footer/beian） */
-.page-footer {
-  margin-top: auto;
-}
-.beian {
-  margin: 40rpx auto 32rpx;
-  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx */
-  font-weight: 400;
-  text-align: center;
 }
 </style>

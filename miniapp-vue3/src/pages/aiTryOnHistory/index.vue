@@ -33,7 +33,7 @@ import { createPageConfigRepository } from "../../infrastructure/repositories/pa
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 import { cosThumb } from "../../application/image";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
-import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
 
 // —— 装配（同 mine/favorites）——
 const detected = detectUiPlatform();
@@ -217,12 +217,8 @@ function pad(n: number): string {
       </view>
     </view>
 
-    <view class="page-footer">
-      <view class="divide"></view>
-      <view class="copyright">
-        <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
-      </view>
-    </view>
+    <!-- 页脚：PageFooter 共享组件（原 :220-225 page-footer > divide + copyright 块收敛；样式随之入组件） -->
+    <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="copyright" />
   </view>
 </template>
 
@@ -235,14 +231,6 @@ function pad(n: number): string {
 }
 .main-content {
   flex: 1;
-}
-.page-footer {
-  margin-top: auto;
-}
-.divide {
-  height: 2rpx;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.15);
 }
 .content {
   padding: 0 8rpx 32rpx; /* 旧 --spacing-lg=32rpx */
@@ -378,12 +366,5 @@ function pad(n: number): string {
   0% { opacity: 0.3; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1.1); }
   100% { opacity: 0.3; transform: scale(0.8); }
-}
-/* 页脚包裹（旧 :337-343） */
-.copyright {
-  margin: 32rpx auto;
-  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx */
-  font-weight: 400;
-  text-align: center;
 }
 </style>

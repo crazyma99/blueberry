@@ -35,7 +35,7 @@ import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseButton from "../../ui/BaseButton.vue";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import ServiceContact from "../../components/ServiceContact/ServiceContact.vue";
-import AppFooter from "../../components/AppFooter/AppFooter.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
 import {
   createPageConfigContent,
@@ -202,9 +202,8 @@ function onDemoClick(idx: number): void {
         :phone="contact.phone"
         :coop-phone="contact.coopPhone"
       />
-      <view class="beian">
-        <AppFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
-      </view>
+      <!-- 页脚：PageFooter 共享组件（原 :205-207 beian 块收敛——beian 变体、无包裹无分隔线） -->
+      <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="beian" :with-divide="false" :wrapped="false" />
       <view v-if="error !== null" class="page-error">
         <text class="page-error-text">{{ error }}</text>
         <BaseButton label="重试" @click="loadShops" />
@@ -249,13 +248,6 @@ function onDemoClick(idx: number): void {
   margin-top: 16rpx;
   font-size: v-bind("tokens.semantic.fontSizeSubTitle");
   color: v-bind("tokens.semantic.colorAction");
-  text-align: center;
-}
-/* 页脚包裹（旧 :107-113 .beian） */
-.beian {
-  margin: 40rpx auto 32rpx;
-  font-size: 18rpx; /* 旧 --font-size-caption-md=18rpx（App.uvue:131，CR 🟡2 纠错） */
-  font-weight: 400;
   text-align: center;
 }
 .page-error {

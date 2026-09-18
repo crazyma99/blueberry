@@ -9,6 +9,10 @@ import type { PageConfigItem } from "../infrastructure/repositories/page-config"
 
 /** 本地兜底（旧端组件 data 内默认值；Profile 未提供者用此值） */
 export const FOOTER_SUPPORT_DEFAULT = "小程序及AI技术能力由 蓝梅网络 提供支持";
+/** AI 等待态页脚覆盖·主行（原 pages/aiTryOnResult :162 与 pages/aiRecommendLoading :135 逐字重复的页面常量，收敛为单一事实源） */
+export const FOOTER_WAITING_MAIN = "内容由 AI 生成，相关图片、文字结果均为 AI 创作，仅供参考";
+/** AI 等待态页脚覆盖·支持行（同源同上） */
+export const FOOTER_WAITING_SUPPORT = "小程序与AI技术能力由 蓝梅网络 提供支持";
 /** 本地兜底（旧端 ServiceContact.uvue:79-88 组件内硬编码默认 8 条；非品牌注入项）——CR 🟡1 补全 */
 export const SERVICE_LIST_DEFAULT: readonly string[] = [
   "一价全包，全程无任何隐形消费",
