@@ -1,7 +1,7 @@
-// P2-08：登录同意门＋原生授权按钮桥＋协议两页（B0 首批页面）。
+// P2-08：原生授权按钮桥＋协议两页（B0 首批页面）。
+// （原 createConsentGate 用例已删：同意门未接线，页面以 loginAgreementChecked 内联实现，见死代码清理）
 import { describe, expect, it } from "vitest";
 import { mount } from "@vue/test-utils";
-import { createConsentGate } from "../../src/application/use-consent";
 import AuthNativeButton from "../../src/platform/ui-bridge/AuthNativeButton.vue";
 import { setUiPlatformOverride } from "../../src/ui/ui-platform";
 import PoliciesUser from "../../src/pages/policies/user.vue";
@@ -9,18 +9,6 @@ import PoliciesPrivacy from "../../src/pages/policies/privacy.vue";
 import { afterEach } from "vitest";
 
 afterEach(() => setUiPlatformOverride(null));
-
-describe("createConsentGate（P2-08 登录同意/拒绝流程）", () => {
-  it("初始未同意阻断；agree 放行；reject 再阻断（旧端 mine:263 语义）", () => {
-    const g = createConsentGate();
-    expect(g.agreed).toBe(false);
-    expect(g.ensure()).toBe(false); // 调用方 toast「请先同意用户协议和隐私政策」
-    g.agree();
-    expect(g.ensure()).toBe(true);
-    g.reject();
-    expect(g.ensure()).toBe(false);
-  });
-});
 
 describe("AuthNativeButton（platform/ui-bridge 原生授权）", () => {
   it("微信 phone：open-type=getPhoneNumber；授权 detail.code → authorized；拒绝 → denied", async () => {

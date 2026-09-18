@@ -15,7 +15,6 @@ import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
-import { systemClock } from "../../ports/clock";
 import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
@@ -52,7 +51,6 @@ const authCoordinator = createAuthCoordinator({
     profileKey: PROFILE.profileKey,
   }),
   storage: uniStorage,
-  clock: systemClock,
 });
 const client = createHttpClient({ transport, authCoordinator });
 const wxAuth = createWxAuthRepository({ client });

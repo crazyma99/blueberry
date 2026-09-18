@@ -4,7 +4,6 @@ import { createAuthCoordinator } from "../../src/application/auth-coordinator";
 import type { Session } from "../../src/infrastructure/http/client";
 import type { RequestContext, Result } from "../../src/ports/context";
 import type { StoragePort } from "../../src/ports/storage";
-import { systemClock } from "../../src/ports/clock";
 
 function memStorage(): StoragePort & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -29,7 +28,7 @@ describe("createAuthCoordinator（P2-03）", () => {
   it("并发 waitForLogin 只发起一次换票；completeLogin 唤醒全部等待者", async () => {
     const d = deferred<Result<Session>>();
     let calls = 0;
-    const co = createAuthCoordinator({ exchangeIdentity: () => { calls++; return d.promise; }, storage: memStorage(), clock: systemClock });
+    const co = createAuthCoordinator({ exchangeIdentity: () => { calls++; return d.promise; }, storage: memStorage() });
     const w1 = co.waitForLogin(ctx());
     const w2 = co.waitForLogin(ctx());
     expect(calls).toBe(1);
@@ -41,7 +40,7 @@ describe("createAuthCoordinator（P2-03）", () => {
   });
   it("cancelLogin → 全部等待者 reject（ok:false）；可再次发起", async () => {
     const d = deferred<Result<Session>>();
-    const co = createAuthCoordinator({ exchangeIdentity: () => d.promise, storage: memStorage(), clock: systemClock });
+    const co = createAuthCoordinator({ exchangeIdentity: () => d.promise, storage: memStorage() });
     const w = co.waitForLogin(ctx());
     co.cancelLogin();
     const r = await w;
@@ -50,7 +49,7 @@ describe("createAuthCoordinator（P2-03）", () => {
   });
   it("换票失败 → 全部等待者失败", async () => {
     const d = deferred<Result<Session>>();
-    const co = createAuthCoordinator({ exchangeIdentity: () => d.promise, storage: memStorage(), clock: systemClock });
+    const co = createAuthCoordinator({ exchangeIdentity: () => d.promise, storage: memStorage() });
     const w = co.waitForLogin(ctx());
     d.resolve({ ok: false, reason: "provider-error" });
     const r = await w;
@@ -62,7 +61,7 @@ describe("createAuthCoordinator（P2-03）", () => {
     const d2 = deferred<Result<Session>>();
     const queue = [d1, d2];
     const storage = memStorage();
-    const co = createAuthCoordinator({ exchangeIdentity: () => { calls++; return queue[calls - 1].promise; }, storage, clock: systemClock });
+    const co = createAuthCoordinator({ exchangeIdentity: () => { calls++; return queue[calls - 1].promise; }, storage });
     const w1 = co.waitForLogin(ctx());
     d1.resolve({ ok: true, value: mkSession(0) });
     const r1 = await w1;
@@ -90,7 +89,6 @@ describe("createAuthCoordinator（P2-03）", () => {
           : Promise.resolve({ ok: true, value: mkSession(0) });
       },
       storage: memStorage(),
-      clock: systemClock,
     });
     const w = co.waitForLogin(ctx());
     const r = await w;
@@ -101,7 +99,7 @@ describe("createAuthCoordinator（P2-03）", () => {
     expect(r2.ok).toBe(true);
   });
   it("超时：不能无限等待（timeoutMs 到点失败）", async () => {
-    const co = createAuthCoordinator({ exchangeIdentity: () => new Promise(() => {}), storage: memStorage(), clock: systemClock });
+    const co = createAuthCoordinator({ exchangeIdentity: () => new Promise(() => {}), storage: memStorage() });
     const r = await co.waitForLogin(ctx(), { timeoutMs: 20 });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe("timeout");

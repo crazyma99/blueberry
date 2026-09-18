@@ -4,7 +4,6 @@
 // Session 为新端内部模型（非后端响应字段伪造）；换票委托 exchangeIdentity（平台 provider）。
 import type { RequestContext, Result } from "../ports/context";
 import type { StoragePort } from "../ports/storage";
-import type { ClockPort } from "../ports/clock";
 import type { Session } from "../infrastructure/http/client";
 
 const SESSION_STORAGE_KEY = "lm.session.v1";
@@ -22,7 +21,6 @@ export interface AuthCoordinator {
 export function createAuthCoordinator(deps: {
   exchangeIdentity: (context: RequestContext) => Promise<Result<Session>>;
   storage: StoragePort;
-  clock: ClockPort;
 }): AuthCoordinator {
   let session: Session | null = null;
   let revision = 0;
@@ -109,7 +107,7 @@ export function createAuthCoordinator(deps: {
       };
       const wrapper = (r: Result<Session>) => finish(r);
       waiters.push(wrapper);
-      // 超时：不能无限等待（clock 仅用于可测性注记；计时用宿主计时器）
+      // 超时：不能无限等待（计时用宿主计时器）
       if (options && typeof options.timeoutMs === "number" && options.timeoutMs > 0) {
         setTimeout(() => finish({ ok: false, reason: "timeout" }), options.timeoutMs);
       }

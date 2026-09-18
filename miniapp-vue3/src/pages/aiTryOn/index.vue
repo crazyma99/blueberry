@@ -17,7 +17,6 @@ import { computed, ref } from "vue";
 import { onHide, onLoad, onShow, onUnload } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { tokens } from "../../generated/tokens";
-import { systemClock } from "../../ports/clock";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
@@ -74,7 +73,6 @@ const authCoordinator = createAuthCoordinator({
     profileKey: PROFILE.profileKey,
   }),
   storage: uniStorage,
-  clock: systemClock,
 });
 const client = createHttpClient({ transport, authCoordinator });
 const wxAuth = createWxAuthRepository({ client });
