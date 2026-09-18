@@ -25,6 +25,7 @@ import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
+import { toast } from "../../platform/uni/feedback";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
@@ -124,12 +125,6 @@ function enterBrand(b: BrandBrief): void {
   ctxFactory.bumpScope(); // 缓存隔离（P2-07/P2-20）
   if (typeof uni !== "undefined" && typeof uni.switchTab === "function") {
     uni.switchTab({ url: "/pages/index/index" });
-  }
-}
-
-function toast(title: string): void {
-  if (typeof uni !== "undefined" && typeof uni.showToast === "function") {
-    uni.showToast({ title, icon: "none" });
   }
 }
 </script>

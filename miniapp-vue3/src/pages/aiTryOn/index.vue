@@ -25,6 +25,7 @@ import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
+import { toast, showLoading, hideLoading, showModal } from "../../platform/uni/feedback";
 import { createCaptureGuard, requestTaskNotify } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
 import { createWeixinPayments } from "../../platform/weixin/payments";
@@ -532,20 +533,6 @@ function safeDecode(v: string): string {
     return decodeURIComponent(v);
   } catch {
     return v;
-  }
-}
-function toast(title: string, icon: "none" | "success" = "none"): void {
-  if (typeof uni !== "undefined" && typeof uni.showToast === "function") uni.showToast({ title, icon });
-}
-function showLoading(title: string): void {
-  if (typeof uni !== "undefined" && typeof uni.showLoading === "function") uni.showLoading({ title, mask: true });
-}
-function hideLoading(): void {
-  if (typeof uni !== "undefined" && typeof uni.hideLoading === "function") uni.hideLoading();
-}
-function showModal(title: string, content: string): void {
-  if (typeof uni !== "undefined" && typeof uni.showModal === "function") {
-    uni.showModal({ title, content, showCancel: false, confirmText: "知道了" });
   }
 }
 </script>

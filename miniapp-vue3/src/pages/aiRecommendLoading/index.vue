@@ -63,6 +63,7 @@ import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
+import { toast } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
@@ -439,9 +440,6 @@ async function loadFooterPair(): Promise<void> {
 // —— 小工具（容器安全：uni 一律 typeof 守卫）——
 function redirectTo(url: string): void {
   if (typeof uni !== "undefined" && typeof uni.redirectTo === "function") uni.redirectTo({ url });
-}
-function toast(title: string, icon: "none" | "success" = "none"): void {
-  if (typeof uni !== "undefined" && typeof uni.showToast === "function") uni.showToast({ title, icon });
 }
 </script>
 

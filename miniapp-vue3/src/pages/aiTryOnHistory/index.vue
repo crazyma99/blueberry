@@ -20,6 +20,7 @@ import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
+import { toast } from "../../platform/uni/feedback";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
@@ -165,12 +166,6 @@ function formatTime(input: string): string {
 }
 function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
-}
-
-function toast(title: string): void {
-  if (typeof uni !== "undefined" && typeof uni.showToast === "function") {
-    uni.showToast({ title, icon: "none" });
-  }
 }
 </script>
 

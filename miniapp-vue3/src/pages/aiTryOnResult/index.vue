@@ -39,6 +39,7 @@ import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createAlbumSaver } from "../../platform/uni/album-save";
+import { toast, showLoading, hideLoading, showModal } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
@@ -778,22 +779,6 @@ async function loadFooterPair(): Promise<void> {
     footerWaiting.value = waiting;
   } catch (err) {
     console.error("[aiTryOnResult] 加载页脚配置失败:", err);
-  }
-}
-
-// —— 小工具（同 aiTryOn 页口径：uni 缺失一律静默，不抛）——
-function toast(title: string, icon: "none" | "success" = "none"): void {
-  if (typeof uni !== "undefined" && typeof uni.showToast === "function") uni.showToast({ title, icon });
-}
-function showLoading(title: string): void {
-  if (typeof uni !== "undefined" && typeof uni.showLoading === "function") uni.showLoading({ title, mask: true });
-}
-function hideLoading(): void {
-  if (typeof uni !== "undefined" && typeof uni.hideLoading === "function") uni.hideLoading();
-}
-function showModal(title: string, content: string): void {
-  if (typeof uni !== "undefined" && typeof uni.showModal === "function") {
-    uni.showModal({ title, content, showCancel: false, confirmText: "知道了" });
   }
 }
 

@@ -51,6 +51,7 @@ import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
+import { navigateTo, toast } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
@@ -251,12 +252,6 @@ function safeDecode(value: string): string {
   } catch {
     return value;
   }
-}
-function navigateTo(url: string): void {
-  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") uni.navigateTo({ url });
-}
-function toast(title: string): void {
-  if (typeof uni !== "undefined" && typeof uni.showToast === "function") uni.showToast({ title, icon: "none" });
 }
 </script>
 

@@ -26,6 +26,7 @@ import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
+import { toast, showLoading, hideLoading } from "../../platform/uni/feedback";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
@@ -369,22 +370,6 @@ function handleMenuClick(item: MenuItem): void {
     navigateToUrl(item.linkUrl);
   } else {
     toast("功能开发中");
-  }
-}
-
-function toast(title: string, icon: "none" | "success" = "none"): void {
-  if (typeof uni !== "undefined" && typeof uni.showToast === "function") {
-    uni.showToast({ title, icon });
-  }
-}
-function showLoading(title: string): void {
-  if (typeof uni !== "undefined" && typeof uni.showLoading === "function") {
-    uni.showLoading({ title, mask: true });
-  }
-}
-function hideLoading(): void {
-  if (typeof uni !== "undefined" && typeof uni.hideLoading === "function") {
-    uni.hideLoading();
   }
 }
 </script>

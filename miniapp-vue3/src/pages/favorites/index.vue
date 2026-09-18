@@ -25,6 +25,7 @@ import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
+import { toast } from "../../platform/uni/feedback";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
@@ -248,12 +249,6 @@ function handleItemClick(item: FavoriteAlbum): void {
 
 function coverThumb(url: string): string {
   return cosThumb(url, 600);
-}
-
-function toast(title: string): void {
-  if (typeof uni !== "undefined" && typeof uni.showToast === "function") {
-    uni.showToast({ title, icon: "none" });
-  }
 }
 </script>
 
