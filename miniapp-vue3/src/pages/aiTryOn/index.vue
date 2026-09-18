@@ -704,7 +704,4 @@ function showModal(title: string, content: string): void {
   font-size: 20rpx; /* 旧 --font-size-body-xs=20rpx */
   color: #ffffff;
 }
-.press-dim {
-  opacity: 0.82;
-}
 </style>

@@ -1319,24 +1319,7 @@ function showModal(title: string, content: string): void {
   font-weight: 400;
 }
 
-/* ===== 旧端 App.uvue 全局类就地还原（新端 App.vue 样式为空，全局样式待后续批次移植；口径同 LoginPopup/ProfilePopup）===== */
-/* 金色主按钮统一类（旧 App.uvue :148-163） */
-.btn-primary {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
-  padding: 26rpx 40rpx;
-  font-size: 32rpx;
-  line-height: 1.2;
-  font-weight: 400;
-  color: v-bind("tokens.semantic.colorActionText"); /* 旧 var(--color-bg) #160F04 */
-  background: linear-gradient(135deg, #ffdf9f 0%, #f1cd91 45%, #d9a75c 100%); /* 旧 var(--gradient-btn-primary) */
-  border: 1rpx solid v-bind("tokens.semantic.colorActionText");
-  border-radius: 999rpx; /* 旧 var(--radius-full) */
-  transition: opacity 0.15s ease-out;
-}
+/* ===== 旧端 App.uvue 全局类就地还原（.btn-primary 已由 App.vue 全局样式提供，2026-09-18 删除本页副本）===== */
 /* 金色次要按钮统一类（旧 App.uvue :166-181） */
 .btn-secondary {
   display: flex;
@@ -1353,8 +1336,5 @@ function showModal(title: string, content: string): void {
   border: 1rpx solid rgba(241, 205, 145, 0.5); /* 旧 var(--color-primary-50) */
   border-radius: 999rpx;
   transition: opacity 0.15s ease-out;
-}
-.press-dim {
-  opacity: 0.82;
 }
 </style>

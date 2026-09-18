@@ -633,10 +633,4 @@ function hideLoading(): void {
 .footer-space {
   height: 48rpx;
 }
-.press-dim {
-  opacity: 0.7;
-}
-.press-row {
-  opacity: 0.7;
-}
 </style>

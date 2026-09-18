@@ -733,8 +733,4 @@ function navigateTo(url: string): void {
   font-size: 20rpx; /* 旧 --font-size-body-xs=20rpx */
   color: #fff;
 }
-/* 旧端 App.uvue 全局类（:139-141 opacity .82）；新端 App.vue 样式为空，按既有组件口径就地还原 */
-.press-dim {
-  opacity: 0.82;
-}
 </style>

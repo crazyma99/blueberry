@@ -391,7 +391,4 @@ function toast(title: string): void {
   font-weight: 400;
   text-align: center;
 }
-.press-dim {
-  opacity: 0.82;
-}
 </style>

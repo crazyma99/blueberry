@@ -20,8 +20,8 @@
 //   --radius-container 24rpx  → 硬编码 24rpx（App.uvue:100）
 //   --font-size-body-sm 22rpx → 硬编码 22rpx（App.uvue:129；**注意** ≠ tokens.semantic.fontSizeCaption=26rpx 档）
 //   其余派生透明度色（旧端即字面 rgba，非变量）：虚线框 .45／底色 .04／氛围光 .16→0／spinner 圈 .3 —— 均按旧端原值保留。
-// hover-class="press-dim"：旧端 App.uvue 全局类（:139-141 opacity:.82），新端 App.vue 样式为空，
-//   按 LoginPopup 既有口径在 scoped 内就地还原（见文末 .press-dim）。
+// hover-class="press-dim"：旧端 App.uvue 全局类（:139-141 opacity:.82），新端由 App.vue 全局样式
+//   提供（与旧端逐字一致），本组件仅引用不定义（2026-09-18 删除迁移期 scoped 临时副本）。
 import { tokens } from "../../generated/tokens";
 
 withDefaults(
@@ -130,10 +130,5 @@ const emit = defineEmits<{
 .picker-mask-text {
   font-size: 22rpx; /* 旧 --font-size-body-sm=22rpx（App.uvue:129） */
   color: #fff;
-}
-
-/* 全局按压反馈（旧 App.uvue :139-141 就地还原，hover-class 引用） */
-.press-dim {
-  opacity: 0.82;
 }
 </style>

@@ -24,8 +24,8 @@
 //   --radius-item 18rpx     → 硬编码 18rpx（App.uvue:98；tokens 无该档位）
 //   --font-size-body 24rpx  → 硬编码 24rpx（App.uvue:128；**注意** ≠ tokens.semantic.fontSizeBody=32rpx 档）
 //   color: #fff             → 硬编码 #fff（旧端即字面色值，非变量）
-// hover-class="press-dim"：旧端 App.uvue 全局类（:139-141 opacity:.82），新端 App.vue 样式为空，
-//   按 LoginPopup 既有口径在 scoped 内就地还原（见文末 .press-dim）。
+// hover-class="press-dim"：旧端 App.uvue 全局类（:139-141 opacity:.82），新端由 App.vue 全局样式
+//   提供（与旧端逐字一致），本组件仅引用不定义（2026-09-18 删除迁移期 scoped 临时副本）。
 import { tokens } from "../../generated/tokens";
 
 withDefaults(
@@ -81,10 +81,5 @@ function onChange(e: { detail: { value: number | string } }): void {
   border-bottom: 3rpx solid v-bind("tokens.semantic.colorAction");
   transform: rotate(45deg) translateY(-3rpx);
   margin-left: 16rpx;
-}
-
-/* 全局按压反馈（旧 App.uvue :139-141 就地还原，hover-class 引用） */
-.press-dim {
-  opacity: 0.82;
 }
 </style>

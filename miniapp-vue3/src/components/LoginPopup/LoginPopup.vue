@@ -18,9 +18,8 @@
 //   --color-popup-card #262626→ 硬编码 #262626（tokens 无该深色卡片档）
 //   --radius-2xl 48rpx / --radius-full 999rpx → 硬编码（tokens.component.popupRadiusRpx=24rpx 为不同档位）
 //   --font-size-body-plus 28rpx / -body-sm 22rpx / -body-xs 20rpx → 硬编码（tokens 无对应档位）
-// 注意：.font-noto-serif / .btn-primary / .press-dim 旧端为 App.uvue 全局类；新端 App.vue 样式为空
-// （全局样式待后续批次移植），故本组件在 scoped 内按旧 App.uvue 原文就地还原 .btn-primary/.press-dim，
-// .font-noto-serif 沿用既有组件约定（PhotoGrid/priceList）仅引用不定义，待全局样式移植后统一生效。
+// 注意：.font-noto-serif / .btn-primary / .press-dim 旧端为 App.uvue 全局类；新端 App.vue 全局样式
+// 已补齐（与旧端逐字一致），本组件仅引用不定义（2026-09-18 删除迁移期 scoped 临时副本）。
 import { tokens } from "../../generated/tokens";
 
 withDefaults(
@@ -187,24 +186,6 @@ const emit = defineEmits<{
   color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) */
 }
 
-/* 金色主按钮统一类（旧 App.uvue :148-163 就地还原；全局样式移植后此处可删） */
-.btn-primary {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
-  padding: 26rpx 40rpx;
-  font-size: 32rpx;
-  line-height: 1.2;
-  font-weight: 400;
-  color: v-bind("tokens.semantic.colorActionText"); /* 旧 var(--color-bg) #160F04 */
-  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%); /* 旧 var(--gradient-btn-primary) */
-  border: 1rpx solid v-bind("tokens.semantic.colorActionText");
-  border-radius: 999rpx; /* 旧 var(--radius-full) */
-  transition: opacity 0.15s ease-out;
-}
-
 /* 一键登录 */
 .login-btn {
   width: 100%;
@@ -213,11 +194,6 @@ const emit = defineEmits<{
 }
 .login-btn::after {
   border: none;
-}
-
-/* 全局按压反馈（旧 App.uvue :139-141 就地还原，hover-class 引用） */
-.press-dim {
-  opacity: 0.82;
 }
 
 /* 暂不登陆 */

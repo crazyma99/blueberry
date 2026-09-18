@@ -231,24 +231,6 @@ function onNicknameInput(e: unknown): void {
   color: rgba(255, 255, 255, 0.35);
 }
 
-/* 金色主按钮统一类（旧 App.uvue :148-163 就地还原；全局样式移植后此处可删） */
-.btn-primary {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
-  padding: 26rpx 40rpx;
-  font-size: 32rpx;
-  line-height: 1.2;
-  font-weight: 400;
-  color: v-bind("tokens.semantic.colorActionText"); /* 旧 var(--color-bg) #160F04 */
-  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%); /* 旧 var(--gradient-btn-primary) */
-  border: 1rpx solid v-bind("tokens.semantic.colorActionText");
-  border-radius: 999rpx; /* 旧 var(--radius-full) */
-  transition: opacity 0.15s ease-out;
-}
-
 /* 确认 + 跳过 */
 .confirm-btn {
   width: 100%;
@@ -264,10 +246,5 @@ function onNicknameInput(e: unknown): void {
   font-size: 22rpx; /* 旧 var(--font-size-body-sm) 22rpx */
   color: rgba(255, 255, 255, 0.4);
   transition: opacity 0.15s ease-out;
-}
-
-/* 全局按压反馈（旧 App.uvue :139-141 就地还原，hover-class 引用） */
-.press-dim {
-  opacity: 0.82;
 }
 </style>

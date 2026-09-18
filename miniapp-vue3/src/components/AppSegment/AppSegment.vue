@@ -19,8 +19,8 @@
 //   --color-bg #160F04     → v-bind("tokens.semantic.colorActionText")（同值 #160F04；此处语义＝金色胶囊上的墨色文字，语义相符）
 //   --radius-full 999rpx   → 硬编码 999rpx（App.uvue:106；tokens.component.popupRadiusRpx=24rpx 为不同档位）
 //   --font-size-body 24rpx → 硬编码 24rpx（App.uvue:128；**注意** ≠ tokens.semantic.fontSizeBody=32rpx 档，不可误映射）
-// hover-class="press-dim"：旧端为 App.uvue 全局类（:139-141 opacity:.82），新端 App.vue 样式为空
-//   （全局样式待后续批次），按 LoginPopup 既有口径在 scoped 内就地还原（见文末 .press-dim）。
+// hover-class="press-dim"：旧端为 App.uvue 全局类（:139-141 opacity:.82），新端由 App.vue 全局样式
+//   提供（与旧端逐字一致），本组件仅引用不定义（2026-09-18 删除迁移期 scoped 临时副本）。
 import { tokens } from "../../generated/tokens";
 
 withDefaults(
@@ -85,10 +85,5 @@ function onItemTap(index: number): void {
 .app-segment-text.is-active {
   color: v-bind("tokens.semantic.colorActionText"); /* 旧 --color-bg #160F04 同值 */
   font-weight: 400;
-}
-
-/* 全局按压反馈（旧 App.uvue :139-141 就地还原，hover-class 引用） */
-.press-dim {
-  opacity: 0.82;
 }
 </style>

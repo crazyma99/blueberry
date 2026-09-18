@@ -579,8 +579,4 @@ function toast(title: string, icon: "none" | "success" = "none"): void {
   color: rgba(241, 205, 145, 0.5); /* 旧 --color-primary-50 */
   font-weight: 400;
 }
-/* 旧端 App.uvue 全局类（:139-141 opacity .82）；新端 App.vue 样式为空，按既有组件口径就地还原 */
-.press-dim {
-  opacity: 0.82;
-}
 </style>

@@ -500,7 +500,4 @@ function toast(title: string): void {
   font-size: 24rpx;
   color: rgba(241, 205, 145, 0.4);
 }
-.press-dim {
-  opacity: 0.7;
-}
 </style>

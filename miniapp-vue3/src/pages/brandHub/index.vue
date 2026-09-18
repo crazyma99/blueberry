@@ -312,7 +312,4 @@ function toast(title: string): void {
   /* 旧 rgba(255,255,255,.4) 白底不可读（CR 🟡3）→ 正文次级色 */
   color: v-bind("tokens.semantic.colorTextSecondary");
 }
-.press-dim {
-  opacity: 0.82; /* 旧全局 .press-dim（App.uvue:139-141）；部分既有页用 0.7，全端待统一 */
-}
 </style>
