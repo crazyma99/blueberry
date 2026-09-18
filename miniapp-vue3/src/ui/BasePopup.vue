@@ -36,6 +36,11 @@ function onClose() {
   }, 0);
 }
 
+// wd-popup v-model 回落：仅在回写 false 时收敛到 cancel 统一出口（模板内禁 TS 标注，提为具名方法）
+function onModelValueUpdate(v: boolean): void {
+  if (!v) onClose();
+}
+
 // 运行时平台分支（抖音自绘；测试可经 setUiPlatformOverride 显式覆盖两条分支）
 const useNative = isToutiaoPlatform();
 </script>
@@ -48,7 +53,7 @@ const useNative = isToutiaoPlatform();
     :closable="closable"
     :root-portal="rootPortal"
     @close="onClose"
-    @update:model-value="(v: boolean) => { if (!v) onClose(); }"
+    @update:model-value="onModelValueUpdate"
   >
     <view class="base-popup">
       <text v-if="title" class="base-popup__title">{{ title }}</text>

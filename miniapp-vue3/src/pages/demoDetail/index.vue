@@ -3,7 +3,7 @@
 // 旧端行为事实：列表参数 shopId＋child.query 透传（demoDetail:478-482）；搜索同接口加 keyword（:551-556）；
 // liked 来自批量 getLikeStatus 合并（:613-619）；点赞乐观更新＋seq 守卫＋失败回滚（:660-693，use-like 移植）。
 // 入参：idx=店铺id、from 来源标记（旧端 index:578-582）；缺 idx 安全失败停留空态。
-import { computed, ref, onMounted } from "vue";
+import { computed, ref } from "vue";
 import { onLoad, onReachBottom } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
@@ -198,10 +198,6 @@ onReachBottom(() => {
   const query = currentQuery();
   if (query == null) return;
   void listVM.loadMore(ctxFactory.next(), { shopId: shopId.value, categoryQuery: query });
-});
-
-onMounted(() => {
-  // onLoad 在页面生命周期驱动；组件挂载路径下（测试/异常容器）无入参即停留空态
 });
 </script>
 

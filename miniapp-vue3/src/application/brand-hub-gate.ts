@@ -21,10 +21,10 @@ export interface BrandHubGate extends BrandHubController {
 export function createBrandHubGate(deps: { pageConfig: PageConfigLike }): BrandHubGate {
   const controller = createBrandHubController({
     // 旧端 pageConfig.uts 口径：page-config 数组取 type==='brand_hub' 的 config 字符串；
-    // 缺失/空/失败 → 空串或抛错，controller 统一按隐藏（false）处理
+    // 缺失/空/失败 → 空串，controller 统一按隐藏（false）处理（Result 纪律：不外抛）
     loadConfig: async (context) => {
       const r = await deps.pageConfig.getPageConfig(context);
-      if (!r.ok) throw new Error(r.error.kind);
+      if (!r.ok) return "";
       const comp = r.value.find((c) => c != null && c.type === "brand_hub");
       const cfg = comp != null ? comp.config : null;
       return typeof cfg === "string" ? cfg : "";

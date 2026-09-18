@@ -142,7 +142,7 @@ function onBannerClick(item: CarouselItem): void {
 }
 
 function onShopClick(shop: PhotoGridShop): void {
-  const id = (shop as { id?: unknown }).id;
+  const id = shop.id;
   if (id == null) return;
   if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") {
     uni.navigateTo({ url: "/pages/demoDetail/index?idx=" + String(id) });

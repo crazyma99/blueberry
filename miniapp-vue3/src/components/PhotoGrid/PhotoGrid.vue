@@ -8,6 +8,7 @@ import { computed } from "vue";
 import { tokens } from "../../generated/tokens";
 
 export interface PhotoGridShop {
+  id?: number;
   homeImage?: string;
   displayName?: string;
   displayNameEn?: string;
@@ -33,7 +34,6 @@ const showPlaceholder = computed(() => {
   <view class="demoPhotoContaner">
     <view
       v-for="(shop, index) in shopList"
-      v-if="shopList.length > 0"
       :key="index"
       :class="shopList.length === 1 ? 'shopCard full-width' : 'shopCard'"
       @click="emit('shop-click', shop)"

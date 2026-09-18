@@ -10,7 +10,7 @@
 // 有意偏差（已声明）：①AppFooter 已由 P2-21 接入（旧 :41；内容经 page-config 用例 props 注入，与旧端 mounted 自取数等价）；
 // ②失败静默忠实保留（不引入 index/demoDetail 的内联错误+重试——本页主内容为价目大图，套餐为辅）。
 // ⚠️ 兜底资产 /static/honghe-price.png 在旧端仓库亦不存在（2026-09-17 静态盘点实测，旧端同为死引用），保持同引用不修正。
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
@@ -102,7 +102,9 @@ function getFallbackPriceImage(id: string): string {
   return id === "1" ? "/static/honghe-price.png" : "/static/iconpark/price.svg";
 }
 
-const pkgPrice = computed(() => (p: ShopPackageInfo) => (typeof p.price === "number" || typeof p.price === "string" ? p.price : ""));
+function pkgPrice(p: ShopPackageInfo): number | string {
+  return typeof p.price === "number" || typeof p.price === "string" ? p.price : "";
+}
 
 onLoad((query) => {
   const q = (query ?? {}) as Record<string, unknown>;

@@ -85,7 +85,7 @@ const ctxFactory = createContextFactory({
 });
 
 // —— 页面状态 ——
-type PriceShop = PhotoGridShop & { id?: number; priceImage?: string; shopName?: string };
+type PriceShop = PhotoGridShop & { priceImage?: string; shopName?: string };
 
 const ready = ref(false);
 const shops = ref<ShopBrief[]>([]);
@@ -151,14 +151,14 @@ onShow(() => {
   }
 });
 
-function onShopClick(shop: PhotoGridShop): void {
-  const s = shop as PriceShop;
-  if (s.id == null) return;
+function onShopClick(shop: PriceShop): void {
+  if (shop.id == null) return;
   // 旧端 :74-77 原样拼接（shopName 可含中文，旧端未编码——微信实测可用，保持忠实）；
   // 字段必须用 shopName（旧端 :76 shop.shopName，导航标题专用），不得用 displayName 替代
   if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") {
     uni.navigateTo({
-      url: "/pages/priceList/index?from=banner&idx=" + s.id + "&shopName=" + s.shopName + "&priceImage=" + s.priceImage,
+      url:
+        "/pages/priceList/index?from=banner&idx=" + shop.id + "&shopName=" + shop.shopName + "&priceImage=" + shop.priceImage,
     });
   }
 }

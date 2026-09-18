@@ -8,6 +8,8 @@ import {
   downsampleSize,
   evaluatePhotoCheck,
   laplacianVariance,
+  PHOTO_BLUR_THRESHOLD,
+  PHOTO_MIN_SIDE,
   toGrayscale,
   type PhotoCheckResult,
 } from "../../domain/photo-check";
@@ -92,7 +94,7 @@ function createWeixinPhotoCheckInner(): PhotoCheckPort {
       // ① 分辨率
       const info = await getImageInfo(filePath);
       const { width: w, height: h } = info;
-      if (w > 0 && h > 0 && (w < 480 || h < 480)) {
+      if (w > 0 && h > 0 && (w < PHOTO_MIN_SIDE || h < PHOTO_MIN_SIDE)) {
         return evaluatePhotoCheck({ width: w, height: h, variance: null });
       }
       // ② 模糊（降采样 ≤256px → 灰度 → 拉普拉斯方差）
@@ -104,7 +106,7 @@ function createWeixinPhotoCheckInner(): PhotoCheckPort {
       const imgData = ctx.getImageData(0, 0, dw, dh);
       const gray = toGrayscale(imgData.data, dw * dh);
       const variance = laplacianVariance(gray, dw, dh);
-      if (variance < 100) {
+      if (variance < PHOTO_BLUR_THRESHOLD) {
         return evaluatePhotoCheck({ width: w, height: h, variance });
       }
       // ③④ 人脸检出 / 人数 / 占比（VK 不可用则跳过该组检查）

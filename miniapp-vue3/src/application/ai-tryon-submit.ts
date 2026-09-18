@@ -87,6 +87,7 @@ export function createTryOnSubmitter(deps: {
     if (input.templates.length === 0) return { kind: "toast", message: "暂无可用模板" };
     const current = input.templates[input.currentTemplateIndex];
     if (current == null) return { kind: "toast", message: "请选择模板" };
+    if (typeof current.id !== "number") return { kind: "toast", message: "请选择模板" };
     // 付费模式且已知无剩余次数：直接拉起支付，省一次必败请求（旧端 :578-581）
     if (input.isPaidMode && input.creditBalance <= 0) {
       return { kind: "need-recharge", reason: "no-credits" };
@@ -94,7 +95,7 @@ export function createTryOnSubmitter(deps: {
 
     const shopIdNum = parseInt(input.shopId, 10) || 0;
     const res = await deps.ai.submitTryOnTask(deps.nextContext(), {
-      templateId: current.id as number,
+      templateId: current.id,
       userPhotoFilename: input.uploadedFilename,
       shopId: shopIdNum,
       ...(input.openid !== "" ? { userOpenid: input.openid } : {}),

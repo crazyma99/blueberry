@@ -266,6 +266,11 @@ function onChooseAvatar(e: unknown): void {
   if (url) profileAvatarUrl.value = String(url);
 }
 
+// 昵称输入（模板内禁 TS 标注，提为具名方法；同 aiRecommend/aiTryOn 页 onProfileNicknameInput 写法）
+function onProfileNicknameInput(value: string): void {
+  profileNickname.value = value;
+}
+
 // 提交头像昵称：非空合并＋PUT（旧端 :354-390 乐观写入语义）
 async function submitProfile(): Promise<void> {
   const nickname = (profileNickname.value || "").trim();
@@ -433,7 +438,7 @@ function handleMenuClick(item: MenuItem): void {
       :avatar-url="profileAvatarUrl"
       :nickname="profileNickname"
       @choose-avatar="onChooseAvatar"
-      @update-nickname="(v: string) => { profileNickname = v }"
+      @update-nickname="onProfileNicknameInput"
       @submit="submitProfile"
       @skip="skipProfile"
     />
