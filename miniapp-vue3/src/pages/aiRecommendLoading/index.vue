@@ -91,6 +91,7 @@ import {
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
+import { useFakeProgress } from "../../composables/use-fake-progress";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
 const detected = detectUiPlatform();
@@ -180,35 +181,22 @@ const runner = createRecommendRunner({
 // —— computed（旧端 :74-118）——
 // 页脚两行：等待态走 AI 生成提示/技术支持，其余状态回落 OPS copyright / Profile 版权（旧端 :75-81）
 const footer = computed<FooterContent>(() => (status.value === "processing" ? footerProcessing.value : footerIdle.value));
-// 生成等待伪进度：百分比封顶 99%，完成时 progressDone → 100（旧端 :82-89，10s 走满 99%）
-const progressPercent = computed<number>(() => {
-  if (progressDone.value) return 100;
-  const p = Math.floor((elapsedSeconds.value / 10) * 100);
-  return p > 99 ? 99 : p;
-});
-// 当前步骤下标（旧端 :90-96）
-const currentProgressStep = computed<number>(() => {
-  const p = progressPercent.value;
-  if (p < 20) return 0;
-  if (p < 45) return 1;
-  if (p < 75) return 2;
-  return 3;
-});
-// 四步节点图标（旧端 :97-105 逐字：IconPark 语义图标；已完成节点由组件统一显示白勾）
-const progressIcons: string[] = [
-  "/static/iconpark/face-scan.svg",
-  "/static/iconpark/eyes.svg",
-  "/static/iconpark/plan.svg",
-  "/static/iconpark/list-success.svg",
-];
-// 四步动态文案（推荐版 · 旧端 :106-117 逐字）
-const progressSteps = computed<string[]>(() => {
-  const base = ["分析照片面部细节", "分析五官类型", "生成推荐方案", "生成推荐结果"];
-  const done = ["照片面部细节分析完毕", "五官类型分析完毕", "推荐方案生成完毕", "推荐结果生成完毕"];
-  const cur = currentProgressStep.value;
-  const list: string[] = [];
-  for (let i = 0; i < 4; i++) list.push(i < cur ? done[i] : base[i]);
-  return list;
+// 生成等待伪进度：10s 走满 99%，完成时 progressDone → 100（旧端 :82-117，已抽共享 composable；时长/图标/文案为本页定稿参数）
+const { progressPercent, currentProgressStep, progressIcons, progressSteps } = useFakeProgress(10, {
+  elapsedSeconds,
+  progressDone,
+  // 四步节点图标（旧端 :97-105 逐字：IconPark 语义图标；已完成节点由组件统一显示白勾）
+  icons: [
+    "/static/iconpark/face-scan.svg",
+    "/static/iconpark/eyes.svg",
+    "/static/iconpark/plan.svg",
+    "/static/iconpark/list-success.svg",
+  ],
+  // 四步动态文案（推荐版 · 旧端 :106-117 逐字）
+  steps: {
+    base: ["分析照片面部细节", "分析五官类型", "生成推荐方案", "生成推荐结果"],
+    done: ["照片面部细节分析完毕", "五官类型分析完毕", "推荐方案生成完毕", "推荐结果生成完毕"],
+  },
 });
 
 // —— 生命周期（旧端 :62-73）——

@@ -82,6 +82,7 @@ import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import LoadingBlock from "../../components/LoadingBlock/LoadingBlock.vue";
+import { useFakeProgress } from "../../composables/use-fake-progress";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue 完全同口径）——
 const detected = detectUiPlatform();
@@ -182,35 +183,22 @@ const watermarkText = computed<string>(() =>
     ? `蓝梅AI · ${shopName.value} · AI试衣效果 仅供预览`
     : "蓝梅AI · AI试衣效果 仅供预览",
 );
-// 生成等待伪进度：28s 走满 99%，完成时 progressDone → 100（旧 :212-218）
-const progressPercent = computed<number>(() => {
-  if (progressDone.value) return 100;
-  const p = Math.floor((elapsedSeconds.value / 28) * 100);
-  return p > 99 ? 99 : p;
-});
-// 当前步骤下标（旧 :219-226）
-const currentProgressStep = computed<number>(() => {
-  const p = progressPercent.value;
-  if (p < 20) return 0;
-  if (p < 45) return 1;
-  if (p < 75) return 2;
-  return 3;
-});
-// 四步节点图标（旧 :227-235）
-const progressIcons: string[] = [
-  "/static/iconpark/face-scan.svg",
-  "/static/iconpark/eyes.svg",
-  "/static/iconpark/puzzle.svg",
-  "/static/iconpark/picture.svg",
-];
-// 四步动态文案（旧 :236-247，逐字）
-const progressSteps = computed<string[]>(() => {
-  const base = ["分析照片面部细节", "分析五官类型", "正在匹配面部", "生成试衣图像"];
-  const done = ["照片面部细节分析完毕", "五官类型分析完毕", "面部匹配完成", "试衣图像生成完毕"];
-  const cur = currentProgressStep.value;
-  const list: string[] = [];
-  for (let i = 0; i < 4; i++) list.push(i < cur ? done[i] : base[i]);
-  return list;
+// 生成等待伪进度：28s 走满 99%，完成时 progressDone → 100（旧 :212-247，已抽共享 composable；时长/图标/文案为本页定稿参数）
+const { progressPercent, currentProgressStep, progressIcons, progressSteps } = useFakeProgress(28, {
+  elapsedSeconds,
+  progressDone,
+  // 四步节点图标（旧 :227-235）
+  icons: [
+    "/static/iconpark/face-scan.svg",
+    "/static/iconpark/eyes.svg",
+    "/static/iconpark/puzzle.svg",
+    "/static/iconpark/picture.svg",
+  ],
+  // 四步动态文案（旧 :236-247，逐字）
+  steps: {
+    base: ["分析照片面部细节", "分析五官类型", "正在匹配面部", "生成试衣图像"],
+    done: ["照片面部细节分析完毕", "五官类型分析完毕", "面部匹配完成", "试衣图像生成完毕"],
+  },
 });
 // 单次价格文案（分 → 元，整元去小数；旧 :248-254）
 const priceText = computed<string>(() => {
