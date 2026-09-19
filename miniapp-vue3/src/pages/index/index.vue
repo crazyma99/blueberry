@@ -55,14 +55,14 @@ const authCoordinator = createAuthCoordinator({
   exchangeIdentity: createSilentIdentityExchange({
     // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
     getWxAuth: () => wxAuth,
-    loginCode: createUniLoginCode(),
+    loginCode: createUniLoginCode({ platform }),
     platform,
     profileKey: PROFILE.profileKey,
   }),
   storage: uniStorage,
 });
 const client = createHttpClient({ transport, authCoordinator });
-const wxAuth = createWxAuthRepository({ client });
+const wxAuth = createWxAuthRepository({ client, platform });
 const brandHub = createBrandHubGate({
   // ⭐ P2-20：与品牌馆页自守卫共用同一 page-config 仓储（旧端 pageConfig.uts 公共工具同义）——
   // 入口显隐与页内自守卫不得各写一套 /api/page-config 解析

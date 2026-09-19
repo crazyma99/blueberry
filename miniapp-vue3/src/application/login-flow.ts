@@ -1,7 +1,7 @@
 // P2-18 登录三步骤纯逻辑（旧端 utils/loginFlow.uts 忠实移植）：
-//   1. uni.login({provider:'weixin'}) 拿 wx code（容器守卫）
-//   2. POST /api/wx/login 换 token+userInfo → 完成会话（completeLogin）并保存用户信息
-//   3. POST /api/wx/phone 绑定手机号 → 非空合并本地用户信息；失败不视为整体失败
+//   1. uni.login（provider 按平台分流：微信 weixin／抖音 toutiao）拿 code（容器守卫）
+//   2. POST 换票端点（wx-auth 按平台查表：微信 /api/wx/login／抖音占位 /api/tt/login）换 token+userInfo → 完成会话（completeLogin）并保存用户信息
+//   3. POST 绑手机号端点（/api/wx/phone／占位 /api/tt/phone）→ 非空合并本地用户信息；失败不视为整体失败
 // 旧端纪律（loginFlow.uts:34-67）：不调 showLoading/toast/关弹窗——调用方按页面策略处理 UX；
 // phone 接口失败仅 warn 继续（phoneHasFullProfile=false，调用方通常再弹 profile 弹窗补齐）。
 // ⚠️ 有意偏差（已声明）：旧端登录成功后 flushPendingRequests/flushPendingUploads——新端由
@@ -37,9 +37,10 @@ export function createPhoneLoginFlow(deps: {
 }) {
   async function runPhoneLogin(phoneCode: string): Promise<PhoneLoginResult> {
     try {
-      // step 1: 静默登录拿 wx code（旧端 :36-41；容器无 uni.login 时安全失败）
-      // ⭐P4-12：改经 `LoginCodePort`（`platform/uni/login.ts`）——平台 API 只允许出现在 `src/platform/**`
-      const wxCode = (await (deps.loginCode ?? createUniLoginCode()).request()) ?? "";
+      // step 1: 静默登录拿 code（旧端 :36-41；容器无 uni.login 时安全失败）
+      // ⭐P4-12：改经 `LoginCodePort`（`platform/uni/login.ts`）——平台 API 只允许出现在 `src/platform/**`；
+      // 平台分流：provider 随 deps.platform（微信 weixin／抖音 toutiao）
+      const wxCode = (await (deps.loginCode ?? createUniLoginCode({ platform: deps.platform })).request()) ?? "";
       if (!wxCode) {
         return { ok: false, phoneHasFullProfile: false, errorKind: "login" };
       }

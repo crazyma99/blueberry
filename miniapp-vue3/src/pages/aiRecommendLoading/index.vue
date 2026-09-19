@@ -103,14 +103,14 @@ const authCoordinator = createAuthCoordinator({
   exchangeIdentity: createSilentIdentityExchange({
     // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
     getWxAuth: () => wxAuth,
-    loginCode: createUniLoginCode(),
+    loginCode: createUniLoginCode({ platform }),
     platform,
     profileKey: PROFILE.profileKey,
   }),
   storage: uniStorage,
 });
 const client = createHttpClient({ transport, authCoordinator });
-const wxAuth = createWxAuthRepository({ client });
+const wxAuth = createWxAuthRepository({ client, platform });
 const aiRepo = createAiRepository({ client });
 const creditRepo = createCreditRepository({ client });
 const ctxFactory = createContextFactory({

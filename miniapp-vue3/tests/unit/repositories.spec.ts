@@ -66,9 +66,27 @@ describe("repositories 请求形状（contracts.md 冻结值）", () => {
     await createLikeRepository({ client: f2.client }).toggleLike(ctx, 7);
     expect(f2.seen[0]).toMatchObject({ method: "POST", url: "/api/like", body: { albumId: 7 }, authRequired: true, replayPolicy: "never" });
     const f3 = fakeClient([{ ok: true, value: { token: "t", userInfo: {} } }]);
-    await createWxAuthRepository({ client: f3.client }).login(ctx, { code: "wxcode" });
+    await createWxAuthRepository({ client: f3.client, platform: "mp-weixin" }).login(ctx, { code: "wxcode" });
     expect(f3.seen[0]).toMatchObject({ method: "POST", url: "/api/wx/login", body: { code: "wxcode" }, replayPolicy: "never" });
     expect(f3.seen[0].authRequired).toBe(false);
+  });
+  it("wxAuth 平台分流（2026-09-19 抖音登录接入）：微信 /api/wx/* 定案；抖音 /api/tt/* 占位契约；无契约平台不发请求 fail-closed", async () => {
+    // 抖音：login/bindPhone 走 /api/tt/* 占位契约（待服务端定案核对）
+    const tt = fakeClient([{ ok: true, value: { token: "t", userInfo: {} } }]);
+    const ttAuth = createWxAuthRepository({ client: tt.client, platform: "mp-toutiao" });
+    await ttAuth.login(ctx, { code: "ttcode" });
+    expect(tt.seen[0]).toMatchObject({ method: "POST", url: "/api/tt/login", body: { code: "ttcode" }, authRequired: false, replayPolicy: "never" });
+    await ttAuth.bindPhone(ctx, { code: "p" });
+    expect(tt.seen[1]).toMatchObject({ method: "POST", url: "/api/tt/phone", body: { code: "p" }, authRequired: true, replayPolicy: "never" });
+    // 无契约平台（mp-xhs）：不发请求，直接 fail-closed（UNKNOWN/不可重放）
+    const xhs = fakeClient([{ ok: true, value: {} }]);
+    const xhsAuth = createWxAuthRepository({ client: xhs.client, platform: "mp-xhs" });
+    const r1 = await xhsAuth.login(ctx, { code: "c" });
+    const r2 = await xhsAuth.bindPhone(ctx, { code: "c" });
+    expect(xhs.seen.length).toBe(0);
+    expect(r1.ok).toBe(false);
+    if (!r1.ok) expect(r1.error).toMatchObject({ kind: "UNKNOWN", retryable: false });
+    expect(r2.ok).toBe(false);
   });
   it("⭐收藏红线：getFavoriteList 无 page/size（默认全量）；分页只在 searchAlbums", async () => {
     const f1 = fakeClient([{ ok: true, value: [] }]);
@@ -128,7 +146,7 @@ describe("repositories 响应映射与错误透传", () => {
     const r1 = await createLikeRepository({ client: f1.client }).getLikeStatus(ctx, "1");
     expect(r1).toEqual({ ok: true, value: [{ albumId: 1, liked: true, likeCount: 3 }] });
     const f2 = fakeClient([{ ok: true, value: { token: "tok", userInfo: { userId: "u" } } }]);
-    const r2 = await createWxAuthRepository({ client: f2.client }).login(ctx, { code: "c" });
+    const r2 = await createWxAuthRepository({ client: f2.client, platform: "mp-weixin" }).login(ctx, { code: "c" });
     expect(r2.ok).toBe(true);
     if (r2.ok) expect(r2.value.token).toBe("tok");
   });

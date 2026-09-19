@@ -63,6 +63,33 @@ describe("platform/uni/login（P2-03 取 code）", () => {
     await createUniLoginCode().request();
     expect(seen.provider).toBe("weixin");
   });
+
+  it("provider 按平台分流（2026-09-19 抖音登录接入）：抖音 toutiao；mp-xhs 省略 provider；显式微信不变", async () => {
+    for (const [platform, expected] of [
+      ["mp-toutiao", "toutiao"],
+      ["mp-weixin", "weixin"],
+    ] as const) {
+      let seen: Record<string, unknown> = {};
+      (globalThis as { uni?: unknown }).uni = {
+        login: (o: Record<string, unknown>) => {
+          seen = o;
+          (o.success as (r: unknown) => void)({ code: "C" });
+        },
+      };
+      await createUniLoginCode({ platform }).request();
+      expect(seen.provider).toBe(expected);
+    }
+    // mp-xhs 无 provider 概念：字段省略（不出现在 options 里）
+    let seenXhs: Record<string, unknown> = {};
+    (globalThis as { uni?: unknown }).uni = {
+      login: (o: Record<string, unknown>) => {
+        seenXhs = o;
+        (o.success as (r: unknown) => void)({ code: "C" });
+      },
+    };
+    await createUniLoginCode({ platform: "mp-xhs" }).request();
+    expect("provider" in seenXhs).toBe(false);
+  });
 });
 
 describe("application/silent-login（P2-03 静默换票 · fail-closed）", () => {

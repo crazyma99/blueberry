@@ -57,14 +57,14 @@ const authCoordinator = createAuthCoordinator({
   exchangeIdentity: createSilentIdentityExchange({
     // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
     getWxAuth: () => wxAuth,
-    loginCode: createUniLoginCode(),
+    loginCode: createUniLoginCode({ platform }),
     platform,
     profileKey: PROFILE.profileKey,
   }),
   storage: uniStorage,
 });
 const client = createHttpClient({ transport, authCoordinator });
-const wxAuth = createWxAuthRepository({ client });
+const wxAuth = createWxAuthRepository({ client, platform });
 const shopRepo = createShopRepository({ client });
 // P2-21：服务保障/联系我们＋页脚内容经用例取数（组件纯 props，不再 mounted 自请求）
 const pageContent = createPageConfigContent({
