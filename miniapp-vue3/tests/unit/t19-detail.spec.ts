@@ -39,11 +39,11 @@ describe("pages/targetPhotoDetail 冒烟（mock 生命周期）", () => {
     h.onLoadCalls[h.onLoadCalls.length - 1]({ liked: "true" }); // 缺 idx
     await flush();
     await w.vm.$nextTick();
-    expect(w.find(".sk-wrap").exists()).toBe(true);
+    expect(w.find(".sk-container").exists()).toBe(true);
     h.onLoadCalls[h.onLoadCalls.length - 1]({ idx: "42", type: "1" });
     await flush();
     await w.vm.$nextTick();
-    expect(w.find(".sk-wrap").exists()).toBe(false);
+    expect(w.find(".sk-container").exists()).toBe(false);
     expect(w.text()).toContain("加载失败");
     expect(w.find(".retry-btn").exists()).toBe(true);
   });

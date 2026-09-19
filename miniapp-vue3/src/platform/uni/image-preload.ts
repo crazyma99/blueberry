@@ -18,3 +18,11 @@ export function preloadImage(url: string): Promise<boolean> {
     }
   });
 }
+
+/** 批量预加载（旧端 imageLoader.uts:22-27 `preloadImages` 语义）：任一失败不影响整体；超时即返回不阻塞 */
+export async function preloadImages(urls: string[], timeout = 5000): Promise<void> {
+  if (urls.length === 0) return;
+  const preloadPromise = Promise.all(urls.map((u) => preloadImage(u)));
+  const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, timeout));
+  await Promise.race([preloadPromise, timeoutPromise]);
+}

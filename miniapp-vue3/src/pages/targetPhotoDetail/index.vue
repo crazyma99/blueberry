@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // T6 客片详情页（P2-11 最后一页）：详情图渐进加载（首图原图、其余 750 WebP 缩略，旧端 :68-72）
 // ＋价格/套餐（:46-53）＋点赞（getLikeStatus 单 id 合并 :246-250 ＋ use-like 乐观更新）。
+// 加载态＝骨架屏 1:1 镜像真实布局（旧端 :13-35），且详情+点赞就绪后预加载前 3 张详情图再收起（旧端 :232-237）。
 // 非 shareToken 作品页（P2-11 边界）；BottomActionBar（AI 试衣按钮＋内置版权 footer）已随 2026-09-19 主人反馈补齐
 // ——AI 按钮仅微信渲染（AI 页不进抖音 Profile），版权栏全平台。
 import { computed, ref } from "vue";
@@ -23,9 +24,10 @@ import { createLikeRepository } from "../../infrastructure/repositories/likes";
 import { createLikeToggler, type LikeableItem } from "../../composables/use-like";
 import { parseDetailParams } from "../../application/route-params";
 import { progressivePhotoSrc } from "../../application/image";
+import { preloadImages } from "../../platform/uni/image-preload";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
-import LoadingBlock from "../../components/LoadingBlock/LoadingBlock.vue";
+import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import BottomActionBar from "../../components/BottomActionBar/BottomActionBar.vue";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
@@ -119,6 +121,12 @@ async function init(id: string, type: string): Promise<void> {
   } else {
     likeState.value = { id: Number(id), liked: false, likeCount: rd.value.likeCount ?? 0 };
   }
+  // 预加载前几张详情图（最多前3张，与渲染口径一致：首图原图、其余 750 缩略），就绪后再收起骨架屏（旧端 :232-237）
+  const urls = images.value
+    .slice(0, 3)
+    .map((img, idx) => photoSrc(img.imageUrl, idx))
+    .filter((u) => u !== "");
+  await preloadImages(urls, 2500);
   ready.value = true;
 }
 
@@ -167,8 +175,29 @@ onLoad((options) => {
       </view>
     </CustomNavBar>
 
-    <view v-if="!ready" class="sk-wrap">
-      <LoadingBlock text="加载中…" />
+    <!-- 骨架屏：与真实页面 1:1 镜像（旧端 :13-35 还原）——容器复用本页真实类 .meta/.title-first/.info-row/.info-left/.photo-wrap，
+         骨架块几何按旧端逐值（标题 52%×46rpx／云朵位 122×40rpx／价格 58%×32／套餐 76%×32／收藏圆 56rpx／图 500rpx×2 间距 8rpx） -->
+    <view v-if="!ready" class="sk-container" style="padding: 0;">
+      <view class="meta">
+        <view class="title-first">
+          <SkeletonBlock width="52%" height="46rpx" radius="8rpx" />
+          <SkeletonBlock width="122rpx" height="40rpx" radius="6rpx" />
+        </view>
+        <view style="height: 16rpx;"></view>
+        <view class="info-row">
+          <view class="info-left">
+            <SkeletonBlock width="58%" height="32rpx" radius="6rpx" />
+            <view style="height: 12rpx;"></view>
+            <SkeletonBlock width="76%" height="32rpx" radius="6rpx" />
+          </view>
+          <SkeletonBlock width="56rpx" height="56rpx" radius="50%" />
+        </view>
+      </view>
+      <view class="photo-wrap">
+        <SkeletonBlock height="500rpx" radius="0" />
+        <view style="height: 8rpx;"></view>
+        <SkeletonBlock height="500rpx" radius="0" />
+      </view>
     </view>
 
     <template v-else-if="detail !== null">
@@ -243,9 +272,6 @@ onLoad((options) => {
 .container {
   min-height: 100vh;
   background: $color-page;
-}
-.sk-wrap {
-  padding: 120rpx 0;
 }
 /* 自定义导航栏标题组（旧端 :453-480） */
 .nav-center {
