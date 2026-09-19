@@ -62,7 +62,7 @@ import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
-import { toast } from "../../platform/uni/feedback";
+import { toast, showLoading, hideLoading } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
@@ -125,6 +125,8 @@ const coordinator = createPaymentCoordinator({
   credits: creditRepo,
   payments: createWeixinPayments(),
   gate: new PayGuard(),
+  // 旧端 pollRechargeStatus(:255) 口径还原：进入到账确认轮询挂「确认到账中...」，离开即摘（2026-09-19 主人指示 loading 与原版一致）
+  onPhase: (p) => (p === "confirmingEntitlement" ? showLoading("确认到账中...") : hideLoading()),
 });
 const pageContent = createPageConfigContent({
   pageConfig: createPageConfigRepository({ client }),

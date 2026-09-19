@@ -30,7 +30,7 @@ import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
-import LoadingBlock from "../../components/LoadingBlock/LoadingBlock.vue";
+import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import type { AlbumBrief } from "../../infrastructure/repositories/albums";
 
@@ -234,11 +234,18 @@ onLoad((options) => {
   void init(p.shopId);
 });
 
-onReachBottom(() => {
-  if (!ready.value || searching.value) return;
+// 分页加载（旧端 onReachBottom :357-365 ＋ load-more 点击 :89/:175：浏览/搜索同接口，搜索带 keyword）
+function loadMore(): void {
+  if (!ready.value) return;
+  const params: { shopId: string; categoryQuery?: Record<string, string>; keyword?: string } = { shopId: shopId.value };
   const query = currentQuery();
-  if (query == null) return;
-  void listVM.loadMore(ctxFactory.next(), { shopId: shopId.value, categoryQuery: query });
+  if (query != null) params.categoryQuery = query;
+  if (searching.value && keyword.value.trim() !== "") params.keyword = keyword.value.trim();
+  void listVM.loadMore(ctxFactory.next(), params);
+}
+
+onReachBottom(() => {
+  loadMore();
 });
 </script>
 
@@ -264,8 +271,23 @@ onReachBottom(() => {
       </view>
     </CustomNavBar>
 
+    <!-- 骨架屏（旧端 :22-41 结构还原：AI横幅→分类标题→两级分类胶囊→6 灰格照片位；
+         老版微信首屏加载走骨架屏而非 loading 转圈，2026-09-19 主人指示新版保持一致。
+         胶囊复用真实 .tab-wrap（自带描边圆环+16rpx 间距，与旧端同口径） -->
     <view v-if="!ready" class="sk-wrap">
-      <LoadingBlock text="加载中…" />
+      <SkeletonBlock height="150rpx" radius="16rpx" />
+      <view class="sk-row" style="margin-top: 24rpx">
+        <SkeletonBlock width="42%" height="36rpx" radius="8rpx" />
+      </view>
+      <view class="sk-row" style="margin-top: 16rpx">
+        <view v-for="i in 4" :key="'p' + i" class="tab-wrap"><SkeletonBlock width="150rpx" height="56rpx" radius="28rpx" /></view>
+      </view>
+      <view class="sk-row" style="margin-top: 12rpx">
+        <view v-for="i in 4" :key="'c' + i" class="tab-wrap"><SkeletonBlock width="150rpx" height="56rpx" radius="28rpx" /></view>
+      </view>
+      <view class="sk-row sk-grid">
+        <view v-for="i in 6" :key="'g' + i" class="sk-photo-item"></view>
+      </view>
     </view>
 
     <template v-else>
@@ -338,8 +360,13 @@ onReachBottom(() => {
         </view>
       </view>
 
-      <view v-if="listVM.loading.value" class="list-foot"><LoadingBlock text="" /></view>
-      <view v-else-if="listVM.noMore.value && albums.length > 0" class="list-foot"><text>没有更多了</text></view>
+      <!-- 分页指示（旧端 :89-94/:175-180 还原：文字态「加载更多」可点击／「加载中...」／到底「已经到底了」，非转圈） -->
+      <view v-if="albums.length > 0 && !listVM.noMore.value" class="load-more" @click="loadMore">
+        <text class="load-more-text">{{ listVM.loading.value ? "加载中..." : "加载更多" }}</text>
+      </view>
+      <view v-if="albums.length > 0 && listVM.noMore.value" class="load-more">
+        <text class="load-more-text">已经到底了</text>
+      </view>
       <view v-if="listVM.error.value !== null" class="list-error">
         <text>{{ listVM.error.value }}</text>
         <view class="search-btn" @click="reloadList">重试</view>
@@ -409,8 +436,26 @@ onReachBottom(() => {
   color: $color-action-text;
   font-size: $font-size-caption;
 }
+/* 骨架（旧端 sk-container padding=--spacing-lg 32rpx；sk-row/sk-photo-item 几何同 favorites 同款口径：
+   卡高 482rpx、圆角 8rpx、白 8% 底——旧端全局 .sk-photo-item App.uvue:296-305） */
 .sk-wrap {
-  padding: 120rpx 0;
+  padding: 32rpx;
+}
+.sk-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.sk-grid {
+  flex-wrap: wrap;
+  margin-top: 20rpx;
+}
+.sk-photo-item {
+  width: calc(50% - 16rpx);
+  height: 482rpx;
+  margin: 8rpx;
+  border-radius: 8rpx;
+  background: rgba(255, 255, 255, 0.08);
 }
 .ai-recommend-banner {
   position: relative;
@@ -589,11 +634,14 @@ onReachBottom(() => {
   font-size: 24rpx; /* 旧 var(--font-size-body) */
   color: #F1CD91; /* 旧 var(--color-primary) */
 }
-.list-foot {
-  padding: 24rpx 0;
+/* 分页指示（旧端 :979-986 .load-more/.load-more-text 逐值还原） */
+.load-more {
+  padding: 32rpx; /* 旧 var(--spacing-lg) */
   text-align: center;
-  font-size: $font-size-caption;
-  color: $color-text-muted;
+}
+.load-more-text {
+  font-size: 24rpx; /* 旧 var(--font-size-body) */
+  color: rgba(241, 205, 145, 0.4); /* 旧端字面量（金 40%） */
 }
 .list-error,
 .list-empty {

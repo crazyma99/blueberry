@@ -4,6 +4,8 @@
 //    「需要充值」作为结果返回，由页面调用共享 `payment-coordinator.recharge/resume`（T9a 单一出口）；
 //  · 守卫顺序与提示文案逐字保留（登录 → 上传中 → 未选照片 → 上传失败 → 无模板 → 未选中模板 → 付费前置充值）；
 //  · 成功即扣 1 次（旧端本地 -1，仅付费模式且余额>0 时）；随后跳结果页 taskId＋shopId。
+//  · `onSubmittingChange`（2026-09-19 主人指示 loading 与原版一致）：网络提交在飞期间通知页面挂/摘
+//    「提交中...」loading（旧端 :583/:622 仅在请求区间 showLoading，守卫早退不挂）。
 // 有意偏差（已声明）：`loadCredit` 成功判定＝客户端 Result.ok（兼容 aiface 的 code 0 与 200）；旧端此处**严格 ===200**，
 // 会把 code 0 误判为失败（旧端自身口径不一致），新端按全站口径统一。
 import type { RequestContext } from "../ports/context";
@@ -76,6 +78,8 @@ export async function loadCreditInfo(
 export function createTryOnSubmitter(deps: {
   ai: AiSubmitRepositoryLike;
   nextContext: () => RequestContext;
+  /** 提交请求在飞通知（true=挂「提交中...」／false=摘）；守卫早退不触发（旧端 :583 仅在请求区间 showLoading） */
+  onSubmittingChange?: (active: boolean) => void;
 }) {
   async function submit(input: SubmitInput): Promise<SubmitOutcome> {
     // 守卫顺序与文案逐字（旧端 :539-577）
@@ -94,15 +98,21 @@ export function createTryOnSubmitter(deps: {
     }
 
     const shopIdNum = parseInt(input.shopId, 10) || 0;
-    const res = await deps.ai.submitTryOnTask(deps.nextContext(), {
-      templateId: current.id,
-      userPhotoFilename: input.uploadedFilename,
-      shopId: shopIdNum,
-      ...(input.openid !== "" ? { userOpenid: input.openid } : {}),
-      category: "travel",
-      bodyType: input.bodyTypeText,
-      ageRange: input.ageRange,
-    });
+    deps.onSubmittingChange?.(true);
+    let res: RepoResult<{ task_id: number }>;
+    try {
+      res = await deps.ai.submitTryOnTask(deps.nextContext(), {
+        templateId: current.id,
+        userPhotoFilename: input.uploadedFilename,
+        shopId: shopIdNum,
+        ...(input.openid !== "" ? { userOpenid: input.openid } : {}),
+        category: "travel",
+        bodyType: input.bodyTypeText,
+        ageRange: input.ageRange,
+      });
+    } finally {
+      deps.onSubmittingChange?.(false);
+    }
 
     if (res.ok && res.value != null) {
       // 任务创建成功即扣 1 次（仅付费模式且余额>0 时同步本地角标）

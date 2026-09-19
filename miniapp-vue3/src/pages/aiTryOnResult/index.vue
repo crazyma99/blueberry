@@ -117,6 +117,8 @@ const coordinator = createPaymentCoordinator({
   credits: creditRepo,
   payments: createWeixinPayments(),
   gate: new PayGuard(),
+  // 旧端 pollRechargeStatus(:940) 口径还原：进入到账确认轮询挂「确认到账中...」，离开即摘（2026-09-19 主人指示 loading 与原版一致）
+  onPhase: (p) => (p === "confirmingEntitlement" ? showLoading("确认到账中...") : hideLoading()),
 });
 const pageContent = createPageConfigContent({
   pageConfig: createPageConfigRepository({ client }),

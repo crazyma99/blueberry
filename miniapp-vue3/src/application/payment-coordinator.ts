@@ -72,6 +72,8 @@ export function createPaymentCoordinator(deps: {
   poll?: { intervalMs?: number; timeoutMs?: number };
   /** 支付面板回调兜底超时（面板不回调时不长期持闩；默认 120s，CR 🟡5） */
   payTimeoutMs?: number;
+  /** 阶段变更通知（2026-09-19 主人指示：loading 与原版一致——页面借此在进入 confirmingEntitlement 时挂「确认到账中...」） */
+  onPhase?: (phase: PaymentPhase) => void;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
 }) {
@@ -81,6 +83,11 @@ export function createPaymentCoordinator(deps: {
   const now = deps.now ?? (() => Date.now());
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   let phase: PaymentPhase = "idle";
+  /** 阶段迁移唯一出口：赋值＋通知（onPhase 消费方据此挂/摘 loading） */
+  function setPhase(p: PaymentPhase): void {
+    phase = p;
+    deps.onPhase?.(p);
+  }
   /** operationId → 在飞过程（P3-03：重复点击复用，不创建第二笔订单） */
   const inFlight = new Map<string, Promise<RechargeOutcome>>();
 
@@ -104,19 +111,19 @@ export function createPaymentCoordinator(deps: {
     params: RechargeParams,
     outTradeNo: string,
   ): Promise<RechargeOutcome> {
-    phase = "confirmingEntitlement";
+    setPhase("confirmingEntitlement");
     const startedAt = now();
     for (;;) {
       const st = await deps.credits.getRechargeStatus(context, outTradeNo);
       if (st.ok && st.value.paid) {
         // 面板/订单已 paid ≠ 权益到账：必须再过权益确认（P3-05）
         if (await entitlementOk(context, params)) {
-          phase = "succeeded";
+          setPhase("succeeded");
           return { ok: true, phase, balance: st.value.balance, credits: st.value.credits, outTradeNo };
         }
       }
       if (now() - startedAt >= timeoutMs) {
-        phase = "failed";
+        setPhase("failed");
         // 超时≠订单作废：回传订单号，页面用 resume() 恢复（P3-04）
         return { ok: false, phase, reason: "timeout", outTradeNo };
       }
@@ -131,16 +138,16 @@ export function createPaymentCoordinator(deps: {
       return { ok: false, phase: "idle", reason: "busy" };
     }
     // 上一轮已终结时复位阶段观测值（isTerminalPhase 的唯一生产用途；消费方也用其判终态）
-    if (isTerminalPhase(phase)) phase = "idle";
+    if (isTerminalPhase(phase)) setPhase("idle");
     try {
-      phase = "creatingOrder";
+      setPhase("creatingOrder");
       const order = await deps.credits.createRecharge(context, params);
       if (!order.ok) {
-        phase = "failed";
+        setPhase("failed");
         return { ok: false, phase, reason: "create-order-failed", errorKind: order.error.kind };
       }
 
-      phase = "awaitingUser";
+      setPhase("awaitingUser");
       // 面板回调兜底超时（CR 🟡5）：避免面板既不 success 也不 fail 时长期持闩；超时按 payment-failed 收口
       const pay = await Promise.race([
         deps.payments.requestPayment(order.value),
@@ -150,10 +157,10 @@ export function createPaymentCoordinator(deps: {
       ]);
       if (!pay.ok) {
         if (pay.reason === "cancelled") {
-          phase = "cancelled";
+          setPhase("cancelled");
           return { ok: false, phase, reason: "cancelled", outTradeNo: order.value.outTradeNo };
         }
-        phase = "failed";
+        setPhase("failed");
         return {
           ok: false,
           phase,
@@ -165,7 +172,7 @@ export function createPaymentCoordinator(deps: {
       return await confirm(context, params, order.value.outTradeNo);
     } catch (err) {
       console.error("[payment] 支付流程异常:", err);
-      phase = "failed";
+      setPhase("failed");
       return { ok: false, phase, reason: "payment-failed", errorKind: "unknown" };
     } finally {
       deps.gate.end(); // ✅ 终态（含异常路径）一律释放前端门闩
@@ -195,7 +202,7 @@ export function createPaymentCoordinator(deps: {
       return await confirm(context, params, params.outTradeNo);
     } catch (err) {
       console.error("[payment] resume 异常:", err);
-      phase = "failed";
+      setPhase("failed");
       return { ok: false, phase, reason: "payment-failed", errorKind: "unknown", outTradeNo: params.outTradeNo };
     } finally {
       deps.gate.end();

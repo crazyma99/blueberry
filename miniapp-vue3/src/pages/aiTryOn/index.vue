@@ -106,11 +106,18 @@ const uploader = createAiPhotoUploader({
 });
 const photoCheck = createWeixinPhotoCheck();
 const captureGuard = createCaptureGuard();
-const submitter = createTryOnSubmitter({ ai: aiRepo, nextContext: () => ctxFactory.next() });
+// 旧端 :583/:622：仅提交请求在飞区间挂「提交中...」（守卫早退不挂）
+const submitter = createTryOnSubmitter({
+  ai: aiRepo,
+  nextContext: () => ctxFactory.next(),
+  onSubmittingChange: (active) => (active ? showLoading("提交中...") : hideLoading()),
+});
 const coordinator = createPaymentCoordinator({
   credits: creditRepo,
   payments: createWeixinPayments(),
   gate: new PayGuard(),
+  // 旧端 pollRechargeStatus(:698) 口径还原：进入到账确认轮询挂「确认到账中...」，离开即摘（2026-09-19 主人指示 loading 与原版一致）
+  onPhase: (p) => (p === "confirmingEntitlement" ? showLoading("确认到账中...") : hideLoading()),
 });
 const pageContent = createPageConfigContent({
   pageConfig: createPageConfigRepository({ client }),
@@ -410,7 +417,7 @@ async function refreshCreditInfo(): Promise<void> {
 async function handleRecharge(): Promise<void> {
   if (isPaying.value) return;
   isPaying.value = true;
-  showLoading("发起支付...");
+  // 旧端 handleRecharge(:644-692)：下单/拉起面板期间无 loading；「确认到账中...」由 coordinator onPhase 钩子挂载
   try {
     const shopIdNum = parseInt(shopId.value, 10) || 0;
     const out = await coordinator.recharge(ctxFactory.next(), {
@@ -439,7 +446,7 @@ async function handleRecharge(): Promise<void> {
     }
     toast("支付失败，请重试");
   } finally {
-    hideLoading();
+    // loading 已由 onPhase 钩子在终态摘除（confirmingEntitlement→succeeded/failed/cancelled 必经 setPhase）
     isPaying.value = false;
   }
 }
