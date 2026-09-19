@@ -28,7 +28,7 @@
 
 ## 3. 已完成（可放心依赖的底座）
 
-- **T5／T6／T7 全绿**：HTTP client（`X-App-Code` 恒带、`X-Brand-Id` 仅品牌作用域、`replayPolicy` 默认 `never`）、versioned storage（旧键兼容迁移）、14 个仓储、11 条公开路由页、native tabBar 适配
+- **T5／T6／T7 全绿**：HTTP client（`X-App-Code` 恒带、`X-Brand-Id` 有品牌上下文即恒带——2026-09-19 对齐旧端 http.uts:122 全请求口径，原「仅品牌作用域」brandScoped 开关因无仓储使用已移除、`replayPolicy` 默认 `never`）、versioned storage（旧键兼容迁移）、14 个仓储、11 条公开路由页、native tabBar 适配
 - **P2-01～P2-09 全勾**（含 P2-03 静默换票：`platform/uni/login.ts`＋`application/silent-login.ts`，11 页零 stub）
 - **T9a 共享支付**（P3-01～06 勾选）：`payment-coordinator`（`recharge`／`resume`，‘超时≠作废’）＋`credits` 四端点＋`platform/weixin/payments`（fail-closed）
 - **T8 AI 试衣主体**：`aiTryOn`／`aiTryOnResult`／`aiTryOnHistory` 三页（1409/196/344 级）＋`ai-recommend-flow` 之外的全套适配（上传端口、照片质量管线、VK 人脸、截屏保护、订阅消息、分享 JPG 缩略、图片预热）＋`GenerationProgress` 等组件（**组件台账 14/15**）

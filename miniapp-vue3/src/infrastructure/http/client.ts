@@ -1,6 +1,6 @@
 // T5（P2-01/02/05）：HTTP 客户端。职责——发起时捕获 RequestContext 快照、注入
-// Bearer / X-App-Code / 可选 X-Brand-Id（默认品牌不硬塞）、业务信封解码（0/200 兼容）、
-// 业务码与传输失败统一映射为 AppError、重放策略透传。
+// Bearer / X-App-Code / X-Brand-Id（旧端 http.uts:122 口径：有品牌上下文即恒带，空则不带）、
+// 业务信封解码（0/200 兼容）、业务码与传输失败统一映射为 AppError、重放策略透传。
 // 合同（phases P2）：createHttpClient({transport, authCoordinator}) -> {request(input)}
 import type { Environment, Platform, RequestContext, Result } from "../../ports/context";
 import type { HttpMethod, HttpPort, HttpResponse } from "../../ports/http";
@@ -27,8 +27,6 @@ export interface ClientRequestInput {
   body?: unknown;
   /** 需要登录：注入 Bearer；登录失败/取消即返回 AUTH_EXPIRED/CANCELLED，不发请求 */
   authRequired?: boolean;
-  /** 品牌作用域请求才带 X-Brand-Id（P2-02：默认品牌不硬塞所有数据请求） */
-  brandScoped?: boolean;
   timeoutMs?: number;
   replayPolicy?: "never" | "idempotent";
   context: RequestContext;
@@ -88,9 +86,12 @@ export function createHttpClient(deps: {
       headers.Authorization = "Bearer " + session.value.token;
     }
 
-    // 3) 头注入（P2-02）：X-App-Code 恒带；X-Brand-Id 仅品牌作用域且有值
+    // 3) 头注入：X-App-Code 恒带；X-Brand-Id 有品牌上下文（非空）即恒带——
+    //    旧端 http.uts:122 全请求口径（扫品牌码/品牌馆切牌后所有业务请求都带，空串＝无品牌上下文走后端旧逻辑）。
+    //    2026-09-19 纠偏：初版「brandScoped 标记才带」无任何仓储使用 ⇒ 实际从不携带、品牌馆切牌后数据不切换
+    //    （主人拍板对齐旧端，deviations #23）
     headers["X-App-Code"] = ctx.appCode;
-    if (input.brandScoped && ctx.brandId) {
+    if (ctx.brandId != null && ctx.brandId !== "") {
       headers["X-Brand-Id"] = ctx.brandId;
     }
 

@@ -248,7 +248,7 @@ onReachBottom(() => {
          无搜索按钮、输入框内置搜索 icon」），结构对齐旧端 :4-19 / 新端 favorites 同款；
          返回由页面处理搜索清空逻辑（manual-back，旧端 :389-411） -->
     <CustomNavBar title="" :manual-back="true" back-fallback-url="/pages/index/index" @back="goBack">
-      <view class="search-bar-wrap">
+      <view :class="platform === 'mp-toutiao' ? 'search-bar-wrap search-bar-wrap-tt' : 'search-bar-wrap'">
         <view class="search-bar-nav">
           <image class="search-icon-small" src="/static/iconpark/search.svg" mode="aspectFit" />
           <input
@@ -372,6 +372,11 @@ onReachBottom(() => {
   box-sizing: border-box;
   border: 1rpx solid rgba(241, 205, 145, 0.3); /* 旧 var(--color-primary-30) */
   border-radius: 32rpx; /* 旧 var(--radius-lg) */
+}
+/* 抖音端顶距（2026-09-19 主人指示：距系统导航栏 10px=20rpx）——抖音 slot 内联在系统栏下方贴顶；
+   微信端同一 wrap 在自绘导航栏 44px 行内垂直居中不需要顶距，故平台修饰类仅抖音挂载（与 favorites 同款） */
+.search-bar-wrap-tt {
+  margin-top: 20rpx;
 }
 .search-bar-nav {
   display: flex;

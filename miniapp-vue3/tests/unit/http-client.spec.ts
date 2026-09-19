@@ -34,24 +34,26 @@ const okAuth = {
 const failAuth = { waitForLogin: async () => ({ ok: false as const, reason: "denied" }) };
 
 describe("createHttpClient 头注入（P2-02）", () => {
-  it("X-App-Code 恒带；Bearer 仅 authRequired；X-Brand-Id 仅 brandScoped", async () => {
+  it("X-App-Code 恒带；Bearer 仅 authRequired；有品牌上下文 X-Brand-Id 恒带（旧端 http.uts:122 全请求口径）", async () => {
     const t = makeTransport((req) => ({ ok: true, value: { status: 200, businessCode: 0, requestId: "r", data: { n: 1 } } }));
     const c = createHttpClient({ transport: t.port, authCoordinator: okAuth });
     await c.request({ method: "GET", url: "/api/shops", context: ctx });
     let h = t.seen[0].headers!;
     expect(h["X-App-Code"]).toBe("blueBerry");
     expect(h.Authorization).toBeUndefined();
-    expect(h["X-Brand-Id"]).toBeUndefined(); // 非品牌作用域不硬塞
-    await c.request({ method: "POST", url: "/api/like", authRequired: true, brandScoped: true, context: ctx });
+    expect(h["X-Brand-Id"]).toBe("brand-1"); // 旧端口径：有品牌上下文即恒带，无需逐请求标记
+    await c.request({ method: "POST", url: "/api/like", authRequired: true, context: ctx });
     h = t.seen[1].headers!;
     expect(h.Authorization).toBe("Bearer tok-1");
     expect(h["X-Brand-Id"]).toBe("brand-1");
   });
-  it("brandScoped 但 brandId 为空 → 不带 X-Brand-Id", async () => {
+  it("brandId 为空（null/空串）→ 不带 X-Brand-Id（无品牌上下文，走后端旧逻辑）", async () => {
     const t = makeTransport((req) => ({ ok: true, value: { status: 200, businessCode: 0, requestId: "r", data: null } }));
     const c = createHttpClient({ transport: t.port, authCoordinator: okAuth });
-    await c.request({ method: "GET", url: "/x", brandScoped: true, context: { ...ctx, brandId: null } });
+    await c.request({ method: "GET", url: "/x", context: { ...ctx, brandId: null } });
     expect(t.seen[0].headers!["X-Brand-Id"]).toBeUndefined();
+    await c.request({ method: "GET", url: "/x", context: { ...ctx, brandId: "" } });
+    expect(t.seen[1].headers!["X-Brand-Id"]).toBeUndefined();
   });
   it("RequestContext 快照捕获＋replayPolicy/timeout 透传", async () => {
     const t = makeTransport((req) => ({ ok: true, value: { status: 200, businessCode: 200, requestId: "r", data: 1 } }));

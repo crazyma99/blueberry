@@ -254,7 +254,7 @@ function coverThumb(url: string): string {
 <template>
   <view class="container">
     <CustomNavBar :manual-back="true" @back="goBack">
-      <view class="search-bar-wrap">
+      <view :class="platform === 'mp-toutiao' ? 'search-bar-wrap search-bar-wrap-tt' : 'search-bar-wrap'">
         <view class="search-bar-nav">
           <image class="search-icon-small" src="/static/iconpark/search.svg" mode="aspectFit"></image>
           <input
@@ -341,6 +341,11 @@ function coverThumb(url: string): string {
   box-sizing: border-box;
   border: 1rpx solid rgba(241, 205, 145, 0.3);
   border-radius: 32rpx;
+}
+/* 抖音端顶距（2026-09-19 主人指示：距系统导航栏 10px=20rpx）——抖音 slot 内联在系统栏下方（#17 口径）贴顶；
+   微信端同一 wrap 在自绘导航栏 44px 行内垂直居中不需要顶距，故平台修饰类仅抖音挂载（与 demoDetail 同款） */
+.search-bar-wrap-tt {
+  margin-top: 20rpx;
 }
 .search-bar-nav {
   display: flex;
