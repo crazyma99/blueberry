@@ -5,7 +5,6 @@
 //  - 非抖音端保持 wd-popup 链，新增 rootPortal prop（默认 true；抖音端 wot 为 no-op、微信/支付宝/H5 生效）。
 //  - 抖音端门面自绘降级：纯 view+fixed 蒙层＋居中容器，绕开 wot 自定义组件宿主节点（fixed 失效根因）。
 //  对外合同（props/emits）不变；cancel 单一出口与去重逻辑两条分支共用。
-import { tokens } from "../generated/tokens";
 import { isToutiaoPlatform } from "./ui-platform";
 
 withDefaults(
@@ -74,7 +73,7 @@ const useNative = isToutiaoPlatform();
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 /* 抖音自绘分支：页面级节点 + fixed，不经过 wot 自定义组件宿主节点 */
 .base-popup-native {
   position: fixed;
@@ -86,7 +85,7 @@ const useNative = isToutiaoPlatform();
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: base-popup-fade-in v-bind("tokens.semantic.durationModal") ease;
+  animation: base-popup-fade-in $duration-modal ease;
 }
 .base-popup-native__mask {
   position: absolute;
@@ -100,29 +99,29 @@ const useNative = isToutiaoPlatform();
   position: relative;
   width: 560rpx;
   max-width: 80%;
-  border-radius: v-bind("tokens.component.popupRadiusRpx + 'rpx'");
-  background: v-bind("tokens.semantic.colorPage");
-  padding: v-bind("tokens.primitive.spaceLg");
+  border-radius: #{$popup-radius-rpx}rpx;
+  background: $color-page;
+  padding: $space-lg;
 }
 .base-popup-native__close {
   position: absolute;
   top: 8rpx;
   right: 8rpx;
-  width: v-bind("tokens.semantic.sizeHitArea");
-  height: v-bind("tokens.semantic.sizeHitArea");
+  width: $size-hit-area;
+  height: $size-hit-area;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .base-popup-native__close-text {
-  font-size: v-bind("tokens.semantic.fontSizeTitle");
-  color: v-bind("tokens.semantic.colorTextMuted");
+  font-size: $font-size-title;
+  color: $color-text-muted;
 }
 .base-popup__title {
   display: block;
-  margin-bottom: v-bind("tokens.primitive.spaceMd");
-  font-size: v-bind("tokens.semantic.fontSizeSubTitle");
-  color: v-bind("tokens.semantic.colorTextStrong");
+  margin-bottom: $space-md;
+  font-size: $font-size-sub-title;
+  color: $color-text-strong;
 }
 @keyframes base-popup-fade-in {
   from {

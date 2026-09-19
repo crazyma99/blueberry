@@ -42,7 +42,7 @@
 
 | 组件 | 状态 | 去向 / 证据 |
 |---|---|---|
-| CustomNavBar | ported | 等价实现（P2-12；抖音端渲染空、原生栏接管） |
+| CustomNavBar | ported | 等价实现（P2-12；2026-09-19 起抖音同微信：navigationStyle custom 全平台、组件全平台渲染） |
 | PhotoGrid | ported | 等价实现（P2-13 布局基线） |
 | SkeletonBlock | ported | 等价实现（共享骨架块；sk-animate 闪烁动画属全局样式批次） |
 | LoginPopup | ported | 等价实现（P2-18，props/emits 与旧端逐字） |

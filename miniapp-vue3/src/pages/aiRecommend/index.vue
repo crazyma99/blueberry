@@ -52,7 +52,6 @@
 import { computed, ref } from "vue";
 import { onHide, onLoad, onShow, onUnload } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
-import { tokens } from "../../generated/tokens";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
@@ -637,7 +636,7 @@ function isLoggedIn(): boolean {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 /* 旧端 :556-561：深色页底（--color-bg #160F04，偏差①） */
 .page {
   background: #160f04;
@@ -678,19 +677,19 @@ function isLoggedIn(): boolean {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  background: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) #F1CD91 */
+  background: $color-action; /* 旧 var(--color-primary) #F1CD91 */
 }
 .action-btn-disabled {
   opacity: 0.4;
 }
 .action-btn-text {
   font-size: 32rpx;
-  color: v-bind("tokens.semantic.colorActionText"); /* 旧 --color-bg（金色面上墨色 #160F04） */
+  color: $color-action-text; /* 旧 --color-bg（金色面上墨色 #160F04） */
   font-weight: 400;
 }
 .action-btn-price {
   font-size: 32rpx;
-  color: v-bind("tokens.semantic.colorActionText");
+  color: $color-action-text;
   font-weight: 400;
 }
 

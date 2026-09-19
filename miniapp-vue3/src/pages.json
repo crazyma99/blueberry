@@ -30,7 +30,7 @@
 				// #ifdef MP-WEIXIN
 				"navigationStyle": "custom",
 				// #endif
-				"navigationBarTitleText": "客片详情"
+				"navigationBarTitleText": "客片欣赏"
 			}
 		},
 		{
@@ -157,35 +157,37 @@
 		// #ifdef MP-WEIXIN
 		"custom": true,
 		// #endif
-		"color": "#F1CD91",
+		// 2026-09-19：抖音原生 tabBar 选中态——未选中用 55% 透明暗金图标（*-dim.png，由金色原图降透明度生成）
+		// ＋ 暗金文字 #8E7752，选中恢复亮金 #F1CD91；iconPath/selectedIconPath 必须不同图才有选中态。
+		"color": "#8E7752",
 		"selectedColor": "#F1CD91",
 		"backgroundColor": "#160F04",
 		"borderStyle": "black",
 		"list": [
 			{
 				"pagePath": "pages/index/index",
-				"iconPath": "static/home-bar.png",
+				"iconPath": "static/home-bar-dim.png",
 				"selectedIconPath": "static/home-bar.png",
 				"text": "首页"
 			},
 			{
 				"pagePath": "pages/priceHomePage/index",
-				"iconPath": "static/price-bar.png",
+				"iconPath": "static/price-bar-dim.png",
 				"selectedIconPath": "static/price-bar.png",
 				"text": "价目表"
 			},
 			{
 				"pagePath": "pages/mine/index",
-				"iconPath": "static/my-bar.png",
+				"iconPath": "static/my-bar-dim.png",
 				"selectedIconPath": "static/my-bar.png",
 				"text": "我的"
 			}
 		]
 	},
 	"globalStyle": {
-		"navigationBarTextStyle": "black",
+		"navigationBarTextStyle": "white",
 		"navigationBarTitleText": "uni-app",
-		"navigationBarBackgroundColor": "#F8F8F8",
-		"backgroundColor": "#F8F8F8"
+		"navigationBarBackgroundColor": "#160F04",
+		"backgroundColor": "#160F04"
 	}
 }

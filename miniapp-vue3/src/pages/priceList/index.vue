@@ -16,7 +16,6 @@ import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
-import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
@@ -172,10 +171,10 @@ async function loadPackages(shopId: string): Promise<void> {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .container {
   min-height: 100vh;
-  background: v-bind("tokens.semantic.colorPage");
+  background: $color-page;
 }
 .sk-wrap {
   padding: 32rpx;
@@ -199,13 +198,13 @@ async function loadPackages(shopId: string): Promise<void> {
   margin-bottom: 16rpx;
 }
 .pkg-title {
-  font-size: v-bind("tokens.semantic.fontSizeSubTitle");
+  font-size: $font-size-sub-title;
   font-weight: 400;
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
   letter-spacing: 2rpx;
 }
 .pkg-sub {
-  font-size: v-bind("tokens.semantic.fontSizeCaption");
+  font-size: $font-size-caption;
   color: rgba(241, 205, 145, 0.3);
   letter-spacing: 2rpx;
 }
@@ -242,7 +241,7 @@ async function loadPackages(shopId: string): Promise<void> {
   background: rgba(241, 205, 145, 0.1);
 }
 .pkg-img-empty-text {
-  font-size: v-bind("tokens.semantic.fontSizeCaption");
+  font-size: $font-size-caption;
   color: rgba(241, 205, 145, 0.5);
   letter-spacing: 4rpx;
 }
@@ -254,13 +253,13 @@ async function loadPackages(shopId: string): Promise<void> {
   flex-direction: column;
 }
 .pkg-name {
-  font-size: v-bind("tokens.semantic.fontSizeBody");
-  color: v-bind("tokens.semantic.colorAction");
+  font-size: $font-size-body;
+  color: $color-action;
   letter-spacing: 1rpx;
 }
 .pkg-detail {
   margin-top: 8rpx;
-  font-size: v-bind("tokens.semantic.fontSizeCaption");
+  font-size: $font-size-caption;
   color: rgba(241, 205, 145, 0.7);
   line-height: 1.5;
   display: -webkit-box;
@@ -275,13 +274,13 @@ async function loadPackages(shopId: string): Promise<void> {
   align-items: baseline;
 }
 .pkg-price-symbol {
-  font-size: v-bind("tokens.semantic.fontSizeCaption");
-  color: v-bind("tokens.semantic.colorAction");
+  font-size: $font-size-caption;
+  color: $color-action;
 }
 .pkg-price {
-  font-size: v-bind("tokens.semantic.fontSizeBody"); /* 旧端 32rpx 精确还原（fontSizeSubTitle 36rpx 系统性偏大，CR 🟡1） */
+  font-size: $font-size-body; /* 旧端 32rpx 精确还原（fontSizeSubTitle 36rpx 系统性偏大，CR 🟡1） */
   font-weight: 400;
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
   margin-left: 2rpx;
 }
 </style>

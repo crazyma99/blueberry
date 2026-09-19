@@ -7,7 +7,7 @@
 // 样式已收敛 PhotoGrid（:106）。
 // priceList 页与 getPackages 仓储属 P2-17 后半（下轮），导航先忠实接线。
 // 有意偏差（已声明）：①ServiceContact（旧 :19）/AppFooter beian（旧 :20）已由 P2-21 接入（内容经 page-config 用例
-// props 注入，等价旧端 mounted 自取数）；tabbar-safe-spacer（旧 :23）未移植——自定义 tabbar 占位属 P2-12 组件批次；②错误态 toast→内联错误+重试（与 index/demoDetail 装配一致）；
+// props 注入，等价旧端 mounted 自取数）；tabbar-safe-spacer（旧 :23）2026-09-19 补齐、仅微信端渲染（自定义 tabbar 仅微信；抖音原生 tab 不占页面区域）；②错误态 toast→内联错误+重试（与 index/demoDetail 装配一致）；
 // ③id 空守卫（旧端会拼出 idx=undefined，新端防御性 return）。
 import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
@@ -15,7 +15,6 @@ import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
-import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
@@ -48,6 +47,8 @@ import {
 // —— 装配（同 index/demoDetail）——
 const detected = detectUiPlatform();
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
+// 自定义 tabbar 仅微信端 ⇒ 底部占位仅微信需要（抖音原生 tab 不占页面区域，2026-09-19 主人反馈）
+const isMpWeixin = platform === "mp-weixin";
 const env = PROFILE.environment;
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
 const uniStorage = createUniStorage();
@@ -207,13 +208,16 @@ function onDemoClick(idx: number): void {
         <BaseButton label="重试" @click="loadShops" />
       </view>
     </template>
+    <!-- 自定义底部 tabbar 占位（旧 :23；全局类在 App.vue：116rpx + 安全区），仅微信端渲染
+         （抖音原生 tab 不占页面区域）——避免页脚贴底 tab -->
+    <view v-if="isMpWeixin" class="tabbar-safe-spacer"></view>
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .container {
   min-height: 100vh;
-  background: v-bind("tokens.semantic.colorPage");
+  background: $color-page;
 }
 .sk-wrap {
   padding: 40rpx 8rpx 0;
@@ -239,13 +243,13 @@ function onDemoClick(idx: number): void {
 /* 标题（旧端 :95-105 divideTit/demoPhotoTit 忠实移植；金色 30% 派生同 PhotoGrid 注释口径） */
 .divideTit {
   text-align: center;
-  font-size: v-bind("tokens.semantic.fontSizeCaption");
+  font-size: $font-size-caption;
   color: rgba(241, 205, 145, 0.3);
 }
 .demoPhotoTit {
   margin-top: 16rpx;
-  font-size: v-bind("tokens.semantic.fontSizeSubTitle");
-  color: v-bind("tokens.semantic.colorAction");
+  font-size: $font-size-sub-title;
+  color: $color-action;
   text-align: center;
 }
 .page-error {
@@ -256,7 +260,7 @@ function onDemoClick(idx: number): void {
   gap: 16rpx;
 }
 .page-error-text {
-  font-size: v-bind("tokens.semantic.fontSizeBody");
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  font-size: $font-size-body;
+  color: $color-text-secondary;
 }
 </style>

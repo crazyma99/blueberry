@@ -16,7 +16,6 @@
 import { computed, ref } from "vue";
 import { onHide, onLoad, onShow, onUnload } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
-import { tokens } from "../../generated/tokens";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";

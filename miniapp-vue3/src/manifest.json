@@ -50,7 +50,7 @@
     "quickapp" : {},
     /* 小程序特有相关 */
     "mp-weixin" : {
-        "appid" : "",
+        "appid" : "wxb19ad7426dfb8bd4",
         "setting" : {
             "urlCheck" : false
         },
@@ -67,6 +67,7 @@
         "usingComponents" : true
     },
     "mp-toutiao" : {
+        "appid" : "ttd6aba01648cc1bf701",
         "usingComponents" : true
     },
     "uniStatistics": {  

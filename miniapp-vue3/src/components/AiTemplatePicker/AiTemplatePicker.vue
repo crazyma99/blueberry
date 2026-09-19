@@ -9,7 +9,6 @@
 // 有意偏差（已声明）：①cosThumb 复用新端 application/image（语义等价）；②旧端 --color-surface/--color-primary-30/-70
 // 等派生色按 rgba 字面值＋注释；③无请求、无生命周期（纯展示，选择结果经事件抛给页面）。
 import { ref } from "vue";
-import { tokens } from "../../generated/tokens";
 import { cosThumb } from "../../application/image";
 import AppSegment from "../AppSegment/AppSegment.vue";
 import AppSelector from "../AppSelector/AppSelector.vue";
@@ -114,7 +113,7 @@ function thThumb(url: string | undefined): string {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .picker-block {
   width: 100%;
 }
@@ -191,7 +190,7 @@ function thThumb(url: string | undefined): string {
   border: 3rpx solid transparent;
 }
 .thumb-item-active {
-  border-color: v-bind("tokens.semantic.colorAction"); /* 选中态金描边（旧 :32 三元 class） */
+  border-color: $color-action; /* 选中态金描边（旧 :32 三元 class） */
 }
 .thumb-img {
   width: 100%;

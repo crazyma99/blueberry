@@ -9,18 +9,19 @@
 // 缺 type 或 liked 详情接口会 400）；onShow firstShow 跳过一次后刷新（搜索态重搜/否则重拉，:108-120）；
 // 搜索双形态响应收窄 getSearchItems/getSearchTotal（数组或 {list,total}，:225-234）。
 // 有意偏差（已声明）：①AppFooter 已由 P2-21 接入（旧 :75；内容经 page-config 用例注入）；
-// ②主题暗→亮（旧 --color-bg #160F04→colorPage 白；金色元素在白底对比度待真机核对）；
+// ②主题：2026-09-19 撤回迁移期亮色、恢复旧端深色（colorPage=#160F04 墨黑＋金文 #F1CD91），
+// 空态/骨架等亮色残留值已按旧端还原（白 50%/30%、骨架白 8%）；
 // ③sk-animate 闪烁动画未带（共享 SkeletonBlock 口径）；④卡片 fade-in 入场动画未带（旧 :46，属全局样式批次，
-// preflight:485 已登记 T6 同族缺口）；⑤搜索框 placeholder-style（旧 :12 金色 70%）未带——白底对比度考虑，待主题批次统一；
-// ⑥抖音端：本页 navStyle=default ⇒ CustomNavBar nativeHidden 整块不渲染、slot 搜索框随之消失 ⇒ 抖音端无搜索入口
-//  （也是唯一分页路径）；旧端 pages.json globalStyle 全局 custom 且抖音无 appid 基线，故不违 P2-19 红线——待后续批次拍板。
+// preflight:485 已登记 T6 同族缺口）；⑤搜索框 placeholder-style 已按旧 :12 还原（金色 70% 字面量，
+// 抖音 TTSS 不支持 CSS 变量故不写 var()）；
+// ⑥抖音端导航已对齐微信（2026-09-19 主人拍板）：pages.json 各页 navigationStyle custom 全平台生效，
+// CustomNavBar 抖音不再渲染空，slot 搜索框随之恢复。
 import { ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
-import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
@@ -260,6 +261,7 @@ function coverThumb(url: string): string {
             class="search-input-nav"
             type="text"
             placeholder="搜索收藏内容"
+            placeholder-style="color: rgba(241, 205, 145, 0.7)"
             v-model="searchKeyword"
             confirm-type="search"
             @confirm="handleSearch"
@@ -319,20 +321,23 @@ function coverThumb(url: string): string {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: v-bind("tokens.semantic.colorPage");
+  background: $color-page;
 }
 .main-content {
   flex: 1;
 }
 /* 自定义导航栏内搜索框（旧端 :277-305） */
 .search-bar-wrap {
-  width: 65%;
-  margin-left: 12rpx;
+  /* 2026-09-19 主人指示：盛满导航栏剩余区域——slot 已做胶囊/返回避让，wrap 填满即不撞胶囊；
+     旧端「width:65%」建立在旧 slot 无避让的满宽上，照抄会在新 slot 里再缩一圈（与 demoDetail 同步改） */
+  flex: 1;
+  min-width: 0;
+  margin: 0 20rpx;
   box-sizing: border-box;
   border: 1rpx solid rgba(241, 205, 145, 0.3);
   border-radius: 32rpx;
@@ -353,7 +358,7 @@ function coverThumb(url: string): string {
 .search-input-nav {
   flex: 1;
   font-size: 26rpx; /* 旧端 --font-size-body-lg=26rpx（CR 🟡1 还原；28rpx 实为 body-plus） */
-  color: v-bind("tokens.semantic.colorTextPrimary"); /* 旧端金色，白底对比度≈1.5:1 → 按新端亮色主题取正文色（CR 建议） */
+  color: $color-text-primary; /* 旧端金色（旧 :303 var(--color-primary)）；深色恢复后 $color-text-primary=#F1CD91 与旧值一致（2026-09-19） */
   margin-left: 12rpx;
 }
 .content {
@@ -374,7 +379,7 @@ function coverThumb(url: string): string {
   height: 482rpx;
   margin: 8rpx;
   border-radius: 8rpx;
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.08); /* 旧端全局 .sk-photo-item（App.uvue:299）；2026-09-19 深色还原（亮色期黑 6% 深底不可见） */
 }
 /* 空状态（旧端 :312-327） */
 .empty-state {
@@ -386,12 +391,12 @@ function coverThumb(url: string): string {
 }
 .empty-title {
   font-size: 32rpx;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.5); /* 旧 :321；2026-09-19 深色还原（亮色期黑 50% 深底不可见） */
   margin-bottom: 16rpx;
 }
 .empty-desc {
   font-size: 24rpx;
-  color: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.3); /* 旧 :326；2026-09-19 深色还原（亮色期黑 30% 深底不可见） */
 }
 /* 客片卡片（旧端 :330-405，与相册 list 页一致） */
 .photolistContainer {
@@ -445,7 +450,7 @@ function coverThumb(url: string): string {
 .photoName {
   font-size: 26rpx; /* 旧端 --font-size-body-lg（硬编码还原） */
   font-weight: 400;
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
 }
 .collect {
   /* 主人 2026-09-15 指示：点赞图标与数量之间加间距（margin 而非 gap，兼容旧 WebView） */
@@ -454,7 +459,7 @@ function coverThumb(url: string): string {
   flex-direction: row;
   align-items: center;
   font-size: 24rpx;
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
 }
 .heart {
   width: 36rpx;

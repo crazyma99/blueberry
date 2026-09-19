@@ -67,11 +67,15 @@ describe("CustomNavBar（平台分支与返回语义）", () => {
     const w2 = mount(CustomNavBar, { props: { title: "t", backFallbackUrl: "/pages/index/index" } });
     expect(w2.find(".custom-navbar-back").exists()).toBe(true);
   });
-  it("抖音：整体渲染空（default 导航定案，系统栏接管）", () => {
+  it("抖音：系统默认导航栏接管——不自绘标题栏/占位，仅内联渲染 slot（2026-09-19 实测：抖音 navigationStyle custom 需平台「页面结构自定义」权限，未生效时自绘＝双标题双占位，回退）", () => {
     setUiPlatformOverride("mp-toutiao");
-    const w = mount(CustomNavBar, { props: { title: "客片详情" } });
+    const w = mount(CustomNavBar, {
+      props: { title: "客片详情" },
+      slots: { default: '<view class="tt-slot-mark">搜索</view>' },
+    });
     expect(w.find(".custom-navbar").exists()).toBe(false);
-    expect(w.text()).toBe("");
+    expect(w.text()).not.toContain("客片详情");
+    expect(w.find(".tt-slot-mark").exists()).toBe(true);
   });
   it("manualBack：点击只 emit back 不走导航；transparent 类生效", async () => {
     const w = mount(CustomNavBar, { props: { title: "t", backFallbackUrl: "/x", manualBack: true, transparent: true } });

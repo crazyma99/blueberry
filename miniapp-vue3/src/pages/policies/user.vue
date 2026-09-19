@@ -93,7 +93,7 @@ const miniAppName = PROFILE.miniAppName;
 }
 
 .policy-content {
-  padding: var(--spacing-lg) 36rpx 80rpx 36rpx;
+  padding: 32rpx 36rpx 80rpx 36rpx;
 }
 
 .policy-title {
@@ -113,7 +113,7 @@ const miniAppName = PROFILE.miniAppName;
 }
 
 .policy-meta-line {
-  font-size: var(--font-size-body-lg);
+  font-size: 26rpx;
   color: #888888;
   line-height: 44rpx;
 }
@@ -128,19 +128,19 @@ const miniAppName = PROFILE.miniAppName;
   font-size: 32rpx;
   font-weight: 400;
   color: #1a1a1a;
-  margin-top: var(--spacing-lg);
+  margin-top: 32rpx;
   margin-bottom: 16rpx;
 }
 
 .policy-paragraph {
-  font-size: var(--font-size-body-plus);
+  font-size: 28rpx;
   color: #333333;
   line-height: 48rpx;
   margin-bottom: 16rpx;
 }
 
 .policy-list-item {
-  font-size: var(--font-size-body-plus);
+  font-size: 28rpx;
   color: #333333;
   line-height: 48rpx;
   margin-bottom: 8rpx;
@@ -148,7 +148,7 @@ const miniAppName = PROFILE.miniAppName;
 }
 
 .policy-footer {
-  font-size: var(--font-size-body-lg);
+  font-size: 26rpx;
   color: #666666;
   line-height: 44rpx;
   text-align: center;

@@ -26,7 +26,6 @@
 //   color: #fff             → 硬编码 #fff（旧端即字面色值，非变量）
 // hover-class="press-dim"：旧端 App.uvue 全局类（:139-141 opacity:.82），新端由 App.vue 全局样式
 //   提供（与旧端逐字一致），本组件仅引用不定义（2026-09-18 删除迁移期 scoped 临时副本）。
-import { tokens } from "../../generated/tokens";
 
 withDefaults(
   defineProps<{
@@ -55,7 +54,7 @@ function onChange(e: { detail: { value: number | string } }): void {
   </picker>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .app-selector {
   width: 100%;
   display: flex;
@@ -77,8 +76,8 @@ function onChange(e: { detail: { value: number | string } }): void {
 .app-selector-arrow {
   width: 16rpx;
   height: 16rpx;
-  border-right: 3rpx solid v-bind("tokens.semantic.colorAction"); /* 旧 --color-primary #F1CD91 */
-  border-bottom: 3rpx solid v-bind("tokens.semantic.colorAction");
+  border-right: 3rpx solid $color-action; /* 旧 --color-primary #F1CD91 */
+  border-bottom: 3rpx solid $color-action;
   transform: rotate(45deg) translateY(-3rpx);
   margin-left: 16rpx;
 }

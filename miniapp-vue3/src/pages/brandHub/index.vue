@@ -10,8 +10,8 @@
 // 旧端事实：onLoad 自守卫失败即 toast「该功能未开放」+ 800ms 后 navigateBack 且不加载品牌列表（:78-95）；
 // 骨架 4 卡与真实卡 1:1 镜像（:15-24）；品牌卡 logo 缺失回退首字方块（:42-44）；空态「暂无入驻品牌」（:57-59）；
 // 卡片点击 hapticTap＋setBrandId＋switchTab('/pages/index/index')（:111-116）。
-// 有意偏差（已声明）：①主题暗→亮（旧 --color-bg #160F04→colorPage 白）——旧端用于浅底文字的低透明度
-// 白/金（desc rgba(255,255,255,.5)、空态 .4）在白底不可读，改取 colorTextSecondary（CR 🟡3）；
+// 有意偏差（已声明）：①主题：2026-09-19 撤回迁移期亮色、恢复旧端深色（colorPage=#160F04，同旧 --color-bg）；
+// desc/空态文字色仍取 colorTextSecondary（深色下=金 70%，与旧白 50%/40% 观感接近，亮色期 CR 🟡3 口径保留）；
 // ②卡片 fade-in 入场动画未带（旧 :38，属全局样式批次）；③font-harmony/font-noto-serif 全局类新端未定义
 // （沿用 PhotoGrid/priceList 既有口径，仅引用不定义）。
 import { ref } from "vue";
@@ -20,7 +20,6 @@ import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
-import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
@@ -177,12 +176,12 @@ function enterBrand(b: BrandBrief): void {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .container {
   height: 100vh; /* 旧 :124 height:100vh（内层 .brand-hub 自滚，忠实保留） */
   display: flex;
   flex-direction: column;
-  background: v-bind("tokens.semantic.colorPage");
+  background: $color-page;
 }
 .brand-hub {
   flex: 1;
@@ -247,7 +246,7 @@ function enterBrand(b: BrandBrief): void {
   width: 96rpx;
   height: 96rpx;
   border-radius: 50%;
-  border: 3rpx solid v-bind("tokens.semantic.colorAction");
+  border: 3rpx solid $color-action;
   background: rgba(241, 205, 145, 0.06);
 }
 .brand-logo-default {
@@ -257,7 +256,7 @@ function enterBrand(b: BrandBrief): void {
 }
 .brand-logo-text {
   font-size: 40rpx;
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
 }
 .brand-info {
   flex: 1;
@@ -265,14 +264,14 @@ function enterBrand(b: BrandBrief): void {
 }
 .brand-name {
   font-size: 34rpx; /* 旧端 34rpx（token 无该档，硬编码还原） */
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
   letter-spacing: 2rpx;
 }
 .brand-desc {
   margin-top: 8rpx;
   font-size: 22rpx; /* 旧 --font-size-body-sm=22rpx */
-  /* 旧 rgba(255,255,255,.5) 在白底 colorPage 上≈1.3:1 不可读（CR 🟡3）→ 取新端正文次级色 */
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  /* 旧 rgba(255,255,255,.5)（旧 :205）→ 正文次级色（深色下=金 70%，观感接近；2026-09-19 深色恢复后沿用） */
+  color: $color-text-secondary;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -285,8 +284,8 @@ function enterBrand(b: BrandBrief): void {
   flex-shrink: 0;
 }
 .brand-enter-text {
-  font-size: v-bind("tokens.semantic.fontSizeBody");
-  color: v-bind("tokens.semantic.colorAction");
+  font-size: $font-size-body;
+  color: $color-action;
 }
 .brand-arrow {
   width: 40rpx;
@@ -301,8 +300,8 @@ function enterBrand(b: BrandBrief): void {
   justify-content: center;
 }
 .empty-title {
-  font-size: v-bind("tokens.semantic.fontSizeBody");
-  /* 旧 rgba(255,255,255,.4) 白底不可读（CR 🟡3）→ 正文次级色 */
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  font-size: $font-size-body;
+  /* 旧 rgba(255,255,255,.4)（旧 :235）→ 正文次级色（深色下=金 70%，观感接近；2026-09-19 深色恢复后沿用） */
+  color: $color-text-secondary;
 }
 </style>

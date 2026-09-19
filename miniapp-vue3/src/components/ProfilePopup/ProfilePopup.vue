@@ -20,7 +20,6 @@
 // token 映射与 LoginPopup 同口径（详见其页头）：金色 → tokens.semantic.colorAction；
 // 墨色 → tokens.semantic.colorActionText；深色卡片/渐变/字号档位 → 硬编码并注释。
 import { ref } from "vue";
-import { tokens } from "../../generated/tokens";
 
 withDefaults(
   defineProps<{
@@ -85,7 +84,7 @@ function onNicknameInput(e: unknown): void {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 /* 遮罩 + 渐显（全屏：vw/vh 撑满） */
 .profile-overlay {
   position: fixed;
@@ -138,7 +137,7 @@ function onNicknameInput(e: unknown): void {
 .card-title {
   font-size: 40rpx;
   font-weight: 400;
-  color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) #F1CD91 */
+  color: $color-action; /* 旧 var(--color-primary) #F1CD91 */
   margin-bottom: 12rpx;
 }
 
@@ -169,7 +168,7 @@ function onNicknameInput(e: unknown): void {
   width: 128rpx;
   height: 128rpx;
   border-radius: 50%;
-  border: 3rpx solid v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) */
+  border: 3rpx solid $color-action; /* 旧 var(--color-primary) */
   background: rgba(255, 255, 255, 0.08);
 }
 .avatar-badge {
@@ -180,7 +179,7 @@ function onNicknameInput(e: unknown): void {
   height: 36rpx;
   border-radius: 50%;
   background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%); /* 旧 var(--gradient-btn-primary) */
-  color: v-bind("tokens.semantic.colorActionText"); /* 旧 var(--color-bg) #160F04 */
+  color: $color-action-text; /* 旧 var(--color-bg) #160F04 */
   font-size: 26rpx;
   font-weight: 400;
   display: flex;
@@ -215,11 +214,11 @@ function onNicknameInput(e: unknown): void {
   transition: border-color 0.15s ease-out;
 }
 .app-input.is-focused {
-  border-color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) */
+  border-color: $color-action; /* 旧 var(--color-primary) */
 }
 .app-input-label {
   font-size: 24rpx; /* 旧 var(--font-size-body) 24rpx */
-  color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) */
+  color: $color-action; /* 旧 var(--color-primary) */
   margin-right: 20rpx;
 }
 .app-input-field {

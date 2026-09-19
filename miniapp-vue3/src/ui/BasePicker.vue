@@ -7,7 +7,6 @@
 //  - 抖音端门面自绘降级：底部面板（纯 view+fixed，不经 wd-popup/wd-picker 组件链）＋取消/确认/清空交互。
 //  对外合同（props/emits/expose）不变；confirm/cancel/clear 事件语义两条分支完全一致。
 import { ref, watch } from "vue";
-import { tokens } from "../generated/tokens";
 import { isToutiaoPlatform } from "./ui-platform";
 
 export interface PickerOption {
@@ -116,7 +115,7 @@ function onNativeConfirm() {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 /* 抖音自绘分支：页面级节点 + fixed 底部面板，不经 wd-popup/wd-picker 组件链 */
 .base-picker-native {
   position: fixed;
@@ -128,7 +127,7 @@ function onNativeConfirm() {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  animation: base-picker-fade-in v-bind("tokens.semantic.durationModal") ease;
+  animation: base-picker-fade-in $duration-modal ease;
 }
 .base-picker-native__mask {
   position: absolute;
@@ -140,31 +139,31 @@ function onNativeConfirm() {
 }
 .base-picker-native__panel {
   position: relative;
-  background: v-bind("tokens.semantic.colorPage");
-  border-radius: v-bind("tokens.component.popupRadiusRpx + 'rpx'")
-    v-bind("tokens.component.popupRadiusRpx + 'rpx'")
+  background: $color-page;
+  border-radius: #{$popup-radius-rpx}rpx
+    #{$popup-radius-rpx}rpx
     0 0;
-  padding-bottom: v-bind("tokens.semantic.sizeTabBarAvoid");
+  padding-bottom: $size-tab-bar-avoid;
 }
 .base-picker-native__bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: v-bind("tokens.semantic.sizeHitArea");
-  padding: 0 v-bind("tokens.primitive.spaceMd");
-  border-bottom: 1rpx solid v-bind("tokens.semantic.colorDivider");
+  height: $size-hit-area;
+  padding: 0 $space-md;
+  border-bottom: 1rpx solid $color-divider;
 }
 .base-picker-native__btn {
-  font-size: v-bind("tokens.semantic.fontSizeBody");
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  font-size: $font-size-body;
+  color: $color-text-secondary;
 }
 .base-picker-native__btn--ok {
-  color: v-bind("tokens.semantic.colorActionText");
+  color: $color-action-text;
   font-weight: 600;
 }
 .base-picker-native__title {
-  font-size: v-bind("tokens.semantic.fontSizeSubTitle");
-  color: v-bind("tokens.semantic.colorTextStrong");
+  font-size: $font-size-sub-title;
+  color: $color-text-strong;
 }
 .base-picker-native__list {
   max-height: 480rpx;
@@ -173,13 +172,13 @@ function onNativeConfirm() {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: v-bind("tokens.semantic.sizeHitArea");
-  font-size: v-bind("tokens.semantic.fontSizeBody");
-  color: v-bind("tokens.semantic.colorTextPrimary");
+  height: $size-hit-area;
+  font-size: $font-size-body;
+  color: $color-text-primary;
 }
 .base-picker-native__item--active {
-  color: v-bind("tokens.semantic.colorActionText");
-  background: v-bind("tokens.semantic.colorActionSoft");
+  color: $color-action-text;
+  background: $color-action-soft;
 }
 @keyframes base-picker-fade-in {
   from {

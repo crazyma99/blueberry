@@ -7,8 +7,6 @@
 import { ref } from "vue";
 import { isToutiaoPlatform } from "./ui-platform";
 import { useDialog } from "./wot-composables";
-import { tokens } from "../generated/tokens";
-
 export interface BaseDialogOptions {
   title?: string;
   msg?: string;
@@ -78,7 +76,7 @@ defineExpose<{ confirm: (options?: BaseDialogOptions) => Promise<"confirm" | "ca
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 /* 抖音自绘分支：页面级节点 + fixed，不经过 wot 自定义组件宿主节点（同 BasePopup §8.12 模式） */
 .base-dialog-native {
   position: fixed;
@@ -90,7 +88,7 @@ defineExpose<{ confirm: (options?: BaseDialogOptions) => Promise<"confirm" | "ca
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: base-dialog-fade-in v-bind("tokens.semantic.durationModal") ease;
+  animation: base-dialog-fade-in $duration-modal ease;
 }
 .base-dialog-native__mask {
   position: absolute;
@@ -104,46 +102,46 @@ defineExpose<{ confirm: (options?: BaseDialogOptions) => Promise<"confirm" | "ca
   position: relative;
   width: 560rpx;
   max-width: 80%;
-  border-radius: v-bind("tokens.component.popupRadiusRpx + 'rpx'");
-  background: v-bind("tokens.semantic.colorPage");
-  padding: v-bind("tokens.primitive.spaceLg");
+  border-radius: #{$popup-radius-rpx}rpx;
+  background: $color-page;
+  padding: $space-lg;
 }
 .base-dialog-native__title {
   display: block;
-  margin-bottom: v-bind("tokens.primitive.spaceSm");
-  font-size: v-bind("tokens.semantic.fontSizeSubTitle");
-  color: v-bind("tokens.semantic.colorTextStrong");
+  margin-bottom: $space-sm;
+  font-size: $font-size-sub-title;
+  color: $color-text-strong;
 }
 .base-dialog-native__msg {
   display: block;
-  margin-bottom: v-bind("tokens.primitive.spaceLg");
-  font-size: v-bind("tokens.semantic.fontSizeBody");
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  margin-bottom: $space-lg;
+  font-size: $font-size-body;
+  color: $color-text-secondary;
 }
 .base-dialog-native__actions {
   display: flex;
-  gap: v-bind("tokens.primitive.spaceSm");
+  gap: $space-sm;
 }
 .base-dialog-native__btn {
   flex: 1;
-  height: v-bind("tokens.semantic.sizeHitArea");
+  height: $size-hit-area;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: v-bind("tokens.component.popupRadiusRpx + 'rpx'");
+  border-radius: #{$popup-radius-rpx}rpx;
 }
 .base-dialog-native__btn--confirm {
-  background: v-bind("tokens.semantic.colorAction");
+  background: $color-action;
 }
 .base-dialog-native__btn--cancel {
-  background: v-bind("tokens.semantic.colorDivider");
+  background: $color-divider;
 }
 .base-dialog-native__btn-text {
-  font-size: v-bind("tokens.semantic.fontSizeBody");
-  color: v-bind("tokens.semantic.colorActionText");
+  font-size: $font-size-body;
+  color: $color-action-text;
 }
 .base-dialog-native__btn-text--cancel {
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  color: $color-text-secondary;
 }
 @keyframes base-dialog-fade-in {
   from {

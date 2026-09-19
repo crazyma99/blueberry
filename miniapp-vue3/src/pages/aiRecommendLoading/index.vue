@@ -535,7 +535,7 @@ function redirectTo(url: string): void {
   text-align: center;
 }
 .retry-btn {
-  background: #fff;
+  background: #fff; /* 旧 :360 同值——失败态重试按钮白底黑字为旧端原设计，非亮色残留（2026-09-19 核对） */
   border-radius: 48rpx; /* 旧 --radius-2xl */
   padding: 24rpx 80rpx;
   margin-bottom: 24rpx;

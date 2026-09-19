@@ -138,7 +138,7 @@ const miniAppName = PROFILE.miniAppName;
 }
 
 .policy-content {
-  padding: var(--spacing-lg) 36rpx 80rpx 36rpx;
+  padding: 32rpx 36rpx 80rpx 36rpx;
 }
 
 .policy-title {
@@ -158,7 +158,7 @@ const miniAppName = PROFILE.miniAppName;
 }
 
 .policy-meta-line {
-  font-size: var(--font-size-body-lg);
+  font-size: 26rpx;
   color: #888888;
   line-height: 44rpx;
 }
@@ -173,7 +173,7 @@ const miniAppName = PROFILE.miniAppName;
   font-size: 32rpx;
   font-weight: 400;
   color: #1a1a1a;
-  margin-top: var(--spacing-lg);
+  margin-top: 32rpx;
   margin-bottom: 16rpx;
 }
 
@@ -181,19 +181,19 @@ const miniAppName = PROFILE.miniAppName;
   font-size: 30rpx;
   font-weight: 400;
   color: #222222;
-  margin-top: var(--spacing-sm);
+  margin-top: 20rpx;
   margin-bottom: 12rpx;
 }
 
 .policy-paragraph {
-  font-size: var(--font-size-body-plus);
+  font-size: 28rpx;
   color: #333333;
   line-height: 48rpx;
   margin-bottom: 16rpx;
 }
 
 .policy-list-item {
-  font-size: var(--font-size-body-plus);
+  font-size: 28rpx;
   color: #333333;
   line-height: 48rpx;
   margin-bottom: 8rpx;
@@ -202,8 +202,8 @@ const miniAppName = PROFILE.miniAppName;
 
 .policy-table {
   border: 1rpx solid #e0e0e0;
-  border-radius: var(--radius-xs);
-  margin: 12rpx 0 var(--spacing-sm) 0;
+  border-radius: 8rpx;
+  margin: 12rpx 0 20rpx 0;
   overflow: hidden;
 }
 
@@ -222,7 +222,7 @@ const miniAppName = PROFILE.miniAppName;
 }
 
 .policy-table-cell {
-  padding: 16rpx var(--spacing-sm);
+  padding: 16rpx 20rpx;
 }
 
 .policy-table-cell-left {
@@ -235,20 +235,20 @@ const miniAppName = PROFILE.miniAppName;
 }
 
 .policy-table-header {
-  font-size: var(--font-size-body-plus);
+  font-size: 28rpx;
   font-weight: 400;
   color: #1a1a1a;
   line-height: 44rpx;
 }
 
 .policy-table-body {
-  font-size: var(--font-size-body-lg);
+  font-size: 26rpx;
   color: #333333;
   line-height: 44rpx;
 }
 
 .policy-footer {
-  font-size: var(--font-size-body-lg);
+  font-size: 26rpx;
   color: #666666;
   line-height: 44rpx;
   text-align: center;

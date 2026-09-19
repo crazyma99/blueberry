@@ -20,7 +20,6 @@
 //   --font-size-body-plus 28rpx / -body-sm 22rpx / -body-xs 20rpx → 硬编码（tokens 无对应档位）
 // 注意：.font-noto-serif / .btn-primary / .press-dim 旧端为 App.uvue 全局类；新端 App.vue 全局样式
 // 已补齐（与旧端逐字一致），本组件仅引用不定义（2026-09-18 删除迁移期 scoped 临时副本）。
-import { tokens } from "../../generated/tokens";
 
 withDefaults(
   defineProps<{
@@ -81,7 +80,7 @@ const emit = defineEmits<{
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 /* 遮罩 + 渐显（全屏：vw/vh 撑满，微信不支持 inset） */
 .login-overlay {
   position: fixed;
@@ -134,7 +133,7 @@ const emit = defineEmits<{
 .card-title {
   font-size: 40rpx;
   font-weight: 400;
-  color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) #F1CD91 */
+  color: $color-action; /* 旧 var(--color-primary) #F1CD91 */
   margin-bottom: 12rpx;
 }
 
@@ -164,15 +163,15 @@ const emit = defineEmits<{
   transition: all 0.15s ease-out;
 }
 .agreement-check.is-checked {
-  border-color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) */
+  border-color: $color-action; /* 旧 var(--color-primary) */
   background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%); /* 旧 var(--gradient-btn-primary) */
 }
 /* 选中对勾（CSS 画勾：两条边框旋转 45 度） */
 .agreement-mark {
   width: 18rpx;
   height: 10rpx;
-  border-left: 4rpx solid v-bind("tokens.semantic.colorActionText"); /* 旧 var(--color-bg) #160F04 */
-  border-bottom: 4rpx solid v-bind("tokens.semantic.colorActionText");
+  border-left: 4rpx solid $color-action-text; /* 旧 var(--color-bg) #160F04 */
+  border-bottom: 4rpx solid $color-action-text;
   transform: rotate(-45deg) translate(1rpx, -2rpx);
 }
 .agreement-text {
@@ -183,7 +182,7 @@ const emit = defineEmits<{
   line-height: 1.5;
 }
 .agreement-link {
-  color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) */
+  color: $color-action; /* 旧 var(--color-primary) */
 }
 
 /* 一键登录 */

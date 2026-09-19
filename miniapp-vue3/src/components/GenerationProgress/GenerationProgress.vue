@@ -66,10 +66,11 @@ withDefaults(
   </view>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+/* 节点尺寸唯一来源：轨道高度、节点宽高均由它推导（改这里即可，连线两处常量需同步）。
+   2026-09-19：原 CSS 变量 --gp-node-size 改 scss 编译期变量（抖音 TTSS 不支持 CSS 变量） */
+$gp-node-size: 64rpx;
 .gp {
-  /* 节点尺寸唯一来源：轨道高度、节点宽高均由它推导（改这里即可，连线两处常量需同步） */
-  --gp-node-size: 64rpx;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -100,7 +101,7 @@ withDefaults(
   left: 50%;
   top: 0;
   width: 100%;
-  height: var(--gp-node-size);
+  height: $gp-node-size;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -124,8 +125,8 @@ withDefaults(
   background: rgba(255, 255, 255, 0.1);
 }
 .gp-node {
-  width: var(--gp-node-size);
-  height: var(--gp-node-size);
+  width: $gp-node-size;
+  height: $gp-node-size;
   border-radius: 50%;
   box-sizing: border-box;
   display: flex;

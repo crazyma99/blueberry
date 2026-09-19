@@ -1,4 +1,5 @@
 // PageFooter 纯去重收敛的结构合同：9 页原有变体（包裹/分隔线/文案类名）逐一保留，props 透传 AppFooter。
+// 2026-09-19 主人指示新增合同：分隔线 divide 以文案非空为闸（loading 期不先出横线）。
 import { describe, expect, it } from "vitest";
 import { mount } from "@vue/test-utils";
 import PageFooter from "../../src/components/PageFooter/PageFooter.vue";
@@ -17,7 +18,7 @@ describe("PageFooter（页脚块共享组件）", () => {
   });
 
   it("copyright 变体（favorites/aiTryOnHistory）", () => {
-    const w = mount(PageFooter, { props: { variant: "copyright" } });
+    const w = mount(PageFooter, { props: { variant: "copyright", mainLine: "版权行" } });
     expect(w.find(".copyright").exists()).toBe(true);
     expect(w.find(".divide").exists()).toBe(true);
   });
@@ -37,10 +38,17 @@ describe("PageFooter（页脚块共享组件）", () => {
   });
 
   it("wrapped=false：无 page-footer 包裹类（priceList/priceHomePage）", () => {
-    const w = mount(PageFooter, { props: { wrapped: false } });
+    const w = mount(PageFooter, { props: { wrapped: false, mainLine: "版权行" } });
     expect((w.element as HTMLElement).classList.contains("page-footer")).toBe(false);
     expect(w.find(".divide").exists()).toBe(true);
     expect(w.find(".bottomdesc").exists()).toBe(true);
+  });
+
+  it("分隔线以文案为闸：空串不渲染，文案到达后出现（2026-09-19 主人指示）", async () => {
+    const w = mount(PageFooter, { props: { mainLine: "", supportLine: "" } });
+    expect(w.find(".divide").exists()).toBe(false);
+    await w.setProps({ supportLine: "支持行" });
+    expect(w.find(".divide").exists()).toBe(true);
   });
 
   it("props 缺省走空串兜底（与 AppFooter 默认一致）", () => {

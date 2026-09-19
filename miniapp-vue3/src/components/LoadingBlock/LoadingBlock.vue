@@ -2,8 +2,6 @@
 // 通用加载块（旧端 LoadingBlock.uvue 移植）：金色旋转圈＋浅金文字。
 // 派生色说明：旧端 --color-primary-20/-70 为金色 20%/70% 透明度派生；
 // 新端 token 仅有实色 gold(#F1CD91=rgb(241,205,145))，故按同值 rgba 派生并注明。
-import { tokens } from "../../generated/tokens";
-
 withDefaults(defineProps<{ text?: string }>(), { text: "加载中…" });
 </script>
 
@@ -14,7 +12,7 @@ withDefaults(defineProps<{ text?: string }>(), { text: "加载中…" });
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .loading-block {
   display: flex;
   flex-direction: column;
@@ -25,13 +23,13 @@ withDefaults(defineProps<{ text?: string }>(), { text: "加载中…" });
   width: 80rpx;
   height: 80rpx;
   border: 6rpx solid rgba(241, 205, 145, 0.2);
-  border-top-color: v-bind("tokens.semantic.colorAction");
+  border-top-color: $color-action;
   border-radius: 999rpx;
   animation: spin 1s linear infinite;
 }
 .loading-text {
-  margin-top: v-bind("tokens.primitive.spaceMd");
-  font-size: v-bind("tokens.semantic.fontSizeBody");
+  margin-top: $space-md;
+  font-size: $font-size-body;
   color: rgba(241, 205, 145, 0.7);
   font-weight: 400;
 }

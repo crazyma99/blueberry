@@ -5,8 +5,6 @@
 // 派生色：--color-primary-50/-70 为金色 50%/70% 透明度派生（gold=rgb(241,205,145)）；
 // --radius-card 旧值未盘点，按现有 token popupRadiusRpx 映射（视觉差异待 P2-13 样页核对）。
 import { computed } from "vue";
-import { tokens } from "../../generated/tokens";
-
 export interface PhotoGridShop {
   id?: number;
   homeImage?: string;
@@ -66,11 +64,14 @@ const showPlaceholder = computed(() => {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .demoPhotoContaner {
   margin: 40rpx 0;
   padding: 0 8rpx;
   width: 100%;
+  /* 旧端 uvue 默认 border-box；vue3 mp 端默认 content-box ⇒ width:100%+padding 会右溢 16rpx，
+     右列店铺卡贴紧/溢出右屏边（2026-09-19 抖音价目表实测，微信同机制仅 4px 不易察觉） */
+  box-sizing: border-box;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -79,18 +80,23 @@ const showPlaceholder = computed(() => {
 .shopCard {
   position: relative;
   width: calc((100% - 8rpx) / 2);
+  /* uvue 默认 border-box；vue3 mp 端须显式声明，否则占位卡 2rpx 描边外扩溢出换行（抖音实测） */
+  box-sizing: border-box;
 }
 .full-width,
 .shopCard.full-width {
   width: 100%;
 }
 .shopCard-placeholder {
+  /* 宽度与 .shopCard 显式对齐：抖音端描边盒模型差异下不依赖选择器叠加 */
+  width: calc((100% - 8rpx) / 2);
+  box-sizing: border-box;
   height: 226rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 2rpx dashed rgba(243, 217, 172, 0.35);
-  border-radius: v-bind("tokens.component.popupRadiusRpx + 'rpx'");
+  border-radius: #{$popup-radius-rpx}rpx;
   background: rgba(255, 255, 255, 0.02);
 }
 .shopCard-placeholder .placeholderContent {
@@ -99,7 +105,7 @@ const showPlaceholder = computed(() => {
   align-items: center;
 }
 .shopCard-placeholder .placeholderTitle {
-  font-size: v-bind("tokens.semantic.fontSizeTitle");
+  font-size: $font-size-title;
   font-weight: 400;
   color: rgba(241, 205, 145, 0.5);
   letter-spacing: 2rpx;
@@ -116,6 +122,9 @@ const showPlaceholder = computed(() => {
 }
 .shopName {
   position: absolute;
+  /* 旧端 uvue absolute 默认吸附父顶点；vue3 mp 端 top:auto 会落在静态位（图片之后）⇒ 蒙层/店名丢失，须显式 top/bottom */
+  top: 0;
+  bottom: 0;
   left: 0;
   width: 100%;
   height: 100%;
@@ -123,8 +132,8 @@ const showPlaceholder = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: v-bind("tokens.semantic.fontSizeTitle");
-  color: v-bind("tokens.semantic.colorAction");
+  font-size: $font-size-title;
+  color: $color-action;
   font-weight: 400;
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3));
 }

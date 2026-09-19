@@ -31,7 +31,6 @@
 import { computed, ref } from "vue";
 import { onHide, onLoad, onShareAppMessage, onShareTimeline, onShow, onUnload } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
-import { tokens } from "../../generated/tokens";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
@@ -924,7 +923,7 @@ async function loadFooterPair(): Promise<void> {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 /* 旧端 :997-1348 逐值移植；深色页底 #160F04（= 旧 --color-bg，见偏差①） */
 .page {
   background: #160f04; /* 旧 var(--color-bg)；不映射 tokens.semantic.colorPage（新端为亮色底） */
@@ -989,7 +988,7 @@ async function loadFooterPair(): Promise<void> {
 }
 .gen-tips-text {
   font-size: 22rpx; /* 旧 var(--font-size-body-sm)=22rpx（勿映射 fontSizeBody=32rpx） */
-  color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) #F1CD91 */
+  color: $color-action; /* 旧 var(--color-primary) #F1CD91 */
 }
 .gen-actions {
   display: flex;
@@ -1192,7 +1191,7 @@ async function loadFooterPair(): Promise<void> {
   box-sizing: border-box;
 }
 .action-bar .btn-primary text {
-  color: v-bind("tokens.semantic.colorActionText"); /* 旧 var(--color-bg)，金色面上墨色 */
+  color: $color-action-text; /* 旧 var(--color-bg)，金色面上墨色 */
   font-size: 32rpx;
   line-height: 1.2;
 }
@@ -1224,7 +1223,7 @@ async function loadFooterPair(): Promise<void> {
   text-align: center;
 }
 .retry-btn {
-  background: #fff;
+  background: #fff; /* 旧 :1284 同值——失败态重试按钮白底黑字为旧端原设计，非亮色残留（2026-09-19 核对） */
   border-radius: 48rpx; /* 旧 var(--radius-2xl) */
   padding: 24rpx 80rpx;
   margin-bottom: 24rpx;
@@ -1286,7 +1285,7 @@ async function loadFooterPair(): Promise<void> {
   font-size: 32rpx;
   line-height: 1.2;
   font-weight: 400;
-  color: v-bind("tokens.semantic.colorAction"); /* 旧 var(--color-primary) */
+  color: $color-action; /* 旧 var(--color-primary) */
   background: rgba(241, 205, 145, 0.1); /* 旧 var(--color-primary-10)，金色 10% 派生 */
   border: 1rpx solid rgba(241, 205, 145, 0.5); /* 旧 var(--color-primary-50) */
   border-radius: 999rpx;

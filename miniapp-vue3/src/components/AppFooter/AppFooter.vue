@@ -5,8 +5,6 @@
 // Profile 注入（copyrightText）→ 本地兜底，保留在用例内（AppFooter.uvue 的注入锚点字段名不变量）。
 // 有意偏差（已声明）：①主题暗→亮——旧端浅底文字用 --color-primary-50（金 50%），白底≈1.3:1，
 // 新端取 colorTextSecondary（CR 🟡3 同口径）；②font-noto-serif/harmony 全局类未定义（仅引用）。
-import { tokens } from "../../generated/tokens";
-
 withDefaults(defineProps<{ mainLine?: string; supportLine?: string }>(), { mainLine: "", supportLine: "" });
 </script>
 
@@ -17,12 +15,12 @@ withDefaults(defineProps<{ mainLine?: string; supportLine?: string }>(), { mainL
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .app-footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  color: $color-text-secondary;
 }
 .footer-main {
   /* 旧端组件无 font-size 规则：主行**继承页面包裹类**字号（.beian/.copyright/.bottomdesc） */
@@ -30,6 +28,6 @@ withDefaults(defineProps<{ mainLine?: string; supportLine?: string }>(), { mainL
 .footer-support {
   margin-top: 8rpx;
   font-size: 14rpx; /* 旧 --font-size-caption=14rpx（App.uvue:132，CR 🟡3） */
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  color: $color-text-secondary;
 }
 </style>

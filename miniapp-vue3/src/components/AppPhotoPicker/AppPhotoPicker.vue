@@ -22,7 +22,6 @@
 //   其余派生透明度色（旧端即字面 rgba，非变量）：虚线框 .45／底色 .04／氛围光 .16→0／spinner 圈 .3 —— 均按旧端原值保留。
 // hover-class="press-dim"：旧端 App.uvue 全局类（:139-141 opacity:.82），新端由 App.vue 全局样式
 //   提供（与旧端逐字一致），本组件仅引用不定义（2026-09-18 删除迁移期 scoped 临时副本）。
-import { tokens } from "../../generated/tokens";
 
 withDefaults(
   defineProps<{
@@ -52,7 +51,7 @@ const emit = defineEmits<{
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .app-photo-picker {
   position: relative;
   width: 100%;
@@ -90,8 +89,8 @@ const emit = defineEmits<{
   width: 88rpx;
   height: 88rpx;
   border-radius: 50%;
-  border: 3rpx solid v-bind("tokens.semantic.colorAction"); /* 旧 --color-primary #F1CD91 */
-  color: v-bind("tokens.semantic.colorAction");
+  border: 3rpx solid $color-action; /* 旧 --color-primary #F1CD91 */
+  color: $color-action;
   font-size: 52rpx;
   display: flex;
   align-items: center;
@@ -118,7 +117,7 @@ const emit = defineEmits<{
   width: 48rpx;
   height: 48rpx;
   border: 4rpx solid rgba(241, 205, 145, 0.3); /* 旧端字面值（金色 30%） */
-  border-top-color: v-bind("tokens.semantic.colorAction"); /* 旧 --color-primary #F1CD91 */
+  border-top-color: $color-action; /* 旧 --color-primary #F1CD91 */
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-bottom: 16rpx;

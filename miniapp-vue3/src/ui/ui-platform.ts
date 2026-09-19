@@ -1,6 +1,8 @@
 // UI 平台桥（方案 A）：运行时平台判定，供门面做抖音分支。
 // 纪律（migration §8.12）：vitest 只用纯 @vitejs/plugin-vue，不处理 uni 的 #ifdef 条件编译——
 // 平台分支一律做成运行时可判定结构；#ifdef 只允许出现在模板/样式且不得承载唯一逻辑。
+// 样式级平台差异（2026-09-19 定）：isToutiaoPlatform() 判定后在模板挂修饰类（后缀 -tt），
+// wxss/ttss 编译同一份 CSS、微信端不挂类即不命中——两端样式都可测，禁止为样式分叉写两套文件。
 // 事实源：src/ports/context.ts PLATFORMS 闭集（mp-weixin/mp-toutiao/mp-xhs）。
 import { isPlatform } from "../ports/context";
 import type { Platform } from "../ports/context";

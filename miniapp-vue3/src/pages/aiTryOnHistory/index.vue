@@ -7,7 +7,8 @@
 // completed 与 pending/processing 均跳转继续轮询，failed 仅 toast）；onShow 首跳过一次后刷新（:98-105，
 // **已有数据时静默刷新**——旧 bug #7：从结果页返回骨架整页闪，:111-114）；openid 取本地用户信息，缺失则空态（:116-122）。
 // ⚠️ 平台：抖音侧 AI 6 页**不注册**（2026-09-17 主人拍板）⇒ pages.json 中本页条目以 `#ifdef MP-WEIXIN` 包裹。
-// 有意偏差（已声明）：①主题暗→亮（旧 --color-bg #160F04→colorPage 白）：空态文案改 colorTextSecondary（旧白 50%／30% 白底不可读）；
+// 有意偏差（已声明）：①主题：2026-09-19 撤回迁移期亮色、恢复旧端深色（colorPage=#160F04，同旧 --color-bg）；
+// 空态文案仍取 colorTextSecondary（深色下=金 70%，与旧白 50%／30% 观感接近）；骨架/照片占位底已按旧端还原白 8%/6%；
 // ②font-noto-serif/harmony 全局类未定义（沿用既有口径）；③AppFooter 由 P2-21 的纯 props 组件接入（内容经 page-config 用例）。
 import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
@@ -15,7 +16,6 @@ import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
-import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
@@ -220,12 +220,12 @@ function pad(n: number): string {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: v-bind("tokens.semantic.colorPage");
+  background: $color-page;
 }
 .main-content {
   flex: 1;
@@ -247,9 +247,9 @@ function pad(n: number): string {
   height: 482rpx;
   margin: 0 8rpx 8rpx 0;
   border-radius: 8rpx; /* 旧 --radius-xs=8rpx */
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.08); /* 旧端全局 .sk-photo-item（App.uvue:299）；2026-09-19 深色还原（亮色期黑 6% 深底不可见） */
 }
-/* 空状态（旧 :218-233；白底可读性改用正文次级色，已于页头声明） */
+/* 空状态（旧 :218-233；文字色取正文次级色，已于页头声明） */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -259,12 +259,12 @@ function pad(n: number): string {
 }
 .empty-title {
   font-size: 32rpx;
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  color: $color-text-secondary;
   margin-bottom: 16rpx;
 }
 .empty-desc {
   font-size: 24rpx;
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  color: $color-text-secondary;
 }
 /* 卡片网格（旧 :236-250） */
 .photolistContainer {
@@ -286,7 +286,7 @@ function pad(n: number): string {
   width: 100%;
   height: 100%;
   border-radius: 8rpx; /* 旧 --radius-xs */
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.06); /* 旧 :255 照片占位底；2026-09-19 深色还原（亮色期黑 6% 深底不可见） */
 }
 .mask {
   position: absolute;

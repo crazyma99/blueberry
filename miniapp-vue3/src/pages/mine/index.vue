@@ -13,15 +13,14 @@
 // 错误给调用方，无事件总线（T5 合同），页面侧显式处理；②list-view/list-item（uni-app x 组件）→普通 view 容器；
 // ③aiTryOnHistory 页尚未迁移（AI 批次），「AI试衣」菜单点击在 pages.json 注册前会导航失败；favorites 页已由
 // P2-19 迁移并注册（2026-09-17），菜单可正常进入。
-// ④主题：旧端深色底 #160F04→新端 tokens.semantic.colorPage 亮色（全仓迁移主题口径），金色元素在白底的
-// 观感差异待真机核对（CR 🟡6）；⑤骨架屏未带旧端 sk-animate 闪烁动画（共享 SkeletonBlock 组件口径）。
+// ④主题：2026-09-19 撤回迁移期亮色、恢复旧端深色（colorPage=#160F04，同旧 --color-bg），
+// 骨架等亮色残留值已按旧端全局骨架还原（白 8%，App.uvue:283/:316/:322）；⑤骨架屏未带旧端 sk-animate 闪烁动画（共享 SkeletonBlock 组件口径）。
 import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
-import { tokens } from "../../generated/tokens";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
@@ -45,6 +44,8 @@ import BottomActionBarSecondary from "../../components/BottomActionBarSecondary/
 // —— 装配（同 index/demoDetail/priceList）——
 const detected = detectUiPlatform();
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
+// 自定义 tabbar 仅微信端 ⇒ 底部占位仅微信需要（抖音原生 tab 不占页面区域，2026-09-19 主人反馈）
+const isMpWeixin = platform === "mp-weixin";
 const env = PROFILE.environment;
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
 const uniStorage = createUniStorage();
@@ -445,16 +446,16 @@ function handleMenuClick(item: MenuItem): void {
       <view class="logout-btn" hover-class="press-dim" @click.stop="confirmLogout">退出登录</view>
     </BottomActionBarSecondary>
 
-    <view class="tabbar-safe-spacer"></view>
+    <view v-if="isMpWeixin" class="tabbar-safe-spacer"></view>
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: v-bind("tokens.semantic.colorPage");
+  background: $color-page;
 }
 /* 顶部氛围光晕（旧端 :480-488 金色弥散） */
 .bg-aura {
@@ -488,19 +489,19 @@ function handleMenuClick(item: MenuItem): void {
   width: 108rpx;
   height: 108rpx;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.08); /* 旧端全局 .sk-avatar（App.uvue:316）；2026-09-19 深色还原 */
 }
 .sk-text {
   width: 200rpx;
   height: 32rpx;
   margin-left: 24rpx;
   border-radius: 8rpx;
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.08); /* 旧端全局 .sk-text（App.uvue:283）；2026-09-19 深色还原 */
 }
 .sk-menu {
   height: 92rpx;
   border-radius: 16rpx;
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.08); /* 旧端全局 .sk-menu（App.uvue:322）；2026-09-19 深色还原 */
 }
 /* 资料+功能列表合成一块（旧端 :503-509） */
 .profile-group {
@@ -539,7 +540,7 @@ function handleMenuClick(item: MenuItem): void {
   width: 108rpx;
   height: 108rpx;
   border-radius: 50%;
-  background: #333;
+  background: #333; /* 旧 :539 同值（头像占位底），2026-09-19 核对一致 */
   overflow: hidden;
   border: 2rpx solid rgba(241, 205, 145, 0.35);
 }
@@ -553,9 +554,9 @@ function handleMenuClick(item: MenuItem): void {
   flex: 1;
 }
 .nickname {
-  font-size: v-bind("tokens.semantic.fontSizeSubTitle"); /* 旧端 36rpx 精确 */
+  font-size: $font-size-sub-title; /* 旧端 36rpx 精确 */
   font-weight: 400;
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
   letter-spacing: 2rpx;
 }
 .user-sub {
@@ -581,7 +582,7 @@ function handleMenuClick(item: MenuItem): void {
 .menu-title {
   flex: 1;
   font-size: 28rpx; /* 旧端 --font-size-body-plus=28rpx（硬编码还原） */
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
   font-weight: 400;
   letter-spacing: 1rpx;
 }

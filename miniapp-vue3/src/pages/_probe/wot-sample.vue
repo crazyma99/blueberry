@@ -118,17 +118,17 @@ async function openDialog() {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .probe-page {
   padding: 24rpx;
-  background: v-bind("tokens.semantic.colorPage");
+  background: $color-page;
 }
 .probe-section {
   margin-bottom: 32rpx;
 }
 .probe-title {
   font-size: 26rpx;
-  color: v-bind("tokens.semantic.colorTextMuted");
+  color: $color-text-muted;
   margin-bottom: 16rpx;
   display: block;
 }
@@ -140,7 +140,7 @@ async function openDialog() {
 }
 .probe-value {
   font-size: 26rpx;
-  color: v-bind("tokens.semantic.colorTextSecondary");
+  color: $color-text-secondary;
 }
 .probe-popup-body {
   padding: 48rpx;
@@ -148,18 +148,18 @@ async function openDialog() {
 .probe-img {
   width: 200rpx;
   height: 200rpx;
-  background: v-bind("tokens.semantic.colorDivider");
+  background: $color-divider;
 }
 .probe-longtitle {
   display: block;
   margin-top: 16rpx;
-  font-size: v-bind("tokens.semantic.fontSizeBody");
-  color: v-bind("tokens.semantic.colorTextPrimary");
+  font-size: $font-size-body;
+  color: $color-text-primary;
 }
 .probe-token-chip {
   display: inline-block;
   padding: 16rpx 24rpx;
-  border-radius: v-bind("tokens.component.popupRadiusRpx + 'rpx'");
+  border-radius: #{$popup-radius-rpx}rpx;
   font-size: 26rpx;
 }
 .probe-dialog-actions {
@@ -170,13 +170,13 @@ async function openDialog() {
   flex: 1;
   text-align: center;
   padding: 16rpx 0;
-  border-radius: v-bind("tokens.component.popupRadiusRpx + 'rpx'");
-  background: v-bind("tokens.semantic.colorDivider");
-  color: v-bind("tokens.semantic.colorTextPrimary");
-  font-size: v-bind("tokens.semantic.fontSizeBody");
+  border-radius: #{$popup-radius-rpx}rpx;
+  background: $color-divider;
+  color: $color-text-primary;
+  font-size: $font-size-body;
 }
 .probe-dialog-btn--ok {
-  background: v-bind("tokens.semantic.colorAction");
-  color: v-bind("tokens.semantic.colorActionText");
+  background: $color-action;
+  color: $color-action-text;
 }
 </style>

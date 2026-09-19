@@ -13,8 +13,8 @@
 //   <button class="xxx">退出登录</button>
 // </BottomActionBarSecondary>
 //
-// token 映射：旧 var(--color-bg) #160F04 为「页面底色」（非金色面上的墨色文字），
-// 新端 tokens.semantic.colorPage 为亮色 #FFFFFF，语义不符，故按旧值硬编码 #160F04 保留深色底。
+// token 映射：旧 var(--color-bg) #160F04 为「页面底色」（非金色面上的墨色文字）；
+// tokens.semantic.colorPage 已于 2026-09-19 恢复深色 #160F04，与旧值一致；此处仍按旧值硬编码保留深色底。
 import { computed } from "vue";
 
 const props = withDefaults(

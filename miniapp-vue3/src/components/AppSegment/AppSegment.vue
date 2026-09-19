@@ -21,7 +21,6 @@
 //   --font-size-body 24rpx → 硬编码 24rpx（App.uvue:128；**注意** ≠ tokens.semantic.fontSizeBody=32rpx 档，不可误映射）
 // hover-class="press-dim"：旧端为 App.uvue 全局类（:139-141 opacity:.82），新端由 App.vue 全局样式
 //   提供（与旧端逐字一致），本组件仅引用不定义（2026-09-18 删除迁移期 scoped 临时副本）。
-import { tokens } from "../../generated/tokens";
 
 withDefaults(
   defineProps<{
@@ -55,7 +54,7 @@ function onItemTap(index: number): void {
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .app-segment {
   display: flex;
   flex-direction: row;
@@ -83,7 +82,7 @@ function onItemTap(index: number): void {
   transition: color 0.15s ease-out;
 }
 .app-segment-text.is-active {
-  color: v-bind("tokens.semantic.colorActionText"); /* 旧 --color-bg #160F04 同值 */
+  color: $color-action-text; /* 旧 --color-bg #160F04 同值 */
   font-weight: 400;
 }
 </style>

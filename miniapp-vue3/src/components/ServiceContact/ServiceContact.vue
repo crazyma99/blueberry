@@ -3,11 +3,9 @@
 // 旧端 ServiceContact.uvue（262 行）原本 mounted → loadContactConfig() 自取 /api/page-config；
 // 本批按 phases「上提请求到用例/组合函数，再 props 注入」改造：OPS 优先 → Profile 注入 → 本地兜底
 // 的优先级链保留在用例内（profile 注入锚点 contactQrSrc/contactPhoneText 由 PROFILE 承载，字段名不变量）。
-// 有意偏差（已声明）：①主题：本区块沿用旧端深色卡片/金色描边（新端 colorPage 为白）——待主题批次统一；
+// 有意偏差（已声明）：①主题：本区块沿用旧端深色卡片/金色描边——2026-09-19 colorPage 已恢复深色 #160F04，与旧端口径一致；
 // ②字号：旧端若干 CSS 变量（--font-size-slogan/--font-size-display 等）未盘点，按近似档硬编码并注释；
 // ③font-noto-serif 全局类新端未定义（沿用既有口径仅引用）。
-import { tokens } from "../../generated/tokens";
-
 withDefaults(
   defineProps<{
     list?: string[];
@@ -72,7 +70,7 @@ withDefaults(
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .divideTit {
   display: flex;
   flex-direction: row;
@@ -89,7 +87,7 @@ withDefaults(
   flex-direction: column;
   font-size: 38rpx; /* 旧 --font-size-display=38rpx（App.uvue:124，CR 🟡2 纠错） */
   font-weight: 400;
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
 }
 .divideTit .demoPhotoTit .icon {
   width: 143rpx;
@@ -116,7 +114,7 @@ withDefaults(
   text-align: center;
   font-weight: 400;
   font-size: 34rpx; /* 旧 --font-size-slogan=34rpx（App.uvue:125，CR 🟡2 纠错） */
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
 }
 .service-contain .main-wrap {
   padding: 1rpx;
@@ -151,7 +149,7 @@ withDefaults(
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
   font-size: 20rpx; /* 旧 --font-size-body-xs=20rpx */
   font-weight: 400;
 }
@@ -168,7 +166,7 @@ withDefaults(
 .service-contain .main .content .item-text {
   flex: 1;
   font-size: 26rpx; /* 旧 --font-size-body-lg=26rpx */
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
   letter-spacing: 0.1em;
 }
 .service-contain .main .line {
@@ -187,7 +185,7 @@ withDefaults(
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: v-bind("tokens.semantic.colorAction");
+  color: $color-action;
   background: linear-gradient(139deg, rgba(241, 205, 145, 0.06) 0%, rgba(241, 205, 145, 0) 100%);
   border: 1px solid rgba(241, 205, 145, 0.2);
   position: relative;

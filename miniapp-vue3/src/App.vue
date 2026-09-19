@@ -2,6 +2,26 @@
 import { onLaunch, onShow, onHide } from "@dcloudio/uni-app";
 onLaunch(() => {
   console.log("App Launch");
+  // 全局加载自定义字体（旧端 App.uvue :9-32 移植；微信小程序需在 mp 后台配置 downloadFile 合法域名：
+  // www.lanmei66.cloud）。使用方式：全局类名 font-noto-serif / font-harmony。
+  // 2026-09-19 补：迁移时遗漏 ⇒ 抖音端 font-noto-serif 全部回落系统字体（微信端靠 custom-tab-bar 的
+  // wx.loadFontFace 兜底才没暴露）；uni.loadFontFace 抖音映射 tt.loadFontFace，旧端抖音线上已验证。
+  if (typeof uni !== "undefined" && typeof uni.loadFontFace === "function") {
+    uni.loadFontFace({
+      global: true,
+      family: "NotoSerifSC-Bold",
+      source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/NotoSerifSC-Bold-subset.woff")',
+      success: () => console.log("[font] NotoSerifSC-Bold 加载成功"),
+      fail: (err) => console.warn("NotoSerifSC-Bold 字体加载失败", err),
+    });
+    uni.loadFontFace({
+      global: true,
+      family: "HarmonyOS-Sans-SC",
+      source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/HarmonyOS_Sans_SC-subset.woff")',
+      success: () => console.log("[font] HarmonyOS-Sans-SC 加载成功"),
+      fail: (err) => console.warn("HarmonyOS-Sans-SC 字体加载失败", err),
+    });
+  }
 });
 onShow(() => {
   console.log("App Show");
@@ -12,13 +32,13 @@ onHide(() => {
 </script>
 
 <!--
-  全局样式＝**旧端 `src/App.uvue` <style> 块的忠实移植**（旧端 :1-140 左右的「每个页面公共css」＋
-  「Design Token 全局 CSS 变量（来源 design-token.md，2026-09-03）」与圆角/字号/间距/弹窗等全套变量）。
+  全局样式＝**旧端 `src/App.uvue` <style> 块的忠实移植**（「每个页面公共css」＋圆角/字号/间距/弹窗等）。
   ⚠️ 2026-09-17 修复（体验版「UI 错乱/布局错乱」根因）：此前本文件 `<style>` 为空 ⇒ 构建产物 `app.wxss` 仅 191B，
   **页面里 46 处 `var(--color-*)` 等变量全部无定义** ⇒ 真机颜色/背景/圆角/字号全失效。
   保持旧端 `page{...}` 选择器（**微信 wxss 不支持 `:root`**，旧端写法在 wxss 下同样成立）。
-  注意：`src/generated/theme.css`（tokens 管线产物，`:root` + `--color-action` 命名）**与本块命名不同且当前无人引用**，
-  两者的归并与 tokens 口径统一列为待办（见 docs/migration/deviations.md 与 HANDOFF 挂账）。
+  ⚠️ 2026-09-19 抖音兼容：TTSS 不支持 CSS 变量（官方：变量特性编译暂不支持）⇒ 原 `page{--*}` 变量定义块
+  整体删除，全部消费点（本文件及 13 个 .vue）经 codemod-css-var-literal.mjs 替换为字面量；
+  页面级 token 改走 theme.scss 编译期 $ 变量（vite additionalData 注入），单源仍是 tokens/source.json。
 -->
 <style>
 /*每个页面公共css */
@@ -26,70 +46,20 @@ onHide(() => {
 		flex-direction: row;
 	}
 
-/* ========== Design Token 全局 CSS 变量（来源 design-token.md，2026-09-03） ========== */
-/* 用法：color: var(--color-primary); 等，逐步替换各页面硬编码值 */
-page {
-	/* 颜色 */
-	--color-bg: #160F04;
-	--color-primary: #F1CD91;
-	--color-primary-deep: #B28A56;
-	--color-surface: #1D1105;
-	--color-primary-70: rgba(241, 205, 145, 0.7);
-	--color-primary-50: rgba(241, 205, 145, 0.5);
-	--color-primary-30: rgba(241, 205, 145, 0.3);
-	--color-primary-20: rgba(241, 205, 145, 0.2);
-	--color-primary-10: rgba(241, 205, 145, 0.1);
-	--color-primary-06: rgba(241, 205, 145, 0.06);
-	--color-border-soft: rgba(255, 255, 221, 0.3);
-	--color-topbar-bg: rgba(0, 0, 0, 0.2);
-	/* 弹窗（中性深色面板） */
-	--color-popup: #1A1A1A;
-	--color-popup-card: #262626;
-	/* 渐变（金色主按钮高光：左上亮 → 右下深，营造立体按压面） */
-	--gradient-btn-primary: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);
-	/* 圆角 */
-	--radius-2xs: 4rpx;
-	--radius-xs: 8rpx;
-	--radius-card: 14rpx;
-	--radius-sm: 16rpx;
-	--radius-item: 18rpx;
-	--radius-md: 20rpx;
-	--radius-container: 24rpx;
-	--radius-lg: 32rpx;
-	--radius-pill: 39rpx;
-	--radius-xl: 44rpx;
-	--radius-2xl: 48rpx;
-	--radius-avatar: 64rpx;
-	--radius-full: 999rpx;
-	/* 图标尺寸 */
-	--icon-xs: 32rpx;
-	--icon-sm: 40rpx;
-	--icon-md: 48rpx;
-	/* 间距 */
-	--spacing-2xs: 6rpx;
-	--spacing-xs: 10rpx;
-	--spacing-sm: 20rpx;
-	/* 设计 token 4.1 间距刻度（t-shirt 档位之外的 24rpx，等待页 Tips 距标题栏 / 页面左右留白用） */
-	--spacing-24: 24rpx;
-	--spacing-md: 28rpx;
-	--spacing-lg: 32rpx;
-	/* 字体族（由 App onLaunch loadFontFace 全局加载） */
-	--font-display: 'NotoSerifSC-Bold', serif;
-	--font-body: 'HarmonyOS-Sans-SC', sans-serif;
-	/* 字号（design-token.md 字体阶梯） */
-	--font-size-display-xl: 46rpx;
-	--font-size-display: 38rpx;
-	--font-size-slogan: 34rpx;
-	--font-size-body-lg: 26rpx;
-	--font-size-body-plus: 28rpx;
-	--font-size-body: 24rpx;
-	--font-size-body-sm: 22rpx;
-	--font-size-body-xs: 20rpx;
-	--font-size-caption-md: 18rpx;
-	--font-size-caption: 14rpx;
+/* ========== 全局自定义字体（微信端在 App onLaunch 中通过 uni.loadFontFace 全局加载） ========== */
+/* 抖音端：小程序侧无 tt.loadFontFace（仅小游戏有 tt.loadFont），官方 FAQ 指定 TTSS @font-face 加载外部字体。
+   微信 wxss 不支持远程 @font-face（只能靠 loadFontFace）⇒ 条件编译只进抖音 ttss。
+   ⚠️ 真机如需下载域名白名单：lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com 配到抖音后台 downloadFile 域名。 */
+/* #ifdef MP-TOUTIAO */
+@font-face {
+	font-family: 'NotoSerifSC-Bold';
+	src: url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/NotoSerifSC-Bold-subset.woff");
 }
-
-/* ========== 全局自定义字体（在 App onLaunch 中通过 uni.loadFontFace 全局加载） ========== */
+@font-face {
+	font-family: 'HarmonyOS-Sans-SC';
+	src: url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/HarmonyOS_Sans_SC-subset.woff");
+}
+/* #endif */
 /* 宋体标题：font-family: 'NotoSerifSC-Bold' */
 /* ========== 全局按压反馈（hover-class 引用） ========== */
 /* 可点击元素加 hover-class="press-dim"，按压时降透明度 + 轻微变亮，不改变布局 */
@@ -112,10 +82,10 @@ page {
   font-size: 32rpx;
   line-height: 1.2;
   font-weight: 400;
-  color: var(--color-bg);
-  background: var(--gradient-btn-primary);
-  border: 1rpx solid var(--color-bg);
-  border-radius: var(--radius-full);
+  color: #160F04;
+  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);
+  border: 1rpx solid #160F04;
+  border-radius: 999rpx;
   transition: opacity 0.15s ease-out;
 }
 
@@ -130,10 +100,10 @@ page {
   font-size: 32rpx;
   line-height: 1.2;
   font-weight: 400;
-  color: var(--color-primary);
-  background: var(--color-primary-10);
-  border: 1rpx solid var(--color-primary-50);
-  border-radius: var(--radius-full);
+  color: #F1CD91;
+  background: rgba(241, 205, 145, 0.1);
+  border: 1rpx solid rgba(241, 205, 145, 0.5);
+  border-radius: 999rpx;
   transition: opacity 0.15s ease-out;
 }
 
@@ -164,7 +134,7 @@ page {
 /* 页面底色：深色主题必须显式设置，否则 tab 切换重绘间隙会透出默认白底（闪白） */
 page {
   font-family: 'HarmonyOS-Sans-SC';
-  background-color: var(--color-bg);
+  background-color: #160F04;
 }
 
 /* 自定义底部 tabbar 的页面占位（高度需与 src/custom-tab-bar 保持一致：116rpx + 底部安全区） */
@@ -195,12 +165,12 @@ page {
 }
 /* 骨架屏容器 */
 .sk-container {
-  padding: var(--spacing-lg);
+  padding: 32rpx;
 }
 /* 通用矩形块 */
 .sk-block {
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-xs);
+  border-radius: 8rpx;
 }
 /* 圆形（头像等） */
 .sk-circle {
@@ -218,33 +188,33 @@ page {
   width: 100%;
   height: 384rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-xs);
-  margin-bottom: var(--spacing-lg);
+  border-radius: 8rpx;
+  margin-bottom: 32rpx;
 }
 .sk-title {
   width: 200rpx;
   height: 24rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-2xs);
+  border-radius: 4rpx;
   margin: 0 auto 16rpx;
 }
 .sk-subtitle {
   width: 140rpx;
   height: 36rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-2xs);
-  margin: 0 auto var(--spacing-lg);
+  border-radius: 4rpx;
+  margin: 0 auto 32rpx;
 }
 .sk-text {
   height: 28rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-2xs);
+  border-radius: 4rpx;
 }
 .sk-photo-card {
   width: 364rpx;
   height: 226rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-xs);
+  border-radius: 8rpx;
   margin-right: 8rpx;
 }
 .sk-photo-card:last-child {
@@ -254,7 +224,7 @@ page {
   width: 340rpx;
   height: 482rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-xs);
+  border-radius: 8rpx;
   margin: 0 8rpx 8rpx 0;
 }
 .sk-photo-item:nth-child(2n) {
@@ -264,7 +234,7 @@ page {
   width: 128rpx;
   height: 42rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-xs);
+  border-radius: 8rpx;
   margin-right: 16rpx;
 }
 .sk-avatar {
@@ -277,7 +247,7 @@ page {
   width: 100%;
   height: 200rpx;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-sm);
-  margin-bottom: var(--spacing-lg);
+  border-radius: 16rpx;
+  margin-bottom: 32rpx;
 }
 </style>
