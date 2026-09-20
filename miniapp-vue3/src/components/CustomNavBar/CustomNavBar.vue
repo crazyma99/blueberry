@@ -174,6 +174,9 @@ function onBackTap() {
   min-width: 0;
 }
 .custom-navbar-title {
+  /* 2026-09-21 主人反馈「微信所有页面标题栏文字都不是 Noto Serif」：标题原先只声明字号/字重、未声明字体族
+     ⇒ 继承 page 黑体 Harmony。按旧端口径标题走宋体（Noto Serif SC Bold，经 App.vue loadFontFace 加载）。 */
+  font-family: 'NotoSerifSC-Bold';
   position: absolute;
   text-align: center;
   font-size: 17px;

@@ -143,12 +143,18 @@
 		{
 			"path": "pages/policies/user",
 			"style": {
+				// #ifdef MP-WEIXIN
+				"navigationStyle": "custom",
+				// #endif
 				"navigationBarTitleText": "用户协议"
 			}
 		},
 		{
 			"path": "pages/policies/privacy",
 			"style": {
+				// #ifdef MP-WEIXIN
+				"navigationStyle": "custom",
+				// #endif
 				"navigationBarTitleText": "隐私政策"
 			}
 		}
