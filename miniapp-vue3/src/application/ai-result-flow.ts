@@ -99,8 +99,11 @@ export function createResultPoller(deps: {
     }
     if (!res.ok || res.value == null) {
       // 业务确定失败 → 立即停止（旧 :488-491）
+      // ⭐2026-09-20：鉴权失效（401）单独给中文可行动文案，避免把「未登录/登录过期」伪装成「生成失败」
+      //（体验版「付完钱却显示生成失败」的观感即来自此处 + 详情请求漏带 Bearer）
+      const kind = !res.ok ? (res.error as { kind?: string } | undefined)?.kind : undefined;
       const message = !res.ok && typeof res.error.message === "string" ? res.error.message : "";
-      stopPolling(true, message !== "" ? message : "任务查询失败");
+      stopPolling(true, kind === "AUTH_EXPIRED" ? "登录已失效，请重新进入" : message !== "" ? message : "任务查询失败");
       return;
     }
     errorStreak = 0;

@@ -7,8 +7,9 @@ export function isCosHost(url: string): boolean {
   return host === "lanmei66.cloud" || host.endsWith(".lanmei66.cloud");
 }
 
-export function cosThumb(url: string, width: number): string {
-  if (url === "") return url;
+export function cosThumb(url: string | null | undefined, width: number): string {
+  // 2026-09-20：对 null/undefined 健壮（首页店铺可能无封面图）——原实现会在 isCosHost 内崩
+  if (url == null || url === "") return (url ?? "") as string;
   if (!isCosHost(url)) return url;
   const sep = url.includes("?") ? "&" : "?";
   return url + sep + "imageMogr2/format/webp/thumbnail/" + width + "x";

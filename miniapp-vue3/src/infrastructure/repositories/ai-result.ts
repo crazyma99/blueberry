@@ -38,6 +38,9 @@ export function createAiResultRepository(deps: { client: ClientLike }) {
       return deps.client.request<AiResultTask>({
         method: "GET",
         url: `/api/aiface/tasks/${taskId}`,
+        // ⭐2026-09-20 修复：后端「任务详情仅本人可读」，无 token 一律 401 ⇒ 体验版「付完钱却显示生成失败」的根因。
+        // 旧端 http 层「有 token 就带」（http.uts:114-116），迁移时该请求漏标 authRequired ⇒ 从不带 Bearer。
+        authRequired: true,
         replayPolicy: "idempotent",
         context,
       });

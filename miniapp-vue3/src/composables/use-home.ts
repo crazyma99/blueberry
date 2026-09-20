@@ -4,6 +4,7 @@ import { ref } from "vue";
 import type { RequestContext } from "../ports/context";
 import type { CarouselItem, RepoResult } from "../infrastructure/repositories/carousels";
 import type { ShopBrief } from "../infrastructure/repositories/shops";
+import { cosThumb } from "../application/image";
 
 export interface HomeDeps {
   carousels: { getImage: (ctx: RequestContext) => Promise<RepoResult<CarouselItem[]>> };
@@ -32,7 +33,10 @@ export function createHomeViewModel(deps: HomeDeps) {
       ),
     ]);
     if (cr != null) carousels.value = cr;
-    if (sr != null) shops.value = sr;
+    // ⭐2026-09-20 修复：首页「客片欣赏」卡片直接用原图（几百 KB～1MB/张）⇒ 首屏慢。
+    // 旧端 index.uvue:374 为 `item.homeImage = cosThumb(item.homeImage, 600)`，此处逐字对齐（COS 缩略 + webp）。
+    // cosThumb 对空值/非 COS 域原样返回，安全。
+    if (sr != null) shops.value = sr.map((s) => ({ ...s, homeImage: cosThumb(s.homeImage as string | null | undefined, 600) }));
     if (cr == null && sr == null) error.value = "加载失败";
     loading.value = false;
   }

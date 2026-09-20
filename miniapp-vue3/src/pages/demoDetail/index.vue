@@ -297,11 +297,11 @@ onReachBottom(() => {
         <view v-if="platform === 'mp-weixin'" class="ai-recommend-banner" @click="goAiRecommend">
           <image class="ai-recommend-bg" src="/static/ai-recom-banner.png" mode="aspectFill" />
           <view class="ai-recommend-content">
-            <text class="ai-recommend-title">AI智能推荐·拍照选服饰</text>
+            <text class="ai-recommend-title font-noto-serif">AI智能推荐·拍照选服饰</text>
             <text class="ai-recommend-subtitle">上传照片，AI为您推荐最合适的服饰风格</text>
           </view>
         </view>
-        <view class="cat-title-row"><text class="cat-title">套系与子系分类</text></view>
+        <view class="cat-title-row"><text class="cat-title font-noto-serif">套系与子系分类</text></view>
         <view class="tabcontainer">
           <view
             v-for="(item, idx) in categories"
@@ -309,7 +309,7 @@ onReachBottom(() => {
             :class="selectedParent === idx ? 'tab-wrap choosed-wrap' : 'tab-wrap'"
             @click="changeTab(idx, 'parent')"
           >
-            <view :class="selectedParent === idx ? 'tab choosed' : 'tab'">{{ item.parentName }}</view>
+            <view :class="selectedParent === idx ? 'tab choosed font-noto-serif' : 'tab font-noto-serif'">{{ item.parentName }}</view>
           </view>
         </view>
         <view v-if="childTabs.length > 0" class="tabcontainer">
@@ -319,7 +319,7 @@ onReachBottom(() => {
             :class="selectedChild === idx ? 'tab-wrap choosed-wrap' : 'tab-wrap'"
             @click="changeTab(idx, 'child')"
           >
-            <view :class="selectedChild === idx ? 'tab choosed' : 'tab'">{{ item.name }}</view>
+            <view :class="selectedChild === idx ? 'tab choosed font-noto-serif' : 'tab font-noto-serif'">{{ item.name }}</view>
           </view>
         </view>
       </view>
@@ -422,6 +422,9 @@ onReachBottom(() => {
 }
 .search-input-nav {
   flex: 1;
+  /* 2026-09-20：小程序 <input> 不继承 page{font-family} ⇒ 真机落系统字体、字重观感与旧端不一致；
+     显式声明正文字体（旧端靠 App.uvue page 字号/字体族继承） */
+  font-family: 'HarmonyOS-Sans-SC';
   font-size: 26rpx; /* 旧 var(--font-size-body-lg) */
   color: $color-text-primary; /* 深色主题 = #F1CD91（旧 var(--color-primary)） */
   margin-left: 12rpx;
