@@ -16,11 +16,13 @@ export interface ToggleLikeResult {
 
 export function createLikeRepository(deps: { client: ClientLike }) {
   return {
-    /** 公开读：不要求登录（未登录按未点赞返回） */
+    /** 读状态：**需带登录态**（后端 JWTOptional——无 token 时 liked 恒 false；旧端 http 层默认带 token） */
     getLikeStatus(context: RequestContext, albumIds: string): Promise<RepoResult<LikeStatusItem[]>> {
       return deps.client.request<LikeStatusItem[]>({
         method: "GET",
         url: "/api/like/status",
+        // ⭐2026-09-20（CR 同根因）：后端 JWTOptional——无 token 则 liked 恒 false（旧端 http 层带 token）
+        authRequired: true,
         query: { albumIds },
         replayPolicy: "idempotent",
         context,

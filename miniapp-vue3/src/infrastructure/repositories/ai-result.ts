@@ -3,7 +3,7 @@
 // 本页另需的**任务详情／下载扣费**两点当时未收录，且**不得修改既有文件**，故按同构在这里新增；
 // 后续若并回 ai.ts，仅需搬迁函数体（口径与 ai.ts 完全一致：公开接口 replayPolicy=idempotent、失败一律 Result 不抛）。
 // 端点（旧端实测）：
-//  · GET  /api/aiface/tasks/{taskId}            （旧端无 authRequired：结果页匿名可看）→ 任务详情（含 share_token/shop_id/album_id）
+//  · GET  /api/aiface/tasks/{taskId}            （**需登录**：后端该接口仅本人可读，2026-09-20 修正原错误注释）→ 任务详情（含 share_token/shop_id/album_id）
 //  · GET  /api/aiface/tasks/{taskId}/download   （**需登录**）→ 下载池扣 1 次并返回 **5 分钟签名下载 URL**
 // 分享详情（`GET /api/aiface/tasks/share/{shareToken}`）已由 `repositories/ai.ts` 的 `getSharedTask` 提供，
 // 本页经 `application/ai-share-routing.ts` 的 `loadSharedTaskOnce` 消费，故此处**不重复实现**。

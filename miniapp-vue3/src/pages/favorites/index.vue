@@ -361,6 +361,8 @@ function coverThumb(url: string): string {
   height: 38rpx;
 }
 .search-input-nav {
+  /* 2026-09-20：小程序 <input> 不继承 page 字体（同 demoDetail 修复） */
+  font-family: 'HarmonyOS-Sans-SC';
   flex: 1;
   font-size: 26rpx; /* 旧端 --font-size-body-lg=26rpx（CR 🟡1 还原；28rpx 实为 body-plus） */
   color: $color-text-primary; /* 旧端金色（旧 :303 var(--color-primary)）；深色恢复后 $color-text-primary=#F1CD91 与旧值一致（2026-09-19） */

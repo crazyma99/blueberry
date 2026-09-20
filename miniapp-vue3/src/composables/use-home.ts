@@ -32,7 +32,7 @@ export function createHomeViewModel(deps: HomeDeps) {
         () => null,
       ),
     ]);
-    if (cr != null) carousels.value = cr;
+    if (cr != null) carousels.value = cr.map((c) => ({ ...c, imageUrl: cosThumb(c.imageUrl as string | null | undefined, 750) })); // ⭐CR P1：hero 图 750 缩略（旧端 index.uvue:365）
     // ⭐2026-09-20 修复：首页「客片欣赏」卡片直接用原图（几百 KB～1MB/张）⇒ 首屏慢。
     // 旧端 index.uvue:374 为 `item.homeImage = cosThumb(item.homeImage, 600)`，此处逐字对齐（COS 缩略 + webp）。
     // cosThumb 对空值/非 COS 域原样返回，安全。

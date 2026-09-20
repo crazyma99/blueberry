@@ -57,11 +57,11 @@ describe("repositories 请求形状（contracts.md 冻结值）", () => {
     await createAlbumRepository({ client: f.client }).getAlbumDetail(ctx, { params: { albumId: "5", type: "photo" } });
     expect(f.seen[0]).toMatchObject({ method: "GET", url: "/wechat/album/detail", query: { albumId: "5", type: "photo" } });
   });
-  it("likes：读免登录 idempotent／写需登录 never；wxLogin 换票入口不带 Bearer、never", async () => {
+  it("likes：读**带登录态**（JWTOptional：无 token 则 liked 恒 false，2026-09-20 修正）idempotent／写需登录 never；wxLogin 换票入口不带 Bearer、never", async () => {
     const f1 = fakeClient([{ ok: true, value: [] }]);
     await createLikeRepository({ client: f1.client }).getLikeStatus(ctx, "1,2,3");
     expect(f1.seen[0]).toMatchObject({ url: "/api/like/status", query: { albumIds: "1,2,3" }, replayPolicy: "idempotent" });
-    expect(f1.seen[0].authRequired).toBeFalsy();
+    expect(f1.seen[0].authRequired).toBe(true); // 2026-09-20：携带 token 才能拿到 liked
     const f2 = fakeClient([{ ok: true, value: { liked: true, likeCount: 9 } }]);
     await createLikeRepository({ client: f2.client }).toggleLike(ctx, 7);
     expect(f2.seen[0]).toMatchObject({ method: "POST", url: "/api/like", body: { albumId: 7 }, authRequired: true, replayPolicy: "never" });
@@ -132,7 +132,7 @@ describe("repositories 请求形状（contracts.md 冻结值）", () => {
     const f1 = fakeClient([{ ok: true, value: [] }]);
     await createPageConfigRepository({ client: f1.client }).getPageConfig(ctx);
     expect(f1.seen[0]).toMatchObject({ method: "GET", url: "/api/page-config", replayPolicy: "idempotent" });
-    expect(f1.seen[0].authRequired).toBeFalsy();
+    expect(f1.seen[0].authRequired).toBeFalsy(); // page-config 为公开读（勿与 likes 的需登录混淆）
     const f2 = fakeClient([{ ok: true, value: [] }]);
     await createBrandRepository({ client: f2.client }).getBrands(ctx);
     expect(f2.seen[0]).toMatchObject({ method: "GET", url: "/api/brands", replayPolicy: "idempotent" });
