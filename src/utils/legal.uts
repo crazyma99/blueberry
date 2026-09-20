@@ -1,4 +1,4 @@
-export const MINI_APP_NAME = '蓝梅旅拍 SKILL'
+export const MINI_APP_NAME = '蓝梅云'
 export const USER_AGREEMENT_NAME = `《${MINI_APP_NAME} 用户协议》`
 export const PRIVACY_POLICY_NAME = `《${MINI_APP_NAME} 隐私政策》`
 
