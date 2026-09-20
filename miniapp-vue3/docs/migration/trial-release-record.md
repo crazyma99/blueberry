@@ -36,6 +36,7 @@ wechat-devtools-cli upload --project "$PWD/dist/build/mp-weixin" -v "v1.0.25" -d
 | 6 | 2026-09-20 11:4x | **v1.0.30** | `[gf5d5677] 修复401误判/缩略图/字体/点赞态` | ✅ **成功** | ①AI试衣详情补 `authRequired`（后端口志实证连续 401 致「生成失败」）②首页卡片/轮播 `cosThumb 600/750` ③demoDetail 4 处 `font-noto-serif` ④搜索栏字体族 ⑤点赞读状态平台条件（微信带 token／抖音匿名）。TOTAL **1.6 MB (1,645,758 B)**。途中两坑：`需要重新登录`（主人扫码即解）→ `app.json is not found`（**IDE 旧句柄，按旧端手法重启工具服务后重试成功**） |
 | 7 | 2026-09-20 20:5x | **v1.0.31** | `[gHEAD] 品牌改名蓝梅云` | ✅ **成功** | C 端展示文案「蓝梅旅拍」→「蓝梅云」（`c0e9bb0`）；`TOTAL 1.6 MB (1,645,274 B)`。⚠️ 前两次尝试**卡在 `Using AppID` → `- Upload` 无进展**：实测 **IDE 的 `nw` 已运行 9h+、CPU 0%（坏状态）** ⇒ 结束 CLI ＋ `pkill -x nw/exe` 重启服务（登录态 `{"login":true}` 仍在）后**一次通过** |
 | 11 | 2026-09-21 | **回退说明（无版本）** | — | ⚠️ **v1.0.32／v1.0.33／v1.0.34 作废** | 主人指示：回滚「年龄 Tabs（picker→胶囊）」与「照片上传改 Wot `wd-upload` UI」全部改动（基准回到 `0074b6a`），**仅保留「微信自绘标题栏」修复**（`CustomNavBar` 标题宋体＋协议两页微信端 `navigationStyle: custom`，抖音仍原生）。picker/upload 维持**迁移初始实现**（原生 `<picker>` 下拉＋旧上传卡片）。 |
+| 12 | 2026-09-21 | **v1.0.35** | `[g61b5b94] 回退后版本：保留自绘标题栏修复` | ✅ **成功** | 回退后的首次发布：picker/upload 维持迁移初始实现（原生 `<picker>` 下拉＋旧上传卡片），**仅保留**微信自绘标题栏修复（`CustomNavBar` 标题宋体＋协议两页微信端 `navigationStyle: custom`，抖音仍原生）。`TOTAL 1.6 MB (1,645,191 B)`（与回退前一致，无 wd-upload 组件）。 |
 
 ## 4. 两个必踩的坑（已固化）
 1. **通配选择器 `*` 在微信 wxss 非法**（`uni build` 不报，上传时才炸）⇒ 一律改用「包裹 view + class」（deviations #13）
