@@ -61,7 +61,11 @@ describe("repositories 请求形状（contracts.md 冻结值）", () => {
     const f1 = fakeClient([{ ok: true, value: [] }]);
     await createLikeRepository({ client: f1.client }).getLikeStatus(ctx, "1,2,3");
     expect(f1.seen[0]).toMatchObject({ url: "/api/like/status", query: { albumIds: "1,2,3" }, replayPolicy: "idempotent" });
-    expect(f1.seen[0].authRequired).toBe(true); // 2026-09-20：携带 token 才能拿到 liked
+    expect(f1.seen[0].authRequired).toBe(true); // 2026-09-20：微信端携带 token 才能拿到 liked
+    // ⭐跨端安全：抖音端登录未落地 ⇒ 不得要求登录（保持匿名，避免弹登录/白拉流程）
+    const f1tt = fakeClient([{ ok: true, value: [] }]);
+    await createLikeRepository({ client: f1tt.client }).getLikeStatus({ ...ctx, platform: "mp-toutiao" }, "1,2,3");
+    expect(f1tt.seen[0].authRequired).toBe(false);
     const f2 = fakeClient([{ ok: true, value: { liked: true, likeCount: 9 } }]);
     await createLikeRepository({ client: f2.client }).toggleLike(ctx, 7);
     expect(f2.seen[0]).toMatchObject({ method: "POST", url: "/api/like", body: { albumId: 7 }, authRequired: true, replayPolicy: "never" });
