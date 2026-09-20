@@ -588,10 +588,10 @@ function handleMenuClick(item: MenuItem): void {
 }
 /* AI试衣渐变字（旧端 :603-609） */
 .special-font {
-  background: linear-gradient(76deg, #ffb26f 15%, #fcc18e 25%, #bbb0ff 38%, #8d7aff 61%, #699bff 79%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  /* 2026-09-20 主人反馈修复：渐变字（background-clip:text）在**微信小程序渲染器不支持** ⇒
+     真机退化为首个渐变色 #ffb26f（橙金），与「我的喜欢」不一致 ⇒ 统一为品牌金 $color-action。
+     旧端 uvue/webview 支持渐变，属**平台差异**（已登记 deviations）。 */
+  color: $color-action;
 }
 .menu-arrow {
   width: 36rpx;
