@@ -444,9 +444,9 @@ function goGenerationQueue(): void {
 function buildShareTitle(): string {
   const style = styleName.value !== "" ? styleName.value : "新中式";
   if (shopName.value !== "") {
-    return `我也在蓝梅旅拍「${shopName.value}」AI 换装，试一下你「${style}」的样子`;
+    return `我也在蓝梅云「${shopName.value}」AI 换装，试一下你「${style}」的样子`;
   }
-  return `我也在蓝梅旅拍 AI 换装，试一下你「${style}」的样子`;
+  return `我也在蓝梅云 AI 换装，试一下你「${style}」的样子`;
 }
 function currentSharePath(): string {
   return buildSharePath({
@@ -500,7 +500,7 @@ function guideShareTimeline(): void {
 // 只读模式 CTA「我也要试」：跳试衣页（单页模式禁跳页 → 引导「前往小程序」；旧 :659-677）
 function tryThisOut(): void {
   if (isTimelinePage.value) {
-    showModal("蓝梅旅拍", "请点击下方「前往小程序」，进入完整服务后即可上传照片体验 AI 试衣");
+    showModal("蓝梅云", "请点击下方「前往小程序」，进入完整服务后即可上传照片体验 AI 试衣");
     return;
   }
   if (typeof uni === "undefined" || typeof uni.navigateTo !== "function") return;
@@ -532,7 +532,7 @@ function handleBack(): void {
   stopPolling();
   // 朋友圈单页模式禁跳页：引导用左上角 ✕ 关闭（CR 🟡）
   if (isTimelinePage.value) {
-    showModal("蓝梅旅拍", "请点击左上角「✕」关闭返回朋友圈");
+    showModal("蓝梅云", "请点击左上角「✕」关闭返回朋友圈");
     return;
   }
   // 分享冷启动栈深=1：navigateBack 会直接退出小程序 → 回首页（行业最佳实践）

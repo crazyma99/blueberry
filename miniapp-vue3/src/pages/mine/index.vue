@@ -114,7 +114,7 @@ const displayNickname = computed(() => {
 // 副标题三态（旧端 :38）；未登录文案随 Profile（微信「登录后可收藏与体验AI试衣」/抖音「登录后可收藏」）
 const userSub = computed(() => {
   if (!isLoggedIn.value) return PROFILE.features.mineHintText;
-  return userNickname.value === "" ? "完善头像昵称，获得完整体验" : "欢迎回来，蓝梅旅拍";
+  return userNickname.value === "" ? "完善头像昵称，获得完整体验" : "欢迎回来，蓝梅云";
 });
 
 // 默认菜单（旧端 :216-221）＋Profile 功能块过滤（features.mineMenu：抖音只留 favorites，

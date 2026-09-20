@@ -127,7 +127,7 @@ function makeArtifact(over: {
 const manifestBase = {
   engine: "vue3", profileKey: "blueberry", platform: "mp-weixin", environment: "release",
   appid: "wxb19ad7426dfb8bd4", appCode: "blueBerry", navTitle: "蓝梅旗袍·汉服·民...",
-  expectedRoutes: ["pages/_probe/wot-sample", "pages/index/index"], forbiddenResidues: ["蓝梅旅拍B残留"],
+  expectedRoutes: ["pages/_probe/wot-sample", "pages/index/index"], forbiddenResidues: ["蓝梅云B残留"],
 };
 
 describe("verifyTarget（P1-32 产物命中；P1-34 每项负向必须失败）", () => {
@@ -158,7 +158,7 @@ describe("verifyTarget（P1-32 产物命中；P1-34 每项负向必须失败）"
     expect(v.errors.join(" ")).toContain("nav title mismatch");
   });
   it("错误品牌残留（A 读 B 产物场景）必须失败", () => {
-    const v = verifyTarget({ manifest: manifestBase, artifactDir: makeArtifact({ residue: "蓝梅旅拍B残留" }) });
+    const v = verifyTarget({ manifest: manifestBase, artifactDir: makeArtifact({ residue: "蓝梅云B残留" }) });
     expect(v.ok).toBe(false);
     expect(v.errors.join(" ")).toContain("forbidden residue");
   });

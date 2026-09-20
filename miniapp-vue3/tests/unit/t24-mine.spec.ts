@@ -92,7 +92,7 @@ describe("pages/mine（T7 P2-18 我的页）", () => {
     await flush();
     await w.vm.$nextTick();
     expect(w.find(".nickname").text()).toBe("马老师");
-    expect(w.find(".user-sub").text()).toBe("欢迎回来，蓝梅旅拍");
+    expect(w.find(".user-sub").text()).toBe("欢迎回来，蓝梅云");
     expect(w.find(".avatar-img").attributes("src")).toBe("https://cos.example/av.png");
     expect(w.find(".logout-btn").exists()).toBe(true);
   });

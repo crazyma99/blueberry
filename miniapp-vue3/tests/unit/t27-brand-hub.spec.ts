@@ -11,7 +11,7 @@ const h = vi.hoisted(() => ({
   enabledMode: "on" as "on" | "off" | "fail",
   brandCalls: 0,
   brands: [
-    { brandId: "lanmei", brandName: "蓝梅旅拍", logoUrl: "https://cos.example/l.png", coverImageUrl: "", description: "汉服体验", sortOrder: 1 },
+    { brandId: "lanmei", brandName: "蓝梅云", logoUrl: "https://cos.example/l.png", coverImageUrl: "", description: "汉服体验", sortOrder: 1 },
     { brandId: "PLATFORM", brandName: "平台管理", logoUrl: "", coverImageUrl: "", description: "", sortOrder: 2 },
     { brandId: "honghe", brandName: "红河分店", logoUrl: "", coverImageUrl: "", description: "", sortOrder: 3 },
   ] as Array<Record<string, unknown>>,
@@ -116,7 +116,7 @@ describe("pages/brandHub（T7 P2-20 品牌馆）", () => {
     expect(h.pageConfigCalls).toBe(1);
     expect(h.brandCalls).toBe(1);
     const names = w.findAll(".brand-name").map((n) => n.text());
-    expect(names).toEqual(["蓝梅旅拍", "红河分店"]); // PLATFORM 已过滤
+    expect(names).toEqual(["蓝梅云", "红河分店"]); // PLATFORM 已过滤
     expect(w.find(".hub-empty").exists()).toBe(false);
   });
 
