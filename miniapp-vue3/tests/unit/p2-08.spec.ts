@@ -43,7 +43,7 @@ describe("协议两页（B0，内容忠实搬运＋miniAppName 注入）", () =>
   it("user.vue：标题/日期/miniAppName 来自 Profile", () => {
     const w = mount(PoliciesUser);
     const t = w.text();
-    expect(t).toContain("蓝梅旅拍 SKILL 小程序用户服务协议");
+    expect(t).toContain("蓝梅云 小程序用户服务协议");
     expect(t).toContain("更新日期：2026年5月7日");
     expect(t).toContain("生效日期：2026年5月7日");
     expect(t).toContain("弥勒蓝梅网络传媒有限公司");
@@ -51,7 +51,7 @@ describe("协议两页（B0，内容忠实搬运＋miniAppName 注入）", () =>
   it("privacy.vue：标题/引言/miniAppName 来自 Profile", () => {
     const w = mount(PoliciesPrivacy);
     const t = w.text();
-    expect(t).toContain("蓝梅旅拍 SKILL 小程序隐私政策");
+    expect(t).toContain("蓝梅云 小程序隐私政策");
     expect(t).toContain("请在使用本小程序前，仔细阅读并了解本隐私政策");
   });
 });
