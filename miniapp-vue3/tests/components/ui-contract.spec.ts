@@ -23,6 +23,8 @@ import StubPopup from "../stubs/wot/wd-popup/wd-popup.vue";
 import StubPicker from "../stubs/wot/wd-picker/wd-picker.vue";
 import StubToast from "../stubs/wot/wd-toast/wd-toast.vue";
 import StubDialog from "../stubs/wot/wd-dialog/wd-dialog.vue";
+import StubLoading from "../stubs/wot/wd-loading/wd-loading.vue";
+import BaseLoading from "../../src/ui/BaseLoading.vue";
 
 const globalWith = {
   components: {
@@ -32,6 +34,7 @@ const globalWith = {
     "wd-picker": StubPicker,
     "wd-toast": StubToast,
     "wd-dialog": StubDialog,
+    "wd-loading": StubLoading,
   },
 };
 
@@ -337,5 +340,30 @@ describe("BaseDialog（对话框双平台门面，方案A收尾 §8.13）", () =
     await w.vm.$nextTick();
     await stub.find(".stub-dialog-cancel").trigger("click");
     await expect(p2).resolves.toBe("cancel");
+  });
+});
+
+describe("BaseLoading（2026-09-21 首页下拉刷新门面）", () => {
+  it("默认值走 design token：品牌金 colorAction + 组件级尺寸档 pullRefreshLoadingSizeRpx；无文案也可渲染", () => {
+    const w = mount(BaseLoading, { global: globalWith });
+    const stub = w.findComponent(StubLoading);
+    expect(stub.props("type")).toBe("circular");
+    expect(stub.props("direction")).toBe("horizontal");
+    expect(stub.props("color")).toBe("#F1CD91"); // tokens.semantic.colorAction
+    expect(stub.props("size")).toBe("48rpx"); // tokens.component.pullRefreshLoadingSizeRpx
+    expect(stub.props("text")).toBe("");
+  });
+  it("调用侧可覆盖：text/size/color/type/direction/inheritColor 原样透传给 wd-loading", () => {
+    const w = mount(BaseLoading, {
+      props: { text: "刷新中…", size: "32rpx", color: "#FFFFFF", type: "dots", direction: "vertical", inheritColor: true },
+      global: globalWith,
+    });
+    const stub = w.findComponent(StubLoading);
+    expect(stub.props("text")).toBe("刷新中…");
+    expect(stub.props("size")).toBe("32rpx");
+    expect(stub.props("color")).toBe("#FFFFFF");
+    expect(stub.props("type")).toBe("dots");
+    expect(stub.props("direction")).toBe("vertical");
+    expect(stub.props("inheritColor")).toBe(true);
   });
 });

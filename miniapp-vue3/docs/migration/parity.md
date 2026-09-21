@@ -9,7 +9,7 @@
 
 | # | path | 状态 | 批次 | 证据（提交） | 备注 |
 |---|---|---|---|---|---|
-| 1 | `pages/index/index` | ported | T6 | `421b07b` | 品牌馆入口开关＝brand-hub-gate 同源闸门；切品牌回首页由 onShow 基线检测重载（P2-20 `12296d1`）；页脚/服务保障 P2-21 |
+| 1 | `pages/index/index` | ported | T6 | `421b07b` | 品牌馆入口开关＝brand-hub-gate 同源闸门；切品牌回首页由 onShow 基线检测重载（P2-20 `12296d1`）；页脚/服务保障 P2-21；**2026-09-21 恢复下拉刷新**（`onPullDownRefresh`＋`enablePullDownRefresh`，deviations #27）；⚠️ **首页分享卡片未迁**（旧端 `onShareAppMessage`/`onShareTimeline`＋`resolveShareCard('index')` 新端暂无，待指示） |
 | 2 | `pages/brandHub/index` | ported | T7 P2-20 | `12296d1` | 自守卫（安全默认 false）＋PLATFORM 过滤＋持久化＋切品牌 scope 隔离；CR 2🔴 全清 |
 | 3 | `pages/demoDetail/index` | ported | T6 | `b6ddb7d` | 分类 tabs/搜索/分页/点赞乐观更新；P2-21 补页脚 |
 | 4 | `pages/priceList/index` | ported | T7 P2-17 | `f478048` | ⭐默认全量＋搜索才分页（红线 4/4）；CR 0🔴/3🟡 |

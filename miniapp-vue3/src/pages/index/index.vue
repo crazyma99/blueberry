@@ -3,9 +3,11 @@
 // 数据流：use-home VM（并行容错）；开关经 brand-hub controller（在飞去重）；上下文经 request-context 工厂。
 // 旧端行为事实：品牌馆浮钮开关驱动默认关（OPS 配置）；banner 点击 300ms 节流＋空链不响应（index:557-560）；
 // demo 卡点击 → /pages/demoDetail/index?from=banner&idx=N（index:578-582）；店铺点击 → demoDetail?idx=店铺id。
+// 2026-09-21 主人：「首页下拉刷新功能丢失了」⇒ 恢复旧端 onPullDownRefresh（index.uvue:252-263）＋pages.json
+// `enablePullDownRefresh`；刷新指示器改用 wot `wd-loading`（主人指定）＋design token 着色（见下方 refreshing 段）。
 // 替换原模板 Hello 页；探针样页仍注册于 pages/_probe/wot-sample（devtools 直达，P1-08 不入生产包）。
 import { computed, onMounted, ref } from "vue";
-import { onShow } from "@dcloudio/uni-app";
+import { onPullDownRefresh, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
@@ -39,6 +41,8 @@ import {
 } from "../../application/page-config-content";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseButton from "../../ui/BaseButton.vue";
+// 2026-09-21 下拉刷新指示器：走门面（业务视图不直用 wd-*，plan §26/§229；独立 CR 🔴1）
+import BaseLoading from "../../ui/BaseLoading.vue";
 
 // —— 装配（构建期平台折叠＋运行时兜底；非闭集值回落微信＝开发期默认）——
 const detected = detectUiPlatform();
@@ -118,6 +122,45 @@ try {
 }
 // 轮播高度：旧端随首图宽高比自适应（兜底 794rpx）；自适应属 P2-13 样页视觉项，此处固定兜底值
 const heroHeight = "794rpx";
+
+// —— 下拉刷新（2026-09-21 主人：「首页下拉刷新功能丢失了」⇒ 恢复；旧端 index.uvue:252-263 同序）——
+// 旧端语义：重新加载首页数据（轮播防缓存/店铺/品牌馆开关）→ 前景层重挂载（fgTick+1）重播渐入动效
+// → uni.stopPullDownRefresh()；刷新期间**不回落骨架屏**（已有内容保留，仅浮出指示器）。
+// 指示器＝wot `wd-loading`（主人指定 https://wot-ui.cn/component/loading.html）经**本项目门面** `BaseLoading`
+// （业务视图不直用 `wd-*`：plan §26/§229）＋ design token 默认值（门面内：品牌金 colorAction／尺寸档 pullRefreshLoadingSizeRpx）。
+// ⚠️ 抖音端口径：wd-loading 自身样式为 var() 链（`--wot-*`），按 deviations #15 抖音 TTSS 可能丢弃 animation/mask/字号
+// ⇒ 抖音「spinner 是否旋转/环是否成形」为 **unknown，待真机**（已登记 #27 与能力矩阵）；页面自身规则零 var()、零通配符。
+const refreshing = ref(false);
+// 指示器纵向位置：让出**原生下拉指示带**（微信原生三点绘制在状态栏下方约 40px 内）＋ token spaceSm(16rpx=8px) 间距 ＝ 48px。
+// 平台差：微信端首页无导航栏（沉浸式 hero，页面坐标原点＝屏幕顶部）⇒ 叠加 statusBarHeight；
+// 抖音端为系统栏页面（页面坐标原点已在系统栏之下，CustomNavBar 抖音分支只内联 slot、不占位）⇒ **不叠加** statusBarHeight。
+const NATIVE_PULL_BAND_PX = 48;
+const refreshIndicatorTop = (isMpWeixin ? statusBarHeight.value : 0) + NATIVE_PULL_BAND_PX + "px";
+
+function stopPullDownRefresh(): void {
+  // 容器守卫（vitest/H5 无该 API）：同旧端 uni.stopPullDownRefresh 语义
+  if (typeof uni !== "undefined" && typeof uni.stopPullDownRefresh === "function") uni.stopPullDownRefresh();
+}
+
+async function refreshHome(): Promise<void> {
+  if (refreshing.value) return; // 连拉守卫：一次未收口不重入（在飞那次收口时自会 stop，不提前收指示器）
+  refreshing.value = true;
+  try {
+    const context = ctxFactory.next();
+    await Promise.all([vm.load(context), vm.refreshBrandHub(context), loadStaticContent()]);
+    brandHubOn.value = brandHub.enabled;
+    updateCurrentBanner();
+    fgTick.value = fgTick.value + 1; // 旧端 index:258：刷新后重挂载前景层，配置变化一眼可见
+  } catch (err) {
+    // 仓储/client 只回 Result 不抛（HANDOFF §5-2），此处仅兜「意外异常」：报错留痕、绝不卡住下拉态
+    // （旧端 reloadHomeData 同款兜底：catch 里告警＋finally 收指示器；前缀 [index] 便于线上追溯）
+    console.error("[index] 下拉刷新失败", err);
+  } finally {
+    // 旧端 .then/.catch 两分支都收指示器 ⇒ finally 等价收口（异常也不会卡住下拉态）
+    refreshing.value = false;
+    stopPullDownRefresh();
+  }
+}
 
 const banners = computed<CarouselItem[]>(() => vm.carousels.value);
 const shops = computed<PhotoGridShop[]>(() => vm.shops.value as unknown as PhotoGridShop[]);
@@ -241,10 +284,22 @@ onShow(() => {
 onMounted(() => {
   void init();
 });
+
+// 下拉刷新入口（pages.json 首页 `enablePullDownRefresh: true`；旧端 index.uvue:255 onPullDownRefresh）
+onPullDownRefresh(() => {
+  void refreshHome();
+});
 </script>
 
 <template>
   <view class="container">
+    <!-- 下拉刷新指示器（2026-09-21 主人：下拉刷新功能丢失 ⇒ 恢复，指示器用 wot `wd-loading`＋design token）：
+         玄墨胶囊（$color-page）＋品牌金 30% 描边（$color-border）；spinner 与文案为门面默认的品牌金 token。
+         位置随平台：微信端 hero 沉浸式无导航栏（状态栏＋原生指示带之下），抖音端页面原点已在系统栏之下（见脚本 refreshIndicatorTop）。 -->
+    <view v-if="refreshing" class="refresh-indicator" :style="{ top: refreshIndicatorTop }">
+      <BaseLoading text="刷新中…" />
+    </view>
+
     <!-- 品牌馆入口：圆形悬浮左上角，开关驱动默认不渲染（旧端 index:4-8 语义） -->
     <view
       v-if="brandHubOn"
@@ -410,6 +465,19 @@ onMounted(() => {
 .home-btn-icon {
   width: 40rpx;
   height: 40rpx;
+}
+/* 下拉刷新指示器：定宽胶囊，水平居中、浮于页面内容之上（z-index 高于品牌馆浮钮 999、低于原生 tabbar） */
+.refresh-indicator {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: $space-xs $space-sm; /* 8rpx 16rpx（token） */
+  border-radius: 999rpx; /* 胶囊 */
+  background: $color-page; /* 玄墨 #160F04（token semantic colorPage） */
+  border: 2rpx solid $color-border; /* 品牌金 30%（token semantic colorBorder） */
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.4); /* 浮层投影：暗底用纯黑透明度，非 token 色阶 */
+  pointer-events: none; /* 指示器不拦截手势（同 .hero-mask 口径） */
 }
 .sk-container {
   padding: 0;

@@ -7,7 +7,14 @@ import type { ShopBrief } from "../infrastructure/repositories/shops";
 import { cosThumb } from "../application/image";
 
 export interface HomeDeps {
-  carousels: { getImage: (ctx: RequestContext) => Promise<RepoResult<CarouselItem[]>> };
+  // options 与仓储真实签名对齐（旧端 getImage(method, params)；新端 params 走 query）——
+  // 2026-09-21 下拉刷新防缓存需要透传 `t`，故 VM 依赖接口同步放开可选入参。
+  carousels: {
+    getImage: (
+      ctx: RequestContext,
+      options?: { method?: "GET" | "POST"; params?: Record<string, string> },
+    ) => Promise<RepoResult<CarouselItem[]>>;
+  };
   shops: { getShops: (ctx: RequestContext) => Promise<RepoResult<ShopBrief[]>> };
   brandHub: { refresh: (ctx: RequestContext) => Promise<void>; readonly enabled: boolean };
 }
@@ -22,8 +29,11 @@ export function createHomeViewModel(deps: HomeDeps) {
     loading.value = true;
     error.value = null;
     // 旧端 index:356-357：两请求并行、各自容错
+    // 2026-09-21（主人「首页下拉刷新功能丢失了」）：旧端 index.uvue:356 每次 load 都传 `t: Date.now()` 作
+    // banner 防缓存——KB 03 分册「同批小程序改造：首页/客片页下拉刷新（banner 防缓存）」，下拉刷新必重新拉取轮播配置；
+    // 新端同口径（合同 getImage 允许 `params?`，query 由 client 组装）。
     const [cr, sr] = await Promise.all([
-      deps.carousels.getImage(context).then(
+      deps.carousels.getImage(context, { params: { t: String(Date.now()) } }).then(
         (r) => (r.ok ? r.value : null),
         () => null,
       ),

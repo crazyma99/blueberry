@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
 // uni 生命周期在非页面容器不可用（vue.injectHook 崩溃）——mock 后页面可挂载
+// （2026-09-21：首页恢复下拉刷新 ⇒ 页面新增 onPullDownRefresh 依赖，mock 同步补齐；行为另见 t49）
 vi.mock("@dcloudio/uni-app", () => ({
   onShow: () => {},
+  onPullDownRefresh: () => {},
 }));
 
 import IndexPage from "../../src/pages/index/index.vue";

@@ -1,5 +1,5 @@
 {
-  "_comment": "唯一手改来源（plan §6.2）；数值全部来自旧端 2026-09-17 实测盘点：颜色词频 grep、尺寸 88/96/140/100/120rpx、动效 220-350ms、字号 32 主体；迁移期不重设计",
+  "_comment": "唯一手改来源（plan §6.2）；数值全部来自旧端 2026-09-17 实测盘点：颜色词频 grep、尺寸 88/96/140/100/120rpx、动效 220-350ms、字号 32 主体；迁移期不重设计。2026-09-21 补 component.pullRefreshLoadingSizeRpx=48（首页下拉刷新 wot wd-loading 指示器尺寸档，主人指定「wotui+design token」）",
   "primitive": {
     "gold": "#F1CD91",
     "goldLight": "#FFF3C6",
@@ -56,6 +56,7 @@
     "popupRadiusRpx": 24,
     "cardPaddingRpx": 24,
     "listGapRpx": 16,
-    "sectionGapRpx": 32
+    "sectionGapRpx": 32,
+    "pullRefreshLoadingSizeRpx": 48
   }
 }

@@ -12,7 +12,11 @@
 				// #ifdef MP-WEIXIN
 				"navigationStyle": "custom",
 				// #endif
-				"navigationBarTitleText": "蓝梅云"
+				"navigationBarTitleText": "蓝梅云",
+				// 2026-09-21 主人：首页下拉刷新功能丢失 ⇒ 恢复（对齐旧端 src/pages.json:5-8）。
+				// backgroundTextStyle=light：抖音端为系统栏页面，下拉指示点用亮色配玄墨底。
+				"enablePullDownRefresh": true,
+				"backgroundTextStyle": "light"
 			}
 		},
 		{

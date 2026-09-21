@@ -3,7 +3,7 @@
 1. **package/lock 历史差异**：以 preflight §0 实测哈希为准（lock 60a176ad…／pkg 9f522349…）。
 2. **finalScore 类型缺失**：旧端 AI 推荐结果 `finalScore` 运行时有值、类型未声明 ⇒ 新端补齐类型（嘉仪 PR#1 已对齐后端降序口径）。
 3. **下载 paid 与权益到账竞态**：旧端 payGuard.uts 统一支付门闩＋到账双条件 paid&&balance>0＋续跑前重拉余额＋不自动二次拉起支付 ⇒ 新端保语义。
-4. **品牌馆开关刷新口径（plan §7 有意修正，2026-09-17 校正表述）**：新端**冷启动（首页 onMounted）**刷新开关，**同上下文在飞请求去重**（brand-hub-controller 按 scopeRevision 去重、切品牌作废在飞）；旧端 60s 内存缓存＋下拉/热恢复强制刷新**不再保留**（controller 无缓存，且当前**未实现** onPullDownRefresh——原表述「下拉/热恢复强制刷新」与代码不符，此处更正）。**2026-09-17 P2-20 追加**：品牌馆页切品牌后回首页，由**首页 onShow 检测品牌基线变化**触发 bumpScope＋复位入口开关＋重载（旧端 index:218-232 同序，非偏差），保证「入口显隐」与「品牌数据」同步，杜绝入口显示而进入被拦。
+4. **品牌馆开关刷新口径（plan §7 有意修正，2026-09-17 校正表述）**：新端**冷启动（首页 onMounted）**刷新开关，**同上下文在飞请求去重**（brand-hub-controller 按 scopeRevision 去重、切品牌作废在飞）；旧端 60s 内存缓存＋下拉/热恢复强制刷新**不再保留**（controller 无缓存，且当前**未实现** onPullDownRefresh——原表述「下拉/热恢复强制刷新」与代码不符，此处更正；**2026-09-21 更新：首页已实现 onPullDownRefresh，见 #27**）。**2026-09-17 P2-20 追加**：品牌馆页切品牌后回首页，由**首页 onShow 检测品牌基线变化**触发 bumpScope＋复位入口开关＋重载（旧端 index:218-232 同序，非偏差），保证「入口显隐」与「品牌数据」同步，杜绝入口显示而进入被拦。
 5. **vitest 版本适配（2026-09-17 实测）**：vitest 5.0.1 需 vite `./module-runner` 导出（vite 6+），与冻结的 vite 5.2.8 不兼容（启动即 ERR_PACKAGE_PATH_NOT_EXPORTED）⇒ **降级锁 vitest 3.2.4**（其 dependencies.vite＝^5.0.0），不为测试框架盲升 vite。
 6. **工具链测试自身两处 bug（2026-09-17 首跑抓出并修复）**：①精确版判定正则写错（`[^~]` 语义相反）②`@dcloudio/types@^3.4.8` 属独立版本线被误判跨线 ⇒ 修正为显式首字符判定＋发行线检查限定 `3.0.0-` 族；**负向 fixture 先红后绿**，10/10 通过。
 7. **品牌馆页解析口径（P2-20 CR 🟡4，已知低风险）**：gate 取件的严格性由 client `isBusinessSuccess`（0/200 均成功）承担，旧端 `pageConfig.uts:11` 为严格 `code===200` ⇒ 若接口返回 `code=0` 旧端隐藏、新端可能放行（实测返回 200，概率低）。`domain/brand-hub.parseBrandHubResponse` 保留为旧端口径的规格测试锚点，生产链路已不经它。
@@ -56,3 +56,36 @@
     **微信小程序渲染器不支持 `background-clip:text`**（产物 wxss 保留该声明但真机不生效）⇒ 文字退化为渐变首个色 `#ffb26f`（**橙金**），
     与同列「我的喜欢」（品牌金 `$color-action`）不一致，主人 2026-09-20 反馈要求修复 ⇒ 改为 `color: $color-action`（统一品牌金）。
     **影响面**：仅该菜单项文字颜色；**测试**：vitest 全绿、三平台构建 exit 0。
+
+27. **首页下拉刷新恢复（2026-09-21，主人：「小程序的首页下拉刷新功能丢失了，下拉刷新使用 wotui+design token 完成」）**：
+    **事实**：旧端 `src/pages/index/index.uvue:252-263` 有 `onPullDownRefresh`、旧端 `src/pages.json:5-8` 首页 `enablePullDownRefresh: true` ＋ `backgroundTextStyle: "light"`；
+    新端 T6 首页接入期二者**均未迁**（本表 #4 曾如实登记「当前未实现 onPullDownRefresh」）⇒ 主人真机下拉无反应，判定「功能丢失」。
+    **恢复口径（对齐旧端，不新造交互）**：①`pages.json` 首页开 `enablePullDownRefresh: true` ＋ `backgroundTextStyle: "light"`（仅首页，逐字段对齐旧端）；
+    ②`index.vue` 注册 `onPullDownRefresh` ⇒ `refreshHome()`：并行重载轮播（**带防缓存 `t`**，旧端 :356 口径）／店铺／品牌馆开关／页脚联系内容 → `brandHubOn` 同步
+    → `updateCurrentBanner()` → **`fgTick+1` 重挂载前景层重播渐入动效**（旧端 :258）→ `uni.stopPullDownRefresh()`；**成功与意外异常都收指示器**（旧端 .then/.catch 双分支
+    ⇒ 新端 `finally`，异常另留 `console.error("[index] …")` 痕）；**刷新期不回落骨架屏**（旧端同：已有内容保留）；连拉守卫（在飞不重入）。
+    ③**指示器＝wot `wd-loading`**（主人指定 https://wot-ui.cn/component/loading.html）——**经本项目门面 `src/ui/BaseLoading.vue` 消费**（业务视图零 `wd-*`，plan §26/§229；独立 CR 🔴1 整改项，页面与产物 `usingComponents` 均只见门面）；
+    门面默认值＝design token：spinner 色 `tokens.semantic.colorAction`（#F1CD91）、尺寸新增**组件级 token** `component.pullRefreshLoadingSizeRpx=48rpx`
+    （`tokens/source.json` 唯一手改 → 重生成 tokens.ts/theme.scss/theme.css，digest `2210080…`→`3a2cfc6…`）；页面侧胶囊底 `$color-page`／描边 `$color-border`／内距 `$space-xs $space-sm`
+    （编译期字面量，**页面自身规则零 `var(--`、零通配 `*`**，守 #13/#15，产物 grep 实证）。
+    ⚠️ **抖音端降级风险（如实登记，独立 CR 🔴2 更正）**：`color` 经组件 `rootStyle` 落根节点**内联** `style.color`（非 var）⇒ **颜色两端有保障**；但 wot 组件**自身样式是 `var()` 链**
+    （产物 `mp-toutiao/.../wd-loading.ttss` 实测：`animation: wd-rotate var(--wot-loading-spinner-animation-duration,.8s)`、`mask: radial-gradient(… var(--wot-loading-spinner-circle-stroke-width,15%) …)`、
+    文案 `font-size: var(--wot-loading-text-font-size, …, 14px)`）⇒ 按 #15 机制（抖音 TTSS 不保证变量）**抖音端「spinner 是否旋转／环是否成形／文案字号」为 `unknown`，待 `tma` 真机**；
+    已同步进 `platform-capability-matrix.md`（下拉刷新行：微信 supported（产物级）／抖音 unknown）。**不得据本条宣称抖音已支持**。
+    **有意差异（登记）**：旧端下拉反馈＝**平台原生**指示（微信三点）；新端在此之上**叠加品牌自绘指示器**（主人本轮明确要求），原生指示并存。
+    位置随平台：`top = (isMpWeixin ? statusBarHeight : 0) + 48px`——48px ＝ 原生下拉指示带约 40px ＋ token `spaceSm`（16rpx＝8px）间距；微信端首页沉浸式无导航栏（页面原点＝屏幕顶部）故叠加状态栏；
+    抖音端为系统栏页面（**页面坐标原点已在系统栏之下**：`CustomNavBar` 抖音分支只内联 slot、不占位）故**不叠加**（独立 CR 🟡2 更正：初版按微信口径叠加 52px 属双计状态栏）。⚠️ **微信端「自绘胶囊 vs 原生三点」是否重叠＝待真机目视**（已进 `device-acceptance-checklist.md`）。
+    **未纳入本轮**：客片页（demoDetail）旧端同样有下拉刷新（旧端 `pages.json:16-22`），主人本轮只点名首页 ⇒ 保持未开，待指示。
+    **与旧端的差异（据实修正，独立 CR 🟡4）**：①旧端成功分支含 `loadShareCard()`，而**新端首页整体没有分享卡片**（无 `onShareAppMessage`/`onShareTimeline`）＝**既有未迁项**（本轮不含，已同步登记 `parity.md` 首页行）；
+    ②`refreshHome` 额外刷 `loadStaticContent()`（页脚/联系信息 2 次 `/api/page-config`）＝**超出旧端、有意**（旧端这两块无 props 自源；新端口径＝「下拉即取最新 OPS 配置」，代价＝弱网下指示器多停留）；
+    ③旧端 `reloadHomeData` 开头重置 `heroHeightReady/heroHeight`（随首图重算），新端 `heroHeight` 为固定 794rpx 且无 `@load` 重算（自适应属既有未迁项）⇒ **该重置在新端无对应物、无新缺口**（页面注释原引 P2-13 不准，已改）。
+    **平台事实（uni-app 官方《页面配置》表逐行核对，2026-09-21）**：`enablePullDownRefresh` 无平台限制说明（微信／抖音同口径生效）；`backgroundTextStyle` **平台差异列＝仅微信小程序** ⇒ 抖音端该字段被忽略（**原生下拉指示点用抖音默认色**，本轮品牌指示器＝我们的 `wd-loading` 胶囊，为其主要视觉）；微信端下拉露出的窗口底色由 `globalStyle.backgroundColor: "#160F04"`（玄墨）保证**不白闪**（`backgroundColor` 官方说明＝「下拉显示出来的窗口的背景色」，仅微信／小红书）。
+    **测试**：`tests/unit/t49-index-pull-refresh.spec.ts`（9 例：配置仅首页开启／两个刷新键在 `#ifdef` 块**之外**／页面零 `wd-*`／页面样式零 `var(--`＋零通配／回调注册＋重新取件＋防缓存 `t`／
+    门面 token 色尺寸文案／**前景层重挂载 `fgTick` 重播**／连拉守卫／意外异常仍收口并留痕）＋`tests/components/ui-contract.spec.ts` 门面 `BaseLoading` 2 例（token 默认值＋全量透传）＋`t6-vms.spec.ts` 防缓存用例；
+    全量 vitest **430 passed／3 skipped**、`vue-tsc` **0 错**、三平台构建 **exit 0**，产物实证：微信/抖音 page json 含 `enablePullDownRefresh:true`＋`backgroundTextStyle:"light"`
+    （微信另含 `navigationStyle:custom`）、wxml/ttml 含 `.refresh-indicator` 且 `usingComponents` 只登记**门面**组件、wxss/ttss 页面规则为 token 字面量
+    （`background:#160f04`／`rgba(241,205,145,.3)` 描边／`padding:8rpx 16rpx`）且**零 `var(--`、零通配 `*`**。
+    **变异测试（独立 CR 🟡3 方法，本轮自测六组）**：删 `enablePullDownRefresh`／删防缓存 `t`／删 `finally` 里 `stopPullDownRefresh()`／删 `fgTick+1`／门面默认色改死值／页面改回直用 `<wd-loading>`
+    ⇒ **六组均按预期变红**（分别 2／2／4／1／2／2 例失败），复原后 39 例全绿 ⇒ 上述断言非「只写类名」的弱断言。
+    ⓘ **顺带发现（未改，待主人拍板）**：`profiles/blueberry/project.env:11` 的 `BRAND_NAME` 仍为「蓝梅旅拍」，与 `c0e9bb0` 已改名的生成快照
+    `src/generated/profile.{config.ts,json}`（「蓝梅云」）不一致 ⇒ **每次跑 `gen-profile-local.mjs` 都会把生成快照刷回旧品牌名**；本轮实测该字段**全仓无消费方**（`PROFILE.brandName` 零引用、产物内文案「蓝梅旅拍」零命中）⇒ 无用户可见影响，故本轮未动品牌源文件（品牌文案属主人拍板项）。

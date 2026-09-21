@@ -54,6 +54,25 @@ describe("createHomeViewModel（P2-11 并行容错）", () => {
     expect(vm.shops.value.length).toBe(1);
     expect(vm.error.value).toBeNull();
   });
+  it("banner 防缓存：load 每次都透传 `t`（旧端 index.uvue:356；下拉刷新必重新拉取轮播配置）", async () => {
+    const seen: Array<Record<string, string> | undefined> = [];
+    const vm = createHomeViewModel({
+      carousels: {
+        getImage: async (_c, options) => {
+          seen.push(options?.params);
+          return ok<CarouselItem[]>([{ id: 1 }]);
+        },
+      },
+      shops: { getShops: async () => ok<ShopBrief[]>([]) },
+      brandHub: { refresh: async () => {}, enabled: false },
+    });
+    await vm.load(ctx);
+    await vm.load(ctx); // 下拉刷新同用 load
+    expect(seen.length).toBe(2);
+    expect(seen[0]?.t).toBeTruthy();
+    expect(Number(seen[0]?.t)).toBeGreaterThan(0); // 时间戳（字符串化 query 值）
+    expect(seen[1]?.t).toBeTruthy();
+  });
   it("单侧失败不拖垮另一侧；双侧失败才置 error（旧端 .catch(()=>null) 语义）", async () => {
     const vm1 = createHomeViewModel({
       carousels: { getImage: async () => { throw new Error("net"); } },

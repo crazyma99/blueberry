@@ -21,6 +21,7 @@
 | **字体** | **supported（注意偏差）** | 旧全局类 `font-noto-serif`／`harmony` 新端未定义 ⇒ **已登记 `deviations.md` 第 11 条**（CR 🔴2 补登：此前表内引用了不存在的登记）；字号按旧值**字面量**还原（旧 `--font-size-body=24rpx` ≠ `tokens.semantic.fontSizeBody=32rpx`） | **同微信口径** | 同上（不涉及平台 API） |
 | **震动/触感** | **supported（能力降级）** | `application/haptics.ts` 守卫版（无 API 静默降级；P2-18 引入） | **unknown** | 抖音 `uni.vibrateShort` 支持情况待真机确认 |
 | **扫码/客服会话（平台原生）** | **unknown（未使用）** | 现无调用点 | **unknown** | — |
+| **下拉刷新**（`enablePullDownRefresh`＋`onPullDownRefresh`） | **supported（产物级）** | `pages.json` 首页 `enablePullDownRefresh:true`＋`backgroundTextStyle:"light"`（`deviation #27`）；`pages/index/index.vue` 的 `refreshHome()`（重载轮播/店铺/开关＋`fgTick` 重播＋`finally` 收指示器）；`t49` 9 例 | **unknown** | 配置与生命周期同口径可出包（双端 page json 实证），但**指示器** `BaseLoading`→`wd-loading` 自身样式为 `var()` 链 ⇒ 按 `deviations #15` 抖音 TTSS 可能丢 `animation/mask/字号` ⇒ 待 `tma` 真机（矩阵 §2 第 6 条） |
 | **支付（平台）** | **supported** | `platform/weixin/payments.ts`（JSAPI；非微信/无 API→`unsupported`，**fail-closed 不假装成功**；`t31`） | **unsupported（有意）** | 主人拍板「抖音**零支付改造**」；`payment-coordinator` 四张 AI 页均不注册于抖音 |
 
 ## 2. 需真机/工具定稿的条目（`P4-14` 时逐项勾）
@@ -32,6 +33,7 @@
 | 3 | 抖音触感/字体渲染一致性 | 抖音 | 真机截图比对 |
 | 4 | 微信各能力在**低版本基础库**下的降级表现（`canIUse` 守卫已实现，需实测） | 微信 | 真机（指定基础库版本） |
 | 5 | 小红书（MP-XHS）整列 | 小红书 | **本轮不做**（主人未纳入本轮；`P4-17` 需登记批准与范围） |
+| 6 | 首页下拉刷新**指示器**（`BaseLoading`→`wd-loading`）在抖音是否正常（旋转/环成形/文案字号） | 抖音 | `tma preview` 真机目视（`deviations #27` 已登记降级风险；颜色有内联 style 保障） |
 
 ## 3. 说明
 
