@@ -80,7 +80,15 @@ import {
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
-import LoadingBlock from "../../components/LoadingBlock/LoadingBlock.vue";
+// 2026-09-21 主人：「AI试衣落地页分享的准备 loading 也使用 wotui 的 loading 组件＋token」
+// ⇒ 分享准备遮罩改用**门面** `ui/BaseLoading`（内含 wot `wd-loading`，业务页零 `wd-*` 直用，plan §26/§229）；
+//    门面默认值＝design token（spinner 色 `semantic.colorAction` 金／尺寸 `component.pullRefreshLoadingSizeRpx` 48rpx），
+//    `direction="vertical"`＝旧端 `LoadingBlock` 竖排口径。本页**仅微信注册**（AI 六页不注册抖音）
+//    ⇒ 无抖音 TTSS 丢 `var()` 的降级面（deviations #15/#27 的适用性说明）。
+//    旧 `components/LoadingBlock` 保留（P5 组件台账「ported」项，本页不再引用）。
+// 2026-09-21 主人：分享准备 loading 改用 **wot popup ＋ wot loading 的公共组件** `ui/BaseLoadingPopup`
+// （内部＝wd-popup 遮罩/居中 ＋ 门面 BaseLoading＝wd-loading；token 卡片面）⇒ 本页不再自绘遮罩与卡片。
+import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue 完全同口径）——
@@ -471,10 +479,16 @@ function currentShareQuery(): string {
 // 点击分享才准备封面（旧 :561-590）；有意偏差②：端侧人脸居中卡片未迁移 → 直接走网络 JPG 兜底
 function prepareShareCard(): Promise<void> {
   return new Promise<void>((resolve) => {
+    let settled = false;
     const done = () => {
+      if (settled) return;
+      settled = true;
       sharePreparing.value = false;
       resolve();
     };
+    // 🟡9（独立 CR）：整链无总超时 ⇒ 若平台回调（getImageInfo／img.onload／canvasToTempFilePath）极端不触发，
+    // 分享准备遮罩（closable/mask 均不可关）会永久停留。VK 自身超时 10s ⇒ 此处 12s 兜底强制收口。
+    setTimeout(done, 12000);
     if (resultImageUrl.value === "" || shareCardReady.value) {
       done();
       return;
@@ -922,12 +936,8 @@ async function loadFooterPair(): Promise<void> {
          单实例 + 动态 props（CR 🟡：避免 v-if/v-else 重建组件、重复拉取 OPS 版权配置） -->
     <PageFooter :main-line="footerLines.mainLine" :support-line="footerLines.supportLine" variant="bottomdesc-dark" safe-area />
 
-    <!-- 分享准备中 loading（点击分享后生成封面期间展示） -->
-    <view v-if="sharePreparing" class="share-preparing-mask">
-      <view class="share-preparing-card">
-        <LoadingBlock text="正在准备分享…" />
-      </view>
-    </view>
+    <!-- 分享准备中 loading（点击分享后生成封面期间展示）：公共组件 BaseLoadingPopup＝wot `wd-popup`＋`wd-loading`＋token -->
+    <BaseLoadingPopup :show="sharePreparing" text="正在准备分享…" direction="vertical" />
   </view>
 </template>
 
@@ -1251,29 +1261,8 @@ async function loadFooterPair(): Promise<void> {
 
 /* 底部页脚（旧 :1302-1318 .page-footer/.divide/.bottomdesc）已收敛入 PageFooter 共享组件（深色变体 + safe-area） */
 
-/* 分享准备中 loading 遮罩（旧 :1320-1347） */
-.share-preparing-mask {
-  position: fixed;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.55);
-  z-index: 999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.share-preparing-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48rpx 64rpx;
-  background: rgba(22, 15, 4, 0.92); /* 旧 var(--color-bg) #160F04 的 92% 派生 */
-  border-radius: 14rpx; /* 旧 var(--radius-card) */
-}
-/* 旧 :1342-1347 的 .share-preparing-text 在旧端模板中已无引用（改由 LoadingBlock 渲染），按忠实优先保留 */
+/* 分享准备中 loading 的遮罩/卡片已收敛到公共组件 `ui/BaseLoadingPopup`（2026-09-21：wot popup＋loading＋token） */
+/* 旧 :1342-1347 的 .share-preparing-text 在旧端模板中已无引用（现由 wot `wd-loading` 渲染文字），按忠实优先保留 */
 .share-preparing-text {
   margin-top: 32rpx;
   font-size: 24rpx; /* 旧 var(--font-size-body)=24rpx */

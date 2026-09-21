@@ -111,3 +111,30 @@
     **🟡 已采纳**：②**首页补 `onLoad`**（`?brandId=`／小程序码 `scene` 写入品牌上下文；此前首页全文件无 `onLoad` ⇒ 分享卡片里带的 brandId **无人消费＝空转**，首访用户拿到全局卡片/数据；顺序按 mp 侧 `setup→onLoad→onMounted→onShow` 处理，只写上下文＋同步品牌基线，不重复 `init`）＋`t51` 增用例；③**去切品牌时的重复解析**（`init()` 内已含 `loadShareCard`，删多余一次 `GET /api/page-config`）；④`t50` 增「页面级位置接线」断言（4 页 `hasCustomNav: true`／首页默认）——原变异「删 demoDetail 旗标」曾 15/15 全绿；⑤`t49` 弱断言 `toContain("BaseLoading")`（当时只由注释满足）改为 `PullRefreshIndicator`；⑥`t18`/`t19` 注释据实更正（失败来源＝本文件 `repositories/albums` 桩 `ok:false`，同形于真实 client 失败；真 client＋空 transport 的失败路径由 `t6-index`／`t21` 覆盖）；⑦**客片列表页补旧端 `onReachBottomDistance: 80`**（旧端 `src/pages.json:17-22` 有、新端全仓漏迁，本轮同一 style 块补齐）；⑧`parity.md` 首页行改为「已补分享卡片＋onLoad 落地」并去掉本轮误加的重复行；⑨**提交范围**排除 `src/generated/profile.{config.ts,json}`（生成脚本按 `profiles/blueberry/project.env` 回刷 `brandName`，属无关回退）与 `._.DS_Store`；⑩**客片详情页下拉连页脚一起刷**（口径与首页/价目表/AI记录页对齐），并把 `init` 内 `preloadImages(urls,2500)` 的注释据实更正为「`Promise.race` 超时上限 ⇒ 弱网首次可能多停 ≤2.5s」；⑪内核注释注明 `hasCustomNav` 在抖音端的语义差异（抖音无自绘栏，44px 实为避开内联 slot ⇒ 是否重叠待真机 checklist §6.5）。
     **CR 复核的测试口径更新**：全量 **vitest 463 passed／3 skipped**（较 460 增 3 例：🔴1 检测段锁 + 🟡4 位置接线 + 🟡2 onLoad 落地）＋`vue-tsc` 0；变异现为 **7 组**（去 `{brand}`／反转 idx 分支／去噪声阈值／去 statusBar 项／padding 回退／去 finally 收口／**检测段改 9 参**）全部变红，复原后全绿。
     **待真机**（已进 `device-acceptance-checklist.md` §6）：4 页下拉指示器与原生三点是否重叠；抖音端两页下拉表现；VK 人脸封面真机效果（开发者工具模拟器不支持 VisionKit ⇒ 走中心裁剪，与旧端同）；分享卡片标题/封面在真机是否按 OPS 配置呈现。
+
+29. **分享准备 loading 改用「wot popup ＋ wot loading」公共组件（2026-09-21，主人指示）**：主人先要求「AI 试衣落地页分享的准备 loading 也使用 wotui 的 loading 组件＋token」，
+    随后追问「这个 loading 是否可以使用 wot-ui 的 popup 与 loading 去做替代，做成公共组件，后面可以复用」⇒ 落地＝**新增门面层公共组件 `src/ui/BaseLoadingPopup.vue`**：
+    · **组合**（事实源＝`npx wot info Popup`／`npx wot info Loading`，`@wot-ui/cli` 1.1.0 实测）：`wd-popup`（`position=center`、`closable=false`、
+      **`close-on-click-modal=false`**＝加载中不许点遮罩关、`root-portal`）＋ 门面 `BaseLoading`（内部 `wd-loading`，token 默认色 `semantic.colorAction` 金／
+      尺寸 `component.pullRefreshLoadingSizeRpx` 48rpx）；卡片品牌面走 token（`$color-page` 玄墨底／`$color-border` 金 30% 描边／`$popup-radius-rpx` 圆角／`$space-lg` 内距）。
+    · **白面消除**：`wd-popup` 默认表面色 `--wot-popup-bg` 为白（产物实证 `var(--wot-popup-bg, …, white)`）⇒ 组件用 `custom-style="--wot-popup-bg: transparent"`
+      把 wot 面置透明、品牌面由自有 token 卡片承担（**不使用** `:deep()` 打洞 wot 内部样式；`custom-style` 经 wd-transition 落在同带 `.wd-popup` 的节点，独立 CR 已双向验证成立）。
+      **注**：同串里的 `--wot-popup-radius: 0` 实为**空转**（`.wd-popup--center.is-round` 只在 `round=true` 时命中，本组件未传 `round`）——独立 CR 🟡4 据实更正，保留该声明仅为防御性。
+    · **层级（真机可见项，独立 CR 🔴1）**：wot `wd-popup` 默认 `z-index: 10`，而本仓自绘标题栏 `z-index: 998`（不透明）⇒ 默认值下**遮罩盖不住顶栏**（不压暗、返回键可点），
+      被删的旧页内遮罩原为 `z-index: 999` ⇒ 属回归。组件已**显式传 `z-index`（prop 默认 1001）**，与门面家法一致（BasePopup 1000／BasePicker 1000／BaseDialog 1100／下拉指示器 1000）。
+    · **平台分支**（同 `BasePopup`／`BaseDialog` 家法，migration §8.12 方案 A）：非抖音端走 `wd-popup` 链（`root-portal` 生效）；抖音端自绘 fixed 蒙层＋居中 token 卡片
+      （绕开 wot 宿主节点 fixed 失效；该端也不吃 `var(--wot-*)` ⇒ 透明面那段 var 只在微信链出现，符合 deviations #15 边界）。
+    · **接入**：`aiTryOnResult` 分享准备遮罩由「页内自绘 `.share-preparing-mask`＋`.share-preparing-card`＋本地 `LoadingBlock`」收敛为一行
+      `<BaseLoadingPopup :show="sharePreparing" text="正在准备分享…" direction="vertical" />`（`direction` 竖排＝旧端 `LoadingBlock` 口径；页内遮罩/卡片样式随之删除）。
+      **可复用**：后续上传/提交等等待态可直接复用本组件（`show`＋`text` 两个入参即可）。
+    · **与旧端的关系（据实，独立 CR 🟡4）**：旧端该遮罩为页内自绘（`:1320-1347` 遮罩＋卡片＋`.share-preparing-text`）⇒ 本项属**有意升级**（换 Wot 组件与 token 化），
+      **几何/视觉逐项变化（非「语义不变」）**：卡片内距 `48rpx 64rpx`→`32rpx`（`$space-lg`）／圆角 `14rpx`→`24rpx`（`$popup-radius-rpx`）／底色 `rgba(22,15,4,.92)`→`#160F04` 不透明＋新增 `2rpx` 金 30% 描边／
+      spinner `80rpx` 环→wot circular `48rpx`（token）／文案 `32rpx`·金 70%→`28rpx`（wot 默认 14px）·全金；全屏遮罩与「居中小卡＋竖排 spinner＋文案」的结构不变；
+      **兜底**：分享准备整链新增 **12s 总超时**（`prepareShareCard`，> VK 10s 超时）——遮罩不可点遮罩关/无关闭按钮，独立 CR 🟡9 指出「极端回调不触发会永久停留」⇒ 加 race 收口；
+      旧类 `.share-preparing-text` 仍按「忠实优先」保留在页样式中（页面已不渲染它）。
+    · **测试**：`tests/components/ui-contract.spec.ts` 增 `BaseLoadingPopup` 3 例（微信分支 props／`show=false` 受控／抖音自绘分支）；`tests/unit/t53-share-preparing-loading.spec.ts`
+      页面级 4 例（未点分享不显示 → 准备中弹层＋token 指示器 → 就绪收口用准备结果 → 降级收口回退网络 JPG → 复用/门面纪律静态守卫）；全量 **vitest 470 passed／3 skipped**、`vue-tsc` 0、
+      **`npx wot lint src`＝No lint issues（45 文件）**、**`npx wot usage src` 实证 `wd-*` 仅出现在 `src/ui/` 门面（＋探针样页）**。
+    · **ⓘ 工具入口（主人 2026-09-21 指示：「以后涉及 wotui 的部分都可以通过 wot skill 和 wot cli 来获取帮助」）**：本仓 `@wot-ui/cli@1.1.0` 已装 ⇒
+      `npx wot info <组件>`（props/events/slots/CSS 变量）／`doc`／`demo`／`token`（组件变量↔token 名）／`lint`／`usage`／`doctor` 为**权威事实源**；
+      `npx wot agent status|init|list` 可接入 MCP/Skill（支持 claude／cursor／vscode／codex／opencode／antigravity；**本仓当前未安装**，实测 detected＝Claude Code／VS Code／Codex／OpenCode）。

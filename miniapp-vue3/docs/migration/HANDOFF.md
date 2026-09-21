@@ -81,6 +81,11 @@
    正确姿势：`text = '\n'.join(lines)` → 必要时 `write(tmp)` → `os.replace(tmp, path)`；**提交前先 `git diff --stat` 复核增删行数**。
    事故处置留痕见 commit `1b4ad0c`（从历史恢复＋差异校验为 1 insert/1 delete）。
 10. **macOS 本机工具链（2026-09-18 实测）**：系统 `pnpm@9.6` 不认 `pnpm-workspace.yaml` 的 `allowBuilds`（报 `packages field missing or empty`），且 `pnpm@11.7` 在 Node v20.20 下起不来（`ERR_UNKNOWN_BUILTIN_MODULE`）⇒ 一律用 **Node v22.22（nvm）＋ pnpm 11.7 shim**（`/tmp/pnpm11-shim/pnpm`，或 `npx pnpm@11.7.0`）；`build-target` 内部调 `pnpm`，跑管线前把 shim 目录放 PATH 最前。
+11. **wot-ui 相关一律先问工具（主人 2026-09-21 指示：「以后涉及 wotui 的部分都可以通过 wot skill 和 wot cli 来获取帮助」）**：
+   本仓已装 `@wot-ui/cli@1.1.0` ⇒ 权威事实源＝`npx wot info <组件>`（props/events/slots/**CSS 变量**）、`npx wot doc <组件>`、`npx wot demo <组件>`、
+   `npx wot token <组件>`（组件变量 ↔ token 名）、`npx wot lint src`（用法体检）、`npx wot usage src`（**可实证 `wd-*` 是否只出现在 `src/ui/` 门面**）、`npx wot doctor`；
+   `npx wot agent status|init|list` 可把 wot 的 MCP／Skill 接到 AI 客户端（支持 claude／cursor／vscode／codex／opencode／antigravity；**本仓当前未安装**）。
+   纪律不变：`wd-*` 只允许出现在 `src/ui/**` 与探针样页；业务页一律走门面（`ui-contract.spec.ts` 保合同）。
 
 ## 6. 纪律（不可让步）
 

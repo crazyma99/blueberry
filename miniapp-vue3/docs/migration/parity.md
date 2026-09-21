@@ -51,7 +51,7 @@
 | BottomActionBarSecondary | ported | 等价实现（P2-18；默认插槽） |
 | AppFooter | ported | **等价实现＋请求上提**（P2-21；纯 props，组件禁请求） |
 | ServiceContact | ported | **等价实现＋请求上提**（P2-21；纯 props；本地兜底 8 条与旧端一致） |
-| LoadingBlock | ported | 等价实现（T5/T6 期间） |
+| LoadingBlock | ported | 等价实现（T5/T6 期间）；**2026-09-21 起应用内不再引用**（分享准备 loading 改用公共组件 `ui/BaseLoadingPopup`，见 deviations #29），组件按台账保留 |
 | AppInput | not_started | AI 批次；ProfilePopup 已就地内联其结构（待替换回组件） |
 | AppPhotoPicker | ported | 等价实现（T8 S2，纯展示：只转发 click，选图/登录/上传留页面 handler） |
 | AppSegment | ported | 等价实现（T8 S2；`change` 载荷＝纯下标 number，与旧端逐字） |

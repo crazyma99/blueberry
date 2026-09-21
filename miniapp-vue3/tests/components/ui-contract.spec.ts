@@ -25,6 +25,7 @@ import StubToast from "../stubs/wot/wd-toast/wd-toast.vue";
 import StubDialog from "../stubs/wot/wd-dialog/wd-dialog.vue";
 import StubLoading from "../stubs/wot/wd-loading/wd-loading.vue";
 import BaseLoading from "../../src/ui/BaseLoading.vue";
+import BaseLoadingPopup from "../../src/ui/BaseLoadingPopup.vue";
 
 const globalWith = {
   components: {
@@ -365,5 +366,59 @@ describe("BaseLoading（2026-09-21 首页下拉刷新门面）", () => {
     expect(stub.props("type")).toBe("dots");
     expect(stub.props("direction")).toBe("vertical");
     expect(stub.props("inheritColor")).toBe(true);
+  });
+});
+
+describe("BaseLoadingPopup（2026-09-21 新增公共组件：wot popup ＋ wot loading＋token）", () => {
+  it("微信分支：走 wd-popup（居中/遮罩点击不关/透明面＋门面 token 卡片与指示器）", () => {
+    setUiPlatformOverride("mp-weixin");
+    const w = mount(BaseLoadingPopup, { props: { show: true, text: "正在准备分享…" }, global: globalWith });
+    const popup = w.findComponent(StubPopup);
+    expect(popup.props("modelValue")).toBe(true);
+    expect(popup.props("position")).toBe("center");
+    expect(popup.props("closable")).toBe(false);
+    expect(popup.props("closeOnClickModal")).toBe(false); // 加载中不许点遮罩关
+    expect(String(popup.props("customStyle"))).toContain("--wot-popup-bg: transparent");
+    expect(popup.props("rootPortal")).toBe(true); // CR 🟡7：此前无覆盖
+    expect(popup.props("zIndex")).toBe(1001); // CR 🔴1：wot 默认 10 < 自绘标题栏 998 ⇒ 必须显式抬层
+    expect(popup.props("customClass")).toBe("base-loading-popup"); // CR 🟡7：此前无覆盖
+    expect(w.find(".base-loading-popup__card").exists()).toBe(true);
+    const loading = w.findComponent(StubLoading);
+    expect(loading.props("text")).toBe("正在准备分享…");
+    expect(loading.props("direction")).toBe("vertical"); // 默认竖排（旧端 LoadingBlock 口径）
+    expect(loading.props("color")).toBe("#F1CD91"); // token semantic.colorAction
+    expect(loading.props("size")).toBe("48rpx"); // token component.pullRefreshLoadingSizeRpx
+  });
+
+  it("show=false 时 wd-popup 不显示（受控：加载态由业务收口）", () => {
+    setUiPlatformOverride("mp-weixin");
+    const w = mount(BaseLoadingPopup, { props: { show: false }, global: globalWith });
+    expect(w.findComponent(StubPopup).props("modelValue")).toBe(false);
+  });
+
+  it("抖音分支：自绘固定蒙层＋居中卡片（不走 wd-popup），文案/指示器同唯一样式源", () => {
+    setUiPlatformOverride("mp-toutiao");
+    const w = mount(BaseLoadingPopup, { props: { show: true }, global: globalWith });
+    expect(w.findComponent(StubPopup).exists()).toBe(false);
+    expect(w.find(".base-loading-popup-native").exists()).toBe(true);
+    expect(w.find(".base-loading-popup-native__mask").exists()).toBe(true);
+    expect(w.find(".base-loading-popup__card").exists()).toBe(true);
+    expect(w.findComponent(StubLoading).props("text")).toBe("加载中…"); // 默认文案
+    const hidden = mount(BaseLoadingPopup, { props: { show: false }, global: globalWith });
+    expect(hidden.find(".base-loading-popup-native").exists()).toBe(false);
+  });
+});
+
+describe("BaseLoadingPopup 样式纪律（独立 CR 🟡7：零 var(--)/零通配；卡片面走 token）", () => {
+  it("组件源码：样式块零运行时 CSS 变量与通配选择器，卡片面为 token 值，且未使用 :deep 打洞 wot 内部", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const src = readFileSync(resolve(__dirname, "../../src/ui/BaseLoadingPopup.vue"), "utf-8");
+    const styleBlock = src.slice(src.indexOf("<style"), src.lastIndexOf("</style>")).replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(styleBlock).not.toContain("var(--");
+    expect(/[\s,{>]\*[\s,{]/.test(styleBlock)).toBe(false);
+    expect(styleBlock).toContain("background: $color-page"); // 卡片面（此前变异「删底色」不变红）
+    expect(styleBlock).toContain("border: 2rpx solid $color-border");
+    expect(styleBlock).not.toContain(":deep("); // 透明面靠 custom-style，不打洞 wot 内部
   });
 });
