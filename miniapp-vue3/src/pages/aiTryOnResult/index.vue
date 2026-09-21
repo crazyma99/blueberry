@@ -69,6 +69,7 @@ import {
 } from "../../application/ai-result-flow";
 import { cosThumb } from "../../application/image";
 import { cosThumbJpg } from "../../application/image-share";
+import { generateFaceCenteredCard } from "../../platform/weixin/face-share-card";
 import { preloadImage } from "../../platform/uni/image-preload";
 import {
   buildSharePath,
@@ -479,9 +480,13 @@ function prepareShareCard(): Promise<void> {
       return;
     }
     // 失败兜底（旧 catch 分支同口径）：非白名单域原样返回、空 URL 返回空串，绝不阻塞分享拉起
-    shareCardImage.value = cosThumbJpg(resultImageUrl.value, 400);
-    shareCardReady.value = true;
-    done();
+    // 2026-09-21 主人：「AI试衣结果分享的 VK 人脸算法裁切也遗漏了」⇒ 接回旧端 :567-586 口径：
+    // 端侧 VK 人脸居中 5:4 卡片（本地临时图）优先；不可用/未检出/异常 → 回退网络 JPG（bug #11 口径不变）
+    void generateFaceCenteredCard(resultImageUrl.value).then((card) => {
+      shareCardImage.value = card != null && card.imagePath !== "" ? card.imagePath : cosThumbJpg(resultImageUrl.value, 400);
+      shareCardReady.value = true;
+      done();
+    });
   });
 }
 async function ensureShareCard(): Promise<{ title: string; path: string; imageUrl: string }> {
@@ -775,9 +780,10 @@ async function loadFooterPair(): Promise<void> {
 
 // ============ 偏差清单（有意偏差逐条；其余与旧端零偏差） ============
 // ① 主题：页底保持旧端**深色** `#160F04`（= 旧 --color-bg），与 BottomActionBar 同口径（父会话红线，非亮色改造）。
-// ② 分享封面：旧端先走端侧人脸居中卡片（utils/faceShareCard.uts `generateFaceCenteredCard`，仅 MP-WEIXIN），
-//    失败才回退网络图；该模块本批未迁移 ⇒ **直接走网络 JPG**（cosThumbJpg 400；旧 catch 分支同口径，
-//    且零本地临时文件，对 bug #11 的卡片兼容性更稳）。`prepareShareCard` 内一行即替换点，接回人脸卡片时只改此处。
+// ② 分享封面：旧端先走端侧人脸居中卡片（`utils/faceShareCard.uts` `generateFaceCenteredCard`，仅 MP-WEIXIN），
+//    失败才回退网络图。**2026-09-21 已迁移**（主人：「VK 人脸算法裁切遗漏了」）⇒ `platform/weixin/face-share-card.ts`
+//    端侧 VK 人脸居中 5:4 卡片优先、不可用/未检出/异常回退 `cosThumbJpg(400)`（bug #11 的 JPG 口径保留）。
+//    ⚠️ 真机需验：VisionKit 在开发者工具模拟器不可用（旧端同：走中心裁剪），人脸效果须真机确认。
 // ③ 支付轮询：旧端 :935-972 页面自建到账轮询（2.5s×48 次＋payPollToken）**已删除**，改消费
 //    `application/payment-coordinator.ts`（终态释放门闩；超时≠作废，可 resume）。旧 :890 的「到账后自动重试保存」
 //    语义由 `resumeSaveAfterCredit` 保留，并按 P3-11 保证**只保存一次**。

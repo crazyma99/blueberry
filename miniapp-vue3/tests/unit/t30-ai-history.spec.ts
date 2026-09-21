@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
 const h = vi.hoisted(() => ({
+  pullDownCalls: [] as Array<() => void>,
+  stops: 0,
   onLoadCalls: [] as Array<(o?: Record<string, unknown>) => void>,
   onShowCalls: [] as Array<() => void>,
   getTasksCalls: 0,
@@ -25,7 +27,9 @@ vi.mock("@dcloudio/uni-app", () => ({
   onShow: (fn: () => void) => {
     h.onShowCalls.push(fn);
   },
-}));
+  onPullDownRefresh: (fn: () => void) => {
+    h.pullDownCalls.push(fn);
+  },}));
 
 vi.mock("../../src/infrastructure/repositories/ai", () => ({
   createAiRepository: () => ({
@@ -70,6 +74,9 @@ beforeEach(() => {
     },
     showToast: (o: { title: string }) => {
       h.toasts.push(o.title);
+    },
+    stopPullDownRefresh: () => {
+      h.stops += 1;
     },
   };
 });
@@ -147,5 +154,25 @@ describe("pages/aiTryOnHistory（T8 记录页）", () => {
     expect(h.getTasksCalls).toBe(2);
     expect(w.find(".sk-wrap").exists()).toBe(false);
     expect(w.findAll(".photoItem").length).toBe(3);
+  });
+});
+
+describe("AI试衣记录页 · 下拉刷新（2026-09-21 主人②）", () => {
+  it("下拉 ⇒ 重载任务列表（getTasks 第二次）＋收口一次", async () => {
+    seedUser("openid-down"); // 有登录态才会真的取任务（旧 :116-122 无 openid 早退）
+    h.stops = 0;
+    h.pullDownCalls.length = 0;
+    h.onLoadCalls.length = 0;
+    const w = mount(AiHistoryPage);
+    await flush();
+    h.onLoadCalls[h.onLoadCalls.length - 1]();
+    await flush();
+    const base = h.getTasksCalls;
+    expect(h.pullDownCalls.length).toBe(1);
+    h.pullDownCalls[0]();
+    await flush();
+    expect(h.getTasksCalls).toBe(base + 1);
+    expect(h.stops).toBe(1);
+    w.unmount();
   });
 });

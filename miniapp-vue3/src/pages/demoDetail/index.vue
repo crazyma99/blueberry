@@ -4,7 +4,7 @@
 // liked 来自批量 getLikeStatus 合并（:613-619）；点赞乐观更新＋seq 守卫＋失败回滚（:660-693，use-like 移植）。
 // 入参：idx=店铺id、from 来源标记（旧端 index:578-582）；缺 idx 安全失败停留空态。
 import { computed, ref } from "vue";
-import { onLoad, onReachBottom } from "@dcloudio/uni-app";
+import { onLoad, onReachBottom, onShareAppMessage } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
@@ -27,8 +27,13 @@ import { formatAlbumTitle } from "../../domain/album-title";
 import { cosThumb } from "../../application/image";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+// 2026-09-21 主人：本页也要下拉刷新 ⇒ 指示器＋刷新内核走共享实现（5 页同源）
+import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
+import { createPullRefresh } from "../../composables/use-pull-refresh";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
+import { createBrandRepository } from "../../infrastructure/repositories/brands";
+import { createShareCardResolver, DEFAULT_SHARE_CARDS, type ShareCard } from "../../application/share-card";
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
@@ -54,9 +59,11 @@ const authCoordinator = createAuthCoordinator({
 const client = createHttpClient({ transport, authCoordinator });
 const wxAuth = createWxAuthRepository({ client, platform });
 const albumRepo = createAlbumRepository({ client });
+// 2026-09-21：`/api/page-config` 单一仓储实例（页脚内容 + 分享卡片共用，同 index 口径）
+const pageConfigRepo = createPageConfigRepository({ client });
 // P2-21：页脚内容经用例取数（旧 demoDetail :184-187 divide＋bottomdesc AppFooter）
 const pageContent = createPageConfigContent({
-  pageConfig: createPageConfigRepository({ client }),
+  pageConfig: pageConfigRepo,
   profile: {
     copyrightText: PROFILE.copyrightText,
     contactQrSrc: PROFILE.contactQrSrc,
@@ -77,6 +84,17 @@ const ctxFactory = createContextFactory({
 });
 const listVM = createAlbumListViewModel({ albums: albumRepo });
 const liker = createLikeToggler({ likes: likeRepo });
+
+// 分享卡片（2026-09-21 主人：「客片详情分享卡片迁移遗漏」⇒ 补迁；旧端 demoDetail.uvue:292-298/:384）
+const shareCards = createShareCardResolver({
+  pageConfig: pageConfigRepo,
+  brands: createBrandRepository({ client }),
+  getBrandId: () => versioned.loadBrandId() ?? "",
+});
+const shareCard = ref<ShareCard>({ ...DEFAULT_SHARE_CARDS.demoDetail });
+async function loadShareCard(): Promise<void> {
+  shareCard.value = await shareCards.resolve("demoDetail", ctxFactory.next());
+}
 
 // —— 页面状态 ——
 interface ChildTab {
@@ -147,6 +165,7 @@ async function init(id: string): Promise<void> {
   selectedParent.value = 0;
   selectedChild.value = 0;
   await reloadList();
+  void loadShareCard(); // 旧端 demoDetail:384（initPage 内解析分享卡片）
   ready.value = true;
 }
 
@@ -228,6 +247,26 @@ function goDetail(item: ListAlbum): void {
   });
 }
 
+// —— 下拉刷新（2026-09-21 主人：客片列表页要下拉刷新；旧端 demoDetail.uvue:348-355 口径）——
+// 旧端：`isSearching ? handleSearch() : initPage(idx)` ⇒ 新端同义（搜索态重跑带 keyword 的首屏；分类态整页 init 含分类/列表/点赞态）
+async function refreshPage(): Promise<void> {
+  if (searching.value) await Promise.all([reloadList(), loadShareCard()]);
+  else await init(shopId.value); // init 内已含 loadShareCard
+}
+
+const { refreshing, indicatorTop } = createPullRefresh({
+  label: "demoDetail",
+  refresh: refreshPage,
+  hasCustomNav: true, // 自绘标题栏页面：指示器落在导航栏下沿之下
+});
+
+// 右上角胶囊菜单「转发」（旧端 demoDetail.uvue:292-298 逐字：idx 有值带 idx，否则落首页）
+onShareAppMessage(() => ({
+  title: shareCard.value.title,
+  path: shopId.value !== "" ? "/pages/demoDetail/index?idx=" + shopId.value : "/pages/index/index",
+  imageUrl: shareCard.value.imageUrl,
+}));
+
 onLoad((options) => {
   const p = parseListParams((options ?? {}) as Record<string, unknown>);
   if (p == null) return; // 缺 idx 安全失败：停留空态
@@ -251,6 +290,8 @@ onReachBottom(() => {
 
 <template>
   <view class="container">
+    <!-- 下拉刷新指示器：共享组件（`hasCustomNav: true` ⇒ 落在自绘导航栏下沿之下、让开原生三点指示带） -->
+    <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
     <!-- 顶栏：搜索框回到 CustomNavBar slot（2026-09-19 主人指示「搜索框与原版微信一致：在导航栏里、
          无搜索按钮、输入框内置搜索 icon」），结构对齐旧端 :4-19 / 新端 favorites 同款；
          返回由页面处理搜索清空逻辑（manual-back，旧端 :389-411） -->

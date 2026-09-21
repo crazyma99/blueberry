@@ -25,7 +25,13 @@
 				// #ifdef MP-WEIXIN
 				"navigationStyle": "custom",
 				// #endif
-				"navigationBarTitleText": "客片列表"
+				"navigationBarTitleText": "客片列表",
+				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/客片列表有；客片详情/AI试衣记录/价目表为本轮新增）
+				// backgroundTextStyle=light：抖音端为系统栏页面，下拉指示点用亮色配玄墨底
+				"enablePullDownRefresh": true,
+				"backgroundTextStyle": "light",
+				// 2026-09-21 独立 CR 🟡7 补齐：旧端 `src/pages.json:17-22` 本页另有 onReachBottomDistance:80（触底加载提前量），新端此前漏迁
+				"onReachBottomDistance": 80
 			}
 		},
 		{
@@ -34,7 +40,11 @@
 				// #ifdef MP-WEIXIN
 				"navigationStyle": "custom",
 				// #endif
-				"navigationBarTitleText": "客片欣赏"
+				"navigationBarTitleText": "客片欣赏",
+				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/客片列表有；客片详情/AI试衣记录/价目表为本轮新增）
+				// backgroundTextStyle=light：抖音端为系统栏页面，下拉指示点用亮色配玄墨底
+				"enablePullDownRefresh": true,
+				"backgroundTextStyle": "light"
 			}
 		},
 		{
@@ -43,7 +53,11 @@
 				// #ifdef MP-WEIXIN
 				"navigationStyle": "custom",
 				// #endif
-				"navigationBarTitleText": "价目表"
+				"navigationBarTitleText": "价目表",
+				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/客片列表有；客片详情/AI试衣记录/价目表为本轮新增）
+				// backgroundTextStyle=light：抖音端为系统栏页面，下拉指示点用亮色配玄墨底
+				"enablePullDownRefresh": true,
+				"backgroundTextStyle": "light"
 			}
 		},
 		{
@@ -125,7 +139,11 @@
 			"path": "pages/aiTryOnHistory/index",
 			"style": {
 				"navigationStyle": "custom",
-				"navigationBarTitleText": "AI试衣记录"
+				"navigationBarTitleText": "AI试衣记录",
+				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/客片列表有；客片详情/AI试衣记录/价目表为本轮新增）
+				// backgroundTextStyle=light：抖音端为系统栏页面，下拉指示点用亮色配玄墨底
+				"enablePullDownRefresh": true,
+				"backgroundTextStyle": "light"
 			}
 		},
 		// 结果页：旧端 pages.json 仅注册 path（可见标题由 CustomNavBar 动态渲染「正在生成 → AI试衣结果」），

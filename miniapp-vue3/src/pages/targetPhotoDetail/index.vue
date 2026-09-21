@@ -5,7 +5,7 @@
 // 非 shareToken 作品页（P2-11 边界）；BottomActionBar（AI 试衣按钮＋内置版权 footer）已随 2026-09-19 主人反馈补齐
 // ——AI 按钮仅微信渲染（AI 页不进抖音 Profile），版权栏全平台。
 import { computed, ref } from "vue";
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onShareAppMessage } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
@@ -27,10 +27,15 @@ import { progressivePhotoSrc } from "../../application/image";
 import { preloadImages } from "../../platform/uni/image-preload";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+// 2026-09-21 主人：本页也要下拉刷新 ⇒ 指示器＋刷新内核走共享实现（5 页同源）
+import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
+import { createPullRefresh } from "../../composables/use-pull-refresh";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import BottomActionBar from "../../components/BottomActionBar/BottomActionBar.vue";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
+import { createBrandRepository } from "../../infrastructure/repositories/brands";
+import { createShareCardResolver, DEFAULT_SHARE_CARDS, type ShareCard } from "../../application/share-card";
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 import { hapticTap } from "../../application/haptics";
 import { navigateTo } from "../../platform/uni/feedback";
@@ -64,9 +69,11 @@ const ctxFactory = createContextFactory({
   getBrandId: () => versioned.loadBrandId(),
 });
 const liker = createLikeToggler({ likes: likeRepo });
+// 2026-09-21：`/api/page-config` 单一仓储实例（页脚内容 + 分享卡片共用，同 index 口径）
+const pageConfigRepo = createPageConfigRepository({ client });
 // 页脚用例（口径同 demoDetail/favorites：BottomActionBar 内置 AppFooter 为纯 props 组件，两行文案须由页面用例注入）
 const pageContent = createPageConfigContent({
-  pageConfig: createPageConfigRepository({ client }),
+  pageConfig: pageConfigRepo,
   profile: {
     copyrightText: PROFILE.copyrightText,
     contactQrSrc: PROFILE.contactQrSrc,
@@ -76,6 +83,17 @@ const pageContent = createPageConfigContent({
 const footer = ref<FooterContent>({ mainLine: "", supportLine: "" });
 async function loadFooter(): Promise<void> {
   footer.value = await pageContent.loadFooter(ctxFactory.next());
+}
+
+// 分享卡片（2026-09-21 主人：客片详情分享卡片迁移遗漏 ⇒ 补迁；旧端 targetPhotoDetail.uvue:164-170/:206）
+const shareCards = createShareCardResolver({
+  pageConfig: pageConfigRepo,
+  brands: createBrandRepository({ client }),
+  getBrandId: () => versioned.loadBrandId() ?? "",
+});
+const shareCard = ref<ShareCard>({ ...DEFAULT_SHARE_CARDS.targetPhotoDetail });
+async function loadShareCard(): Promise<void> {
+  shareCard.value = await shareCards.resolve("targetPhotoDetail", ctxFactory.next());
 }
 
 // —— 页面状态 ——
@@ -127,8 +145,18 @@ async function init(id: string, type: string): Promise<void> {
     .map((img, idx) => photoSrc(img.imageUrl, idx))
     .filter((u) => u !== "");
   await preloadImages(urls, 2500);
+  void loadShareCard(); // 旧端 targetPhotoDetail:206（详情就绪后解析分享卡片）
   ready.value = true;
 }
+
+// —— 下拉刷新（2026-09-21 主人：客片详情页要下拉刷新）——
+// 重载「详情 + 点赞态 + 前 3 张预加载（同 init）+ 页脚文案」（独立 CR 🟡10：页脚口径与首页/价目表/AI记录页对齐）。
+// ⚠️ init 内的 `preloadImages(urls, 2500)` 是 `Promise.race` 超时上限 ⇒ 弱网首次可能多停至 2.5s（如实登记，不假装无等待）。
+const { refreshing, indicatorTop } = createPullRefresh({
+  label: "targetPhotoDetail",
+  refresh: () => Promise.all([init(albumId.value, shopId.value), loadFooter()]), // init 内已含 loadShareCard
+  hasCustomNav: true,
+});
 
 async function onToggleLike(): Promise<void> {
   if (likeState.value == null) return;
@@ -151,6 +179,13 @@ function goToAiTryOn(): void {
   );
 }
 
+// 右上角胶囊菜单「转发」（旧端 targetPhotoDetail.uvue:164-170 逐字：`?idx=<albumId>&type=<shopId>`）
+onShareAppMessage(() => ({
+  title: shareCard.value.title,
+  path: `/pages/targetPhotoDetail/index?idx=${albumId.value}&type=${shopId.value}`,
+  imageUrl: shareCard.value.imageUrl,
+}));
+
 onLoad((options) => {
   const p = parseDetailParams((options ?? {}) as Record<string, unknown>);
   if (p == null) return; // 缺 idx 安全失败：停留加载态
@@ -164,6 +199,8 @@ onLoad((options) => {
 
 <template>
   <view class="container">
+    <!-- 下拉刷新指示器：共享组件（`hasCustomNav: true` ⇒ 落在自绘导航栏下沿之下、让开原生三点指示带） -->
+    <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
     <!-- 顶栏：CustomNavBar slot 放标题组（旧端 :4-11 nav-center 还原） -->
     <CustomNavBar title="">
       <view class="nav-center">

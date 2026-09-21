@@ -4,13 +4,35 @@ import { mount } from "@vue/test-utils";
 import { cosThumb, isCosHost } from "../../src/application/image";
 
 const h = vi.hoisted(() => ({
+  pullDownCalls: [] as Array<() => void>,
+  stops: 0,
+  detailCalls: 0,
+  detailMode: "fail" as "ok" | "fail",
   onLoadCalls: [] as Array<(o: Record<string, unknown>) => void>,
 }));
+// ⚠️ 2026-09-21：本打桩（下拉刷新计数用，默认 fail）同时承担了下方冒烟用例的失败来源
+//   ⇒ 该用例的「加载失败」＝桩 `ok:false`（与真实 client 失败同形）；真实 client＋空 transport 的失败路径见 t6-index（独立 CR 🟡6 据实更正）。
+vi.mock("../../src/infrastructure/repositories/albums", () => ({
+  createAlbumRepository: () => ({
+    getAlbumDetail: async () => {
+      h.detailCalls += 1;
+      return h.detailMode === "ok"
+        ? { ok: true, value: { images: [{ imageUrl: "https://lanmei66.cloud/a.jpg" }], likeCount: 3 } }
+        : { ok: false };
+    },
+    getCategories: async () => ({ ok: false }),
+    getAlbumList: async () => ({ ok: false }),
+  }),
+}));
+
 vi.mock("@dcloudio/uni-app", () => ({
   onLoad: (fn: (o: Record<string, unknown>) => void) => {
     h.onLoadCalls.push(fn);
   },
-}));
+  onPullDownRefresh: (fn: () => void) => {
+    h.pullDownCalls.push(fn);
+  },
+  onShareAppMessage: () => undefined,}));
 
 import DetailPage from "../../src/pages/targetPhotoDetail/index.vue";
 
@@ -46,5 +68,32 @@ describe("pages/targetPhotoDetail 冒烟（mock 生命周期）", () => {
     expect(w.find(".sk-container").exists()).toBe(false);
     expect(w.text()).toContain("加载失败");
     expect(w.find(".retry-btn").exists()).toBe(true);
+  });
+});
+
+describe("客片详情页 · 下拉刷新（2026-09-21 主人②）", () => {
+  it("下拉 ⇒ 重载详情（getAlbumDetail 第二次）＋收口一次", async () => {
+    (globalThis as { uni?: unknown }).uni = {
+      stopPullDownRefresh: () => {
+        h.stops += 1;
+      },
+    };
+    h.detailMode = "ok";
+    h.detailCalls = 0;
+    h.stops = 0;
+    h.pullDownCalls.length = 0;
+    h.onLoadCalls.length = 0;
+    const w = mount(DetailPage);
+    await flush();
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ idx: "42", type: "1" });
+    await flush();
+    expect(h.detailCalls).toBe(1);
+    expect(h.pullDownCalls.length).toBe(1);
+    h.pullDownCalls[0]();
+    await flush();
+    expect(h.detailCalls).toBe(2);
+    expect(h.stops).toBe(1);
+    delete (globalThis as { uni?: unknown }).uni;
+    w.unmount();
   });
 });

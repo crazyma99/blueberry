@@ -22,6 +22,9 @@
 | **震动/触感** | **supported（能力降级）** | `application/haptics.ts` 守卫版（无 API 静默降级；P2-18 引入） | **unknown** | 抖音 `uni.vibrateShort` 支持情况待真机确认 |
 | **扫码/客服会话（平台原生）** | **unknown（未使用）** | 现无调用点 | **unknown** | — |
 | **下拉刷新**（`enablePullDownRefresh`＋`onPullDownRefresh`） | **supported（产物级）** | `pages.json` 首页 `enablePullDownRefresh:true`＋`backgroundTextStyle:"light"`（`deviation #27`）；`pages/index/index.vue` 的 `refreshHome()`（重载轮播/店铺/开关＋`fgTick` 重播＋`finally` 收指示器）；`t49` 9 例 | **unknown** | 配置与生命周期同口径可出包（双端 page json 实证），但**指示器** `BaseLoading`→`wd-loading` 自身样式为 `var()` 链 ⇒ 按 `deviations #15` 抖音 TTSS 可能丢 `animation/mask/字号` ⇒ 待 `tma` 真机（矩阵 §2 第 6 条） |
+| **分享**（卡片三层解析 `share_card`） | **supported（产物级）** | `application/share-card.ts`（旧端 `share.uts` 忠实移植：品牌槽位 > 全局同键 > 代码默认＋`{brand}`＋60s 品牌名缓存）；首页/客片列表/客片详情三页接线，`t51` 7 例 | **unknown** | 抖音 `onShareAppMessage` 由 uni 透传（tt 形态不同，见上一行）；分享**卡片文案/封面**无平台分支 → 待 `tma` 真机确认落卡表现 |
+| **分享**（VK 人脸居中 5:4 封面） | **supported（真机待验）** | `platform/weixin/face-share-card.ts`（旧端 `faceShareCard.uts` 1:1：降采样 1024／5:4 750×600／噪声阈值 2%／VK 超时 10s）；回退 `cosThumbJpg(400)`；`t52` 9 例 | **unsupported（无对应物）** | 抖音无 VisionKit／离屏 canvas 同能力 ⇒ 返回 null、调用方回退网络 JPG（fail-open） |
+| **分享**（首页/客片列表/客片详情 `onShareAppMessage`） | **supported（产物级）** | 三页 handler 与旧端逐字（`?brandId=`／`idx` 两分支／`?idx=&type=`）；产物 `pages/*/index.js` 实测含 handler | **unknown** | handler 由 uni 透传；抖音卡片形态与 path 规则待真机确认（客片展示版是否需要分享由产品定） |
 | **支付（平台）** | **supported** | `platform/weixin/payments.ts`（JSAPI；非微信/无 API→`unsupported`，**fail-closed 不假装成功**；`t31`） | **unsupported（有意）** | 主人拍板「抖音**零支付改造**」；`payment-coordinator` 四张 AI 页均不注册于抖音 |
 
 ## 2. 需真机/工具定稿的条目（`P4-14` 时逐项勾）
@@ -34,6 +37,9 @@
 | 4 | 微信各能力在**低版本基础库**下的降级表现（`canIUse` 守卫已实现，需实测） | 微信 | 真机（指定基础库版本） |
 | 5 | 小红书（MP-XHS）整列 | 小红书 | **本轮不做**（主人未纳入本轮；`P4-17` 需登记批准与范围） |
 | 6 | 首页下拉刷新**指示器**（`BaseLoading`→`wd-loading`）在抖音是否正常（旋转/环成形/文案字号） | 抖音 | `tma preview` 真机目视（`deviations #27` 已登记降级风险；颜色有内联 style 保障） |
+| 7 | 5 页下拉刷新指示器与**原生三点**是否重叠（含自绘标题栏 4 页） | 微信 | 真机目视（口径见 `deviations #27/#28`；位置常数在 `composables/use-pull-refresh.ts`） |
+| 8 | VK 人脸居中 5:4 分享封面真机效果（开发者工具模拟器不支持 VisionKit） | 微信 | 真机：点右上角「···」→ 转发，看卡片封面是否以人脸为中心（`deviations #28` ④） |
+| 9 | 分享卡片文案/封面是否按 OPS `share_card` 槽位呈现（含 `{brand}` 替换） | 微信 | 真机切换品牌后分享，比对 OPS 配置（`t51` 已锁解析口径） |
 
 ## 3. 说明
 

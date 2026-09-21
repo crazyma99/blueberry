@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
 const h = vi.hoisted(() => ({
+  pullDownCalls: [] as Array<() => void>,
+  stops: 0,
+  shopsCalls: 0,
   onLoadCalls: [] as Array<(o?: Record<string, unknown>) => void>,
   onShowCalls: [] as Array<() => void>,
   navigateToCalls: [] as Array<{ url: string }>,
@@ -37,12 +40,16 @@ vi.mock("@dcloudio/uni-app", () => ({
   onShow: (fn: () => void) => {
     h.onShowCalls.push(fn);
   },
-}));
+  onPullDownRefresh: (fn: () => void) => {
+    h.pullDownCalls.push(fn);
+  },}));
 
 vi.mock("../../src/infrastructure/repositories/shops", () => ({
   createShopRepository: () => ({
-    getShops: async () =>
-      h.repoMode === "fail" ? { ok: false, reason: "network" } : { ok: true, value: h.shops },
+    getShops: async () => {
+      h.shopsCalls += 1;
+      return h.repoMode === "fail" ? { ok: false, reason: "network" } : { ok: true, value: h.shops };
+    },
   }),
 }));
 
@@ -56,6 +63,9 @@ beforeEach(() => {
   h.repoMode = "ok";
   // 容器最小 uni 存根：storage 进 Map（品牌检测可驱动）；navigateTo 记录；无 request ⇒ transport 安全回落
   (globalThis as { uni?: unknown }).uni = {
+    stopPullDownRefresh: () => {
+      h.stops += 1;
+    },
     navigateTo: (o: { url: string }) => {
       h.navigateToCalls.push(o);
     },
@@ -128,5 +138,24 @@ describe("pages/priceHomePage（T7 P2-17 tab 页）", () => {
     h.onShowCalls[h.onShowCalls.length - 1]();
     await w.vm.$nextTick();
     expect(w.find(".sk-wrap").exists()).toBe(false);
+  });
+});
+
+describe("价目表 tab · 下拉刷新（2026-09-21 主人②）", () => {
+  it("下拉 ⇒ 重新拉门店（getShops 第二次）＋收口 stopPullDownRefresh 一次", async () => {
+    h.shopsCalls = 0;
+    h.stops = 0;
+    h.pullDownCalls.length = 0;
+    const w = mount(PriceHomePage);
+    await flush();
+    h.onLoadCalls[h.onLoadCalls.length - 1](); // 页面在 onLoad 拉门店
+    await flush();
+    expect(h.shopsCalls).toBe(1);
+    expect(h.pullDownCalls.length).toBe(1); // 已注册
+    h.pullDownCalls[0]();
+    await flush();
+    expect(h.shopsCalls).toBe(2);
+    expect(h.stops).toBe(1);
+    w.unmount();
   });
 });

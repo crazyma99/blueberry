@@ -7,7 +7,7 @@
 // `enablePullDownRefresh`；刷新指示器改用 wot `wd-loading`（主人指定）＋design token 着色（见下方 refreshing 段）。
 // 替换原模板 Hello 页；探针样页仍注册于 pages/_probe/wot-sample（devtools 直达，P1-08 不入生产包）。
 import { computed, onMounted, ref } from "vue";
-import { onPullDownRefresh, onShow } from "@dcloudio/uni-app";
+import { onLoad, onShareAppMessage, onShareTimeline, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
@@ -23,9 +23,12 @@ import { createVersionedStorage } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import { createCarouselRepository, type CarouselItem } from "../../infrastructure/repositories/carousels";
+import { createBrandRepository } from "../../infrastructure/repositories/brands";
 import { createShopRepository } from "../../infrastructure/repositories/shops";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
+import { createShareCardResolver, DEFAULT_SHARE_CARDS, type ShareCard } from "../../application/share-card";
 import { createHomeViewModel } from "../../composables/use-home";
+import { createPullRefresh } from "../../composables/use-pull-refresh";
 import { syncTabBarSelected } from "../../application/tabbar";
 // 2026-09-19：首页网格还原旧端 photo-grid/photo-card 结构（不再用 PhotoGrid 组件），类型沿用其接口
 import type { PhotoGridShop } from "../../components/PhotoGrid/PhotoGrid.vue";
@@ -41,8 +44,8 @@ import {
 } from "../../application/page-config-content";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseButton from "../../ui/BaseButton.vue";
-// 2026-09-21 下拉刷新指示器：走门面（业务视图不直用 wd-*，plan §26/§229；独立 CR 🔴1）
-import BaseLoading from "../../ui/BaseLoading.vue";
+// 2026-09-21 下拉刷新：指示器＝共享组件（内含门面 BaseLoading），5 页同源（业务视图零 wd-*，plan §26/§229）
+import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
 
 // —— 装配（构建期平台折叠＋运行时兜底；非闭集值回落微信＝开发期默认）——
 const detected = detectUiPlatform();
@@ -67,10 +70,13 @@ const authCoordinator = createAuthCoordinator({
 });
 const client = createHttpClient({ transport, authCoordinator });
 const wxAuth = createWxAuthRepository({ client, platform });
+// 2026-09-21：`/api/page-config` 只建**一个**仓储实例（品牌馆闸门 / 内容上提 / 分享卡片共用；
+// 旧端 pageConfig.uts 公共工具同义——入口显隐、页内自守卫、分享卡片不得各写一套解析）
+const pageConfigRepo = createPageConfigRepository({ client });
 const brandHub = createBrandHubGate({
   // ⭐ P2-20：与品牌馆页自守卫共用同一 page-config 仓储（旧端 pageConfig.uts 公共工具同义）——
   // 入口显隐与页内自守卫不得各写一套 /api/page-config 解析
-  pageConfig: createPageConfigRepository({ client }),
+  pageConfig: pageConfigRepo,
 });
 const ctxFactory = createContextFactory({
   platform,
@@ -86,13 +92,24 @@ const vm = createHomeViewModel({
 });
 // P2-21：服务保障/联系我们＋页脚（旧 index :109-113）内容经用例取数，组件纯 props
 const pageContent = createPageConfigContent({
-  pageConfig: createPageConfigRepository({ client }),
+  pageConfig: pageConfigRepo,
   profile: {
     copyrightText: PROFILE.copyrightText,
     contactQrSrc: PROFILE.contactQrSrc,
     contactPhoneText: PROFILE.contactPhoneText,
   },
 });
+
+// 分享卡片（2026-09-21 主人：「首页分享卡片迁移遗漏」⇒ 补迁；旧端 index.uvue:265-278/:317-320）
+const shareCards = createShareCardResolver({
+  pageConfig: pageConfigRepo,
+  brands: createBrandRepository({ client }),
+  getBrandId: () => versioned.loadBrandId() ?? "",
+});
+const shareCard = ref<ShareCard>({ ...DEFAULT_SHARE_CARDS.index });
+async function loadShareCard(): Promise<void> {
+  shareCard.value = await shareCards.resolve("index", ctxFactory.next());
+}
 
 // —— 页面状态 ——
 const ready = ref(false);
@@ -124,43 +141,20 @@ try {
 const heroHeight = "794rpx";
 
 // —— 下拉刷新（2026-09-21 主人：「首页下拉刷新功能丢失了」⇒ 恢复；旧端 index.uvue:252-263 同序）——
-// 旧端语义：重新加载首页数据（轮播防缓存/店铺/品牌馆开关）→ 前景层重挂载（fgTick+1）重播渐入动效
+// 旧端语义：重新加载首页数据（轮播防缓存/店铺/品牌馆开关/分享卡片）→ 前景层重挂载（fgTick+1）重播渐入动效
 // → uni.stopPullDownRefresh()；刷新期间**不回落骨架屏**（已有内容保留，仅浮出指示器）。
-// 指示器＝wot `wd-loading`（主人指定 https://wot-ui.cn/component/loading.html）经**本项目门面** `BaseLoading`
-// （业务视图不直用 `wd-*`：plan §26/§229）＋ design token 默认值（门面内：品牌金 colorAction／尺寸档 pullRefreshLoadingSizeRpx）。
-// ⚠️ 抖音端口径：wd-loading 自身样式为 var() 链（`--wot-*`），按 deviations #15 抖音 TTSS 可能丢弃 animation/mask/字号
-// ⇒ 抖音「spinner 是否旋转/环是否成形」为 **unknown，待真机**（已登记 #27 与能力矩阵）；页面自身规则零 var()、零通配符。
-const refreshing = ref(false);
-// 指示器纵向位置：让出**原生下拉指示带**（微信原生三点绘制在状态栏下方约 40px 内）＋ token spaceSm(16rpx=8px) 间距 ＝ 48px。
-// 平台差：微信端首页无导航栏（沉浸式 hero，页面坐标原点＝屏幕顶部）⇒ 叠加 statusBarHeight；
-// 抖音端为系统栏页面（页面坐标原点已在系统栏之下，CustomNavBar 抖音分支只内联 slot、不占位）⇒ **不叠加** statusBarHeight。
-const NATIVE_PULL_BAND_PX = 48;
-const refreshIndicatorTop = (isMpWeixin ? statusBarHeight.value : 0) + NATIVE_PULL_BAND_PX + "px";
-
-function stopPullDownRefresh(): void {
-  // 容器守卫（vitest/H5 无该 API）：同旧端 uni.stopPullDownRefresh 语义
-  if (typeof uni !== "undefined" && typeof uni.stopPullDownRefresh === "function") uni.stopPullDownRefresh();
-}
-
+// 2026-09-21 二次（主人：首页之外再给 4 页加下拉刷新）：守卫/收口/指示器位置**收敛到共享内核**
+// `composables/use-pull-refresh`（5 页同源），指示器本体＝`components/PullRefreshIndicator`（内含门面 BaseLoading）；
+// 本页只保留「刷新要重载什么」的业务动作 `refreshHome()`（`hasCustomNav: false`＝沉浸式 hero 无导航栏）。
 async function refreshHome(): Promise<void> {
-  if (refreshing.value) return; // 连拉守卫：一次未收口不重入（在飞那次收口时自会 stop，不提前收指示器）
-  refreshing.value = true;
-  try {
-    const context = ctxFactory.next();
-    await Promise.all([vm.load(context), vm.refreshBrandHub(context), loadStaticContent()]);
-    brandHubOn.value = brandHub.enabled;
-    updateCurrentBanner();
-    fgTick.value = fgTick.value + 1; // 旧端 index:258：刷新后重挂载前景层，配置变化一眼可见
-  } catch (err) {
-    // 仓储/client 只回 Result 不抛（HANDOFF §5-2），此处仅兜「意外异常」：报错留痕、绝不卡住下拉态
-    // （旧端 reloadHomeData 同款兜底：catch 里告警＋finally 收指示器；前缀 [index] 便于线上追溯）
-    console.error("[index] 下拉刷新失败", err);
-  } finally {
-    // 旧端 .then/.catch 两分支都收指示器 ⇒ finally 等价收口（异常也不会卡住下拉态）
-    refreshing.value = false;
-    stopPullDownRefresh();
-  }
+  const context = ctxFactory.next();
+  await Promise.all([vm.load(context), vm.refreshBrandHub(context), loadStaticContent(), loadShareCard()]);
+  brandHubOn.value = brandHub.enabled;
+  updateCurrentBanner();
+  fgTick.value = fgTick.value + 1; // 旧端 index:258：刷新后重挂载前景层，配置变化一眼可见
 }
+
+const { refreshing, indicatorTop } = createPullRefresh({ label: "index", refresh: refreshHome });
 
 const banners = computed<CarouselItem[]>(() => vm.carousels.value);
 const shops = computed<PhotoGridShop[]>(() => vm.shops.value as unknown as PhotoGridShop[]);
@@ -222,7 +216,7 @@ const showPlaceholder = computed(() => {
 
 async function init(): Promise<void> {
   const context = ctxFactory.next();
-  await Promise.all([vm.load(context), vm.refreshBrandHub(context), loadStaticContent()]);
+  await Promise.all([vm.load(context), vm.refreshBrandHub(context), loadStaticContent(), loadShareCard()]);
   brandHubOn.value = brandHub.enabled;
   // 双层视差：banners 就绪后刷新前景层当前项（旧端 :368-369）
   updateCurrentBanner();
@@ -267,6 +261,35 @@ function goBrandHub(): void {
 // 否则用户看到的是旧品牌数据（仅冷启动生效）。
 let lastBrandId: string | null = versioned.loadBrandId();
 
+// 分享落地：`?brandId=`（好友卡片带品牌）与扫品牌小程序码的 `scene` 都写入品牌上下文（旧端 index.uvue:205-232 口径）。
+// ⚠️ 2026-09-21 独立 CR 🟡2 补齐：此前首页**没有 onLoad** ⇒ 分享卡片里带的 brandId 无人消费，
+// 首访用户拿到的是全局卡片/全局数据（`onShareAppMessage` 生成 `?brandId=` 形同空转）。
+// 顺序：mp 侧 setup → onLoad → onMounted(init) → onShow；此处只写上下文＋同步品牌基线，
+// 数据由 onMounted 的 init() 与 onShow 基线检测接管（不重复 init、不触发骨架闪烁）。
+onLoad((options) => {
+  const scene = decodeURIComponent(String((options as { scene?: unknown } | undefined)?.scene ?? ""));
+  const brandId = scene !== "" ? scene : String((options as { brandId?: unknown } | undefined)?.brandId ?? "");
+  if (brandId === "") return;
+  versioned.saveBrandId(brandId);
+  lastBrandId = brandId; // 防 onShow 基线检测再重载一次（数据由 init 带品牌上下文取）
+});
+
+// 右上角胶囊菜单「转发」：卡片动态化（品牌落地 + 品牌配置封面）；旧端 index.uvue:265-272 逐字
+onShareAppMessage(() => {
+  const brandId = versioned.loadBrandId();
+  return {
+    title: shareCard.value.title,
+    path: "/pages/index/index" + (brandId !== "" ? "?brandId=" + brandId : ""),
+    imageUrl: shareCard.value.imageUrl,
+  };
+});
+
+// 右上角胶囊菜单「分享到朋友圈」（旧端 index.uvue:274-278 逐字；旧端不带 path/query）
+onShareTimeline(() => ({
+  title: shareCard.value.title,
+  imageUrl: shareCard.value.imageUrl,
+}));
+
 onShow(() => {
   // P2-12：自定义 tabBar 选中态由页面 onShow 同步（唯一必然触发的入口）
   syncTabBarSelected(0);
@@ -277,28 +300,19 @@ onShow(() => {
     ctxFactory.bumpScope();
     brandHubOn.value = false;
     ready.value = false;
-    void init();
+    void init(); // init 内已含 loadShareCard（旧端切品牌后分享卡片同刷，index.uvue:319）
   }
 });
 
 onMounted(() => {
   void init();
 });
-
-// 下拉刷新入口（pages.json 首页 `enablePullDownRefresh: true`；旧端 index.uvue:255 onPullDownRefresh）
-onPullDownRefresh(() => {
-  void refreshHome();
-});
 </script>
 
 <template>
   <view class="container">
-    <!-- 下拉刷新指示器（2026-09-21 主人：下拉刷新功能丢失 ⇒ 恢复，指示器用 wot `wd-loading`＋design token）：
-         玄墨胶囊（$color-page）＋品牌金 30% 描边（$color-border）；spinner 与文案为门面默认的品牌金 token。
-         位置随平台：微信端 hero 沉浸式无导航栏（状态栏＋原生指示带之下），抖音端页面原点已在系统栏之下（见脚本 refreshIndicatorTop）。 -->
-    <view v-if="refreshing" class="refresh-indicator" :style="{ top: refreshIndicatorTop }">
-      <BaseLoading text="刷新中…" />
-    </view>
+    <!-- 下拉刷新指示器：共享组件（玄墨胶囊＋品牌金 30% 描边＋门面 BaseLoading 的金 spinner/文案；token 默认值） -->
+    <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
 
     <!-- 品牌馆入口：圆形悬浮左上角，开关驱动默认不渲染（旧端 index:4-8 语义） -->
     <view
@@ -466,19 +480,7 @@ onPullDownRefresh(() => {
   width: 40rpx;
   height: 40rpx;
 }
-/* 下拉刷新指示器：定宽胶囊，水平居中、浮于页面内容之上（z-index 高于品牌馆浮钮 999、低于原生 tabbar） */
-.refresh-indicator {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  padding: $space-xs $space-sm; /* 8rpx 16rpx（token） */
-  border-radius: 999rpx; /* 胶囊 */
-  background: $color-page; /* 玄墨 #160F04（token semantic colorPage） */
-  border: 2rpx solid $color-border; /* 品牌金 30%（token semantic colorBorder） */
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.4); /* 浮层投影：暗底用纯黑透明度，非 token 色阶 */
-  pointer-events: none; /* 指示器不拦截手势（同 .hero-mask 口径） */
-}
+/* 下拉刷新指示器样式已收敛到 `components/PullRefreshIndicator`（2026-09-21：5 页同源；内 padding 加大一档） */
 .sk-container {
   padding: 0;
 }

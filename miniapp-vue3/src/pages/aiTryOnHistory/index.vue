@@ -32,6 +32,9 @@ import { createPageConfigRepository } from "../../infrastructure/repositories/pa
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 import { cosThumb } from "../../application/image";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+// 2026-09-21 主人：本页也要下拉刷新 ⇒ 指示器＋刷新内核走共享实现（5 页同源）
+import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
+import { createPullRefresh } from "../../composables/use-pull-refresh";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 
 // —— 装配（同 mine/favorites）——
@@ -92,6 +95,14 @@ onShow(() => {
     return;
   }
   void loadData(); // 从结果页返回刷新（状态可能已更新）
+});
+
+// —— 下拉刷新（2026-09-21 主人：AI 试衣记录页要下拉刷新）——
+// 重载任务列表 + 页脚文案（口径同首页：下拉即取最新 OPS 配置）
+const { refreshing, indicatorTop } = createPullRefresh({
+  label: "aiTryOnHistory",
+  refresh: () => Promise.all([loadData(), loadFooter()]),
+  hasCustomNav: true,
 });
 
 async function loadFooter(): Promise<void> {
@@ -169,6 +180,8 @@ function pad(n: number): string {
 
 <template>
   <view class="container">
+    <!-- 下拉刷新指示器：共享组件（`hasCustomNav: true` ⇒ 落在自绘导航栏下沿之下、让开原生三点指示带） -->
+    <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
     <CustomNavBar title="AI试衣记录" />
 
     <view v-if="loading" class="sk-wrap main-content">

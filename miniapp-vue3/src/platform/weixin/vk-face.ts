@@ -5,6 +5,8 @@
 
 interface VkAnchor {
   type?: unknown;
+  /** 人脸框左上角（归一化 0-1；旧端 faceShareCard 用它算人脸中心裁剪窗） */
+  origin?: { x?: unknown; y?: unknown };
   size?: { width?: unknown; height?: unknown };
 }
 interface VkSession {

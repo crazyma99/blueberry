@@ -6,8 +6,10 @@ import { mount } from "@vue/test-utils";
 // （2026-09-21：首页恢复下拉刷新 ⇒ 页面新增 onPullDownRefresh 依赖，mock 同步补齐；行为另见 t49）
 vi.mock("@dcloudio/uni-app", () => ({
   onShow: () => {},
+  onLoad: () => undefined, // 2026-09-21：首页补 onLoad（分享落地 ?brandId=/scene 写品牌上下文）
   onPullDownRefresh: () => {},
-}));
+  onShareAppMessage: () => undefined,
+  onShareTimeline: () => undefined,}));
 
 import IndexPage from "../../src/pages/index/index.vue";
 

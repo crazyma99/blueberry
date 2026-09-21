@@ -21,8 +21,10 @@ const h = vi.hoisted(() => ({
 
 vi.mock("@dcloudio/uni-app", () => ({
   onShow: () => undefined,
+  onLoad: () => undefined, // 2026-09-21：首页补 onLoad（分享落地 ?brandId=/scene 写品牌上下文）
   onPullDownRefresh: (fn: () => void) => h.pullDownCalls.push(fn),
-}));
+  onShareAppMessage: () => undefined,
+  onShareTimeline: () => undefined,}));
 
 // 轮播仓储打桩：记录每次取件入参（证明「刷新＝重新拉取」＋「banner 防缓存 t」）；
 // throwNext 用于构造「意外异常」路径（同步抛，验证 finally 收口）。
@@ -57,7 +59,7 @@ function pageBlock(path: string): string {
   return pagesJson.slice(at, next < 0 ? undefined : next);
 }
 
-const indicator = (w: ReturnType<typeof mount>) => w.find(".refresh-indicator");
+const indicator = (w: ReturnType<typeof mount>) => w.find(".pull-refresh-indicator");
 
 beforeEach(() => {
   h.pullDownCalls.length = 0;
@@ -92,7 +94,7 @@ describe("首页下拉刷新 · 配置（pages.json）", () => {
     expect(home.indexOf('"backgroundTextStyle"')).toBeGreaterThan(endifAt);
     // 门面纪律：业务页零 `<wd-`（本页经 BaseLoading 消费 Wot）
     expect(pageSource).not.toContain("<wd-");
-    expect(pageSource).toContain("BaseLoading");
+    expect(pageSource).toContain("PullRefreshIndicator"); // 共享指示器（内含门面 BaseLoading）
   });
 
   it("页面自身样式零运行时 CSS 变量、零通配选择器（deviations #13／#15 守卫）", () => {
@@ -105,8 +107,17 @@ describe("首页下拉刷新 · 配置（pages.json）", () => {
     expect(/[\s,{>]\*[\s,{]/.test(styleBlock)).toBe(false);
   });
 
-  it("仅首页开启（旧端客片页属另一批，本轮未动）", () => {
-    expect((pagesJson.match(/"enablePullDownRefresh"/g) ?? []).length).toBe(1);
+  it("开启范围＝5 页（首页＋客片列表＋客片详情＋AI试衣记录＋价目表；2026-09-21 主人点名扩围）", () => {
+    expect((pagesJson.match(/"enablePullDownRefresh"/g) ?? []).length).toBe(5);
+    for (const p of [
+      "pages/index/index",
+      "pages/demoDetail/index",
+      "pages/targetPhotoDetail/index",
+      "pages/aiTryOnHistory/index",
+      "pages/priceHomePage/index",
+    ]) {
+      expect(pageBlock(p)).toContain('"enablePullDownRefresh": true');
+    }
   });
 });
 

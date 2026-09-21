@@ -32,6 +32,9 @@ import type { PhotoGridShop } from "../../components/PhotoGrid/PhotoGrid.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseButton from "../../ui/BaseButton.vue";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+// 2026-09-21 主人：本页也要下拉刷新 ⇒ 指示器＋刷新内核走共享实现（5 页同源）
+import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
+import { createPullRefresh } from "../../composables/use-pull-refresh";
 import ServiceContact from "../../components/ServiceContact/ServiceContact.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
@@ -132,6 +135,15 @@ async function loadShops(): Promise<void> {
   ready.value = true;
 }
 
+// —— 下拉刷新（2026-09-21 主人：价目表 tab 要下拉刷新）——
+// 重载门店（PhotoGrid 数据源）+ 页脚/联系信息（口径同首页）。
+// ⚠️ 下拉不重置品牌基线：品牌切换由 onShow 基线检测负责（旧端 priceHomePage 同序，避免把新品牌当旧品牌）
+const { refreshing, indicatorTop } = createPullRefresh({
+  label: "priceHomePage",
+  refresh: () => Promise.all([loadShops(), loadStaticContent()]),
+  hasCustomNav: true,
+});
+
 onLoad(() => {
   void loadShops();
   void loadStaticContent();
@@ -171,6 +183,8 @@ function onDemoClick(idx: number): void {
 
 <template>
   <view class="container">
+    <!-- 下拉刷新指示器：共享组件（`hasCustomNav: true` ⇒ 落在自绘导航栏下沿之下、让开原生三点指示带） -->
+    <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
     <CustomNavBar transparent />
     <view v-if="!ready" class="sk-wrap">
       <view class="sk-title">
