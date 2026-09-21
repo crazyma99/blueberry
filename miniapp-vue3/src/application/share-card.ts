@@ -19,11 +19,16 @@ export interface ShareCard {
 /** 分享卡片键（旧端三处调用点：首页 / 客片列表页 / 客片详情页） */
 export type ShareCardKey = "index" | "demoDetail" | "targetPhotoDetail";
 
-/** 代码默认卡片（旧端 `share.uts:13-21` 逐字；与 OPS 懒预置槽位一致；图片已随本轮拷入 `src/static/`） */
+/** 代码默认卡片：**标题**沿用旧端 `share.uts:13-21` 逐字；**图片不内嵌**——
+ *  主人 2026-09-21 订正：「分享图的来源 url 来自于后台配置」⇒ `imageUrl` 以 OPS `share_card` 槽位下发的 URL 为准；
+ *  代码兜底留空时，微信按默认行为用「当前页面截图」作卡片图（零包体占用）。
+ *  原因（本批实证）：3 张本地图共 487 KB，把主包从 1.61 MB 顶到 2113 KB，**上传被平台拒**
+ *  （`80051 source size 2113KB exceed max limit 2MB`）；主包上限 2 MB 是硬线。
+ *  与旧端的唯一行为差：旧端「OPS 未配置」时展示内嵌默认图，新端改为微信默认截图（已登记 `deviations #28`）。 */
 export const DEFAULT_SHARE_CARDS: Record<ShareCardKey, ShareCard> = {
-  index: { title: "一键解锁AI推荐｜AI试衣｜客片展示", imageUrl: "/static/share-home.jpg" },
-  demoDetail: { title: "点击查看品牌客片展示", imageUrl: "/static/share-album.jpg" },
-  targetPhotoDetail: { title: "点击查看客片详情信息，也支持一键AI试衣哦～", imageUrl: "/static/share-aitryon.jpg" },
+  index: { title: "一键解锁AI推荐｜AI试衣｜客片展示", imageUrl: "" },
+  demoDetail: { title: "点击查看品牌客片展示", imageUrl: "" },
+  targetPhotoDetail: { title: "点击查看客片详情信息，也支持一键AI试衣哦～", imageUrl: "" },
 };
 
 type PageConfigLike = {

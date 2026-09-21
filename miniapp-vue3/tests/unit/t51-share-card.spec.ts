@@ -112,9 +112,10 @@ describe("createShareCardResolver（旧端 utils/share.uts 三层兜底）", () 
     expect(await r.resolve("index", ctx)).toEqual(DEFAULT_SHARE_CARDS.index);
     expect(await r.resolve("demoDetail", ctx)).toEqual(DEFAULT_SHARE_CARDS.demoDetail);
     expect(await r.resolve("targetPhotoDetail", ctx)).toEqual(DEFAULT_SHARE_CARDS.targetPhotoDetail);
-    expect(DEFAULT_SHARE_CARDS.index.imageUrl).toBe("/static/share-home.jpg");
-    expect(DEFAULT_SHARE_CARDS.demoDetail.imageUrl).toBe("/static/share-album.jpg");
-    expect(DEFAULT_SHARE_CARDS.targetPhotoDetail.imageUrl).toBe("/static/share-aitryon.jpg");
+    // 主人 2026-09-21 订正：分享图 URL 来自后台配置 ⇒ 代码兜底留空（端上回退微信默认截图，零包体占用）
+    expect(DEFAULT_SHARE_CARDS.index.imageUrl).toBe("");
+    expect(DEFAULT_SHARE_CARDS.demoDetail.imageUrl).toBe("");
+    expect(DEFAULT_SHARE_CARDS.targetPhotoDetail.imageUrl).toBe("");
   });
 
   it("命中 share_card 组件 + bizName 槽位 → 覆盖 title/imageUrl；字段级兜底（空串不覆盖）", async () => {
@@ -137,7 +138,7 @@ describe("createShareCardResolver（旧端 utils/share.uts 三层兜底）", () 
     );
     const index = await r.resolve("index", ctx);
     expect(index.title).toBe("OPS首页标题");
-    expect(index.imageUrl).toBe(DEFAULT_SHARE_CARDS.index.imageUrl);
+    expect(index.imageUrl).toBe(""); // 配置未给图 ⇒ 留空（以 OPS 为准）
     const demo = await r.resolve("demoDetail", ctx);
     expect(demo.title).toBe("OPS客片列表");
     expect(demo.imageUrl).toBe("https://cdn/album.jpg");
@@ -216,7 +217,7 @@ describe("页面分享卡片接线（三页逐字段核对）", () => {
     const s1 = h.shareCalls[h.shareCalls.length - 1]() as { title: string; path: string; imageUrl: string };
     expect(s1.title).toBe("OPS列表卡片");
     expect(s1.path).toBe("/pages/demoDetail/index?idx=7");
-    expect(s1.imageUrl).toBe(DEFAULT_SHARE_CARDS.demoDetail.imageUrl); // 配置未给图 ⇒ 默认图
+    expect(s1.imageUrl).toBe(""); // 配置未给图 ⇒ 留空（以 OPS 为准）
     withIdx.unmount();
 
     h.shareCalls.length = 0;
