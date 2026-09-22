@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // T8（Phase 3）AI 试衣记录页——旧端 aiTryOnHistory/index.uvue（344 行）忠实移植。
-// 旧端事实：CustomNavBar「AI试衣记录」（:4）；骨架 4 卡（:7-11）；空态「暂无内容/还没有 AI 试衣记录哦」（:16-19）；
+// 旧端事实：CustomNavBar「AI试衣记录」（:4）；骨架 4 卡（:7-11）→ 2026-09-21 起与「相册列表」同款 6 卡；空态「暂无内容/还没有 AI 试衣记录哦」（:16-19）；
 // 卡片 coverThumb 400（completed 用 result_image_url，否则 template_image_url，:158-164）；
 // 状态遮罩 pending/processing＝「生成中」（含 dotPulse 动画，:37-42/:322-334）、failed＝「生成失败」（:44-48）；
 // 底部 style_name（缺省「AI 试衣」）＋created_at 格式化为 MM-DD HH:mm（:171-187）；点击 → aiTryOnResult?taskId（:143-156，
@@ -184,9 +184,10 @@ function pad(n: number): string {
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
     <CustomNavBar title="AI试衣记录" />
 
+    <!-- 骨架屏：与「相册列表」（demoDetail）同款（sk-row sk-grid + 6 灰格 482rpx/8rpx） -->
     <view v-if="loading" class="sk-wrap main-content">
-      <view class="sk-row">
-        <view v-for="i in 4" :key="i" class="sk-photo-item"></view>
+      <view class="sk-row sk-grid">
+        <view v-for="i in 6" :key="i" class="sk-photo-item"></view>
       </view>
     </view>
 
@@ -196,32 +197,31 @@ function pad(n: number): string {
         <view class="empty-desc">还没有 AI 试衣记录哦</view>
       </view>
 
-      <view v-else class="photolistContainer">
-        <view
-          v-for="(item, index) in taskList"
-          :key="index"
-          class="photoItem"
-          hover-class="press-dim"
-          @click="handleItemClick(item)"
-        >
-          <image :src="getCoverUrl(item)" class="photo" mode="aspectFill" lazy-load />
+      <!-- 列表网格与卡片**对齐「相册列表」（demoDetail）标准**（2026-09-21 主人：「AI试衣列表的 Grid 与卡片样式以相册列表为标准统一」）：
+           外描边卡（1rpx 金 30%）＋内圈圆角（13rpx）＋底部渐变蒙层（55%→85%）＋左下描述区（20rpx）＋金标题（26rpx 衬线，单行省略）；
+           AI 专属内容仅「状态遮罩」（生成中／生成失败）保留，配色同步改为品牌金系。 -->
+      <view v-else class="album-grid">
+        <view v-for="(item, index) in taskList" :key="index" class="album-card">
+          <view class="album-inner">
+            <image :src="getCoverUrl(item)" class="album-cover" mode="aspectFill" lazy-load />
 
-          <view v-if="isProcessing(item.status)" class="status-overlay">
-            <view class="status-badge processing">
-              <view class="loading-dot"></view>
-              <text class="status-text">生成中</text>
+            <view v-if="isProcessing(item.status)" class="status-overlay">
+              <view class="status-badge processing">
+                <view class="loading-dot"></view>
+                <text class="status-text">生成中</text>
+              </view>
             </view>
-          </view>
-          <view v-else-if="item.status === 'failed'" class="status-overlay">
-            <view class="status-badge failed">
-              <text class="status-text">生成失败</text>
+            <view v-else-if="item.status === 'failed'" class="status-overlay">
+              <view class="status-badge failed">
+                <text class="status-text">生成失败</text>
+              </view>
             </view>
-          </view>
 
-          <view class="mask">
-            <view class="desc">
-              <view class="photoName">{{ item.style_name || "AI 试衣" }}</view>
-              <view class="time">{{ formatTime(item.created_at) }}</view>
+            <view class="album-mask" hover-class="press-dim" @click="handleItemClick(item)">
+              <view class="album-desc">
+                <text class="album-title font-noto-serif">{{ item.style_name || "AI 试衣" }}</text>
+                <text class="album-time">{{ formatTime(item.created_at) }}</text>
+              </view>
             </view>
           </view>
         </view>
@@ -244,23 +244,31 @@ function pad(n: number): string {
   flex: 1;
 }
 .content {
-  padding: 0 8rpx 32rpx; /* 旧 --spacing-lg=32rpx */
+  /* 🔴R2（独立 CR）：横向 padding 归零——旧端 8rpx 是配「362rpx×2＋间隙」的老数学（旧端 :211-213），
+     本轮网格改用相册标准的 `calc((100% - 16rpx)/2)` 后 8rpx 属重复扣减 ⇒ 有效左右内边距变 32rpx（标准 24rpx）、卡窄 8rpx。
+     仅保留纵向底部间距。 */
+  padding: 0 0 32rpx;
 }
 /* 骨架（旧 sk-photo-item 2 列 4 卡；几何同旧：362×482、卡距 8rpx） */
 .sk-wrap {
-  padding: 16rpx 0;
+  padding: 32rpx; /* 与「相册列表」同值（独立 CR 🟡①：原 16rpx 0 ⇒ 骨架贴屏边） */
 }
 .sk-row {
   display: flex;
   flex-direction: row;
+  align-items: center;
+}
+.sk-grid {
   flex-wrap: wrap;
+  margin-top: 20rpx;
 }
 .sk-photo-item {
-  width: 362rpx;
+  /* 与「相册列表」同值 */
+  width: calc(50% - 16rpx);
   height: 482rpx;
-  margin: 0 8rpx 8rpx 0;
-  border-radius: 8rpx; /* 旧 --radius-xs=8rpx */
-  background: rgba(255, 255, 255, 0.08); /* 旧端全局 .sk-photo-item（App.uvue:299）；2026-09-19 深色还原（亮色期黑 6% 深底不可见） */
+  margin: 8rpx;
+  border-radius: 8rpx;
+  background: rgba(255, 255, 255, 0.08);
 }
 /* 空状态（旧 :218-233；文字色取正文次级色，已于页头声明） */
 .empty-state {
@@ -280,78 +288,89 @@ function pad(n: number): string {
   color: $color-text-secondary;
 }
 /* 卡片网格（旧 :236-250） */
-.photolistContainer {
-  margin: 16rpx 0;
+/* ===== 网格与卡片：**逐值对齐「相册列表」（demoDetail）**（2026-09-21 主人指示；两侧同值由 t54 漂移守卫锁死） ===== */
+.album-grid {
+  padding: 24rpx 24rpx 0;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  gap: 16rpx;
 }
-.photoItem {
-  width: 362rpx;
-  height: 482rpx;
-  margin: 0 8rpx 8rpx 0;
+.album-card {
+  /* 纯色描边外框；border-box 防 1rpx 描边使每行溢出换行（抖音实测） */
+  width: calc((100% - 16rpx) / 2);
+  box-sizing: border-box;
+  border: 1rpx solid rgba(241, 205, 145, 0.3);
+  border-radius: 14rpx;
+}
+.album-inner {
+  /* 内圈圆角 = 外圈 14rpx − 1rpx 描边，两段圆弧同心 */
+  width: 100%;
+  height: 460rpx;
   position: relative;
+  border-radius: 13rpx;
+  overflow: hidden;
 }
-.photoItem:nth-child(2n) {
-  margin: 0 0 8rpx;
-}
-.photo {
+.album-cover {
   width: 100%;
   height: 100%;
-  border-radius: 8rpx; /* 旧 --radius-xs */
-  background: rgba(255, 255, 255, 0.06); /* 旧 :255 照片占位底；2026-09-19 深色还原（亮色期黑 6% 深底不可见） */
 }
-.mask {
+.album-mask {
+  /* 底部渐变蒙层，标题/时间都在蒙层上 */
   position: absolute;
-  width: 362rpx;
-  height: 482rpx;
+  width: 100%;
+  height: 100%;
   top: 0;
   left: 0;
-  border-radius: 8rpx;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.4) 75%, rgba(0, 0, 0, 0.7) 89%, #000000 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 75%, rgba(0, 0, 0, 0.85) 100%);
 }
-.desc {
-  margin: 436rpx 16rpx 0;
+.album-desc {
+  position: absolute;
+  left: 20rpx;
+  right: 20rpx;
+  bottom: 20rpx;
   display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
 }
-.photoName {
-  font-size: 28rpx; /* 旧 --font-size-body-plus=28rpx */
+.album-title {
+  font-size: 26rpx;
   font-weight: 400;
-  color: #ffffff; /* 深色渐变蒙层上的白字（与旧端一致） */
-  flex: 1;
+  color: #F1CD91;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
-.time {
-  font-size: 22rpx; /* 旧 --font-size-body-sm=22rpx */
-  color: rgba(255, 255, 255, 0.6);
-  margin-left: 12rpx;
+.album-time {
+  /* 次级行排版对齐相册卡片的 `.like-row`（上间距 10rpx／字号 24rpx／金） */
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #F1CD91;
 }
-/* 状态遮罩（旧 :289-334） */
 .status-overlay {
+  /* 几何随「相册标准」卡片（460rpx／内圈 13rpx 同心）；AI 专属状态层 */
   position: absolute;
-  width: 362rpx;
-  height: 482rpx;
+  width: 100%;
+  height: 100%;
   top: 0;
   left: 0;
-  border-radius: 8rpx;
+  border-radius: 13rpx;
   background: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2;
+  /* 🔴R1（独立 CR）：状态层是蒙层的兄弟且在上层 ⇒ 真机命中测试取它、事件只沿祖先冒泡，
+     而点击面在 `.album-mask` 上 ⇒「生成中/生成失败」卡真机点不动（旧端点击在卡片根，故可点）。
+     置 `pointer-events: none` 让手势穿透到蒙层（本仓先例：brandHub:199 / mine:467）。 */
+  pointer-events: none;
 }
 .status-badge {
   display: flex;
   flex-direction: row;
   align-items: center;
   padding: 12rpx 24rpx;
-  border-radius: 32rpx; /* 旧 --radius-lg=32rpx */
-  border: 1rpx solid rgba(255, 255, 255, 0.25);
+  border-radius: 32rpx;
+  border: 1rpx solid rgba(241, 205, 145, 0.3); /* 与相册卡片描边同色（品牌金 30%） */
 }
 .status-badge.processing {
   background: rgba(243, 217, 172, 0.18);
@@ -362,14 +381,14 @@ function pad(n: number): string {
 }
 .status-text {
   font-size: 24rpx;
-  color: #ffffff;
+  color: #F1CD91; /* 品牌金（与相册卡片文字同族） */
   font-weight: 400;
 }
 .loading-dot {
   width: 12rpx;
   height: 12rpx;
   border-radius: 50%;
-  background: #f3d9ac;
+  background: #F1CD91; /* 品牌金（与相册卡片同色系） */
   margin-right: 10rpx; /* 旧 --spacing-xs=10rpx */
   animation: dotPulse 1s ease-in-out infinite;
 }

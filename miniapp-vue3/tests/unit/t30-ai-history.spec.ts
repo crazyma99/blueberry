@@ -89,14 +89,14 @@ describe("pages/aiTryOnHistory（T8 记录页）", () => {
     await flush();
     await w.vm.$nextTick();
     expect(h.getTasksCalls).toBe(1);
-    const cards = w.findAll(".photoItem");
+    const cards = w.findAll(".album-card"); // 2026-09-21 起网格/卡片对齐「相册列表」标准（旧 .photoItem 已删）
     expect(cards.length).toBe(3);
     // completed → 结果图 400 缩略
-    expect(w.findAll(".photo")[0].attributes("src")).toContain("r1.png");
+    expect(w.findAll(".album-cover")[0].attributes("src")).toContain("r1.png");
     // processing → 模板图；style_name 为空 → 缺省「AI 试衣」
-    expect(w.findAll(".photoName")[1].text()).toBe("AI 试衣");
+    expect(w.findAll(".album-title")[1].text()).toBe("AI 试衣");
     // 时间格式化
-    expect(w.findAll(".time")[0].text()).toBe("09-17 13:05");
+    expect(w.findAll(".album-time")[0].text()).toBe("09-17 13:05"); // 次级行＝.album-time（对齐相册列表排版）
     // 状态遮罩：processing「生成中」、failed「生成失败」
     expect(w.findAll(".status-badge.processing").length).toBe(1);
     expect(w.findAll(".status-badge.failed").length).toBe(1);
@@ -127,11 +127,11 @@ describe("pages/aiTryOnHistory（T8 记录页）", () => {
     h.onShowCalls[h.onShowCalls.length - 1](); // 二次 onShow＝刷新
     await flush();
     await w.vm.$nextTick();
-    await w.findAll(".photoItem")[0].trigger("click"); // completed → 结果页
+    await w.findAll(".album-mask")[0].trigger("click"); // completed → 结果页（点击面＝蒙层，同相册列表口径）
     expect(h.navigateToCalls[0]?.url).toBe("/pages/aiTryOnResult/index?taskId=1");
-    await w.findAll(".photoItem")[1].trigger("click"); // processing → 结果页继续轮询
+    await w.findAll(".album-mask")[1].trigger("click"); // processing → 结果页继续轮询
     expect(h.navigateToCalls[1]?.url).toBe("/pages/aiTryOnResult/index?taskId=2");
-    await w.findAll(".photoItem")[2].trigger("click"); // failed → 仅提示
+    await w.findAll(".album-mask")[2].trigger("click"); // failed → 仅提示
     expect(h.navigateToCalls.length).toBe(2);
     expect(h.toasts).toContain("该记录生成失败");
   });
@@ -153,7 +153,7 @@ describe("pages/aiTryOnHistory（T8 记录页）", () => {
     await w.vm.$nextTick();
     expect(h.getTasksCalls).toBe(2);
     expect(w.find(".sk-wrap").exists()).toBe(false);
-    expect(w.findAll(".photoItem").length).toBe(3);
+    expect(w.findAll(".album-card").length).toBe(3);
   });
 });
 

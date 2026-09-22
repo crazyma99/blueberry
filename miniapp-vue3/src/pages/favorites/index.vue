@@ -457,7 +457,12 @@ function coverThumb(url: string): string {
 .photoName {
   font-size: 26rpx; /* 旧端 --font-size-body-lg（硬编码还原） */
   font-weight: 400;
-  color: $color-action;
+  color: $color-action; /* 与「相册列表」标准同值（`$color-action` 编译即 #F1CD91） */
+  /* 2026-09-21 统一口径（主人：「卡片样式以相册列表的卡片为标准」）：补单行省略三件套——
+     本页原缺这三条 ⇒ 长标题溢出/换行，与相册列表、AI 试衣记录不一致 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .collect {
   /* 主人 2026-09-15 指示：点赞图标与数量之间加间距（margin 而非 gap，兼容旧 WebView） */
