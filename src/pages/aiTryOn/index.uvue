@@ -435,7 +435,11 @@ export default {
 					if (this.albumId !== '' && (!Array.isArray(res.data) || res.data.length === 0)) {
 						this.albumId = ''
 						uni.showToast({ title: '该相册暂无可试衣客片，已展示本店全部模板', icon: 'none' })
-						this.loadTemplates()
+						await this.loadTemplates() // 🟡await：否则 finally 先置 loaded ⇒ 空态先闪一帧
+						return
+					}
+					if (!Array.isArray(res.data)) {
+						uni.showToast({ title: '模板数据异常，请重试', icon: 'none' })
 						return
 					}
 					this.templates = res.data
@@ -449,7 +453,10 @@ export default {
 							}
 						}
 					}
-				}
+ else {
+					// 🟡CR：非 0/200 时原为静默（模板留空且无提示）⇒ 按接口 message 提示，避免"看起来是空的"
+					uni.showToast({ title: res.message || '模板加载失败，请重试', icon: 'none' })
+				}				}
 			} catch (err) {
 				console.error('[aiTryOn] 加载模板失败:', err)
 				uni.showToast({ title: '模板加载失败，请重试', icon: 'none' })
@@ -1256,7 +1263,7 @@ export default {
 	.tpl-empty-desc {
 		margin-top: 16rpx;
 		font-size: 24rpx;
-		color: var(--color-text-secondary);
+		color: var(--color-primary-70); /* 🟡CR：`--color-text-secondary` 本仓 0 定义 ⇒ 改存在的 token（同值） */
 		text-align: center;
 	}
 	.tpl-empty-btn {
