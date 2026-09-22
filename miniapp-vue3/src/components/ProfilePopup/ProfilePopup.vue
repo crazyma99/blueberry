@@ -21,9 +21,10 @@
 // 墨色 → tokens.semantic.colorActionText；深色卡片/渐变/字号档位 → 硬编码并注释。
 import { ref } from "vue";
 import BasePopup from "../../ui/BasePopup.vue";
+import { tokens } from "../../generated/tokens";
 
 /** 🟡CR3：`placeholder-class` 在 scoped 下**永不命中**（基座自造 class，不带 data-v）⇒ 改内联 style（含字体，见 🔴1） */
-const PLACEHOLDER_STYLE = "font-family:'HarmonyOS-Sans-SC';color:rgba(255,255,255,0.35)";
+const PLACEHOLDER_STYLE = `font-family:${tokens.primitive.fontFamilyBody};color:rgba(255,255,255,0.35)`; // 字体绑定 token（单一事实源）
 
 withDefaults(
   defineProps<{
@@ -97,17 +98,18 @@ function onNicknameInput(e: unknown): void {
 .profile-card {
   position: relative;
   width: 620rpx;
-  background: #262626; /* 旧 var(--color-popup-card) #262626（App.uvue :90） */
-  border-radius: 48rpx; /* 旧 var(--radius-2xl) 48rpx（App.uvue :104） */
-  padding: 56rpx 48rpx 44rpx;
+  background: $color-popup-card; /* 旧 var(--color-popup-card) $color-popup-card（App.uvue :90） */
+  border-radius: 4$space-xs; /* 旧 var(--radius-2xl) 4$space-xs（App.uvue :104） */
+  padding: 56rpx 4$space-xs 44rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
+  font-family: $font-family-body; /* 主人指示：字体绑定 token（不依赖全局类继承；root-portal 摘树后仍生效） */
   animation: cardPopIn 0.28s ease-out;
 }
 @keyframes cardPopIn {
-  from { opacity: 0; transform: scale(0.92) translateY(24rpx); }
+  from { opacity: 0; transform: scale(0.92) translateY($space-md); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -124,16 +126,16 @@ function onNicknameInput(e: unknown): void {
 }
 
 .card-title {
-  font-size: 40rpx;
+  font-size: $font-title;
   font-weight: 400;
-  color: $color-action; /* 旧 var(--color-primary) #F1CD91 */
+  color: $color-action; /* 旧 var(--color-primary) $gold */
   margin-bottom: 12rpx;
 }
 
 .card-desc {
   font-size: 22rpx; /* 旧 var(--font-size-body-sm) 22rpx */
   color: rgba(255, 255, 255, 0.45);
-  margin-bottom: 36rpx;
+  margin-bottom: $font-sub-title;
 }
 
 /* 头像 */
@@ -144,7 +146,7 @@ function onNicknameInput(e: unknown): void {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 32rpx;
+  margin-bottom: $font-body;
   padding: 0 20rpx;
   width: 180rpx;
   box-sizing: border-box;
@@ -154,27 +156,27 @@ function onNicknameInput(e: unknown): void {
   border: none;
 }
 .avatar-img {
-  width: 128rpx;
-  height: 128rpx;
+  width: 12$space-xs;
+  height: 12$space-xs;
   border-radius: 50%;
   border: 3rpx solid $color-action; /* 旧 var(--color-primary) */
   background: rgba(255, 255, 255, 0.08);
 }
 .avatar-badge {
   position: absolute;
-  right: 24rpx;
+  right: $space-md;
   bottom: 30rpx;
-  width: 36rpx;
-  height: 36rpx;
+  width: $font-sub-title;
+  height: $font-sub-title;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%); /* 旧 var(--gradient-btn-primary) */
-  color: $color-action-text; /* 旧 var(--color-bg) #160F04 */
-  font-size: 26rpx;
+  background: linear-gradient(135deg, #FFDF9F 0%, $gold 45%, #D9A75C 100%); /* 旧 var(--gradient-btn-primary) */
+  color: $color-action-text; /* 旧 var(--color-bg) $ink */
+  font-size: $font-caption;
   font-weight: 400;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid #262626; /* 旧 var(--color-popup-card) #262626 */
+  border: 2rpx solid $color-popup-card; /* 旧 var(--color-popup-card) $color-popup-card */
 }
 .avatar-tip {
   margin-top: 14rpx;
@@ -185,7 +187,7 @@ function onNicknameInput(e: unknown): void {
 /* 输入框间距（使用方控制，组件不带外距） */
 .input-wrap {
   width: 100%;
-  margin-bottom: 36rpx;
+  margin-bottom: $font-sub-title;
 }
 
 /* —— 以下为内联 AppInput 样式（旧 AppInput.uvue :42-72 就地还原，待组件移植后移除）—— */
@@ -196,9 +198,9 @@ function onNicknameInput(e: unknown): void {
   align-items: center;
   background: rgba(255, 255, 255, 0.06);
   border: 2rpx solid rgba(255, 255, 255, 0.12);
-  border-radius: 18rpx; /* 旧 var(--radius-item) 18rpx */
-  padding: 0 24rpx;
-  height: 88rpx;
+  border-radius: 1$space-xs; /* 旧 var(--radius-item) 1$space-xs */
+  padding: 0 $space-md;
+  height: $hit-area-min;
   box-sizing: border-box;
   transition: border-color 0.15s ease-out;
 }
@@ -206,16 +208,16 @@ function onNicknameInput(e: unknown): void {
   border-color: $color-action; /* 旧 var(--color-primary) */
 }
 .app-input-label {
-  font-size: 24rpx; /* 旧 var(--font-size-body) 24rpx */
+  font-size: $space-md; /* 旧 var(--font-size-body) $space-md */
   color: $color-action; /* 旧 var(--color-primary) */
   margin-right: 20rpx;
 }
 .app-input-field {
   /* 🔴CR1（2026-09-22）：小程序 `<input>` **不继承**父级/容器 font-family（基座对 wx-input 硬编码 UICTFontTextStyleBody）
      ⇒ 必须在元素自身声明；与仓内先例 `pages/demoDetail:474-476`／`pages/favorites:364-365` 同法 */
-  font-family: 'HarmonyOS-Sans-SC';
+  font-family: $font-family-body;
   flex: 1;
-  font-size: 24rpx; /* 旧 var(--font-size-body) 24rpx */
+  font-size: $space-md; /* 旧 var(--font-size-body) $space-md */
   color: #fff;
 }
 
@@ -223,14 +225,14 @@ function onNicknameInput(e: unknown): void {
 .confirm-btn {
   width: 100%;
   height: 92rpx;
-  font-size: 28rpx; /* 旧 var(--font-size-body-plus) 28rpx */
+  font-size: 2$space-xs; /* 旧 var(--font-size-body-plus) 2$space-xs */
 }
 .confirm-btn::after {
   border: none;
 }
 .profile-skip {
-  margin-top: 28rpx;
-  padding: 10rpx 40rpx;
+  margin-top: 2$space-xs;
+  padding: 10rpx $font-title;
   font-size: 22rpx; /* 旧 var(--font-size-body-sm) 22rpx */
   color: rgba(255, 255, 255, 0.4);
   transition: opacity 0.15s ease-out;

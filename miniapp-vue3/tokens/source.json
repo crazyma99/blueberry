@@ -24,7 +24,9 @@
     "fontCaption": "26rpx",
     "fontBody": "32rpx",
     "fontSubTitle": "36rpx",
-    "fontTitle": "40rpx"
+    "fontTitle": "40rpx",
+    "fontFamilyBody": "HarmonyOS-Sans-SC",
+    "fontFamilySerif": "NotoSerifSC-Bold"
   },
   "semantic": {
     "colorAction": "{primitive.gold}",
@@ -46,7 +48,8 @@
     "fontSizeCaption": "{primitive.fontCaption}",
     "fontSizeSubTitle": "{primitive.fontSubTitle}",
     "sizeHitArea": "{primitive.hitAreaMin}",
-    "sizeTabBarAvoid": "{primitive.tabBarAvoid}"
+    "sizeTabBarAvoid": "{primitive.tabBarAvoid}",
+    "colorPopupCard": "#262626"
   },
   "component": {
     "albumTitleLikeGapRpx": 10,
@@ -57,6 +60,7 @@
     "cardPaddingRpx": 24,
     "listGapRpx": 16,
     "sectionGapRpx": 32,
-    "pullRefreshLoadingSizeRpx": 48
+    "pullRefreshLoadingSizeRpx": 48,
+    "popupCardRadiusRpx": 48
   }
 }

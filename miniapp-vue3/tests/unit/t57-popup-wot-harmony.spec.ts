@@ -81,12 +81,17 @@ describe("弹窗统一 wot Popup 门面 ＋ HarmonyOS Sans 文案（源码守卫
     }
   });
 
-  it("输入框字体（🔴CR1）：`.app-input-field` 显式 HarmonyOS ＋ 内联 placeholder-style（scoped 的 placeholder-class 不命中）", () => {
+  it("输入框字体（🔴CR1）＋ 主题绑定 token：容器与输入框用 `$font-family-body`，placeholder style 取自 tokens", () => {
     const s = read("src/components/ProfilePopup/ProfilePopup.vue");
     const block = s.slice(s.indexOf(".app-input-field {"), s.indexOf(".app-input-field {") + 400);
-    expect(block).toContain("font-family: 'HarmonyOS-Sans-SC'");
-    expect(s).toContain("PLACEHOLDER_STYLE");
+    expect(block).toContain("font-family: $font-family-body"); // 显式＋token 绑定
+    expect(s).toContain("font-family: $font-family-body"); // 卡片容器同绑定（root-portal 摘树后仍生效）
+    expect(s).toContain("tokens.primitive.fontFamilyBody"); // placeholder 内联 style 走 token 单一事实源
     expect(s).not.toContain("placeholder-class=");
+    expect(read("src/components/LoginPopup/LoginPopup.vue")).toContain("font-family: $font-family-body");
+    // token 源必须是唯一事实源
+    const src = JSON.parse(read("tokens/source.json"));
+    expect(src.primitive.fontFamilyBody).toBe("HarmonyOS-Sans-SC");
   });
 });
 
