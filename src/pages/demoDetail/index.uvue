@@ -296,6 +296,13 @@ import { resolveDefaultShopId } from '../../utils/navigate.uts'
 				imageUrl: this.shareCard.imageUrl
 			}
 		},
+		// 朋友圈（单页模式打开的是**本页**）：必须带 idx，否则落地缺参停在空态（同 bug #8 一族；2026-09-22 主人拍板 A）
+		onShareTimeline() {
+			return {
+				title: this.shareCard.title,
+				query: this.idx ? `idx=${this.idx}` : ''
+			}
+		},
 		onLoad(query) {
 			const systemInfo = uni.getSystemInfoSync()
 			this.statusBarHeight = systemInfo.statusBarHeight || 20

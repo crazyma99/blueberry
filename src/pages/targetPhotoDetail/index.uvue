@@ -161,6 +161,13 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 				shareCard: { title: '点击查看客片详情信息，也支持一键AI试衣哦～', imageUrl: '/static/share-aitryon.jpg' }
 			}
 		},
+		// 朋友圈（单页模式打开的是**本页**）：带 idx＋type，否则落地缺参被兜底回首页（同 bug #8 一族；2026-09-22 主人拍板 A）
+		onShareTimeline() {
+			return {
+				title: this.shareCard.title,
+				query: `idx=${this.albumId}&type=${this.shopId}`
+			}
+		},
 		onShareAppMessage() {
 			return {
 				title: this.shareCard.title,
@@ -169,6 +176,12 @@ import { cosThumb } from '../../utils/imageLoader.uts'
 			}
 		},
 		onLoad(query) {
+			// 缺 idx 兜底（2026-09-22 主人拍板 A）：提示 + 回首页 tab，避免空白/空转加载
+			if (query?.idx == null || String(query.idx) === '') {
+				uni.showToast({ title: '分享链接已失效，请返回首页重新进入', icon: 'none' })
+				uni.reLaunch({ url: '/pages/index/index' })
+				return
+			}
 			const id = query?.idx ?? ''
 			const type = query?.type ?? ''
 			this.albumId = id
