@@ -158,3 +158,11 @@
     **⑤微信侧零影响（双向取证）**：微信产物 `app.json` 的 `tabBar.custom = true` ⇒ 原生 tabBar（含 `iconPath`）**不渲染**，底栏由 `custom-tab-bar` 以 `iconpark/*.svg` 38rpx 绘制 ⇒ **视觉与代码均未改动**；6 张 PNG 仅作为静态资源随包（未使用）。
     **⑥验证与发布**：`vitest` **484 passed／3 skipped**（含 t55 四例）、`vue-tsc` 0 错；抖音产物复核＝6 张图标内容 62–72px／`custom` 缺省／12 页；**P4-13 产物校验 `ok=true`**、包体积 **1.34MB**；`tma preview` 出码（短链 `https://t.zijieimg.com/iXxFD23R/`）＋ **`tma upload -v 0.0.2` 成功**（`🎉 Upload success`）。
     **⑦待真机**：抖音扫码看底 tab 三图标大小/居中/选中态是否与微信端观感接近（`device-acceptance-checklist.md` §8.3.7）；两图标 `-dim` 压暗态是否仍清晰。
+
+32. **AI 试衣详情旧 loading → wot loading 门面；弹窗统一 wot Popup 门面；弹窗文案 HarmonyOS Sans（2026-09-22 主人三项）**
+    **①主人三项**：「从 AI试衣列表点进详情，一瞬间跳出 loading（好像是旧的）⇒ 换成 wot UI 的组件 loading」；「我的 → 个人信息卡片 → 完善个人资料弹窗内有些文字用默认字体而非 HarmonyOS Sans，需修复」；「检查新项目里 Popup 弹窗，使用 Wot UI 组件中的 Popup（可看 skill／CLI）」。
+    **②旧 loading 定位与处置**：`pages/aiTryOnResult/index.vue` 首查分支渲染 **自绘旧 spinner**（`.loading-spinner`＝80rpx 白边圆圈＋`border-top-color` 旋转），「生成中」面板内同一套 ⇒ 两处**全删**（产物残留 0），改走**门面 `ui/BaseLoading`**（内含 wot `wd-loading`；业务页零 `wd-*` 直用）——首查「加载中」竖排、处理中「生成中」竖排。
+    **③字体真相与处置**：本仓 HarmonyOS Sans 是 `uni.loadFontFace` 注册的自定义字体＋**全局类 `.font-harmony`**（`App.vue:6-22/59`），**默认字体仍是系统字体** ⇒ 弹窗内只有挂类的节点才用 HarmonyOS；`ProfilePopup` 原本仅标题挂 `font-noto-serif` ⇒ **容器挂 `.font-harmony`**（全部文案继承；标题衬线优先）；同族 `LoginPopup` 同法修复。
+    **④弹窗统一 wot Popup**：`ProfilePopup`／`LoginPopup` 由自绘 `.profile-overlay`／`.login-overlay` 迁到**门面 `ui/BasePopup`**（内含 wot `wd-popup`；抖音/无 wot 环境保留自绘分支 `base-popup-native`），**遮罩点击关闭语义不丢**（门面 `cancel` → 原 `emit('skip')`／`emit('close')`），并删除死样式。**审计结论**：仓内其余 `*-mask`／`*-overlay` 均为**图片渐变遮罩/状态角标**（`album-mask`/`hero-mask`/`photo-card-mask`/`status-overlay`）**不是弹窗**，无需迁移；可选后续＝`AppPhotoPicker` 的 busy 遮罩换 `BaseLoading`（非弹窗，属美化）。
+    **⑤守卫**：新增 `tests/unit/t57-popup-wot-harmony.spec.ts`（门面内部确为 `wd-popup` 且保留自绘分支／两弹窗经门面渲染＋容器挂 `font-harmony`＋自绘遮罩类与样式**不得回流**／`ProfilePopup` 标题衬线优先／`cancel` 转发语义）；`t38` 断言同步（登录弹窗容器 `.login-card`）。
+    **⑥验证**：`vitest` **497 passed／3 skipped**、`vue-tsc` 0 错、**三平台构建 exit 0**（h5／mp-toutiao／mp-weixin）；产物实证＝`pages/aiTryOnResult/index.js` 含 `base-loading`、旧 `loading-spinner` 残留 **0**、`ProfilePopup.json` 的 `usingComponents＝{base-popup: ../../ui/BasePopup}`、`ProfilePopup.wxml` 含 `font-harmony`。**待真机**：详情页 loading 观感（wot 竖排 loading）＋两弹窗文字字体。
