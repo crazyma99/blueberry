@@ -25,3 +25,11 @@
 - `tma preview`／`upload`／`audit`（需登录＋AppID＋类目资质）
 - 微信工具打开、样页（`_probe/wot-sample`）在两端工具中的**实际打开结果**
 - 任何**真机**运行记录（属 `device-acceptance-checklist.md`）
+
+### 2026-09-22 抖音端新增证据（首轮体检→预览→上传）
+
+| 项 | 命令 | 结果 | 日期 |
+|---|---|---|---|
+| **预览出码**（P1-06／P4-14 前置） | `tma preview --qrcode-output /tmp/tt-preview.png dist/build/mp-toutiao` | **exit 0**；二维码 PNG 973 B；短链 `https://t.zijieimg.com/iXxNvAkY/` | 2026-09-22 |
+| **体验版上传**（抖音首次） | `tma upload -c "[gc5b7be2] …" dist/build/mp-toutiao` | **`🎉 Upload success`**；版本 `0.0.1`（平台自动分配）；主包 **1.33MB** | 2026-09-22 |
+| 包体积（复测） | `tma project-size dist/build/mp-toutiao --json` | `{"main":{"size":1174673},"sub":[],"total":1174673}` | 2026-09-22 |

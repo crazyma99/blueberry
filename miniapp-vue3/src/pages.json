@@ -214,7 +214,7 @@
 	},
 	"globalStyle": {
 		"navigationBarTextStyle": "white",
-		"navigationBarTitleText": "uni-app",
+		"navigationBarTitleText": "蓝梅云",
 		"navigationBarBackgroundColor": "#160F04",
 		"backgroundColor": "#160F04"
 	}

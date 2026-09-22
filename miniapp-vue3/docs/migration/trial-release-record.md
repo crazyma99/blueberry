@@ -1,4 +1,4 @@
-# 体验版发布记录（微信）
+# 体验版发布记录（微信 ＋ 抖音）
 
 > 记录每一次「新端产物 → 体验版」的上传：**命令、版本号、描述、结果、失败与修法**。发布动作用的是
 > **移植版工具自带 CLI**（`wechat-devtools-cli`，见 §1），**不用私钥、不走 miniprogram-ci**。
@@ -50,3 +50,44 @@ wechat-devtools-cli upload --project "$PWD/dist/build/mp-weixin" -v "v1.0.25" -d
 ## 5. 上传后仍需人工一步（否则扫不了）
 mp.weixin.qq.com → **版本管理** → 把该**开发版本设为体验版** → 生成**体验版二维码** → 手机扫；
 扫码的微信号须为该小程序**开发者或体验成员**（「成员管理」）。
+
+## 8. 抖音端发布记录（2026-09-22 起；工具链＝官方 `tma`／`tt-ide-cli` v0.1.33，账号 `lanmeilvpai_skill`）
+
+> 抖音无官方 Linux 版 IDE ⇒ 一律走 `tma`（既定路径）；判定沿用旧端 `scripts/release-trial-douyin.sh` v2 的三重判据
+> （退出码 ＋ 错误关键字 ＋ **正向成功证据**）。**上传属发布动作**：本轮由主人明确指示（「提交一版抖音体验版」）后执行。
+
+| # | 时间 | 版本 | 描述 | 结果 | 备注 |
+|---|---|---|---|---|---|
+| 1 | 2026-09-22 | **0.0.1**（未传 `-v`，平台自动分配） | `[gc5b7be2] 抖音客片展示版：网格/卡片对齐相册标准＋分享卡片与下拉刷新＋全局标题品牌化（AI 六页不注册）` | ✅ **成功** | `tma upload dist/build/mp-toutiao` ⇒ `- 正在准备上传...`／`The default version is 0.0.1`／**主包 1.33MB**／**`🎉 Upload success`**／exit 0。前置＝兼容性体检全绿（见 §8.1）＋`tma preview` 出码成功（二维码 PNG 973 B；短链 `https://t.zijieimg.com/iXxNvAkY/`）。**待主人两步**：抖音开放平台「版本管理」把 `0.0.1` **设为体验版** ＋ 添加**体验成员**（测试设备绑定已于 2026-09-15 完成） |
+
+### 8.1 抖音兼容性体检（2026-09-22，工具侧全量实测）
+
+| 项 | 命令／证据 | 结果 |
+|---|---|---|
+| 敏感平台 API 落点（P4-12） | `node scripts/scan-platform-usage.mjs` | **exit 0、0 违规** |
+| 产物级校验（P4-13） | `verifyTarget`（复用 `build-target` 的 manifest 形状，`artifactDir=dist/build/mp-toutiao`） | **`ok=true`**，11 项 checked＝app.json／app.js／routes:12／appid／navTitle／engine:vue3／subPackages:0／forbiddenRoutes:4／platform:mp-toutiao(tt-files)／appid-non-placeholder；1 warning＝`forbiddenResidues` 未提供（跨品牌残留扫描未执行） |
+| 页数与 AI 页 | `app.json` 实测 | **12 页**；`pages/ai*` **零注册** ✓（客片展示版口径） |
+| 导航与 tabBar | 12 页 json 实测 | **无 `navigationStyle`**（系统栏）／`tabBar.custom` 缺省（原生 tab）✓ 与 `deviations #17` 一致 |
+| 身份与引擎特征 | `project.config.json`／产物 | appid＝`ttd6aba01648cc1bf701`；`app.ttss`＋`app.js`＋**44** 个 `.ttml`；**微信产物特征文件（`.wxss`/`.wxml`/`.wxs`）＝0** |
+| 包体积 | `tma project-size --json` | 主包 **1,174,673 B**（上传时平台口径 **1.33MB**）≤ 2MB 上限 ✓、无分包 |
+| WeChat API 泄漏 | 全量 `.js` grep `wx.` | **0 命中** ✓ |
+| CSS 变量／通配选择器 | 全量 `.ttss` grep | **本项目文件 0**；**12 个 wot 自带组件含 `var(--`、3 个含通配 `*`** ⇒ 抖音端这些组件样式可能局部降级（既有登记 `deviations #15/#27`，**真机目视项**） |
+| 平台调用面 | 产物 grep | `loadFontFace`／`vibrateShort`／`getPhoneNumber` 各 1 处（均走 uni 转发或能力守卫）；`requestSubscribeMessage`／`setVisualEffectOnCapture`／`chooseImage` **0**（AI 页不注册 ⇒ 无该场景） |
+| 预览出码 | `tma preview --qrcode-output` | **exit 0** ＋二维码文件 ＋短链 ✓ |
+| 真机（待主人） | `tma preview` 扫码 / 体验版扫码 | 见 §8.3 目视清单 |
+
+### 8.2 ⚠️ 本轮发现的阻断项（不影响本次发版，但需修）
+
+1. **规范发布通路 `build-target.mjs` 对新端不可用（真 bug，已取证）**：`copyTemplate` 的 `TEMPLATE_WHITELIST` 只带 `package.json／pnpm-lock.yaml／pnpm-workspace.yaml／tsconfig.json／vite.config.ts／index.html／shims-uni.d.ts／src／tokens` ⇒ 隔离副本里**既无 `scripts/` 也无 `profiles/`**，而 `package.json` 的 `build:<platform>` 第一步是 `node scripts/gen-profile-local.mjs <platform>` ⇒ 实测 `Cannot find module '…/run-tt-trial-0922/scripts/gen-profile-local.mjs'`、`[ELIFECYCLE] Command failed with exit code 1`。**建议修法（二选一）**：①白名单补 `scripts`＋`profiles`；②`applyProfile` 把隔离副本的 `build:<platform>` 改写为 `uni build -p <platform>`（profile 已由 `applyProfile`＋`generateProfile` 注入，无需再跑 `gen-profile-local`）。**本轮发版改走普通通路**（`gen-profile-local.mjs` ＋ `uni build -p mp-toutiao`，与历轮抖音产物同路）。
+2. **全局导航标题泄漏 `uni-app`** ⇒ **已修**：`src/pages.json` 的 `globalStyle.navigationBarTitleText` 由 `uni-app` 改为品牌名 **`蓝梅云`**（12 页各自都有标题 ⇒ 页内不显示全局值，但平台「关于/启动/分享兜底」等面会用；P4-13 的 `navTitle` 检查即此项）。**两通路口径差异**：流水线通路按 profile 覆盖为 `蓝梅旗袍·汉服·民...`，普通通路用源码值 ⇒ 已登记。
+3. **探针页随包发布**：`pages/_probe/wot-sample` 出现在**微信与抖音两端**产物（源码无条件注册），而 `pages/index/index.vue` 注释自称「P1-08 不入生产包」与实况不符 ⇒ 建议正式发布前按 profile 剔除（**既有问题，非本轮引入**）。
+
+### 8.3 抖音真机目视清单（§7 之外的抖音专属项）
+| # | 操作 | 预期 |
+|---|---|---|
+| 8.3.1 | 抖音扫码进首页 | 系统导航栏标题＝**蓝梅云**（不得出现 `uni-app`）；底部为**原生** tab（首页/价目表/我的） |
+| 8.3.2 | 首页/价目表/我的 之间切换 | 页面正常渲染；卡片网格与微信端一致（金 30% 描边／460rpx／金衬线标题） |
+| 8.3.3 | 首页下拉 | 自绘金胶囊出现且收口（`deviations #27` 记录的 wot `wd-loading` var() 降级面：**spinner 是否旋转/环是否成形/文案字号**） |
+| 8.3.4 | 我的收藏/客片列表/客片详情 | 卡片样式与微信端一致；长标题省略号 |
+| 8.3.5 | 走一遍 客片浏览 → 详情 → 收藏 | 无白屏/布局错乱；wot 组件（按钮/输入/弹层/选择器）样式是否局部降级 |
+| 8.3.6 | 关注 | 抖音端**不注册** AI 六页与支付 ⇒ 不应出现任何 AI 入口（`deviations #17` 口径） |

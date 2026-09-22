@@ -40,7 +40,7 @@
 | 待验 | 清单 | 谁做 |
 |---|---|---|
 | `P3-11` 保存/买断、`P3-15` 纵切、`P3-13` 分享三分支、T9b 同步扣费、`P0-11` 基准 | **`device-acceptance-checklist.md`**（逐条「操作步骤／预期结果／记录项」，照做即可） | **主人或测试同学** |
-| 抖音真机（`P4-14`） | ~~需先解决 **AppID 占位**~~ **AppID 已注入并出包验证（2026-09-18）**；剩 `tma preview` 出码＋主人手机扫码逐项验 | 主人手机＋装有 `tma` 的机器 |
+| 抖音真机（`P4-14`） | **2026-09-22 新进展**：工具侧**全绿**（P4-12／P4-13 均通过、包 1.17MB、无 AI 页/无 wx API/无微信产物）+ `tma preview` **出码成功**（短链 `https://t.zijieimg.com/iXxNvAkY/`）+ **体验版 `0.0.1` 已上传**（`🎉 Upload success`，主包 1.33MB）⇒ 剩**主人/测试同学真机逐项验**（`device-acceptance-checklist.md` §7＋发版记录 §8.3）＋平台侧把 `0.0.1` 设为体验版并加体验成员 | 主人手机（测试设备已绑定） |
 
 ### 台账（`phases.md` 为唯一来源；**计数入口：`python3` 按 Phase 段统计 `- [x]`**）
 
@@ -81,6 +81,13 @@
    正确姿势：`text = '\n'.join(lines)` → 必要时 `write(tmp)` → `os.replace(tmp, path)`；**提交前先 `git diff --stat` 复核增删行数**。
    事故处置留痕见 commit `1b4ad0c`（从历史恢复＋差异校验为 1 insert/1 delete）。
 10. **macOS 本机工具链（2026-09-18 实测）**：系统 `pnpm@9.6` 不认 `pnpm-workspace.yaml` 的 `allowBuilds`（报 `packages field missing or empty`），且 `pnpm@11.7` 在 Node v20.20 下起不来（`ERR_UNKNOWN_BUILTIN_MODULE`）⇒ 一律用 **Node v22.22（nvm）＋ pnpm 11.7 shim**（`/tmp/pnpm11-shim/pnpm`，或 `npx pnpm@11.7.0`）；`build-target` 内部调 `pnpm`，跑管线前把 shim 目录放 PATH 最前。
+12. **`build-target.mjs` 规范通路对新端「不可构建」（2026-09-22 抖音发版实测，已取证；未修）**：
+   `copyTemplate` 的 `TEMPLATE_WHITELIST` 只带 `package.json／pnpm-lock.yaml／pnpm-workspace.yaml／tsconfig.json／vite.config.ts／index.html／shims-uni.d.ts／src／tokens`
+   ⇒ 隔离副本里**既无 `scripts/` 也无 `profiles/`**，而 `package.json` 的 `build:<platform>` 第一步是
+   `node scripts/gen-profile-local.mjs <platform>` ⇒ 实测 `Cannot find module '…/scripts/gen-profile-local.mjs'` ＋ `[ELIFECYCLE] Command failed with exit code 1`。
+   **修法（二选一）**：①白名单补 `scripts`＋`profiles`；②`applyProfile` 把隔离副本 `build:<platform>` 改写为 `uni build -p <platform>`（profile 已由 `applyProfile`／`generateProfile` 注入）。
+   **绕行**：发版用普通通路 `node scripts/gen-profile-local.mjs <platform> && npx uni build -p <platform>`（抖音历轮产物同路）；
+   注意两条通路的**全局导航标题**口径不同——流水线按 profile 覆盖为「蓝梅旗袍·汉服·民...」，普通通路取 `src/pages.json` 的 `globalStyle.navigationBarTitleText`（2026-09-22 已由 `uni-app` 修为品牌名「蓝梅云」）。
 11. **wot-ui 相关一律先问工具（主人 2026-09-21 指示：「以后涉及 wotui 的部分都可以通过 wot skill 和 wot cli 来获取帮助」）**：
    本仓已装 `@wot-ui/cli@1.1.0` ⇒ 权威事实源＝`npx wot info <组件>`（props/events/slots/**CSS 变量**）、`npx wot doc <组件>`、`npx wot demo <组件>`、
    `npx wot token <组件>`（组件变量 ↔ token 名）、`npx wot lint src`（用法体检）、`npx wot usage src`（**可实证 `wd-*` 是否只出现在 `src/ui/` 门面**）、`npx wot doctor`；

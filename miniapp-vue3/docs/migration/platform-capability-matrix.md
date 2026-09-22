@@ -47,3 +47,20 @@
 - 与 `deviations.md` 的关系：字体/主题类差异已在 **`deviations.md` 第 11 条**登记（CR 🔴2 补登；原「第 1–10 条」引用不实，已更正），本表不重复。
 - ⚠️ 本表**暂无小红书列**（P4-10 要求「逐端」）：小红书整列本轮不做（主人未纳入），按 `P4-17` 需登记批准与范围后再补。
 - 定稿时机：`P4-14` 真机矩阵跑完后，把 `unknown` 收敛为 `supported`/`unsupported` 并补「依据版本」。
+
+## 4. 抖音端产物级体检结论（2026-09-22 实测，**工具侧**；真机项仍以 §2 为准）
+
+> 本轮为抖音首次「体检 → 出码 → 体验版上传」（记录见 `trial-release-record.md` §8）。**以下均为产物级证据，不等于平台支持性结论**；
+> 未真机验证的项一律仍记 `unknown`。
+
+| 能力/项 | 结论（产物级） | 依据 |
+|---|---|---|
+| 产物合规（app.json/app.js/tt 指纹） | **supported（产物级）** | P4-13 `ok=true` 11 项（含 `app.ttss`／`platform:mp-toutiao(tt-files)`）；`.wxss/.wxml/.wxs` 0 个 |
+| 包体积 | **supported（产物级）** | 主包 1,174,673 B（平台口径 1.33MB）≤ 2MB；`subPackages:0` |
+| 路由与 AI 页排除 | **supported（产物级）** | 12 页；`forbiddenRoutes` 4 前缀零命中 |
+| 导航（系统栏） | **supported（产物级）** | 12 页均无 `navigationStyle`（自绘栏仅微信，`deviations #17`） |
+| WeChat API 泄漏 | **supported（产物级）** | 全量 `.js` grep `wx.`＝0 |
+| 本项目样式合规（零 CSS 变量／零通配） | **supported（产物级）** | 项目文件 0；**wot 自带组件 12 份含 `var(--`、3 份含 `*`** ⇒ 抖音端样式局部降级风险（`deviations #15/#27`）＝**真机目视项** |
+| 字体／触感／手机号 | **unknown（依赖真机）** | 产物各 1 处调用；`tt.loadFontFace`／`tt.vibrateShort`／手机号能力的真机表现待验 |
+| 预览出码 | **supported（工具侧）** | `tma preview` exit 0＋二维码＋短链 |
+| 体验版上传 | **supported（工具侧）** | `tma upload` 成功（版本 `0.0.1`，主包 1.33MB） |
