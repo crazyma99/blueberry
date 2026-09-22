@@ -20,9 +20,15 @@ withDefaults(
      * （`components/CustomNavBar`，不透明）⇒ 默认值下遮罩**盖不住顶栏**（不压暗、返回键仍可点）；抖音自绘分支须一致。
      */
     zIndex?: number;
+    /** 🟡CR4：把「遮罩点击是否关闭」从 wot 上游默认值变成**门面合同**（`wd-popup` 默认 true） */
+    closeOnClickModal?: boolean;
   }>(),
-  { show: false, title: "", position: "center", closable: false, rootPortal: true, zIndex: 1001 },
+  { show: false, title: "", position: "center", closable: false, rootPortal: true, zIndex: 1001, closeOnClickModal: true },
 );
+
+/** 🔴CR2（2026-09-22）：wot `wd-popup` 根节点自带**不透明**默认底色（`.wd-popup{background:var(--wot-popup-bg,…white)}`，本仓未定义任何 `--wot-*`）
+ * ⇒ 不置透明会在深色圆角卡片四角露出白色直角。与 `BaseLoadingPopup` 同家法（`deviations #29` 一族）。 */
+const POPUP_TRANSPARENT_STYLE = "--wot-popup-bg: transparent; --wot-popup-radius: 0;";
 
 const emit = defineEmits<{
   (e: "update:show", value: boolean): void;
@@ -58,6 +64,8 @@ const useNative = isToutiaoPlatform();
     :closable="closable"
     :root-portal="rootPortal"
     :z-index="zIndex"
+    :close-on-click-modal="closeOnClickModal"
+    :custom-style="POPUP_TRANSPARENT_STYLE"
     @close="onClose"
     @update:model-value="onModelValueUpdate"
   >
@@ -67,7 +75,7 @@ const useNative = isToutiaoPlatform();
     </view>
   </wd-popup>
   <view v-else-if="show" class="base-popup-native" :style="{ zIndex }">
-    <view class="base-popup-native__mask" @click="onClose" />
+    <view class="base-popup-native__mask" @click="onClose" @touchmove.stop.prevent />
     <view class="base-popup-native__box">
       <view v-if="closable" class="base-popup-native__close" @click="onClose">
         <text class="base-popup-native__close-text">×</text>
@@ -88,7 +96,6 @@ const useNative = isToutiaoPlatform();
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;

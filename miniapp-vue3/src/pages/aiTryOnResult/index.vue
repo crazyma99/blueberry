@@ -1048,15 +1048,8 @@ async function loadFooterPair(): Promise<void> {
   /* CR 🟡 修复：打断百分比宽度循环依赖，让内层面板宽度确定 */
   width: 100%;
 }
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
 .loading-tip {
+  margin-top: 16rpx; /* 🟡CR8：旧 spinner 自带 16rpx 下边距，换门面后补回，避免 spinner 与文案贴死 */
   font-size: 28rpx; /* 旧 var(--font-size-body-plus)=28rpx */
   color: rgba(255, 255, 255, 0.7);
   text-align: center;

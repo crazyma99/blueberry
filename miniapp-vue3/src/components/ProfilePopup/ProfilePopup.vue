@@ -22,6 +22,9 @@
 import { ref } from "vue";
 import BasePopup from "../../ui/BasePopup.vue";
 
+/** 🟡CR3：`placeholder-class` 在 scoped 下**永不命中**（基座自造 class，不带 data-v）⇒ 改内联 style（含字体，见 🔴1） */
+const PLACEHOLDER_STYLE = "font-family:'HarmonyOS-Sans-SC';color:rgba(255,255,255,0.35)";
+
 withDefaults(
   defineProps<{
     avatarUrl?: string;
@@ -74,7 +77,7 @@ function onNicknameInput(e: unknown): void {
             :value="nickname"
             placeholder="请输入昵称"
             :maxlength="60"
-            placeholder-class="app-input-placeholder"
+            :placeholder-style="PLACEHOLDER_STYLE"
             @focus="inputFocused = true"
             @blur="inputFocused = false"
             @input="onNicknameInput"
@@ -89,10 +92,6 @@ function onNicknameInput(e: unknown): void {
 </template>
 
 <style lang="scss" scoped>
-@keyframes overlayFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
 
 /* 居中卡片（与 LoginPopup login-card 同款视觉） */
 .profile-card {
@@ -212,12 +211,12 @@ function onNicknameInput(e: unknown): void {
   margin-right: 20rpx;
 }
 .app-input-field {
+  /* 🔴CR1（2026-09-22）：小程序 `<input>` **不继承**父级/容器 font-family（基座对 wx-input 硬编码 UICTFontTextStyleBody）
+     ⇒ 必须在元素自身声明；与仓内先例 `pages/demoDetail:474-476`／`pages/favorites:364-365` 同法 */
+  font-family: 'HarmonyOS-Sans-SC';
   flex: 1;
   font-size: 24rpx; /* 旧 var(--font-size-body) 24rpx */
   color: #fff;
-}
-.app-input-placeholder {
-  color: rgba(255, 255, 255, 0.35);
 }
 
 /* 确认 + 跳过 */

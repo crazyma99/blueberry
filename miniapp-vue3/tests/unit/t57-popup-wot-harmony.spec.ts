@@ -1,20 +1,34 @@
-// 2026-09-22 主人两项收口：
-//  ①「我的 → 个人信息卡片 → 完善个人资料弹窗里有文字用的是默认字体，不是 HarmonyOS Sans」——
-//    本仓 HarmonyOS Sans 是 `uni.loadFontFace` 注册的自定义字体 ＋ **全局类 `.font-harmony`**（默认字体仍是系统字体）
-//    ⇒ 弹窗**容器**挂 `.font-harmony`，所有文案继承（标题 `font-noto-serif` 仍优先）。
-//  ②「检查新项目里 Popup 弹窗，使用 Wot UI 组件中的 Popup」——统一走门面 `ui/BasePopup`（内部＝wot `wd-popup`），
-//    业务组件零 `wd-*` 直用。本 spec 为**结构守卫**：防回退到自绘遮罩、防字体类被摘掉。
+// 2026-09-22 主人三项收口（AI 试衣详情旧 loading→wot loading；弹窗文案 HarmonyOS Sans；弹窗统一 wot Popup）——
+// 本 spec 含**源码守卫**与**渲染级断言**（独立 CR 🟡10：纯字符串断言测不到白底/层级/cancel 语义，故补渲染层）。
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { defineComponent } from "vue";
+import { mount } from "@vue/test-utils";
+import ProfilePopup from "../../src/components/ProfilePopup/ProfilePopup.vue";
 
 const read = (p: string): string => readFileSync(resolve(__dirname, "../..", p), "utf-8");
 
-describe("弹窗统一 wot Popup 门面 ＋ HarmonyOS Sans 文案", () => {
-  it("门面 `ui/BasePopup` 内部确为 wot `wd-popup`，且保留抖音/无 wot 环境的自绘分支", () => {
-    const facade = read("src/ui/BasePopup.vue");
-    expect(facade).toContain("wd-popup");
-    expect(facade).toContain("base-popup-native");
+/** 镜像 wot `wd-popup` 的真实结构：**遮罩与内容是兄弟**（卡片内点击不会冒到遮罩） */
+const StubWdPopup = defineComponent({
+  name: "StubWdPopup",
+  props: {
+    modelValue: { type: Boolean, default: false },
+    zIndex: { type: Number, default: 10 },
+    customStyle: { type: String, default: "" },
+    closeOnClickModal: { type: Boolean, default: true },
+  },
+  emits: ["close", "update:model-value"],
+  template:
+    '<view class="stub-popup"><view class="stub-popup__mask" @click="$emit(\'close\')" /><view class="stub-popup__content"><slot /></view></view>',
+});
+
+describe("弹窗统一 wot Popup 门面 ＋ HarmonyOS Sans 文案（源码守卫）", () => {
+  it("门面 BasePopup/BaseLoading 内部确为 wot 组件，且保留抖音自绘分支", () => {
+    const popup = read("src/ui/BasePopup.vue");
+    expect(popup).toContain("wd-popup");
+    expect(popup).toContain("base-popup-native"); // 抖音/无 wot 环境自绘分支
+    expect(read("src/ui/BaseLoading.vue")).toContain("wd-loading");
   });
 
   const cases: Array<[string, string, string]> = [
@@ -27,47 +41,66 @@ describe("弹窗统一 wot Popup 门面 ＋ HarmonyOS Sans 文案", () => {
       expect(s).toContain('import BasePopup from "../../ui/BasePopup.vue";');
       expect(s).toContain("<BasePopup");
       expect(s).toContain("</BasePopup>");
-      expect(s).toContain("position=\"center\"");
-      // 容器挂字体类 ⇒ 全部文案继承 HarmonyOS Sans（标题另挂 font-noto-serif 优先）
       expect(s).toMatch(new RegExp(`class="${cardClass}[^"]*font-harmony`));
-      // 自绘遮罩（类名与样式）不得回流
       expect(s).not.toContain(deadClass);
       expect(s).not.toContain(`.${deadClass} {`);
     });
   }
 
-  it("ProfilePopup 标题仍为衬线（font-noto-serif 优先于容器 font-harmony）", () => {
-    const s = read("src/components/ProfilePopup/ProfilePopup.vue");
-    expect(s).toContain('class="card-title font-noto-serif"');
-  });
-
-  it("遮罩点击关闭语义由门面 cancel 转发（原 `.profile-overlay @click` 行为不丢）", () => {
-    expect(read("src/components/ProfilePopup/ProfilePopup.vue")).toContain('@cancel="emit(\'skip\')"');
+  it("ProfilePopup 标题仍为衬线（font-noto-serif 优先）；遮罩点击语义由门面 cancel 转发", () => {
+    const prof = read("src/components/ProfilePopup/ProfilePopup.vue");
+    expect(prof).toContain('class="card-title font-noto-serif"');
+    expect(prof).toContain('@cancel="emit(\'skip\')"');
     expect(read("src/components/LoginPopup/LoginPopup.vue")).toContain('@cancel="emit(\'close\')"');
   });
 
-  // ===== 本批①：AI 试衣详情「旧 loading」→ wot loading 门面（变异实测：换回旧 spinner 时全仓 497 例全绿 ⇒ 原零守卫）=====
-  it("aiTryOnResult：经门面 BaseLoading 渲染（加载中/生成中），旧自绘 spinner 与样式不得回流", () => {
+  it("aiTryOnResult：经门面 BaseLoading 渲染（加载中/生成中），旧自绘 spinner 与规则不得回流", () => {
     const page = read("src/pages/aiTryOnResult/index.vue");
     expect(page).toContain('import BaseLoading from "../../ui/BaseLoading.vue";');
     expect(page).toContain('<BaseLoading text="加载中" direction="vertical" />');
     expect(page).toContain('<BaseLoading text="生成中" direction="vertical" />');
-    expect(page).not.toContain('class="loading-spinner"'); // 旧自绘 spinner 不得回流
+    expect(page).not.toContain('class="loading-spinner"');
     expect(/\n[ \t]*[^\n{}]*\.loading-spinner[^\n{}]*\{/.test(page), "死样式规则不得回流").toBe(false);
   });
 
-  it("门面 `ui/BaseLoading` 内部确为 wot `wd-loading`（业务页零 wd-* 直用）", () => {
-    const facade = read("src/ui/BaseLoading.vue");
-    expect(facade).toContain("wd-loading");
+  it("门面层级家法：默认 zIndex 1001 ＋ wot 分支透传 ＋ 抖音自绘分支同层级", () => {
+    const popup = read("src/ui/BasePopup.vue");
+    expect(popup).toContain("zIndex: 1001");
+    expect(popup).toContain(':z-index="zIndex"');
+    expect(popup).toContain(':style="{ zIndex }"');
   });
 
-  // ===== 抖音兼容性：门面必须在两端都盖得住（#29 家法＝1001；抖音走自绘分支，froze 分支须同层级）=====
-  it("`ui/BasePopup` 显式层级 zIndex 默认 1001，且 wot 分支与抖音自绘分支都用到（两端口径一致）", () => {
-    const facade = read("src/ui/BasePopup.vue");
-    expect(facade).toContain("zIndex: 1001"); // 默认值家法
-    expect(facade).toContain(':z-index="zIndex"'); // 微信（wot wd-popup）分支显式透传
-    expect(facade).toContain(':style="{ zIndex }"'); // 抖音自绘分支同层级
-    expect(facade).toContain("wd-popup");
-    expect(facade).toContain("base-popup-native"); // 抖音/无 wot 环境自绘分支
+  it("门面合同与死代码：closeOnClickModal 显式化、透明面常量、抖音分支防穿透、孤儿 keyframes 不得回流", () => {
+    const popup = read("src/ui/BasePopup.vue");
+    expect(popup).toContain("closeOnClickModal: true");
+    expect(popup).toContain(':close-on-click-modal="closeOnClickModal"');
+    expect(popup).toContain("POPUP_TRANSPARENT_STYLE");
+    expect(popup).toContain("@touchmove.stop.prevent");
+    for (const f of ["src/pages/aiTryOnResult/index.vue", "src/components/ProfilePopup/ProfilePopup.vue", "src/components/LoginPopup/LoginPopup.vue"]) {
+      expect(read(f), f).not.toMatch(/@keyframes (spin|overlayFadeIn)\b/);
+    }
+  });
+
+  it("输入框字体（🔴CR1）：`.app-input-field` 显式 HarmonyOS ＋ 内联 placeholder-style（scoped 的 placeholder-class 不命中）", () => {
+    const s = read("src/components/ProfilePopup/ProfilePopup.vue");
+    const block = s.slice(s.indexOf(".app-input-field {"), s.indexOf(".app-input-field {") + 400);
+    expect(block).toContain("font-family: 'HarmonyOS-Sans-SC'");
+    expect(s).toContain("PLACEHOLDER_STYLE");
+    expect(s).not.toContain("placeholder-class=");
+  });
+});
+
+describe("渲染级：弹窗经门面确实拿到透明面/层级，遮罩与卡片点击语义正确", () => {
+  it("ProfilePopup：zIndex=1001、custom-style 置透明（🔴CR2）、遮罩点击 cancel→skip 恰好一次、卡片内点击不关闭", async () => {
+    const w = mount(ProfilePopup, { global: { components: { "wd-popup": StubWdPopup } } });
+    expect(w.find(".profile-card").exists()).toBe(true);
+    const stub = w.findComponent(StubWdPopup);
+    expect(stub.props("zIndex")).toBe(1001);
+    expect(stub.props("customStyle")).toContain("--wot-popup-bg: transparent");
+    expect(stub.props("closeOnClickModal")).toBe(true);
+    await w.find(".stub-popup__mask").trigger("click");
+    expect(w.emitted("skip")?.length).toBe(1);
+    await w.find(".profile-card").trigger("click"); // 遮罩为兄弟节点 ⇒ 卡片内点击不得关闭
+    expect(w.emitted("skip")?.length).toBe(1);
   });
 });

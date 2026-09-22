@@ -83,10 +83,6 @@ const emit = defineEmits<{
 </template>
 <style lang="scss" scoped>
 /* 遮罩 + 渐显（全屏：vw/vh 撑满，微信不支持 inset） */
-@keyframes overlayFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
 
 /* 居中卡片 */
 .login-card {

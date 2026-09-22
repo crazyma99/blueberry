@@ -60,7 +60,11 @@ vi.mock("../../src/infrastructure/repositories/wx-auth", () => ({
   createWxAuthRepository: () => ({ exchange: async () => ({ ok: false, error: { kind: "unsupported" } }) }),
 }));
 
+import StubWdPopup from "../stubs/wot/wd-popup/wd-popup.vue";
 import AiTryOnPage from "../../src/pages/aiTryOn/index.vue";
+
+/** wot 桩（CR 🟡10）：门面 BasePopup 内部是 `wd-popup`，不注册会打 Vue warn 且断言退化为「裸元素」 */
+const GLOBAL = { components: { "wd-popup": StubWdPopup } };
 
 const flush = () => new Promise((r) => setTimeout(r, 30));
 
@@ -92,7 +96,7 @@ beforeEach(() => {
 
 describe("pages/aiTryOn（T8 装配）", () => {
   it("默认入口：按 travel 维度加载模板（category=travel，带 shop_id）", async () => {
-    const w = mount(AiTryOnPage);
+    const w = mount(AiTryOnPage, { global: GLOBAL });
     h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
     await flush();
     await w.vm.$nextTick();
@@ -101,7 +105,7 @@ describe("pages/aiTryOn（T8 装配）", () => {
   });
 
   it("⭐albumId=random：先随机解析相册（过滤 tryonDisabled），再按 album_id 精确取模板；相册空则回退本店全部并提示", async () => {
-    const w = mount(AiTryOnPage);
+    const w = mount(AiTryOnPage, { global: GLOBAL });
     h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7", albumId: "random" });
     await flush();
     await w.vm.$nextTick();
@@ -113,7 +117,7 @@ describe("pages/aiTryOn（T8 装配）", () => {
   });
 
   it("生成守卫（未登录）：点生成 → 弹登录弹窗、不发提交请求（守卫顺序逐条已由 t37 覆盖）", async () => {
-    const w = mount(AiTryOnPage);
+    const w = mount(AiTryOnPage, { global: GLOBAL });
     h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
     await flush();
     await w.vm.$nextTick();
@@ -130,7 +134,7 @@ describe("pages/aiTryOn（T8 装配）", () => {
   // 查询参数丢失 ⇒ C 冷启动落在无参页（无门店/相册/模板/品牌上下文）⇒ 模板列表为空、页面空白。
   describe("分享：B 从本页二次转发不得丢参（C 能看到同一上下文）", () => {
     it("landing 页（带 share_from/templateId/shopId/brandId）转发时，path 原样带出全部上下文", async () => {
-      const w = mount(AiTryOnPage);
+      const w = mount(AiTryOnPage, { global: GLOBAL });
       // A 的卡片参数（结果页 buildSharePath 产出的那套）
       h.onLoadCalls[h.onLoadCalls.length - 1]({ share_from: "tryon_result", templateId: "99", shopId: "1010", brandId: "brand9" });
       await flush();
@@ -148,7 +152,7 @@ describe("pages/aiTryOn（T8 装配）", () => {
     });
 
     it("朋友圈（onShareTimeline）query 同样带参（单页模式打开的是本页）", async () => {
-      const w = mount(AiTryOnPage);
+      const w = mount(AiTryOnPage, { global: GLOBAL });
       h.onLoadCalls[h.onLoadCalls.length - 1]({ share_from: "tryon_result", templateId: "11", shopId: "1010", brandId: "brand9" });
       await flush();
       await w.vm.$nextTick();
@@ -161,7 +165,7 @@ describe("pages/aiTryOn（T8 装配）", () => {
     });
 
     it("自己从首页进入（无 share_from）转发：不带 share_from，但仍带自有上下文", async () => {
-      const w = mount(AiTryOnPage);
+      const w = mount(AiTryOnPage, { global: GLOBAL });
       h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
       await flush();
       await w.vm.$nextTick();
@@ -173,7 +177,7 @@ describe("pages/aiTryOn（T8 装配）", () => {
 
     it("空态兜底：模板为空时渲染可读提示与「重新加载」，不再是白屏（页面级）", async () => {
       h.templatesByQuery = () => [];
-      const w = mount(AiTryOnPage);
+      const w = mount(AiTryOnPage, { global: GLOBAL });
       h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
       await flush();
       await w.vm.$nextTick();
@@ -181,7 +185,7 @@ describe("pages/aiTryOn（T8 装配）", () => {
       expect(w.text()).toContain("暂无可试衣模板");
       h.templatesByQuery = (q: Record<string, string>) => (q.album_id != null ? [] : [{ id: 11, imageUrl: "https://lanmei66.cloud/t.png" }]);
       // 🟡负断言：有模板时**不得**出现空态（CR 变异实测「摘 v-if 全绿」＝假绿）
-      const w2 = mount(AiTryOnPage);
+      const w2 = mount(AiTryOnPage, { global: GLOBAL });
       h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
       await flush();
       await w2.vm.$nextTick();
