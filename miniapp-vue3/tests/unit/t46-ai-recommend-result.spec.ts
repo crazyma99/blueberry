@@ -13,6 +13,7 @@ vi.mock("@dcloudio/uni-app", () => ({
   onHide: () => undefined,
   onUnload: () => undefined,
   onShareAppMessage: () => undefined,
+  onShareTimeline: () => undefined,
 }));
 
 vi.mock("../../src/infrastructure/repositories/page-config", () => ({

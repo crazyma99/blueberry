@@ -241,3 +241,57 @@ describe("页面分享卡片接线（三页逐字段核对）", () => {
     w.unmount();
   });
 });
+
+// ===== 2026-09-22 主人拍板 A：相册列表/客片详情补「朋友圈（onShareTimeline）」＋客片详情缺参兜底 =====
+// 判定依据：分享卡片的**落地页自己有没有分享处理器**——有则 B 打开后能用自身状态重建路径（不丢参）；
+// 这两页此前仅好友分享 ⇒ 朋友圈单页模式打开**无 idx** ⇒ 停留空态/加载态（同 bug #8 一族）。
+import DemoDetailPage from "../../src/pages/demoDetail/index.vue";
+import TargetPhotoDetailPage from "../../src/pages/targetPhotoDetail/index.vue";
+
+describe("相册列表/客片详情：朋友圈分享与缺参兜底（主人拍板 A）", () => {
+  const uniStub = () => (globalThis as { uni?: Record<string, unknown> }).uni as Record<string, unknown>;
+
+  it("相册列表：落地页转发不丢参（好友 path 带 idx）", async () => {
+    const w = mount(DemoDetailPage);
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ idx: "7" });
+    await new Promise((r) => setTimeout(r, 30));
+    await w.vm.$nextTick();
+    const share = h.shareCalls[h.shareCalls.length - 1]() as { path: string };
+    expect(share.path).toBe("/pages/demoDetail/index?idx=7");
+  });
+
+  it("相册列表：朋友圈 query 带 idx（单页模式打开的是本页）", async () => {
+    const w = mount(DemoDetailPage);
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ idx: "7" });
+    await new Promise((r) => setTimeout(r, 30));
+    await w.vm.$nextTick();
+    expect(h.timelineCalls.length).toBeGreaterThan(0);
+    const tl = h.timelineCalls[h.timelineCalls.length - 1]() as { query: string };
+    expect(tl.query).toContain("idx=7");
+  });
+
+  it("客片详情：落地页转发不丢参（好友 path 带 idx＋type）；朋友圈 query 同参", async () => {
+    const w = mount(TargetPhotoDetailPage);
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ idx: "55", type: "1010" });
+    await new Promise((r) => setTimeout(r, 30));
+    await w.vm.$nextTick();
+    const share = h.shareCalls[h.shareCalls.length - 1]() as { path: string };
+    expect(share.path).toContain("idx=55");
+    expect(share.path).toContain("type=1010");
+    const tl = h.timelineCalls[h.timelineCalls.length - 1]() as { query: string };
+    expect(tl.query).toBe("idx=55&type=1010");
+  });
+
+  it("客片详情：缺 idx 时兜底（提示 + 回首页 tab），不再停在加载态", async () => {
+    const reLaunch = vi.fn();
+    const showToast = vi.fn();
+    // 本用例只需这两个平台调用（t51 其余用例的 uni 桩在各自体内建立）
+    (globalThis as { uni?: Record<string, unknown> }).uni = { ...(uniStub() ?? {}), reLaunch, showToast };
+    const w = mount(TargetPhotoDetailPage);
+    h.onLoadCalls[h.onLoadCalls.length - 1]({});
+    await new Promise((r) => setTimeout(r, 30));
+    await w.vm.$nextTick();
+    expect(showToast).toHaveBeenCalled();
+    expect(reLaunch).toHaveBeenCalledWith({ url: "/pages/index/index" });
+  });
+});

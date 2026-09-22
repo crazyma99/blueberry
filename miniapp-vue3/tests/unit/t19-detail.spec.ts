@@ -32,7 +32,8 @@ vi.mock("@dcloudio/uni-app", () => ({
   onPullDownRefresh: (fn: () => void) => {
     h.pullDownCalls.push(fn);
   },
-  onShareAppMessage: () => undefined,}));
+  onShareAppMessage: () => undefined,
+  onShareTimeline: () => undefined,}));
 
 import DetailPage from "../../src/pages/targetPhotoDetail/index.vue";
 
@@ -54,14 +55,19 @@ describe("cosThumb／isCosHost（旧端忠实移植，含 CR 🟡 防误命中�
 });
 
 describe("pages/targetPhotoDetail 冒烟（mock 生命周期）", () => {
-  it("缺入参安全停留加载态；有入参 → 详情请求失败收敛错误态＋可重试", async () => {
+  it("缺入参兜底回首页 tab（2026-09-22 主人拍板 A）；有入参 → 详情请求失败收敛错误态＋可重试", async () => {
     const w = mount(DetailPage);
     await w.vm.$nextTick();
     expect(h.onLoadCalls.length).toBeGreaterThan(0);
-    h.onLoadCalls[h.onLoadCalls.length - 1]({ liked: "true" }); // 缺 idx
+    const reLaunch = vi.fn();
+    const toastSpy = vi.fn();
+    const uniObj = (globalThis as { uni?: Record<string, unknown> }).uni ?? {};
+    (globalThis as { uni?: Record<string, unknown> }).uni = { ...uniObj, reLaunch, showToast: toastSpy };
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ liked: "true" }); // 缺 idx ⇒ 兜底
     await flush();
     await w.vm.$nextTick();
-    expect(w.find(".sk-container").exists()).toBe(true);
+    expect(toastSpy).toHaveBeenCalled();
+    expect(reLaunch).toHaveBeenCalledWith({ url: "/pages/index/index" });
     h.onLoadCalls[h.onLoadCalls.length - 1]({ idx: "42", type: "1" });
     await flush();
     await w.vm.$nextTick();

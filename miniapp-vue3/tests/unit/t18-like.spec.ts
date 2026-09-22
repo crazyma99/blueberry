@@ -36,7 +36,8 @@ vi.mock("@dcloudio/uni-app", () => ({
   onPullDownRefresh: (fn: () => void) => {
     h.pullDownCalls.push(fn);
   },
-  onShareAppMessage: () => undefined,}));
+  onShareAppMessage: () => undefined,
+  onShareTimeline: () => undefined,}));
 
 import DemoDetail from "../../src/pages/demoDetail/index.vue";
 

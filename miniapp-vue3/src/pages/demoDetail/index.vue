@@ -4,7 +4,7 @@
 // liked 来自批量 getLikeStatus 合并（:613-619）；点赞乐观更新＋seq 守卫＋失败回滚（:660-693，use-like 移植）。
 // 入参：idx=店铺id、from 来源标记（旧端 index:578-582）；缺 idx 安全失败停留空态。
 import { computed, ref } from "vue";
-import { onLoad, onReachBottom, onShareAppMessage } from "@dcloudio/uni-app";
+import { onLoad, onReachBottom, onShareAppMessage, onShareTimeline } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
@@ -16,6 +16,7 @@ import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
 import { createVersionedStorage } from "../../infrastructure/storage/versioned";
+import { enableShareMenu } from "../../platform/weixin/capabilities";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import { createAlbumRepository, type CategoryBrief } from "../../infrastructure/repositories/albums";
@@ -261,6 +262,11 @@ const { refreshing, indicatorTop } = createPullRefresh({
 });
 
 // 右上角胶囊菜单「转发」（旧端 demoDetail.uvue:292-298 逐字：idx 有值带 idx，否则落首页）
+// 朋友圈（单页模式打开的是**本页**）：必须带 idx，否则落地缺参停在空态（同 bug #8 一族）
+onShareTimeline(() => ({
+  title: shareCard.value.title,
+  query: shopId.value !== "" ? `idx=${shopId.value}` : "",
+}));
 onShareAppMessage(() => ({
   title: shareCard.value.title,
   path: shopId.value !== "" ? "/pages/demoDetail/index?idx=" + shopId.value : "/pages/index/index",
@@ -268,6 +274,8 @@ onShareAppMessage(() => ({
 }));
 
 onLoad((options) => {
+  // 右上角菜单开放「分享给朋友／分享到朋友圈」（2026-09-22 主人拍板 A：本页此前仅好友分享 ⇒ 朋友圈单页模式打开会**无 idx**）
+  enableShareMenu();
   const p = parseListParams((options ?? {}) as Record<string, unknown>);
   if (p == null) return; // 缺 idx 安全失败：停留空态
   void init(p.shopId);

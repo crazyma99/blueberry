@@ -5,11 +5,12 @@
 // 非 shareToken 作品页（P2-11 边界）；BottomActionBar（AI 试衣按钮＋内置版权 footer）已随 2026-09-19 主人反馈补齐
 // ——AI 按钮仅微信渲染（AI 页不进抖音 Profile），版权栏全平台。
 import { computed, ref } from "vue";
-import { onLoad, onShareAppMessage } from "@dcloudio/uni-app";
+import { onLoad, onShareAppMessage, onShareTimeline } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
+import { enableShareMenu } from "../../platform/weixin/capabilities";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
@@ -180,6 +181,11 @@ function goToAiTryOn(): void {
 }
 
 // 右上角胶囊菜单「转发」（旧端 targetPhotoDetail.uvue:164-170 逐字：`?idx=<albumId>&type=<shopId>`）
+// 朋友圈（单页模式打开的是**本页**）：带 idx＋type，否则落地缺参被兜底回首页（同 bug #8 一族）
+onShareTimeline(() => ({
+  title: shareCard.value.title,
+  query: `idx=${albumId.value}&type=${shopId.value}`,
+}));
 onShareAppMessage(() => ({
   title: shareCard.value.title,
   path: `/pages/targetPhotoDetail/index?idx=${albumId.value}&type=${shopId.value}`,
@@ -187,8 +193,15 @@ onShareAppMessage(() => ({
 }));
 
 onLoad((options) => {
+  // 右上角菜单开放「分享给朋友／分享到朋友圈」（2026-09-22 主人拍板 A）
+  enableShareMenu();
   const p = parseDetailParams((options ?? {}) as Record<string, unknown>);
-  if (p == null) return; // 缺 idx 安全失败：停留加载态
+  if (p == null) {
+    // 缺 idx 兜底（2026-09-22）：原为「停留加载态」= 白屏感 ⇒ 提示 + 回首页 tab
+    uni.showToast({ title: "分享链接已失效，请返回首页重新进入", icon: "none" });
+    uni.reLaunch({ url: "/pages/index/index" });
+    return;
+  }
   category.value = p.category;
   subCategory.value = p.subCategory;
   styleText.value = p.style;
