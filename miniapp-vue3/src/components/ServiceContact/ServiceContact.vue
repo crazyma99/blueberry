@@ -212,4 +212,10 @@ withDefaults(
   font-weight: 400;
   margin-bottom: 20rpx;
 }
+
+/* 2026-09-22 主人报「弹窗内字体不对」根因族：自定义组件**默认样式隔离（isolated）** ⇒ app.wxss 的
+   `page{font-family}` 与全局类 `.font-noto-serif`／`.font-harmony` 都进不来 ⇒ 组件内自带声明。 */
+.font-noto-serif {
+  font-family: 'NotoSerifSC-Bold';
+}
 </style>
