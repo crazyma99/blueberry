@@ -63,6 +63,45 @@ export function buildSharePath(input: ShareContextInput): string {
   return path;
 }
 
+export interface TryonContextInput {
+  /** 来源标记：原样透传（从结果页分享进来 ⇒ `tryon_result`；自己从首页进 ⇒ 空） */
+  shareFrom: string;
+  /** 当前选中模板 id（分享后 C 落地即预选同一套系） */
+  templateId: number;
+  shopId: string;
+  albumId: string;
+  style?: string;
+  gender?: string;
+  /** 与 `ShareContextInput` 同口径：无品牌时 `versioned.loadBrandId()` 返回 null ⇒ 视为未设品牌 */
+  brandId?: string | null;
+}
+
+/**
+ * 试衣页自身上下文的 query（**2026-09-22 主人报 Bug 修复点**）。
+ *
+ * 背景：结果页分享给好友的卡片 path＝`/pages/aiTryOn/index?share_from=tryon_result&templateId=…&shopId=…&albumId=…&brandId=…`
+ * （落地页＝**试衣页**）。但试衣页此前**没有实现 `onShareAppMessage`** ⇒ B 从落地页再次转发时走微信**默认转发**，
+ * 查询参数丢失 ⇒ C 冷启动落在**无参**的试衣页（无门店/相册/模板/品牌上下文）⇒ 模板列表为空、页面**空白**。
+ * ⇒ 试衣页显式声明分享 path/query，把当前上下文原样带出，转发链路上**不再依赖平台默认行为**。
+ */
+export function buildTryonContextQuery(input: TryonContextInput): string {
+  const parts: string[] = [];
+  if (input.shareFrom !== "") parts.push(`share_from=${encodeURIComponent(input.shareFrom)}`);
+  if (input.templateId > 0) parts.push(`templateId=${input.templateId}`);
+  if (input.shopId !== "") parts.push(`shopId=${encodeURIComponent(input.shopId)}`);
+  if (input.albumId !== "") parts.push(`albumId=${encodeURIComponent(input.albumId)}`);
+  if (input.style != null && input.style !== "") parts.push(`style=${encodeURIComponent(input.style)}`);
+  if (input.gender != null && input.gender !== "") parts.push(`gender=${encodeURIComponent(input.gender)}`);
+  if (input.brandId != null && input.brandId !== "") parts.push(`brandId=${encodeURIComponent(input.brandId)}`);
+  return parts.join("&");
+}
+
+/** 好友卡片 path（须以 `/` 开头的完整路径） */
+export function buildTryonSharePath(input: TryonContextInput): string {
+  const q = buildTryonContextQuery(input);
+  return q === "" ? "/pages/aiTryOn/index" : `/pages/aiTryOn/index?${q}`;
+}
+
 /** 朋友圈单页模式 query（旧 :537-549）：在试衣页参数基础上**追加 taskId＋shareToken** */
 export function buildShareQuery(input: ShareContextInput & { taskId: string; shareToken: string }): string {
   const path = buildSharePath(input);

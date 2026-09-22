@@ -14,7 +14,7 @@
 // login-flow（旧端直连 auth.uts/loginFlow.uts）；③充值轮询由 coordinator 承担（T9a 冻结：idle→creatingOrder→…→succeeded，
 // 终态释放门闩；超时≠作废，回传 outTradeNo 可用 resume 恢复）；④2026-09-17 主人拍板：抖音侧不注册本页（pages.json `#ifdef MP-WEIXIN`）。
 import { computed, ref } from "vue";
-import { onHide, onLoad, onShow, onUnload } from "@dcloudio/uni-app";
+import { onHide, onLoad, onShareAppMessage, onShareTimeline, onShow, onUnload } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform, type Platform } from "../../ports/context";
@@ -24,9 +24,10 @@ import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
 import { toast, showLoading, hideLoading, showModal } from "../../platform/uni/feedback";
-import { createCaptureGuard, requestTaskNotify } from "../../platform/weixin/capabilities";
+import { createCaptureGuard, enableShareMenu, requestTaskNotify } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
 import { createWeixinPayments } from "../../platform/weixin/payments";
+import { buildTryonSharePath, buildTryonContextQuery } from "../../application/ai-share-routing";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
@@ -100,7 +101,7 @@ const uploader = createAiPhotoUploader({
   headers: () =>
     buildUploadHeaders({
       token: versioned.loadSession()?.token ?? null,
-      brandId: versioned.loadBrandId(),
+      brandId: versioned.loadBrandId() ?? "",
       appCode: PROFILE.appCode,
     }),
 });
@@ -144,6 +145,8 @@ const navTitle = ref("AI试衣");
 const backFallbackUrl = ref("");
 const templates = ref<Array<{ id?: number; imageUrl?: string; tryonDisabled?: boolean }>>([]);
 const currentTemplateIndex = ref(0);
+/** 模板列表是否已加载完（用于空态判定，避免首帧闪空态） */
+const templatesLoaded = ref(false);
 const bodyType = ref("slim"); // slim | medium | fat
 const ageRange = ref("10岁及以下");
 const ageOptions = ["10岁及以下", "11-18岁", "19-30岁", "31-45岁", "46-60岁", "60岁以上"];
@@ -208,7 +211,43 @@ onLoad((options?: Record<string, unknown>) => {
   }
 });
 
+/* ===== 分享（2026-09-22 主人报 Bug 修复）=====
+   结果页分享给好友的卡片**落地页是本页**（试衣页）。本页此前没有实现分享处理器 ⇒ B 从本页二次转发走微信默认转发、
+   查询参数丢失 ⇒ C 冷启动落在无参页 ⇒ 模板列表为空、页面空白。此处显式声明 path/query，把当前上下文原样带出。 */
+function tryonShareContext() {
+  const cur = templates.value[currentTemplateIndex.value];
+  const curId = cur?.id != null ? Number(cur.id) : 0;
+  return {
+    shareFrom: shareFrom.value,
+    templateId: curId > 0 ? curId : shareTemplateId.value, // 优先「当前选中」；无则回落落地预选值
+    shopId: shopId.value,
+    albumId: albumId.value,
+    style: style.value,
+    gender: gender.value,
+    brandId: versioned.loadBrandId(),
+  };
+}
+function tryonShareTitle(): string {
+  const styleName = style.value !== "" ? style.value : "AI 换装";
+  return `我也在${PROFILE.miniAppName} AI 换装，试一下你「${styleName}」的样子`;
+}
+onShareAppMessage(() => {
+  const cur = templates.value[currentTemplateIndex.value];
+  return {
+    title: tryonShareTitle(),
+    path: buildTryonSharePath(tryonShareContext()),
+    ...(cur?.imageUrl != null && cur.imageUrl !== "" ? { imageUrl: cur.imageUrl } : {}),
+  };
+});
+onShareTimeline(() => ({
+  title: tryonShareTitle(),
+  query: buildTryonContextQuery(tryonShareContext()),
+}));
+
 onShow(() => {
+  // 右上角菜单开放「分享给朋友／分享到朋友圈」（2026-09-22：本页新增分享处理器后，需显式开放朋友圈入口；
+  // 平台 API 收在 platform 层，fail-soft）
+  enableShareMenu();
   captureGuard.enable(); // 旧端 :272-273
   updateLoginState();
   if (isLoggedIn.value) void refreshCreditInfo(); // 未登录保持原按钮，避免进页即拉登录
@@ -279,7 +318,15 @@ async function loadTemplates(): Promise<void> {
   } catch (err) {
     console.error("[aiTryOn] 加载模板失败:", err);
     toast("模板加载失败，请重试");
+  } finally {
+    templatesLoaded.value = true;
   }
+}
+
+/** 空态「重新加载」：重置标志后重拉（避免再次瞬间显示空态） */
+function reloadTemplates(): void {
+  templatesLoaded.value = false;
+  void loadTemplates();
 }
 
 async function loadFooter(): Promise<void> {
@@ -545,7 +592,14 @@ function safeDecode(v: string): string {
   <view class="page">
     <CustomNavBar :title="navTitle" :back-fallback-url="backFallbackUrl" />
 
+    <!-- 空态兜底（2026-09-22 主人报 Bug）：分享落地缺门店/相册上下文或接口异常导致模板为空时，**不再白屏** -->
+    <view v-if="templatesLoaded && templates.length === 0" class="tpl-empty">
+      <text class="tpl-empty-title">暂无可试衣模板</text>
+      <text class="tpl-empty-desc">分享链接可能缺少门店或相册信息，请返回首页重新进入</text>
+      <view class="tpl-empty-btn" hover-class="press-dim" @click="reloadTemplates">重新加载</view>
+    </view>
     <AiTemplatePicker
+      v-else
       :templates="templates"
       :current-index="currentTemplateIndex"
       :body-index="bodyIndex"
@@ -694,5 +748,32 @@ function safeDecode(v: string): string {
 .gen-btn-badge-text {
   font-size: 20rpx; /* 旧 --font-size-body-xs=20rpx */
   color: #ffffff;
+}
+
+/* 空态兜底（2026-09-22）：白屏 → 可读提示 + 可重试（分享落地缺参场景） */
+.tpl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $space-xl $space-lg;
+  gap: $space-sm;
+}
+.tpl-empty-title {
+  font-size: $font-size-body-lg;
+  color: $color-action;
+}
+.tpl-empty-desc {
+  font-size: $font-size-body-sm;
+  color: $color-text-secondary;
+  text-align: center;
+}
+.tpl-empty-btn {
+  margin-top: $space-sm;
+  padding: $space-sm $space-lg;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-pill;
+  font-size: $font-size-body;
+  color: $color-action;
 }
 </style>

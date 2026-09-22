@@ -11,6 +11,8 @@ const h = vi.hoisted(() => ({
     q.album_id != null ? [] : [{ id: 11, imageUrl: "https://lanmei66.cloud/t.png" }],
   store: new Map<string, string>(),
   toasts: [] as string[],
+  shareCalls: [] as Array<() => unknown>,
+  timelineCalls: [] as Array<() => unknown>,
 }));
 
 vi.mock("@dcloudio/uni-app", () => ({
@@ -18,6 +20,8 @@ vi.mock("@dcloudio/uni-app", () => ({
   onShow: (fn: () => void) => h.onShowCalls.push(fn),
   onHide: () => undefined,
   onUnload: () => undefined,
+  onShareAppMessage: (fn: () => unknown) => h.shareCalls.push(fn),
+  onShareTimeline: (fn: () => unknown) => h.timelineCalls.push(fn),
 }));
 
 vi.mock("../../src/infrastructure/repositories/ai", () => ({
@@ -64,6 +68,8 @@ beforeEach(() => {
   h.templateQueries.length = 0;
   h.albumQueries.length = 0;
   h.toasts.length = 0;
+  h.shareCalls.length = 0;
+  h.timelineCalls.length = 0;
   h.store.clear();
   (globalThis as { uni?: unknown }).uni = {
     getStorageSync: (k: string) => h.store.get(k) ?? "",
@@ -118,5 +124,65 @@ describe("pages/aiTryOn（T8 装配）", () => {
     // 旧端守卫顺序：登录先于照片 ⇒ 未登录时拉登录弹窗（而非提示上传）
     expect(w.find(".login-overlay").exists()).toBe(true);
     expect(h.toasts).not.toContain("请先上传照片");
+  });
+  // ===== 2026-09-22 主人报 Bug：A→B→C 二次转发后 C 打开空白 =====
+  // 根因：结果页分享卡片的落地页是本页（试衣页），而本页**没有实现分享处理器** ⇒ B 从本页转发走微信默认转发、
+  // 查询参数丢失 ⇒ C 冷启动落在无参页（无门店/相册/模板/品牌上下文）⇒ 模板列表为空、页面空白。
+  describe("分享：B 从本页二次转发不得丢参（C 能看到同一上下文）", () => {
+    it("landing 页（带 share_from/templateId/shopId/brandId）转发时，path 原样带出全部上下文", async () => {
+      const w = mount(AiTryOnPage);
+      // A 的卡片参数（结果页 buildSharePath 产出的那套）
+      h.onLoadCalls[h.onLoadCalls.length - 1]({ share_from: "tryon_result", templateId: "11", shopId: "1010", brandId: "brand9" });
+      await flush();
+      await w.vm.$nextTick();
+      expect(h.shareCalls.length).toBe(1); // 本页必须显式声明（否则走默认转发＝丢参）
+      const share = h.shareCalls[0]() as { title: string; path: string; imageUrl?: string };
+      expect(share.path.startsWith("/pages/aiTryOn/index?")).toBe(true);
+      expect(share.path).toContain("share_from=tryon_result");
+      expect(share.path).toContain("templateId=11"); // 当前选中模板（预选命中）
+      expect(share.path).toContain("shopId=1010");
+      expect(share.path).toContain("brandId=brand9");
+      expect(share.imageUrl).toBe("https://lanmei66.cloud/t.png"); // 以当前模板图作封面
+      expect(share.title).toContain("AI 换装");
+    });
+
+    it("朋友圈（onShareTimeline）query 同样带参（单页模式打开的是本页）", async () => {
+      const w = mount(AiTryOnPage);
+      h.onLoadCalls[h.onLoadCalls.length - 1]({ share_from: "tryon_result", templateId: "11", shopId: "1010", brandId: "brand9" });
+      await flush();
+      await w.vm.$nextTick();
+      expect(h.timelineCalls.length).toBe(1);
+      const tl = h.timelineCalls[0]() as { query: string };
+      expect(tl.query).toContain("share_from=tryon_result");
+      expect(tl.query).toContain("templateId=11");
+      expect(tl.query).toContain("shopId=1010");
+      expect(tl.query).toContain("brandId=brand9");
+    });
+
+    it("自己从首页进入（无 share_from）转发：不带 share_from，但仍带自有上下文", async () => {
+      const w = mount(AiTryOnPage);
+      h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
+      await flush();
+      await w.vm.$nextTick();
+      const share = h.shareCalls[0]() as { path: string };
+      expect(share.path).not.toContain("share_from=");
+      expect(share.path).toContain("shopId=7");
+      expect(share.path).toContain("templateId=11"); // 当前选中模板（自己进入时也带）
+    });
+
+    it("空态兜底：模板为空时渲染可读提示与「重新加载」，不再是白屏（页面级）", async () => {
+      h.templatesByQuery = () => [];
+      const w = mount(AiTryOnPage);
+      h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
+      await flush();
+      await w.vm.$nextTick();
+      expect(w.find(".tpl-empty").exists()).toBe(true);
+      expect(w.text()).toContain("暂无可试衣模板");
+      const before = h.templateQueries.length;
+      await w.find(".tpl-empty-btn").trigger("click");
+      await flush();
+      expect(h.templateQueries.length).toBe(before + 1); // 可重试
+      h.templatesByQuery = (q: Record<string, string>) => (q.album_id != null ? [] : [{ id: 11, imageUrl: "https://lanmei66.cloud/t.png" }]);
+    });
   });
 });

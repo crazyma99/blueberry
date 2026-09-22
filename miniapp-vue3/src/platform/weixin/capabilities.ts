@@ -6,6 +6,7 @@ interface WxLike {
   canIUse?: (schema: string) => boolean;
   setVisualEffectOnCapture?: (options: { visualEffect: string }) => void;
   requestSubscribeMessage?: (options: { tmplIds: string[]; success: () => void; fail: () => void }) => void;
+  showShareMenu?: (options: { menus?: string[] }) => void;
 }
 
 function wxGlobal(): WxLike | undefined {
@@ -35,6 +36,20 @@ export function createCaptureGuard(): CaptureGuard {
     enable: () => setCapture(true),
     disable: () => setCapture(false),
   };
+}
+
+/**
+ * 右上角菜单开放「分享给朋友／分享到朋友圈」（2026-09-22 试衣页新增分享处理器后补：菜单需显式开放朋友圈入口，
+ * 否则 `onShareTimeline` 不可达）。fail-soft：无 `wx`／无该 API／调用异常一律静默（容器安全纪律）。
+ */
+export function enableShareMenu(): void {
+  try {
+    const wx = wxGlobal();
+    if (wx == null || typeof wx.showShareMenu !== "function") return;
+    wx.showShareMenu({ menus: ["shareAppMessage", "shareTimeline"] });
+  } catch {
+    /* 基础库/容器差异：菜单开放失败不影响页面 */
+  }
 }
 
 export interface TaskNotifyResult {
