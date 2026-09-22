@@ -79,6 +79,7 @@ import {
 } from "../../application/ai-share-routing";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
+import BaseLoading from "../../ui/BaseLoading.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 // 2026-09-21 主人：「AI试衣落地页分享的准备 loading 也使用 wotui 的 loading 组件＋token」
 // ⇒ 分享准备遮罩改用**门面** `ui/BaseLoading`（内含 wot `wd-loading`，业务页零 `wd-*` 直用，plan §26/§229）；
@@ -819,9 +820,9 @@ async function loadFooterPair(): Promise<void> {
 
     <!-- 首查中：从 AI试衣列表进入已完成任务时不展示伪进度（主人指示），仅短暂轻加载 -->
     <view v-if="initializing" class="center-content">
-      <view class="loading-wrapper">
-        <view class="loading-spinner"></view>
-      </view>
+      <!-- 2026-09-22 主人：从 AI试衣列表进详情时「一瞬间跳出的旧 loading」＝自绘 `.loading-spinner`（80rpx 白边圆圈）
+           ⇒ 统一改用**门面** `ui/BaseLoading`（内含 wot `wd-loading`，业务页零 `wd-*` 直用） -->
+      <BaseLoading text="加载中" direction="vertical" />
     </view>
 
     <!-- 加载态（伪进度三步条 + Tips；底部双按钮固定于结果落地页同款位置） -->
@@ -841,7 +842,7 @@ async function loadFooterPair(): Promise<void> {
         </view>
         <!-- 只读分享落地：他人作品生成中，保持轻提示 -->
         <view v-else class="gen-panel">
-          <view class="loading-spinner"></view>
+          <BaseLoading text="生成中" direction="vertical" />
           <text class="loading-tip">作品正在生成中，请稍后再来</text>
         </view>
       </view>
