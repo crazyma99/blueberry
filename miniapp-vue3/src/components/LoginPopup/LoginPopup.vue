@@ -88,18 +88,17 @@ const emit = defineEmits<{
 .login-card {
   position: relative;
   width: 620rpx;
-  background: $color-popup-card; /* 旧 var(--color-popup-card) $color-popup-card（App.uvue :90） */
-  border-radius: 4$space-xs; /* 旧 var(--radius-2xl) 4$space-xs（App.uvue :104） */
-  padding: 56rpx 4$space-xs 44rpx;
+  background: #262626; /* 旧 var(--color-popup-card) #262626（App.uvue :90） */
+  border-radius: 48rpx; /* 旧 var(--radius-2xl) 48rpx（App.uvue :104） */
+  padding: 56rpx 48rpx 44rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
-  font-family: $font-family-body; /* 主人指示：字体绑定 token */
   animation: cardPopIn 0.28s ease-out;
 }
 @keyframes cardPopIn {
-  from { opacity: 0; transform: scale(0.92) translateY($space-md); }
+  from { opacity: 0; transform: scale(0.92) translateY(24rpx); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -116,16 +115,16 @@ const emit = defineEmits<{
 }
 
 .card-title {
-  font-size: $font-title;
+  font-size: 40rpx;
   font-weight: 400;
-  color: $color-action; /* 旧 var(--color-primary) $gold */
+  color: $color-action; /* 旧 var(--color-primary) #F1CD91 */
   margin-bottom: 12rpx;
 }
 
 .card-desc {
   font-size: 22rpx; /* 旧 var(--font-size-body-sm) 22rpx */
   color: rgba(255, 255, 255, 0.45);
-  margin-bottom: $font-title;
+  margin-bottom: 40rpx;
 }
 
 /* 协议勾选 */
@@ -134,28 +133,28 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  margin-bottom: $font-title;
+  margin-bottom: 40rpx;
 }
 .agreement-check {
-  width: $font-sub-title;
-  height: $font-sub-title;
+  width: 36rpx;
+  height: 36rpx;
   border-radius: 50%;
   border: 2rpx solid rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: $space-sm;
+  margin-right: 16rpx;
   transition: all 0.15s ease-out;
 }
 .agreement-check.is-checked {
   border-color: $color-action; /* 旧 var(--color-primary) */
-  background: linear-gradient(135deg, #FFDF9F 0%, $gold 45%, #D9A75C 100%); /* 旧 var(--gradient-btn-primary) */
+  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%); /* 旧 var(--gradient-btn-primary) */
 }
 /* 选中对勾（CSS 画勾：两条边框旋转 45 度） */
 .agreement-mark {
-  width: 1$space-xs;
+  width: 18rpx;
   height: 10rpx;
-  border-left: 4rpx solid $color-action-text; /* 旧 var(--color-bg) $ink */
+  border-left: 4rpx solid $color-action-text; /* 旧 var(--color-bg) #160F04 */
   border-bottom: 4rpx solid $color-action-text;
   transform: rotate(-45deg) translate(1rpx, -2rpx);
 }
@@ -174,7 +173,7 @@ const emit = defineEmits<{
 .login-btn {
   width: 100%;
   height: 92rpx;
-  font-size: 2$space-xs; /* 旧 var(--font-size-body-plus) 2$space-xs */
+  font-size: 28rpx; /* 旧 var(--font-size-body-plus) 28rpx */
 }
 .login-btn::after {
   border: none;
@@ -182,8 +181,8 @@ const emit = defineEmits<{
 
 /* 暂不登陆 */
 .login-skip {
-  margin-top: $font-body;
-  padding: 12rpx $font-title;
+  margin-top: 32rpx;
+  padding: 12rpx 40rpx;
   font-size: 22rpx; /* 旧 var(--font-size-body-sm) 22rpx */
   color: rgba(255, 255, 255, 0.4);
   transition: opacity 0.15s ease-out;

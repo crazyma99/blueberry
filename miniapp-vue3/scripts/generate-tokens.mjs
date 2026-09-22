@@ -10,9 +10,6 @@ const RGBA_RE = /^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*(0|1|0?\.\d+)\s*)?\)$
 const DIM_RE = /^-?\d+(\.\d+)?(rpx|ms|s|%)$/;
 const NUM_RE = /^-?\d+(\.\d+)?$/;
 const REF_RE = /^\{(primitive|semantic)\.([A-Za-z0-9_]+)\}$/;
-// 2026-09-22 主人「风格和主题请绑定 token」：字体族（如 HarmonyOS-Sans-SC / NotoSerifSC-Bold）本质是**平台字体资源名**，
-// 也应有单一事实源 ⇒ 仅放行 `fontFamily*` 键（CSS 标识符或逗号分隔族名），其它键仍只认 #hex/rpx/ms/s/%/纯数。
-const FONT_FAMILY_RE = /^[A-Za-z][\w-]*(?:\s+[A-Za-z][\w-]*)*(?:\s*,\s*[A-Za-z][\w-]*(?:\s+[A-Za-z][\w-]*)*)*$/;
 
 function kebab(name) {
   return name.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
@@ -22,7 +19,6 @@ function checkLiteral(layer, key, value) {
   if (typeof value === "number") return; // component 纯数（档位计数）
   if (typeof value !== "string") throw new Error("invalid value type in " + layer + "." + key);
   if (COLOR_RE.test(value) || RGBA_RE.test(value) || DIM_RE.test(value) || NUM_RE.test(value)) return;
-  if (key.startsWith("fontFamily") && FONT_FAMILY_RE.test(value)) return;
   throw new Error("bad unit in " + layer + "." + key + ": " + value + " (uni 只认 #hex/rpx/ms/s/%/纯数)");
 }
 
