@@ -90,6 +90,12 @@ const useNative = isToutiaoPlatform();
 
 <style lang="scss" scoped>
 /* 抖音自绘分支：页面级节点 + fixed，不经过 wot 自定义组件宿主节点 */
+.base-popup {
+  /* 组件样式隔离（默认 isolated）：app.wxss 的 `page{font-family}` 与全局 `.font-harmony` **进不来组件**
+     ⇒ 门面自带正文字体（弹窗内文案在真机才不会是系统字体；2026-09-22 主人报「只弹窗字体不对」的根因） */
+  font-family: 'HarmonyOS-Sans-SC';
+}
+
 .base-popup-native {
   position: fixed;
   top: 0;

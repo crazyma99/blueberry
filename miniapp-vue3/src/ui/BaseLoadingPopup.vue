@@ -79,6 +79,7 @@ const useNative = isToutiaoPlatform();
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  font-family: 'HarmonyOS-Sans-SC'; /* 组件样式隔离（默认 isolated）⇒ app.wxss 的 page/.font-harmony 进不来，必须自带 */
   padding: $space-lg;
   border-radius: #{$popup-radius-rpx}rpx;
   background: $color-page;

@@ -96,7 +96,8 @@ const emit = defineEmits<{
   align-items: center;
   overflow: hidden;
   animation: cardPopIn 0.28s ease-out;
-}
+
+  font-family: 'HarmonyOS-Sans-SC'; /* 组件样式隔离（默认 isolated）⇒ app.wxss 的 page/.font-harmony 进不来，必须自带 */}
 @keyframes cardPopIn {
   from { opacity: 0; transform: scale(0.92) translateY(24rpx); }
   to { opacity: 1; transform: scale(1) translateY(0); }
@@ -119,7 +120,8 @@ const emit = defineEmits<{
   font-weight: 400;
   color: $color-action; /* 旧 var(--color-primary) #F1CD91 */
   margin-bottom: 12rpx;
-}
+
+  font-family: 'NotoSerifSC-Bold'; /* 同上：组件内自带衬线，不依赖全局类 */}
 
 .card-desc {
   font-size: 22rpx; /* 旧 var(--font-size-body-sm) 22rpx */
