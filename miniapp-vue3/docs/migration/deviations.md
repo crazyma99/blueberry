@@ -149,3 +149,12 @@
     **验证**：全量 `vitest` **480 passed／3 skipped**（新增 t54 九例；`t30` 断言同步到 `.album-card/.album-cover/.album-title/.album-time`，点击面改 `.album-mask`）、`vue-tsc` **0 错**、三平台构建 **exit 0**；**变异测试 7 组全部变红**——①AI 改共享值 ②**标准页**改值（双向生效）③旧类名回流 ④追加同名规则 ⑤**三页同改** `gap`（治「一起改错」）⑥删状态层 `pointer-events`（R1 回归）⑦改 `.content` 横向 padding（R2 回归）。
     **产物级证据**：微信 `pages/demoDetail/index.wxss` 与 `pages/aiTryOnHistory/index.wxss` 的 7 条共享选择器声明**逐字相同**（`node`/`python` 双脚本比对）；收藏页 `.photoName` 编译为 `font-size:26rpx;font-weight:400;color:#f1cd91;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`。**抖音端不适用**：AI 六页仅微信注册（产物无该页）⇒ content-box（#20）等抖音坑不涉及；相册列表页两端同源。
     **待真机**：`device-acceptance-checklist.md` **§7**（六条：两页卡片一致／标题金+衬线+单行省略／长标题不溢出／状态卡可点进结果页／骨架同款／抖音端说明）。
+
+31. **抖音端底 tab 图标尺寸优化（2026-09-22，主人指示；微信侧不动）**：主人原话「抖音侧底 tab 是不是和微信不是一套代码，抖音侧仅能使用抖音默认底 tab 导航，目前抖音侧底 tab 的 icon 太大，针对抖音侧进行 icon 大小优化（微信侧不动）」。
+    **①两套代码（实测确认）**：**微信＝自绘 `custom-tab-bar`**（`src/custom-tab-bar/{index.js,wxml,wxss,json}`；图标 `/static/iconpark/{home,price,mine}[-filled].svg`，渲染 **38rpx×38rpx**；页面侧 `tabBar.custom: true`）；**抖音＝`pages.json` 原生 `tabBar`**（`custom` 缺省；图标 `static/{home,price,my}-bar[-dim].png` 6 张，由平台渲染）。⇒ **6 张 PNG 仅抖音使用**（微信自绘栏不引用；`t55` 以此为断言之一）。
+    **②问题与口径**：原生 tabBar 的图标尺寸**平台固定**（无 API 可调），能调的是**图片内容在画布中的占比**——原图 **114×114 画布**里内容占 **72%–93%**（`price-bar` 最宽 106×96 ⇒ 平台观感偏大）。⇒ 本轮**保持画布 114×114 不变**（不改平台缩放映射），把内容等比缩进 **72×72 框并居中**（长边恰 72 ⇒ `home` 62×72、`price` 72×65、`my` 72×72；占用率 ≤65%，线宽等比变细）。
+    **③实现**：用 PIL 对**同一画布内**重排（LANCZOS 缩放 + 居中贴回；`-dim` 变体同法处理，保留其原有压暗口径）；原图 md5 留痕于本次提交说明与 KB（可逐张比对回滚）。
+    **④守卫（防回归）**：新增 `tests/unit/t55-douyin-tabbar-icons.spec.ts`（**4 例**，**纯 Node**：`zlib` 解 PNG + 逐行反滤波求 alpha 包围盒，零新依赖、可进 CI）——画布仍 114×114／内容 ≤72×72 且占用率 ≤65%／三个选中态图标统一装入 72×72 框且居中（留白差 ≤2px）／`pages.json` 仍按「dim＝未选中、原图＝选中」引用且微信自绘栏仍用 `iconpark/`（不引用 PNG）。**变异实测**：把一张图标换回原图 ⇒ **3 例变红**，复原即绿。
+    **⑤微信侧零影响（双向取证）**：微信产物 `app.json` 的 `tabBar.custom = true` ⇒ 原生 tabBar（含 `iconPath`）**不渲染**，底栏由 `custom-tab-bar` 以 `iconpark/*.svg` 38rpx 绘制 ⇒ **视觉与代码均未改动**；6 张 PNG 仅作为静态资源随包（未使用）。
+    **⑥验证与发布**：`vitest` **484 passed／3 skipped**（含 t55 四例）、`vue-tsc` 0 错；抖音产物复核＝6 张图标内容 62–72px／`custom` 缺省／12 页；**P4-13 产物校验 `ok=true`**、包体积 **1.34MB**；`tma preview` 出码（短链 `https://t.zijieimg.com/iXxFD23R/`）＋ **`tma upload -v 0.0.2` 成功**（`🎉 Upload success`）。
+    **⑦待真机**：抖音扫码看底 tab 三图标大小/居中/选中态是否与微信端观感接近（`device-acceptance-checklist.md` §8.3.7）；两图标 `-dim` 压暗态是否仍清晰。
