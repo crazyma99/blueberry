@@ -302,7 +302,7 @@ async function loadTemplates(): Promise<void> {
     if (albumId.value !== "" && list.length === 0) {
       albumId.value = "";
       toast("该相册暂无可试衣客片，已展示本店全部模板");
-      void loadTemplates();
+      await loadTemplates(); // 🟡await：否则本函数 finally 先置 loaded ⇒ 空态先闪一帧（CR 实测 60ms 可见）
       return;
     }
     templates.value = list;
@@ -756,24 +756,24 @@ function safeDecode(v: string): string {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: $space-xl $space-lg;
-  gap: $space-sm;
+  padding: 64rpx 32rpx;
+  gap: 16rpx;
 }
 .tpl-empty-title {
-  font-size: $font-size-body-lg;
-  color: $color-action;
+  font-size: 28rpx;
+  color: #F1CD91;
 }
 .tpl-empty-desc {
-  font-size: $font-size-body-sm;
-  color: $color-text-secondary;
+  font-size: 24rpx;
+  color: rgba(241, 205, 145, 0.7);
   text-align: center;
 }
 .tpl-empty-btn {
-  margin-top: $space-sm;
-  padding: $space-sm $space-lg;
-  border: 1rpx solid $color-border;
-  border-radius: $radius-pill;
-  font-size: $font-size-body;
-  color: $color-action;
+  margin-top: 16rpx;
+  padding: 16rpx 32rpx;
+  border: 1rpx solid rgba(241, 205, 145, 0.3);
+  border-radius: 32rpx;
+  font-size: 32rpx;
+  color: #F1CD91;
 }
 </style>

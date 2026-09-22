@@ -132,14 +132,15 @@ describe("pages/aiTryOn（T8 装配）", () => {
     it("landing 页（带 share_from/templateId/shopId/brandId）转发时，path 原样带出全部上下文", async () => {
       const w = mount(AiTryOnPage);
       // A 的卡片参数（结果页 buildSharePath 产出的那套）
-      h.onLoadCalls[h.onLoadCalls.length - 1]({ share_from: "tryon_result", templateId: "11", shopId: "1010", brandId: "brand9" });
+      h.onLoadCalls[h.onLoadCalls.length - 1]({ share_from: "tryon_result", templateId: "99", shopId: "1010", brandId: "brand9" });
       await flush();
       await w.vm.$nextTick();
       expect(h.shareCalls.length).toBe(1); // 本页必须显式声明（否则走默认转发＝丢参）
       const share = h.shareCalls[0]() as { title: string; path: string; imageUrl?: string };
       expect(share.path.startsWith("/pages/aiTryOn/index?")).toBe(true);
       expect(share.path).toContain("share_from=tryon_result");
-      expect(share.path).toContain("templateId=11"); // 当前选中模板（预选命中）
+      expect(share.path).toContain("templateId=11"); // 取**当前选中**（落参 99 不在列表内 ⇒ 回落第一项 11）
+      expect(share.path).not.toContain("templateId=99");
       expect(share.path).toContain("shopId=1010");
       expect(share.path).toContain("brandId=brand9");
       expect(share.imageUrl).toBe("https://lanmei66.cloud/t.png"); // 以当前模板图作封面
@@ -178,6 +179,14 @@ describe("pages/aiTryOn（T8 装配）", () => {
       await w.vm.$nextTick();
       expect(w.find(".tpl-empty").exists()).toBe(true);
       expect(w.text()).toContain("暂无可试衣模板");
+      h.templatesByQuery = (q: Record<string, string>) => (q.album_id != null ? [] : [{ id: 11, imageUrl: "https://lanmei66.cloud/t.png" }]);
+      // 🟡负断言：有模板时**不得**出现空态（CR 变异实测「摘 v-if 全绿」＝假绿）
+      const w2 = mount(AiTryOnPage);
+      h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
+      await flush();
+      await w2.vm.$nextTick();
+      expect(w2.find(".tpl-empty").exists()).toBe(false);
+      expect(w2.find(".album-card, .template-swiper, .swiper-wrap").exists() || w2.text().length > 0).toBe(true);
       const before = h.templateQueries.length;
       await w.find(".tpl-empty-btn").trigger("click");
       await flush();
