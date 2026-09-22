@@ -20,6 +20,7 @@
 // token 映射与 LoginPopup 同口径（详见其页头）：金色 → tokens.semantic.colorAction；
 // 墨色 → tokens.semantic.colorActionText；深色卡片/渐变/字号档位 → 硬编码并注释。
 import { ref } from "vue";
+import BasePopup from "../../ui/BasePopup.vue";
 
 withDefaults(
   defineProps<{
@@ -47,8 +48,11 @@ function onNicknameInput(e: unknown): void {
 </script>
 
 <template>
-  <view class="profile-overlay" @click="emit('skip')">
-    <view class="profile-card" @click.stop>
+  <!-- 2026-09-22 主人两项：①「完善个人资料」弹窗文字须为 HarmonyOS Sans（本仓 HarmonyOS 靠全局类 `.font-harmony`，
+       默认仍是系统字体）⇒ 容器挂类、所有文案继承（标题 font-noto-serif 优先）；②弹窗统一走 **wot Popup 门面** `ui/BasePopup`
+       （内部＝wot `wd-popup`，遮罩点击关闭由门面 `cancel` 转发为 `skip`，业务组件零 `wd-*` 直用）。 -->
+  <BasePopup :show="true" position="center" @cancel="emit('skip')">
+    <view class="profile-card font-harmony">
       <!-- 顶部氛围光 -->
       <view class="card-aura"></view>
       <view class="card-title font-noto-serif">完善个人资料</view>
@@ -81,24 +85,10 @@ function onNicknameInput(e: unknown): void {
       <button class="confirm-btn btn-primary" hover-class="press-dim" @click="emit('submit')">确认</button>
       <view class="profile-skip" hover-class="press-dim" @click="emit('skip')">跳过</view>
     </view>
-  </view>
+  </BasePopup>
 </template>
 
 <style lang="scss" scoped>
-/* 遮罩 + 渐显（全屏：vw/vh 撑满） */
-.profile-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-  animation: overlayFadeIn 0.25s ease-out;
-}
 @keyframes overlayFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

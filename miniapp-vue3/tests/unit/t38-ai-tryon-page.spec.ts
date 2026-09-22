@@ -117,12 +117,12 @@ describe("pages/aiTryOn（T8 装配）", () => {
     h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
     await flush();
     await w.vm.$nextTick();
-    expect(w.find(".login-overlay").exists()).toBe(false);
+    expect(w.find(".login-card").exists()).toBe(false); // 2026-09-22 起登录弹窗走 wot Popup 门面（原 .login-overlay 已删）
     await w.find(".generate-btn").trigger("click");
     await flush();
     await w.vm.$nextTick();
     // 旧端守卫顺序：登录先于照片 ⇒ 未登录时拉登录弹窗（而非提示上传）
-    expect(w.find(".login-overlay").exists()).toBe(true);
+    expect(w.find(".login-card").exists()).toBe(true);
     expect(h.toasts).not.toContain("请先上传照片");
   });
   // ===== 2026-09-22 主人报 Bug：A→B→C 二次转发后 C 打开空白 =====

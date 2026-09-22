@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BasePopup from "../../ui/BasePopup.vue";
 // LoginPopup — 手机号快捷登录弹窗（全局居中弹窗 · 品牌视觉统一）
 // 旧端源：/home/majunhi/blueberry/src/components/LoginPopup/LoginPopup.uvue（198 行）
 // 忠实移植：模板 :9-47；props :52-65；emits :66；样式 :75-198。
@@ -41,8 +42,9 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <view class="login-overlay" @click="emit('close')">
-    <view class="login-card" @click.stop>
+  <!-- 2026-09-22 主人第③项：弹窗统一走 **wot Popup 门面** `ui/BasePopup`（内部＝wot `wd-popup`）；遮罩点击关闭由门面 `cancel` 转发 -->
+  <BasePopup :show="true" position="center" @cancel="emit('close')">
+    <view class="login-card font-harmony">
       <!-- 顶部氛围光 -->
       <view class="card-aura"></view>
       <view class="card-title font-noto-serif">手机号快捷登陆</view>
@@ -77,24 +79,10 @@ const emit = defineEmits<{
 
       <view class="login-skip" hover-class="press-dim" @click="emit('close')">暂不登陆</view>
     </view>
-  </view>
+    </BasePopup>
 </template>
-
 <style lang="scss" scoped>
 /* 遮罩 + 渐显（全屏：vw/vh 撑满，微信不支持 inset） */
-.login-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-  animation: overlayFadeIn 0.25s ease-out;
-}
 @keyframes overlayFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
