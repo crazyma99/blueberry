@@ -1039,9 +1039,6 @@ async function loadFooterPair(): Promise<void> {
 .gen-btn::after {
   border: none;
 }
-.gen-panel .loading-spinner {
-  margin-bottom: 16rpx;
-}
 
 /* 加载态（旧 :1097-1133） */
 .loading-wrapper {
@@ -1050,17 +1047,6 @@ async function loadFooterPair(): Promise<void> {
   align-items: center;
   /* CR 🟡 修复：打断百分比宽度循环依赖，让内层面板宽度确定 */
   width: 100%;
-}
-.loading-spinner {
-  width: 80rpx;
-  height: 80rpx;
-  border: 6rpx solid rgba(255, 255, 255, 0.2);
-  border-top-color: rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  margin-bottom: 48rpx;
-  /* 面板改 stretch 后，固定尺寸的 spinner 仍需自身居中 */
-  align-self: center;
-  animation: spin 1s linear infinite;
 }
 @keyframes spin {
   from {

@@ -14,8 +14,14 @@ withDefaults(
     position?: "center" | "top" | "right" | "bottom" | "left";
     closable?: boolean;
     rootPortal?: boolean;
+    /**
+     * 弹层层级。⚠️ **必须显式给**（与 `BaseLoadingPopup` 同家法、`deviations #29`／独立 CR 同族结论）：
+     * wot `wd-popup` 默认 `z-index: 10`（`npx wot info Popup` 实测），而本仓自绘标题栏 `z-index: 998`
+     * （`components/CustomNavBar`，不透明）⇒ 默认值下遮罩**盖不住顶栏**（不压暗、返回键仍可点）；抖音自绘分支须一致。
+     */
+    zIndex?: number;
   }>(),
-  { show: false, title: "", position: "center", closable: false, rootPortal: true },
+  { show: false, title: "", position: "center", closable: false, rootPortal: true, zIndex: 1001 },
 );
 
 const emit = defineEmits<{
@@ -51,6 +57,7 @@ const useNative = isToutiaoPlatform();
     :position="position"
     :closable="closable"
     :root-portal="rootPortal"
+    :z-index="zIndex"
     @close="onClose"
     @update:model-value="onModelValueUpdate"
   >
@@ -59,7 +66,7 @@ const useNative = isToutiaoPlatform();
       <slot />
     </view>
   </wd-popup>
-  <view v-else-if="show" class="base-popup-native">
+  <view v-else-if="show" class="base-popup-native" :style="{ zIndex }">
     <view class="base-popup-native__mask" @click="onClose" />
     <view class="base-popup-native__box">
       <view v-if="closable" class="base-popup-native__close" @click="onClose">

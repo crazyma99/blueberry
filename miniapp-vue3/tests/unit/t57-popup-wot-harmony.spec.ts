@@ -45,4 +45,29 @@ describe("弹窗统一 wot Popup 门面 ＋ HarmonyOS Sans 文案", () => {
     expect(read("src/components/ProfilePopup/ProfilePopup.vue")).toContain('@cancel="emit(\'skip\')"');
     expect(read("src/components/LoginPopup/LoginPopup.vue")).toContain('@cancel="emit(\'close\')"');
   });
+
+  // ===== 本批①：AI 试衣详情「旧 loading」→ wot loading 门面（变异实测：换回旧 spinner 时全仓 497 例全绿 ⇒ 原零守卫）=====
+  it("aiTryOnResult：经门面 BaseLoading 渲染（加载中/生成中），旧自绘 spinner 与样式不得回流", () => {
+    const page = read("src/pages/aiTryOnResult/index.vue");
+    expect(page).toContain('import BaseLoading from "../../ui/BaseLoading.vue";');
+    expect(page).toContain('<BaseLoading text="加载中" direction="vertical" />');
+    expect(page).toContain('<BaseLoading text="生成中" direction="vertical" />');
+    expect(page).not.toContain('class="loading-spinner"'); // 旧自绘 spinner 不得回流
+    expect(/\n[ \t]*[^\n{}]*\.loading-spinner[^\n{}]*\{/.test(page), "死样式规则不得回流").toBe(false);
+  });
+
+  it("门面 `ui/BaseLoading` 内部确为 wot `wd-loading`（业务页零 wd-* 直用）", () => {
+    const facade = read("src/ui/BaseLoading.vue");
+    expect(facade).toContain("wd-loading");
+  });
+
+  // ===== 抖音兼容性：门面必须在两端都盖得住（#29 家法＝1001；抖音走自绘分支，froze 分支须同层级）=====
+  it("`ui/BasePopup` 显式层级 zIndex 默认 1001，且 wot 分支与抖音自绘分支都用到（两端口径一致）", () => {
+    const facade = read("src/ui/BasePopup.vue");
+    expect(facade).toContain("zIndex: 1001"); // 默认值家法
+    expect(facade).toContain(':z-index="zIndex"'); // 微信（wot wd-popup）分支显式透传
+    expect(facade).toContain(':style="{ zIndex }"'); // 抖音自绘分支同层级
+    expect(facade).toContain("wd-popup");
+    expect(facade).toContain("base-popup-native"); // 抖音/无 wot 环境自绘分支
+  });
 });
