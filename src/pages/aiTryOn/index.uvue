@@ -6,8 +6,15 @@
 			<text class="tip-text">左右横向滑动支持切换模板</text>
 		</view>
 
+		<!-- 空态兜底（2026-09-22 主人报 Bug）：分享落地缺门店/相册上下文或接口异常导致模板为空时，**不再白屏** -->
+		<view v-if="templatesLoaded && templates.length === 0" class="tpl-empty">
+			<text class="tpl-empty-title">暂无可试衣模板</text>
+			<text class="tpl-empty-desc">分享链接可能缺少门店或相册信息，请返回首页重新进入</text>
+			<view class="tpl-empty-btn" @click="reloadTemplates">重新加载</view>
+		</view>
+
 		<!-- 服饰模板轮播 -->
-		<view class="swiper-wrap">
+		<view v-if="templates.length > 0" class="swiper-wrap">
 			<swiper
 				class="template-swiper"
 				:circular="true"
@@ -21,7 +28,7 @@
 		</view>
 
 		<!-- 模板缩略图横滑条：展示当前相册全部模板，点击直达；箭头折叠/展开（默认展开），位于主图下方不遮挡 -->
-		<view class="thumb-strip">
+		<view v-if="templates.length > 0" class="thumb-strip">
 			<view class="thumb-strip-head" @click="toggleThumbStrip">
 				<image class="thumb-strip-arrow" :class="thumbCollapsed ? '' : 'thumb-strip-arrow-up'" src="/static/iconpark/down.svg" mode="aspectFit"></image>
 				<text class="thumb-strip-label">模板快速选择（{{ templates.length }}）</text>
@@ -133,7 +140,7 @@
 <script lang="uts">
 import { getAiTemplates, getAlbumList, uploadPhoto, submitAiTryOn, rejectAllPendingUploads, getCreditBalance, createCreditRecharge, getCreditRechargeStatus } from '../../utils/api.uts'
 import { checkUploadPhoto } from '../../utils/photoCheck.uts'
-import { setBrandId } from '../../utils/brand.uts'
+import { getBrandId, setBrandId } from '../../utils/brand.uts'
 import { isLoggedIn, getUserInfo, mergeUserInfo, UserInfo, consumeLoginExpired } from '../../utils/auth.uts'
 import { runPhoneLogin } from '../../utils/loginFlow.uts'
 import { submitUserProfile } from '../../utils/profileSubmit.uts'
@@ -163,6 +170,7 @@ export default {
 			navTitle: 'AI试衣',
 			backFallbackUrl: '',
 			templates: [] as any[],
+			templatesLoaded: false,		// 模板是否已加载完（空态判定，避免首帧闪空态）
 			currentTemplateIndex: 0,		thumbCollapsed: false,   // 模板缩略图条折叠态（默认展开）
 			bodyType: 'slim',
 			ageRange: '10岁及以下',
@@ -216,6 +224,50 @@ export default {
 			return '瘦'
 		}
 	},
+	// ===== 分享（2026-09-22 主人报 Bug 修复）=====
+	// 结果页分享给好友的卡片**落地页是本页**（试衣页，见 aiTryOnResult.buildSharePath）。
+	// 本页此前没有实现分享处理器 ⇒ B 从本页二次转发走微信默认转发、查询参数丢失 ⇒ C 冷启动落在无参页
+	// （无门店/相册/模板/品牌上下文）⇒ 模板列表为空、页面空白。此处显式声明 path/query，把当前上下文原样带出。
+	buildTryonShareQuery() : string {
+		let q = ''
+		if (this.shareFrom !== '') q = q + 'share_from=' + encodeURIComponent(this.shareFrom)
+		// 当前选中模板优先（分享后 C 落地即预选同一套系）；无则回落落地预选值
+		let curId = 0
+		const cur = this.templates[this.currentTemplateIndex]
+		if (cur != null && cur.id != null) curId = Number(cur.id)
+		if (curId <= 0) curId = this.shareTemplateId
+		if (curId > 0) q = q + (q === '' ? '' : '&') + 'templateId=' + curId
+		if (this.shopId !== '') q = q + (q === '' ? '' : '&') + 'shopId=' + encodeURIComponent(this.shopId)
+		if (this.albumId !== '') q = q + (q === '' ? '' : '&') + 'albumId=' + encodeURIComponent(this.albumId)
+		if (this.style !== '') q = q + (q === '' ? '' : '&') + 'style=' + encodeURIComponent(this.style)
+		if (this.gender !== '') q = q + (q === '' ? '' : '&') + 'gender=' + encodeURIComponent(this.gender)
+		const brandId = getBrandId()
+		if (brandId !== '') q = q + (q === '' ? '' : '&') + 'brandId=' + encodeURIComponent(brandId)
+		return q
+	},
+	buildTryonShareTitle() : string {
+		const styleName = this.style !== '' ? this.style : 'AI 换装'
+		return `我也在蓝梅云 AI 换装，试一下你「${styleName}」的样子`
+	},
+	onShareAppMessage() : any {
+		const q = this.buildTryonShareQuery()
+		const cur = this.templates[this.currentTemplateIndex]
+		const res : any = {
+			title: this.buildTryonShareTitle(),
+			path: q === '' ? '/pages/aiTryOn/index' : '/pages/aiTryOn/index?' + q
+		}
+		if (cur != null && cur.imageUrl != null && cur.imageUrl !== '') {
+			res.imageUrl = cur.imageUrl
+		}
+		return res
+	},
+	onShareTimeline() : any {
+		return {
+			title: this.buildTryonShareTitle(),
+			query: this.buildTryonShareQuery()
+		}
+	},
+
 	onLoad(options) {
 		if (options && options.shopId) {
 			this.shopId = String(options.shopId)
@@ -269,6 +321,14 @@ export default {
 		}
 	},
 	onShow() {
+		// 右上角菜单开放「分享给朋友／分享到朋友圈」（2026-09-22：本页新增分享处理器后，菜单需显式开放朋友圈入口）
+		// #ifdef MP-WEIXIN
+		if (typeof wx !== 'undefined' && (wx as any).showShareMenu != null) {
+			try {
+				(wx as any).showShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
+			} catch (e) {}
+		}
+		// #endif
 		// 防截屏：进页开启（微信原生 API，仅小程序端生效）
 		this.enableCaptureProtection()
 		// 监听 401 登录过期事件，自动拉起登录弹窗
@@ -393,7 +453,15 @@ export default {
 			} catch (err) {
 				console.error('[aiTryOn] 加载模板失败:', err)
 				uni.showToast({ title: '模板加载失败，请重试', icon: 'none' })
+			} finally {
+				this.templatesLoaded = true
 			}
+		},
+
+		/** 空态「重新加载」（分享落地缺参/接口异常时不再白屏） */
+		reloadTemplates() {
+			this.templatesLoaded = false
+			this.loadTemplates()
 		},
 
 		onSwiperChange(e: any) {
@@ -1173,4 +1241,30 @@ export default {
 	color: #fff;
 }
 
+	/* 空态兜底（2026-09-22）：白屏 → 可读提示 + 可重试（分享落地缺参场景） */
+	.tpl-empty {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 64rpx 32rpx;
+	}
+	.tpl-empty-title {
+		font-size: 28rpx;
+		color: var(--color-primary);
+	}
+	.tpl-empty-desc {
+		margin-top: 16rpx;
+		font-size: 24rpx;
+		color: var(--color-text-secondary);
+		text-align: center;
+	}
+	.tpl-empty-btn {
+		margin-top: 24rpx;
+		padding: 16rpx 32rpx;
+		border: 1rpx solid var(--color-primary-30);
+		border-radius: 32rpx;
+		font-size: 26rpx;
+		color: var(--color-primary);
+	}
 </style>
