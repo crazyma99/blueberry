@@ -8,6 +8,7 @@
 //  对外合同（props/emits/expose）不变；confirm/cancel/clear 事件语义两条分支完全一致。
 import { ref, watch } from "vue";
 import { isToutiaoPlatform } from "./ui-platform";
+import { hapticTap } from "../application/haptics";
 
 export interface PickerOption {
   label: string;
@@ -39,6 +40,7 @@ function onConfirm(value: (string | number)[]) {
   emit("update:show", false);
 }
 function onCancel() {
+  hapticTap(); // 弹层内交互：触感统一（主人 2026-09-23）
   emit("cancel");
   emit("update:show", false);
 }
@@ -47,6 +49,7 @@ function onVisibleChange(v: boolean) {
   if (!v && props.show) emit("update:show", false);
 }
 function onClear() {
+  hapticTap(); // 弹层内交互：触感统一（主人 2026-09-23）
   emit("clear");
   emit("update:modelValue", []);
 }
@@ -64,9 +67,11 @@ watch(
   { immediate: true },
 );
 function onSelect(value: string | number) {
+  hapticTap(); // 弹层内交互：触感统一（主人 2026-09-23）
   draft.value = [value];
 }
 function onNativeConfirm() {
+  hapticTap(); // 弹层内交互：触感统一（主人 2026-09-23）
   onConfirm([...draft.value]);
 }
 </script>
@@ -98,6 +103,7 @@ function onNativeConfirm() {
             :key="String(opt.value)"
             class="base-picker-native__item"
             :class="{ 'base-picker-native__item--active': draft.includes(opt.value) }"
+            hover-class="press-dim"
             @click="onSelect(opt.value)"
           >
             <text>{{ opt.label }}</text>
@@ -108,6 +114,7 @@ function onNativeConfirm() {
     <view
       v-if="clearable && modelValue.length > 0"
       class="base-picker__clear"
+      hover-class="press-dim"
       @click="onClear"
     >
       清空

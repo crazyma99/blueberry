@@ -23,6 +23,7 @@
 // token 映射与 LoginPopup 同口径（详见其页头）：金色 → tokens.semantic.colorAction；
 // 墨色 → tokens.semantic.colorActionText；深色卡片/渐变/字号档位 → 硬编码并注释。
 import { ref } from "vue";
+import { hapticTap } from "../../application/haptics";
 import BasePopup from "../../ui/BasePopup.vue";
 
 /** 🟡CR3：`placeholder-class` 在 scoped 下**永不命中**（基座自造 class，不带 data-v）⇒ 改内联 style（含字体，见 🔴1） */
@@ -42,6 +43,19 @@ const emit = defineEmits<{
   (e: "submit"): void;
   (e: "skip"): void;
 }>();
+/** 弹层内交互统一「**触感反馈 ＋ 按压反馈**」（主人 2026-09-23：「Popup 内的按钮缺少震动反馈和按压效果」）——
+ *  与全站自绘按钮（`hover-class="press-dim"` ＋ `hapticTap()`）保持同一口径；`hapticTap` 失败静默、不影响业务。 */
+function onAvatarTap(): void {
+  hapticTap();
+}
+function onSubmit(): void {
+  hapticTap();
+  emit("submit");
+}
+function onSkip(): void {
+  hapticTap();
+  emit("skip");
+}
 
 // 内联 AppInput 的聚焦态（旧 AppInput.uvue :31-32 data.focused；@focus/@blur 切换金描边）
 const inputFocused = ref(false);
@@ -65,7 +79,7 @@ function onNicknameInput(e: unknown): void {
       <view class="card-desc">设置头像和昵称以获得完整体验</view>
 
       <!-- 头像选择 -->
-      <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="emit('choose-avatar', $event)">
+      <button class="avatar-btn" hover-class="press-dim" open-type="chooseAvatar" @click="onAvatarTap" @chooseavatar="emit('choose-avatar', $event)">
         <image class="avatar-img" :src="avatarUrl || '/static/iconpark/mine.svg'" mode="aspectFill"></image>
         <view class="avatar-badge">+</view>
         <text class="avatar-tip">点击选择头像</text>
@@ -88,8 +102,8 @@ function onNicknameInput(e: unknown): void {
         </view>
       </view>
 
-      <button class="confirm-btn btn-primary" hover-class="press-dim" @click="emit('submit')">确认</button>
-      <view class="profile-skip" hover-class="press-dim" @click="emit('skip')">跳过</view>
+      <button class="confirm-btn btn-primary" hover-class="press-dim" @click="onSubmit">确认</button>
+      <view class="profile-skip" hover-class="press-dim" @click="onSkip">跳过</view>
     </view>
   </BasePopup>
 </template>

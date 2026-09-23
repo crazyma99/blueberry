@@ -6,6 +6,7 @@
 // 失效的 fixed 链内 ⇒ 点击无响应；抖音端照搬 BasePopup 已真机验证的自绘模式降级。
 import { ref } from "vue";
 import { isToutiaoPlatform } from "./ui-platform";
+import { hapticTap } from "../application/haptics";
 import { useDialog } from "./wot-composables";
 export interface BaseDialogOptions {
   title?: string;
@@ -41,6 +42,7 @@ function confirm(options: BaseDialogOptions = {}): Promise<"confirm" | "cancel">
 }
 
 function settle(result: "confirm" | "cancel") {
+  hapticTap(); // 弹层内按钮：触感统一（主人 2026-09-23）
   visible.value = false;
   const r = resolver;
   resolver = null;
@@ -64,11 +66,12 @@ defineExpose<{ confirm: (options?: BaseDialogOptions) => Promise<"confirm" | "ca
         <view
           v-if="showCancel"
           class="base-dialog-native__btn base-dialog-native__btn--cancel"
+          hover-class="press-dim"
           @click="settle('cancel')"
         >
           <text class="base-dialog-native__btn-text base-dialog-native__btn-text--cancel">取消</text>
         </view>
-        <view class="base-dialog-native__btn base-dialog-native__btn--confirm" @click="settle('confirm')">
+        <view class="base-dialog-native__btn base-dialog-native__btn--confirm" hover-class="press-dim" @click="settle('confirm')">
           <text class="base-dialog-native__btn-text">确认</text>
         </view>
       </view>

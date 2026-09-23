@@ -8,6 +8,7 @@
 import { computed } from "vue";
 import BasePopup from "../../ui/BasePopup.vue";
 import { PHOTO_GATE_ACCEPT_ASSET, resolvePhotoGateCopy } from "../../application/photo-gate";
+import { hapticTap } from "../../application/haptics";
 
 const props = withDefaults(
   defineProps<{
@@ -26,6 +27,16 @@ const emit = defineEmits<{
   (e: "retry"): void;
   (e: "close"): void;
 }>();
+
+/** 弹层内按钮：**触感反馈 ＋ 按压反馈**与全站一致（主人 2026-09-23：「Popup 内的按钮缺少震动反馈和按压效果」） */
+function onRetry(): void {
+  hapticTap();
+  emit("retry");
+}
+function onClose(): void {
+  hapticTap();
+  emit("close");
+}
 
 const base = computed(() => resolvePhotoGateCopy(props.code));
 const copy = computed(() => ({
@@ -59,10 +70,10 @@ const copy = computed(() => ({
       <text class="qr-note">本次未消耗试衣次数</text>
 
       <view class="qr-actions">
-        <view class="qr-btn qr-btn--primary" @click="emit('retry')">
+        <view class="qr-btn qr-btn--primary" hover-class="press-dim" @click="onRetry">
           <text class="qr-btn-text qr-btn-text--primary">重新选择照片</text>
         </view>
-        <view class="qr-btn qr-btn--ghost" @click="emit('close')">
+        <view class="qr-btn qr-btn--ghost" hover-class="press-dim" @click="onClose">
           <text class="qr-btn-text qr-btn-text--ghost">知道了</text>
         </view>
       </view>

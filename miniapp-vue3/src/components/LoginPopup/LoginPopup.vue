@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BasePopup from "../../ui/BasePopup.vue";
+import { hapticTap } from "../../application/haptics";
 // LoginPopup — 手机号快捷登录弹窗（全局居中弹窗 · 品牌视觉统一）
 // 旧端源：/home/majunhi/blueberry/src/components/LoginPopup/LoginPopup.uvue（198 行）
 // 忠实移植：模板 :9-47；props :52-65；emits :66；样式 :75-198。
@@ -42,6 +43,31 @@ const emit = defineEmits<{
   (e: "open-privacy"): void;
   (e: "get-phone", event: unknown): void;
 }>();
+/** 弹层内交互统一「**触感反馈 ＋ 按压反馈**」（主人 2026-09-23：「Popup 内的按钮缺少震动反馈和按压效果」）——
+ *  与全站自绘按钮（`hover-class="press-dim"` ＋ `hapticTap()`）保持同一口径；`hapticTap` 失败静默、不影响业务。 */
+function onToggleAgreement(): void {
+  hapticTap();
+  emit("toggle-agreement");
+}
+function onOpenUser(): void {
+  hapticTap();
+  emit("open-user");
+}
+function onOpenPrivacy(): void {
+  hapticTap();
+  emit("open-privacy");
+}
+function onPhoneTap(): void {
+  hapticTap();
+}
+function onOneKeyLogin(): void {
+  hapticTap();
+  emit("show-toast");
+}
+function onSkip(): void {
+  hapticTap();
+  emit("close");
+}
 </script>
 
 <template>
@@ -54,15 +80,15 @@ const emit = defineEmits<{
       <view class="card-desc">登录后可使用收藏与 AI 试衣</view>
 
       <!-- 协议勾选（自绘） -->
-      <view class="agreement-row" @click="emit('toggle-agreement')">
+      <view class="agreement-row" hover-class="press-dim" @click="onToggleAgreement">
         <view :class="agreementChecked ? 'agreement-check is-checked' : 'agreement-check'">
           <view v-if="agreementChecked" class="agreement-mark"></view>
         </view>
         <text class="agreement-text">
           <text>登录即代表同意 </text>
-          <text class="agreement-link" @click.stop="emit('open-user')">{{ userAgreementName }}</text>
+          <text class="agreement-link" @click.stop="onOpenUser">{{ userAgreementName }}</text>
           <text>、</text>
-          <text class="agreement-link" @click.stop="emit('open-privacy')">{{ privacyPolicyName }}</text>
+          <text class="agreement-link" @click.stop="onOpenPrivacy">{{ privacyPolicyName }}</text>
         </text>
       </view>
 
@@ -70,17 +96,19 @@ const emit = defineEmits<{
       <button
         v-if="agreementChecked"
         class="login-btn btn-primary"
+        hover-class="press-dim"
         open-type="getPhoneNumber"
+        @click="onPhoneTap"
         @getphonenumber="emit('get-phone', $event)"
       >一键登录</button>
       <button
         v-else
         class="login-btn btn-primary"
         hover-class="press-dim"
-        @click="emit('show-toast')"
+        @click="onOneKeyLogin"
       >一键登录</button>
 
-      <view class="login-skip" hover-class="press-dim" @click="emit('close')">暂不登陆</view>
+      <view class="login-skip" hover-class="press-dim" @click="onSkip">暂不登陆</view>
     </view>
     </BasePopup>
 </template>
