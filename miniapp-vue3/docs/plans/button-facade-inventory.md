@@ -40,11 +40,11 @@
 - B1 `QualityRejectSheet` 2 处 → `aeb3270`
 - B3 ① `ProfilePopup` 1 处 → `e4686f7`；② `aiRecommendLoading.retry-btn` 1 处 → `030a87e`；③ `demoDetail` 1 处 → `02b2c29`；④ `targetPhotoDetail` 2 处（`retry` → `26b7214`；`btn-primary` 图文/多行块 → `b3f95a3`，内容经插槽保留 → `180778c`）；⑤ `aiTryOn.tpl-empty-btn` 1 处 → `eee8150`；⑥ `mine.logout-btn` 1 处 → `40b5efa`；⑦ `aiTryOn.generate-btn` 2 处（图文，含插槽＋`generateBtnStyle`）→ `5b40a1f`；⑧ `aiTryOnResult` 主按钮组 4 处（`.btn-primary`；label/插槽两种形态）→ `eb2759a`；⑨ `aiTryOnResult` 余 5 处（`gen-btn`×2 原生 button／`share-btn` 图标／`retry-btn`／`back-btn-wrapper`）→ `c4ea2ab`**（该页自绘按钮清零）**；⑩ `aiRecommendLoading.back-btn-wrapper` 1 处（纯文字返回，与结果页同形）→ `1636e65`**（所有业务页自绘按钮清零）**
 
-**剩余（＝守卫 `t62` 白名单现值 2 文件/3 处，**全部为门面内部自绘的登记豁免**）**
+**剩余（＝守卫 `t62` 白名单现值 2 文件/4 处，**全部为门面内部自绘的登记豁免**）**
 | 文件 | 登记豁免项 | 理由 |
 |---|---|---|
 | `ui/BasePicker.vue` | 2 | 门面自身（抖音分支 ＋ 确定/取消），已在 `ui/**` 内用 `wd-*`，不再套一层门面 |
-| `ui/BaseDialog.vue` | 1 | 同上（对话框自身按钮） |
+| `ui/BaseDialog.vue` | 2 | 同上（原生自绘对话框的「取消/确定」两枚；`t62` 升级为标签级扫描后补齐计数） |
 
 > **业务侧结论（2026-09-23）**：`src/pages/**` 与 `src/components/**` 的**自绘按钮已全部清零**；白名单仅剩 `src/ui/**` 门面内部自绘（登记豁免）。免替换另含平台强制原生 `<button open-type=…>`（`chooseAvatar`／`getPhoneNumber`／`share`）。
 
@@ -52,6 +52,12 @@
 > **仍待拍板**：`aiTryOnResult` 的 `open-type="share"` 原生分享按钮是否也组件化（需给门面扩 `openType` 透传；`ProfilePopup` 的 chooseAvatar/getPhoneNumber 另需转发事件 payload）；~~`aiRecommendLoading.back-btn-wrapper`（非按钮）是否换算按钮或从启发式豁免~~ ⇒ **已处置**：按主人口径统一组件化（见 ⑩）。
 
 > 口径提示：`ui/BasePicker`、`ui/BaseDialog` 属"门面自身（ui/**）"登记项——**结论：保持自绘并登记豁免**（它们本就在门面层、内部用 `wd-*`，再套一层门面只会增加层级与回归面）。
+
+**独立 CR 回执与处置（2026-09-23 第 21 轮；限定预算紧凑 CR）**
+- **🔴 文字色失效（已修，12 处常量）**：wot `base` 变体的文字色**不取自** `--wot-button-primary-color`（该变量只对 `variant="plain"` 生效），而取 `--wot-button-main-color`（默认白）——产物硬证 `wd-button.wxss`：`.wd-button.is-primary{background:var(--wot-button-primary-bg,…);color:var(--wot-button-main-color,…white)}`。⇒ **门面 style 常量必须显式声明 `color:`**（`GENERATE`/`PRIMARY`/`RETRY` 早就这么做，其余 12 处漏了）。已全部补齐并逐文件产物核验。
+- **🟡1 百分比尺寸语义（已修）**：父级为 `column flex + align-items:center` 时宿主是 shrink-to-fit，内层 `width: calc(100% - 64rpx)` 基准不确定 ⇒ **宽度/外边距应留给宿主**，内层用 `width: 100%`。产物实证 `.logout-btn.data-v-d1d0c3ca{width:calc(100% - 64rpx);margin:0 32rpx}` ⇒ 同时证明**页面 scoped 样式可达组件宿主节点**（此前我因担心隔离把宿主规则删了，属过度保守）。
+- **🟡2 守卫漏检（已修＋补齐 4 处）**：`t62` 原按**行**匹配，属性分行书写会整块漏检 ⇒ 改**标签级**扫描后**新抓出 4 处**此前漏检的自绘按钮并已全部组件化：`aiRecommend.action-btn` ×2（图文）、`pages/index.home-btn`（fixed 悬浮入口，动态 `top` 进 computed 拼 custom-style）、`LoginPopup` 未勾选协议态原生 `<button>`。⇒ **更正**：第 20 轮「业务页自绘按钮清零」是**弱启发式下的结论**，现按标签级口径复验才是真清零。
+- **新增守卫 `t64`**：每个 `*_STYLE` 常量必须显式 `color:`（变异自证：抹掉即红）。
 
 **方法固化（务必沿用——我已踩过的坑）**
 1. **定位**：`grep -n "<类名>"` 看真实形态；**不要**用 `<template>…</template>` 切片（本仓部分文件根标签带属性，会取错片段 ⇒ 我曾连续 MISS 两轮）。
@@ -66,6 +72,10 @@
 9. **类名钩子是测试接口**：`t38` 用 `w.find(".generate-btn").trigger("click")` 驱动生成 ⇒ 组件化时**必须保留原类名**（可作无害钩子），否则要同步改写测试。
 10. **`disabled` 语义要分清**：「外观禁用」≠「行为禁用」。aiTryOn 的 `canGenerate` 只控制变暗，点击仍须弹登录/上传引导 ⇒ **不得**绑 `:disabled`（门面 `onClick` 会对 disabled/busy 直接 return，等于吞掉引导）。
 7. **样式隔离**：`class` 交给组件时页面 scoped 样式**不可靠**（组件 `styleIsolation: isolated`）；视觉一律走 `custom-style` 内联（配色用 wot CSS 变量 `--wot-button-*-bg/-bg-active/-color` ⇒ 连按压态都交给 wot 自身 `hover-class`）。已实测产物 `wd-button.wxml`：`<button style="{{i}}" class="wd-button …">`。
+
+13. **门面 style 常量必须显式 `color:`**：wot `base` 变体文字色取 `--wot-button-main-color`（默认白），`--wot-button-primary-color` 只对 `plain` 生效 ⇒ 只写变量会让文字变白（`t64` 已机器化拦截）。
+14. **百分比尺寸放宿主，不放门面内层**：父级为 `column flex + align-items:center` 等不定宽容器时，宿主 shrink-to-fit ⇒ 内层百分比基准不确定（表现为宽度塌成内容宽）。宿主规则页面 scoped 样式**可达**（产物实证），别因隔离担忧而删。
+15. **守卫要按标签扫，不能按行扫**：行级匹配对**分行书写**的标签整块漏检（假阴性），对单行门面用法反而假阳性；跨行取开始标签后再判属性才可靠（`t62` 已改）。
 
 **已知瑕疵（如实留痕）**：①空提交 `4e85572`（信息夸大为"清理"，实际未改动）——因已推送且禁止改写历史，仅登记、不追溯。②第 17 轮"变异测试"首跑为空跑（锚点缩进抄错）却当成验证结论 ⇒ 已在「方法固化」第 6 条固化防呆，本轮已用正确锚点重做并取得真实红。
 
