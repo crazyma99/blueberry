@@ -3,7 +3,7 @@ process.env.TZ = "UTC";
 
 // 2026-09-23 主人报：「等待页返回/进入其他页面后再回来，进度会丢失（异步任务没丢，但体感丢了）」。
 // 解法：伪进度支持**真实起始时间**（`startedAtMs`）⇒ 按墙钟推导，回页自动续算；无可用值则回落旧行为。
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -75,5 +75,23 @@ describe("伪进度续算（离开等待页再回来不再从 0 开始）", () =
     expect(rec.match(/status\.value = "failed";/g)?.length ?? 0).toBe(1);
     // 统一出口内部必须清理起始时间（否则失败后重试会「一上来就 60%」）
     expect(srcSlice(rec, "function finishAsFailed()")).toContain("clearRecommendStartedAt()");
+  });
+
+  it("⭐有真实起始时间时也**必须随 tick 重算**（主人报「试衣不自动更新」根因：computed 失去依赖被缓存）", () => {
+    vi.useFakeTimers();
+    try {
+      const base = Date.parse("2026-09-23T10:00:00+08:00");
+      vi.setSystemTime(base + 5000); // 已等待 5s（墙钟）
+      const elapsedSeconds = ref(0); // 内核每秒 emit 的那个 tick
+      const progressDone = ref(false);
+      const startedAtMs = ref(base); // 服务端 created_at ⇒ 走墙钟分支
+      const { progressPercent } = useFakeProgress(20, { elapsedSeconds, progressDone, icons, steps, startedAtMs });
+      expect(progressPercent.value).toBe(25); // 5s/20s
+      vi.setSystemTime(base + 15000); // 墙钟推进到 15s
+      elapsedSeconds.value += 1; // 内核 tick（**唯一的失效来源**）
+      expect(progressPercent.value).toBe(75); // 若未建立依赖 ⇒ 仍返回缓存的 25（旧 bug）
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

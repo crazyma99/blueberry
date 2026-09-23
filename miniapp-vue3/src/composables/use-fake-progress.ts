@@ -68,6 +68,10 @@ export function useFakeProgress(durationSec: number, source: FakeProgressSource)
   // 生成等待伪进度：durationSec 秒走满 99%，完成时 progressDone → 100
   const progressPercent = computed<number>(() => {
     if (source.progressDone.value) return 100;
+    // ⚠️ 必须**无条件**读一次 tick（`elapsedSeconds`）：否则当 `startedAtMs` 有效时（试衣页几乎总是取到服务端
+    //    `created_at`），computed 没有任何响应式依赖 ⇒ 被 Vue 缓存、永不重算 ⇒ 真机表现为「环/百分比不自动更新」。
+    //    （2026-09-23 主人报「推荐会更新、试衣不会更新」的根因；内核本就每秒 emit 一次 elapsedSeconds。）
+    void source.elapsedSeconds.value;
     const elapsed = effectiveElapsedSeconds(source);
     const p = Math.floor((elapsed / durationSec) * 100);
     return p > FAKE_PROGRESS_CAP ? FAKE_PROGRESS_CAP : p;
