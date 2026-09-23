@@ -22,6 +22,7 @@ vi.mock("../../src/infrastructure/repositories/ai", () => ({
   createAiRepository: () => ({
     getRecommend: async () => {
       h.recommendCalls += 1;
+      if (h.mode === "hang") return await new Promise(() => {}); // 停在等待态（进度续算/推进测试用）
       if (h.mode === "insufficient") return { ok: false, error: { kind: "INSUFFICIENT_CREDITS" } };
       if (h.mode === "network") return { ok: false, error: { kind: "NETWORK" } };
       if (h.mode === "auth") return { ok: false, error: { kind: "AUTH_EXPIRED" } };
@@ -166,6 +167,59 @@ describe("pages/aiRecommendLoading（P3-20 页级场景）", () => {
       expect(h.recommendCalls).toBe(1); // ✅ 超时不得自动再扣第二次
     } finally {
       (globalThis as { setInterval: typeof setInterval }).setInterval = realSetInterval;
+    }
+  });
+});
+
+// ===== 2026-09-23 目标：进度文案动画 ＋ 主人追加「离开再回来进度不能从 0 重来」 =====
+describe("等待页进度：随时间推进（驱动圆环动画）与回页续算", () => {
+  const uniStub = () => (globalThis as { uni?: { getStorageSync?: (k: string) => unknown } }).uni!;
+
+  it("⭐进度随时间推进：进页 5s 后百分比约 50%（说明输入在动 ⇒ 圆环动画有驱动源）", async () => {
+    vi.useFakeTimers();
+    try {
+      h.mode = "hang";
+      const w = boot();
+      await vi.advanceTimersByTimeAsync(30);
+      expect(w.find(".gp-percent").text()).toBe("0%");
+      await vi.advanceTimersByTimeAsync(5000); // 5s（同时推进假时钟 ⇒ 墙钟推导也 +5s）
+      await w.vm.$nextTick();
+      const pct = parseInt(w.find(".gp-percent").text().replace("%", ""), 10);
+      expect(pct).toBeGreaterThanOrEqual(49);
+      expect(pct).toBeLessThanOrEqual(51);
+      expect(w.find(".gp-steps").exists()).toBe(true); // 增量：三段式仍在
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("⭐回页续算：storage 里已有 5s 前的起始时间 ⇒ 首帧即 ≈50%（不从 0 重来）", async () => {
+    vi.useFakeTimers();
+    try {
+      h.mode = "hang";
+      const now = Date.now();
+      uniStub().getStorageSync = (k: string) => (k === "aiRecommend:startedAt" ? String(now - 5000) : "");
+      const w = boot();
+      await vi.advanceTimersByTimeAsync(30);
+      const pct = parseInt(w.find(".gp-percent").text().replace("%", ""), 10);
+      expect(pct).toBeGreaterThanOrEqual(49);
+      expect(pct).toBeLessThanOrEqual(51);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("陈旧保护：起始时间超过 180s（UI 超时窗口）⇒ 不续算，从 0 开始（防「永远 99%」）", async () => {
+    vi.useFakeTimers();
+    try {
+      h.mode = "hang";
+      const now = Date.now();
+      uniStub().getStorageSync = (k: string) => (k === "aiRecommend:startedAt" ? String(now - 181000) : "");
+      const w = boot();
+      await vi.advanceTimersByTimeAsync(30);
+      expect(w.find(".gp-percent").text()).toBe("0%");
+    } finally {
+      vi.useRealTimers();
     }
   });
 });
