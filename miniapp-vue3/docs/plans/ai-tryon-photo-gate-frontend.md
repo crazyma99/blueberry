@@ -140,7 +140,7 @@ export function resolvePhotoGateCopy(raw: unknown): PhotoGateCopy;
 
 > 另有坑：`cases/05_facemask/` 的图**内容与文件名不符**（实为树影斑驳人像、无口罩），`TEST-RESULT.md` 已如实记录 ⇒ 不要用它做「遮挡」用例。
 
-### 5.3.2 弹层美术素材需求（2026-09-23 主人定稿；**待产出**）
+### 5.3.2 弹层美术素材（2026-09-23 主人定稿；**已交付并入库** ✅）
 
 > 主人决定：**形式＝正反例对比**（✓ 正例 / ✗ 反例）｜**风格＝AI 真实感**｜**图标＝复用现有 IconPark（不新增图标）**｜**格式＝JPG 或 PNG**。
 
@@ -151,9 +151,16 @@ export function resolvePhotoGateCopy(raw: unknown): PhotoGateCopy;
 | 3 | 对比版式 | 0 | **不出图**：✓/✗ 角标、描边、圆角、底色全部由代码 + token 实现（避免图内嵌装饰，便于主题化） |
 | 4 | 图标 | 0 | **复用** `src/static/iconpark/`：`face-scan`（无人脸/检测）、`eyes`（侧脸）、`check-white`（正例角标）、`camera` 若需另画则改用现有 `picture`／`plan` 语义替代（主人已定「复用现有」） |
 
+**ⓘ 交付实况（2026-09-23 主人提供 `归档.zip`，已核对与压缩入包）**：
+- 源图：`正例.jpg`／`no_face.jpg`／`multi_face.jpg`／`face_too_small.jpg`／`side_face.jpg`，均 **1254×1254**、合计 857KB；
+- **内容逐张核对无误**（正例＝正面单人清晰；`no_face`＝背影无脸；`multi_face`＝三人合照；`face_too_small`＝远景点比例小；`side_face`＝大侧脸），风格统一（同一 AI 合成虚拟模特／同场景／同服装）⇒ **正反例对比达成**；
+- **压缩**：875KB → **157KB**（`480×480`／JPEG q80／progressive；显示尺寸仅约 120px CSS ⇒ 3x 上限 360px，480 足够），产物总包 **1462KB**，距微信主包 2MB 上限余量 **586KB**；
+- 入包路径：`src/static/quality-gate/{accept_normal,reject_no_face,reject_multi_face,reject_face_too_small,reject_side_face}.jpg`；
+- 知识库存档：`assets/quality-gate/`（同 5 件，basename 已登记索引「图片资源清单」）。
+
 - 命名与路径：`src/static/quality-gate/{reject_no_face,reject_multi_face,reject_face_too_small,reject_side_face,accept_normal}.jpg`（PNG 则同后缀改 `.png`）。
 - 通用规范：**图内不嵌中文字/不画圆角/不留白底**（文案与圆角走代码与 token）；暗底（`#160F04`）观感优先；四张反例建议**同一位虚拟模特/同一构图**，仅变换「场景缺陷」；总增包体目标 **≤150KB**。
-- 交付方式（二选一）：⒜ 主人/设计直接给图；⒝ **我按图库口径先产出 5 张图的生图提示词**（按公司硬约定先加载 `gpt-image-prompt-library` skill，**只出提示词、不生图**）交您定稿后再产出。
+- 交付方式：**已由主人直接提供 `归档.zip` 并完成核对/压缩/入包**（原「先出提示词」路径不再需要）。
 - 关联待办：知识库 04 分册**待办项 6**（JPG/PNG 美术素材需求）＋ 03 分册 §十 10.20。
 
 ### 5.4 PRD 验收 → 实现映射
@@ -171,7 +178,7 @@ export function resolvePhotoGateCopy(raw: unknown): PhotoGateCopy;
 
 | # | 事项 | 我的建议 |
 |---|---|---|
-| 1 | ~~弹层示例图素材~~ → **已定稿（2026-09-23 主人）**：正反例对比／AI 真实感／复用现有 IconPark／JPG 或 PNG | **待产出**（需求见 §5.3.2；KB 04 待办项 6）：由主人/设计给图，或我先出**生图提示词**（先加载 `gpt-image-prompt-library` skill，只出提示词不生图）供定稿 |
+| 1 | ~~弹层示例图素材~~ → **已交付并入包**（2026-09-23 主人提供 `归档.zip`）：正反例对比／AI 真实感／复用现有 IconPark／JPG | ✅ 已核对 5 张内容与命名一致、压缩 875KB→157KB、入包 `src/static/quality-gate/`（见 §5.3.2 交付实况） |
 | 2 | **埋点是否本期做** | 建议本期只做「端口 + fail-soft 调用」，不接第三方 SDK |
 | 3 | **弹层形态** | 建议底部弹层（与本次改造同口径）；若您偏好居中弹窗/全屏引导页，我改 |
 | 4 | **未知码文案优先级** | 建议以本地映射为准，`unknown` 时若后端 `message` 非空则优先展示 `message`（更具体） |
