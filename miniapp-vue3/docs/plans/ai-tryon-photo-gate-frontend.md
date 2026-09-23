@@ -216,3 +216,20 @@ export function resolvePhotoGateCopy(raw: unknown): PhotoGateCopy;
 2. `PHOTO_FACE_AREA_MIN`：`0.02 → 0.08`；
 3. 端侧文案口语化（如「照片太小啦，换一张清晰的试试」「有点糊，麻烦重拍一张」），与后端弹层风格统一；
 4. 同步单测（`t35-photo-check-domain`／`t36-photo-check-pipeline`）与偏差台账。
+
+## 9. 实现与独立 CR 收口（2026-09-23；分支 `feat/backend-tryon-photo-gate`）
+
+**已交付（提交链 `d74529d`→`b5317de`→`2719a93`→`ee66f70`→`fd68495`→`e6cfe57`→`2b29dc8`→`82afe1d`→`0c289bd`）**
+- 契约三层：`domain/payment-state`（4002→`QUALITY_REJECTED`）／`infrastructure/http`（`AppError.businessData` ＋ client 失败路径透传信封 `data`）／`application/photo-gate`（4 码文案＋unknown 兜底）／`ai-tryon-submit`（`quality-rejected(checkCode)`）。
+- 呈现层：`components/QualityRejectSheet`（门面 `BasePopup`、`position=bottom`、`root-portal=false`、`z-index=2000`；Token 化；正反例对比；「本次未消耗试衣次数」；重新选择照片/知道了）＋ `pages/aiTryOn` 接线（retry 复用 `choosePhoto`）。
+- 资产：5 张 **480×480 JPEG q80**（857KB→159KB＝162,609 B），**改走打包器引用**（`src/assets/quality-gate/`）⇒ 只在微信包（抖音 0KB）；微信产物 1467 KiB（2MB 余 ≈581KB）。
+- **独立 CR（子代理只读）**：🔴 弹层缺卡片面、安全区写进 `padding` 简写 ⇒ **均已修并产物实证**（`.qr-sheet{background:#262626;border-radius:48rpx 48rpx 0 0}`＋三条 padding）；结论「不扣次数/不扣费」全链路守得住（6 条证据）；层级 2000 与仓内惯例同档。
+- **假绿全部闭合**：m2（client 不传 `data`）→ 新增真走 `createHttpClient` 的 4002 用例；**m7**（删 retry 的 `choosePhoto()`）→ 页面级全链路用例改用「断门面 `modelValue`」（共享桩无条件渲染 slot 是结构性假绿源）；m9（删卡片面）→ 样式守卫。三条变异实测均变红。
+- 回归：`vitest` **549 passed／3 skipped**、`vue-tsc` 0、微信/抖音构建 exit 0。
+
+**待主人拍板（本方案不擅自改）**
+1. **端侧改动集（先做 3 项）**：⚠️ **撤回本方案 §8 第 2 条**（`0.02→0.08` 量纲错误：后端单轴线性比 vs 端侧面积比 ⇒ 保持 `0.02`）；**删除 `PHOTO_FACE_AREA_MAX`（>0.65 纯误杀）**；**端侧拦截改走同一 `QualityRejectSheet`**（现为原生 `showModal`）。后做：阈值标定、归因修正（256px 降采样下「未检测到人脸」可能是「太小」）、拦截后清空 `uploadedFilename`。
+2. **埋点 `ai_tryon_quality_reject`**：加约 20 行 fail-soft 端口，或书面记「本期不做」（契约 §6 验收第 6 项）。
+3. **发体验版**：`environment=trial` ⇒ `apiBases.trial=https://crazyma99.xyz/`（后端 staging，**零配置**）；前置＝后端 `aiface.tryon_filter.enabled` 已开。
+
+**待回执后端（天文）**：⒜文案实发取自契约 **§3.4 伪代码**（§3.3 表格另有一套更短的，避免按 §3.3 验收）；⒝`unknown` 文案＝「换一张照片试试吧」是**主人拍板的有意偏差**（契约建议「照片未通过检测，请重新上传」），标题仍沿用 §3.4。

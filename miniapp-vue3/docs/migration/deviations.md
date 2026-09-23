@@ -193,3 +193,11 @@
     **⑤同批修复（主人本轮追加需求）：等待页「返回/切页再回来进度从 0 重来」（体感丢进度）**——根因：伪进度只认**本页挂载后的本地 `elapsedSeconds`**（新页面实例＝从 0），而异步任务其实照跑。解法（不改内核、不改轮询节奏）：`use-fake-progress` 新增可选 **`startedAtMs`（任务真实起始时间）** ⇒ 有效时按**墙钟**推导百分比（回页自动续算），无效（非数字／≤0／**未来**＝时钟偏差）回落本地累加（旧行为零变化）。取值口径：⒜**AI 试衣**＝**服务端任务 `created_at`**（`aiTryOnResult.queryInitialTask` 首查即解析，跨设备一致，最佳实践；解析失败/时钟偏差保持 0）；⒝**AI 推荐**＝该接口「只调一次不可轮询重发」⇒ **本地持久化起始时间** `aiRecommend:startedAt`（进页读取、无可续则写下本次开始），并设**陈旧保护**（超出 180s UI 超时窗口即忽略，避免「永远 99%」假进度），失败/超时等**终态统一出口**（`finishAsFailed()`，见本条第⑥段）。测试：`tests/unit/t60-progress-resume.spec.ts`（**4 例**：−5s 起始 ⇒ ≈50% 而非 0／无起始或 NaN 或未来 ⇒ 回落旧行为／续算仍守 99% 封顶与 `progressDone→100`／两页接线源码守卫）；**全量 `vitest` 519 passed／3 skipped**、`vue-tsc` 0、微信构建 exit 0；产物实证两页 `index.js` 均含 `startedAtMs` 接线。
 
     **⑤待办（本批）**：独立 CR（子代理只读）**在飞**——目标规定的「单测 → **独立CR** → 上传体验版」顺序要求**CR 回执后**再发版；届时按 🔴／🟡 处置并出 `v1.0.50`。
+
+35. **AI 试衣「上传照片质量拦截（4002+check_code）」前端对接（2026-09-23 主人目标；分支 `feat/backend-tryon-photo-gate`）**
+    **①主人指示**：从新 Vue 分支切出 `feat/backend-tryon-photo-gate`，在新分支对接后端 staging 的该功能；①示意图是否需压缩由我判断 ②**直接使用底部弹层**（复用既有 Popup 门面，**要接 Tokens**）③未知码文案＝「**换一张照片试试吧**」④评估端侧 VK 拦截严谨度（后端已有质量拦截，前端是否不必拦那么死）。
+    **②落地**：契约三层（`4002→QUALITY_REJECTED`／`AppError.businessData`＋client 透传信封 `data`／`photo-gate.ts` 4 码＋unknown 兜底／`quality-rejected(checkCode)`）＋ `QualityRejectSheet`（门面 `BasePopup` bottom＋`root-portal=false`＋z-index 2000，Token 化，正反例对比，「本次未消耗试衣次数」）＋ `aiTryOn` 接线（retry 复用 `choosePhoto`）；资产 5 张 **857KB→159KB（480×480 q80）** 并**改走打包器引用**（`src/assets/`）⇒ 抖音包零死资源（省 157KB）。
+    **③独立 CR 结论与处置**：🔴 弹层缺卡片面／安全区写进 `padding` 简写 ⇒ 已修＋产物实证；「不扣次数/不扣费」全链路守得住（6 条证据）；假绿 **m2/m7/m9 全部闭合**（分别补真走 `createHttpClient` 的 4002 用例、页面级全链路用例改断门面 `modelValue`、样式守卫；变异实测均变红）；回归 `vitest 549 passed/3 skipped`、`vue-tsc 0`、双端构建 exit 0。
+    **④⚠️ 自我更正**：我原 §8 建议「端侧人脸占比下限 `0.02→0.08`」**量纲错误，已撤回**——后端是**单轴线性比**（`tryon_filter.go:88-94`，宽或高任一 <10%），端侧是**面积比**（`weixin/photo-check.ts:117-124`）；`0.02` 面积 ≈ 线性 14%（已比后端严），`0.08` ≈ 28% 会大面积误杀 ⇒ **保持 `0.02`**。CR 独立发现、我亲自复核确认。
+    **⑤待主人拍板（未擅改）**：端侧改动集（删 `>0.65` 上限／端侧拦截改走同一弹层／阈值标定／归因修正／清 `uploadedFilename`）、埋点 `ai_tryon_quality_reject`（或书面记不做）、发体验版（`trial` 天然指向 staging，前置＝后端开关 `aiface.tryon_filter.enabled` 已开）。
+    **⑥待回执后端**：文案实发取自契约 §3.4（非 §3.3 表格）；`unknown` 文案为主人拍板的有意偏差。
