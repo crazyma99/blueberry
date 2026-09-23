@@ -300,11 +300,14 @@ onLoad((options) => {
       <BottomActionBar :footer-main-line="footer.mainLine" :footer-support-line="footer.supportLine">
         <view v-if="platform === 'mp-weixin' && detail.tryonDisabled !== true" class="ai-tryon-btn">
           <image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill" />
-          <view class="btn-primary" hover-class="press-dim" @click="goToAiTryOn">
-            <view>生成</view>
-            <image src="/static/aitry-text.png" class="text" mode="aspectFill" />
-            <view>效果</view>
-          </view>
+          <BaseButton
+            class="btn-primary"
+            label=""
+            block
+            round
+            :custom-style="PRIMARY_BTN_STYLE"
+            @click="goToAiTryOn"
+          />
           <image src="/static/btn-right-icon.png" class="btn-icon" mode="aspectFill" />
         </view>
       </BottomActionBar>

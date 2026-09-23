@@ -41,7 +41,6 @@ const ALLOWLIST = new Map<string, number>([
     ["src/pages/aiTryOn/index.vue", 3],
     ["src/pages/aiTryOnResult/index.vue", 9],
     ["src/pages/mine/index.vue", 1],
-    ["src/pages/targetPhotoDetail/index.vue", 1],
     ["src/ui/BaseDialog.vue", 1],
     ["src/ui/BasePicker.vue", 2],
 ]);
