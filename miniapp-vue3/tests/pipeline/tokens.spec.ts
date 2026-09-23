@@ -88,4 +88,12 @@ describe("失败用例（漏检即红）", () => {
     const out = join(dir, "out"); mkdirSync(out);
     expect(() => generateTokens({ sourceFile: src, outputDir: out })).toThrow();
   });
+
+  it("仓库内已提交的三产物 == 由 source.json 重生成（CR 🟡8：防手改/漏重生成）", () => {
+    const out = mkdtempSync(join(tmpdir(), "tok-guard-"));
+    generateTokens({ sourceFile: join(root, "tokens/source.json"), outputDir: out });
+    for (const f of ["tokens.ts", "theme.scss", "theme.css"]) {
+      expect(readFileSync(join(out, f), "utf-8"), f).toBe(readFileSync(join(root, "src/generated", f), "utf-8"));
+    }
+  });
 });

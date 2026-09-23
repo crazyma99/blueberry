@@ -18,6 +18,10 @@ Component({
   data: {
     // 当前选中下标（唯一数据源，驱动图标态/文字色/渐变背景）
     selected: 0,
+    // 2026-09-23 主人报「底部弹层被 Tab 栏盖住」：**自定义 tabBar 位于独立元素树，页面内 z-index 压不过它、
+    // `wx.hideTabBar()` 对它也不生效**（生态公认事实）⇒ 正解＝弹窗打开时把本组件隐藏（门面 BasePopup 调
+    // `getTabBar().setData({visible:false})`），关闭/页面 show 时恢复。
+    visible: true,
     list: [
       {
         pagePath: 'pages/index/index',
@@ -52,6 +56,10 @@ Component({
     },
   },
   pageLifetimes: {
+    show() {
+      // 每次进页面自动恢复（防上一次弹窗未恢复导致 Tab 栏永久消失）
+      if (this.data.visible !== true) this.setData({ visible: true });
+    },
     show() {
       // 兜底通道：webview 渲染器下自定义 tabbar 很可能收不到 pageLifetimes，
       // 主入口是页面 onShow → getTabBar().setSelected(index)（src/utils/tabbar.uts）。

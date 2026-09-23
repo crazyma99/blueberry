@@ -6,7 +6,7 @@
   - 所有 tab 均分宽度，高度 116rpx（另加底部安全区）
   当前选中项由 index.js 按页面路由 + 模块级共享下标自动判定，页面侧无需额外代码。
 -->
-<view class="tabbar">
+<view class="tabbar" wx:if="{{visible}}">
   <view class="tabbar-inner">
     <view
       wx:for="{{list}}"

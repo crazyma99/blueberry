@@ -3,6 +3,9 @@
 // 旧端源：/home/majunhi/blueberry/src/components/ProfilePopup/ProfilePopup.uvue（195 行）
 // 忠实移植：模板 :9-38；props :43-52；emits :53；样式 :62-195。
 //
+// 层叠（2026-09-22 主人报「弹窗仍被 Tab 栏盖住」）：**不用 `root-portal`**——微信端 `custom-tab-bar` 与 `root-portal`
+//   都是运行时注入的独立层，弹层进 root-portal 后会离开页面层叠上下文、z-index 再高也压不住 Tab 栏；
+//   故回到**页面内层叠**并显式 `z-index: 2000`（> 自绘栏 998 / Tab 栏 900）。
 // 视觉：居中卡片 + 顶部金色氛围光 + Noto Serif 金色标题 + 头像金描边角标
 //       + 深色输入面板 + 渐变主按钮 + 弹入动画。
 // 交互：emit 事件交回页面既有 handler（业务逻辑完全不变）。
@@ -54,7 +57,7 @@ function onNicknameInput(e: unknown): void {
   <!-- 2026-09-22 主人两项：①「完善个人资料」弹窗文字须为 HarmonyOS Sans（本仓 HarmonyOS 靠全局类 `.font-harmony`，
        默认仍是系统字体）⇒ 容器挂类、所有文案继承（标题 font-noto-serif 优先）；②弹窗统一走 **wot Popup 门面** `ui/BasePopup`
        （内部＝wot `wd-popup`，遮罩点击关闭由门面 `cancel` 转发为 `skip`，业务组件零 `wd-*` 直用）。 -->
-  <BasePopup :show="true" position="bottom" :z-index="1200" @cancel="emit('skip')">
+  <BasePopup :show="true" position="bottom" :root-portal="false" :z-index="2000" @cancel="emit('skip')">
     <view class="profile-card font-harmony">
       <!-- 顶部氛围光 -->
       <view class="card-aura"></view>
@@ -97,8 +100,6 @@ function onNicknameInput(e: unknown): void {
 .profile-card {
   position: relative;
   box-sizing: border-box; /* 修：width:100%+左右 padding 在 content-box 下会溢出屏幕（主人报「内容比弹窗宽」） */
-  padding-bottom: calc(32rpx + constant(safe-area-inset-bottom)); /* 底部安全区（两端通用，非 CSS 变量） */
-  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
   width: 100%; /* 底部弹层：通栏（面/圆角/安全区由 wot 弹层承载） */
   background: $color-popup-card; /* 面色=**主题 token**（旧端 --color-popup-card 同值）；不依赖 CSS 变量 ⇒ 微信/抖音同源 */ /* 旧 var(--color-popup-card) #262626（App.uvue :90） */
   border-radius: #{$popup-radius-rpx * 2}rpx #{$popup-radius-rpx * 2}rpx 0 0; /* 底部弹层上圆角（token 档位） */ /* 旧 var(--radius-2xl) 48rpx（App.uvue :104） */
@@ -109,12 +110,11 @@ function onNicknameInput(e: unknown): void {
   overflow: hidden;
   /* 底部弹层用 wot `position=bottom` 自带上滑过渡，不再叠加卡片缩放动画 */
 
-  font-family: 'HarmonyOS-Sans-SC'; /* 组件样式隔离（默认 isolated）⇒ app.wxss 的 page/.font-harmony 进不来，必须自带 */}
-@keyframes cardPopIn {
-  from { opacity: 0; transform: scale(0.92) translateY(24rpx); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  font-family: 'HarmonyOS-Sans-SC'; /* 组件样式隔离（默认 isolated）⇒ app.wxss 的 page/.font-harmony 进不来，必须自带 */
+  /* 🔴CR1：安全区必须写在 `padding:` 简写**之后**（同规则内后声明取胜；此前写在前面＝死代码） */
+  padding-bottom: calc(44rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(44rpx + env(safe-area-inset-bottom));
 }
-
 /* 顶部金色氛围光 */
 .card-aura {
   position: absolute;
@@ -179,7 +179,7 @@ function onNicknameInput(e: unknown): void {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid #262626; /* 旧 var(--color-popup-card) #262626 */
+  border: 2rpx solid $color-popup-card; /* 🟡CR5：与卡片面同语义 ⇒ 走 token（主题换色时不再浮出异色环） */ /* 旧 var(--color-popup-card) #262626 */
 }
 .avatar-tip {
   margin-top: 14rpx;

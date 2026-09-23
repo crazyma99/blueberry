@@ -2,10 +2,11 @@
 // 本 spec 含**源码守卫**与**渲染级断言**（独立 CR 🟡10：纯字符串断言测不到白底/层级/cancel 语义，故补渲染层）。
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { defineComponent } from "vue";
 import { mount } from "@vue/test-utils";
 import ProfilePopup from "../../src/components/ProfilePopup/ProfilePopup.vue";
+import LoginPopup from "../../src/components/LoginPopup/LoginPopup.vue";
 
 const read = (p: string): string => readFileSync(resolve(__dirname, "../..", p), "utf-8");
 
@@ -80,7 +81,7 @@ describe("弹窗统一 wot Popup 门面 ＋ HarmonyOS Sans 文案（源码守卫
     expect(popup).toContain("POPUP_TRANSPARENT_STYLE");
     expect(popup).toContain("@touchmove.stop.prevent");
     for (const f of ["src/pages/aiTryOnResult/index.vue", "src/components/ProfilePopup/ProfilePopup.vue", "src/components/LoginPopup/LoginPopup.vue"]) {
-      expect(read(f), f).not.toMatch(/@keyframes (spin|overlayFadeIn)\b/);
+      expect(read(f), f).not.toMatch(/@keyframes (spin|overlayFadeIn|cardPopIn)\b/);
     }
   });
 
@@ -98,10 +99,9 @@ describe("渲染级：弹窗经门面确实拿到透明面/层级，遮罩与卡
     const w = mount(ProfilePopup, { global: { components: { "wd-popup": StubWdPopup } } });
     expect(w.find(".profile-card").exists()).toBe(true);
     const stub = w.findComponent(StubWdPopup);
-    expect(stub.props("zIndex")).toBe(1200); // 底部弹层：须高于 Tab 栏（已下调 900）与自绘栏 998
+    expect(stub.props("zIndex")).toBe(2000); // 底部弹层：须高于自绘栏 998 / Tab 栏 900（且**关闭 root-portal** 回到页面层叠）
     expect(stub.props("position")).toBe("bottom"); // 底部弹层（主人指示）
-    expect(stub.props("round")).toBe(false); // 圆角改由卡片 token 提供（两端一致）
-    expect(stub.props("safeAreaInsetBottom")).toBe(false);
+    
     expect(stub.props("customStyle")).toContain("--wot-popup-bg: transparent"); // 弹层保持透明面；**面色由卡片 SCSS token 承载**（抖音 TTSS 不支持 CSS 变量）
     expect(stub.props("closeOnClickModal")).toBe(true);
     await w.find(".stub-popup__mask").trigger("click");
@@ -121,8 +121,72 @@ describe("渲染级：弹窗经门面确实拿到透明面/层级，遮罩与卡
 
   it("层级：弹层显式 z-index 1200；Tab 栏下调至 900（弹层须覆盖 Tab 栏）", () => {
     for (const f of ["src/components/ProfilePopup/ProfilePopup.vue", "src/components/LoginPopup/LoginPopup.vue"]) {
-      expect(read(f), f).toContain(':z-index="1200"');
+      expect(read(f), f).toContain(':z-index="2000"');
+      expect(read(f), f).toContain(':root-portal="false"');
     }
     expect(read("src/custom-tab-bar/index.wxss")).toContain("z-index: 900");
+  });
+
+  // ===== CR 🟡4：补两处假绿（LoginPopup 无渲染级覆盖；「Token 跟随主题色」零覆盖）=====
+  it("LoginPopup 渲染级：position=bottom／zIndex=1200／遮罩点击 cancel→close", async () => {
+    const w = mount(LoginPopup, { global: { components: { "wd-popup": StubWdPopup } } });
+    const stub = w.findComponent(StubWdPopup);
+    expect(stub.props("position")).toBe("bottom");
+    expect(stub.props("zIndex")).toBe(2000);
+    await w.find(".stub-popup__mask").trigger("click");
+    expect(w.emitted("close")?.length).toBe(1);
+  });
+
+  it("⭐Token 跟随主题色（CR 🟡4②）：两卡片面色与上圆角/安全区均走 SCSS token，且 token 源存在于 source.json", () => {
+    for (const f of ["src/components/ProfilePopup/ProfilePopup.vue", "src/components/LoginPopup/LoginPopup.vue"]) {
+      const s = read(f);
+      expect(s, f).toContain("background: $color-popup-card");
+      if (f.includes("ProfilePopup")) expect(s, f).toContain("border: 2rpx solid $color-popup-card"); // 头像角标描边同语义色（CR 🟡5）
+      expect(s, f).toMatch(/border-radius: #\{\$popup-radius-rpx \* 2\}rpx #\{\$popup-radius-rpx \* 2\}rpx 0 0;/);
+      expect(s, f).toMatch(/padding-bottom: calc\(44rpx \+ env\(safe-area-inset-bottom\)\)/);
+      // 🔴CR1：安全区必须在 `padding:` 简写之后（否则被覆盖＝死代码）
+      expect(s.indexOf("padding-bottom: calc(44rpx + env(")).toBeGreaterThan(s.indexOf("padding: 56rpx 48rpx 44rpx") > 0 ? s.indexOf("padding: 56rpx 48rpx 44rpx") : s.indexOf("padding: "));
+    }
+    const src = JSON.parse(read("tokens/source.json"));
+    expect(src.semantic.colorPopupCard).toBe("#262626");
+  });
+
+  it("抖音自绘分支（CR 🔴2/🟡4⑥⑦）：is-bottom 判定存在、箱体重置 max-width/padding、按 position 绑类", () => {
+    const s = read("src/ui/BasePopup.vue");
+    expect(s).toContain("base-popup-native.is-bottom");
+    expect(s).toContain("max-width: none");
+    expect(s).toContain("padding: 0");
+    expect(s).toMatch(/position === 'bottom' \? 'base-popup-native is-bottom'/);
+  });
+
+  it("门面无死 API（CR 🟡3）：两弹窗**不得**传 round／safe-area-inset-bottom／:custom-style", () => {
+    for (const f of ["src/components/ProfilePopup/ProfilePopup.vue", "src/components/LoginPopup/LoginPopup.vue"]) {
+      const s = read(f);
+      // 负断言要看**prop 用法**而非子串（`background` 里含 "round" 会假红）
+      expect(s, f).not.toMatch(/<BasePopup[^>]*\sround[\s/>]/);
+      expect(s, f).not.toContain("safe-area-inset-bottom=");
+      expect(s, f).not.toContain("SHEET_STYLE");
+    }
+    const facade = read("src/ui/BasePopup.vue");
+    expect(facade).not.toContain("round?: boolean");
+    expect(facade).not.toContain("safeAreaInsetBottom?: boolean");
+  });
+
+  // ===== 2026-09-23 主人报「48 版弹层仍被 Tab 栏盖住」：生态公认解法＝弹层显示期间隐藏自定义 Tab 栏 =====
+  it("自定义 Tab 栏协同：Tab 栏有 visible 开关 + pageLifetimes 兜底恢复；门面显示期隐藏、卸载恢复", async () => {
+    const tabJs = read("src/custom-tab-bar/index.js");
+    expect(tabJs).toContain("visible: true");
+    expect(tabJs).toContain("pageLifetimes");
+    expect(read("src/custom-tab-bar/index.wxml")).toContain('wx:if="{{visible}}"');
+    expect(read("src/ui/BasePopup.vue")).toContain("setTabBarVisible");
+
+    const setData = vi.fn();
+    const g = globalThis as { getCurrentPages?: () => unknown[] };
+    g.getCurrentPages = () => [{ getTabBar: () => ({ setData }) }];
+    const w = mount(ProfilePopup, { global: { components: { "wd-popup": StubWdPopup } } });
+    expect(setData).toHaveBeenCalledWith({ visible: false }); // 打开弹层 ⇒ 隐藏 Tab 栏
+    w.unmount();
+    expect(setData).toHaveBeenCalledWith({ visible: true }); // 关闭/卸载 ⇒ 恢复
+    delete g.getCurrentPages;
   });
 });

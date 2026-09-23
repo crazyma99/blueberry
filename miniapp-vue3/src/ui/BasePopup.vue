@@ -5,9 +5,10 @@
 //  - 非抖音端保持 wd-popup 链，新增 rootPortal prop（默认 true；抖音端 wot 为 no-op、微信/支付宝/H5 生效）。
 //  - 抖音端门面自绘降级：纯 view+fixed 蒙层＋居中容器，绕开 wot 自定义组件宿主节点（fixed 失效根因）。
 //  对外合同（props/emits）不变；cancel 单一出口与去重逻辑两条分支共用。
+import { onMounted, onUnmounted, watch } from "vue";
 import { isToutiaoPlatform } from "./ui-platform";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     show?: boolean;
     title?: string;
@@ -22,22 +23,42 @@ withDefaults(
     zIndex?: number;
     /** 🟡CR4：把「遮罩点击是否关闭」从 wot 上游默认值变成**门面合同**（`wd-popup` 默认 true） */
     closeOnClickModal?: boolean;
-    /** wot `round`：开启后**按弹出位置自动适配圆角**（底部弹出→上圆角）——底部弹层接管圆角，勿手写（`npx wot info Popup`） */
-    round?: boolean;
-    /** wot `safe-area-inset-bottom`：底部弹层是否适配底部安全区（同上，由组件负责，勿手写 padding hack） */
-    safeAreaInsetBottom?: boolean;
-    /** 覆盖弹层 surface（如 `--wot-popup-bg: <主题 token 色>`；默认透明 = 由内容自带面） */
+    /** 弹层根部样式覆盖（默认 `POPUP_TRANSPARENT_STYLE`＝透明面，由内容自带面）。
+     *  ⚠️ 当前两弹窗底部弹层**不传**该 prop：面色/圆角/安全区由卡片 SCSS token 承载（抖音 TTSS 不支持 CSS 变量，
+     *  `--wot-popup-bg` 在抖音无效）⇒ 这是跨端一致的正解。 */
     customStyle?: string;
   }>(),
-  {
-    show: false, title: "", position: "center", closable: false, rootPortal: true, zIndex: 1001, closeOnClickModal: true,
-    round: false, safeAreaInsetBottom: false, customStyle: "",
-  },
+  { show: false, title: "", position: "center", closable: false, rootPortal: true, zIndex: 1001, closeOnClickModal: true, customStyle: "" },
 );
 
 /** 🔴CR2（2026-09-22）：wot `wd-popup` 根节点自带**不透明**默认底色（`.wd-popup{background:var(--wot-popup-bg,…white)}`，本仓未定义任何 `--wot-*`）
  * ⇒ 不置透明会在深色圆角卡片四角露出白色直角。与 `BaseLoadingPopup` 同家法（`deviations #29` 一族）。 */
 const POPUP_TRANSPARENT_STYLE = "--wot-popup-bg: transparent; --wot-popup-radius: 0;";
+
+
+/**
+ * 弹层与**自定义 Tab 栏**的层叠：自定义 tabBar 处于独立元素树，页面内 z-index 无法覆盖、`wx.hideTabBar()` 也不生效
+ * （2026-09-23 主人报「底部弹层被 Tab 栏盖住」+ 生态公认结论）⇒ 弹层显示期间**隐藏 Tab 栏**，关闭/卸载恢复。
+ * fail-soft：非 tab 页、无 `getTabBar`、容器差异一律静默；`pageLifetimes.show` 兜底恢复。
+ */
+function setTabBarVisible(visible: boolean): void {
+  try {
+    const pages = typeof getCurrentPages === "function" ? getCurrentPages() : [];
+    const cur = pages[pages.length - 1] as unknown as { getTabBar?: () => { setData?: (d: Record<string, unknown>) => void } | undefined };
+    cur?.getTabBar?.()?.setData?.({ visible });
+  } catch {
+    /* 非 tab 页/平台差异：静默 */
+  }
+}
+
+onMounted(() => {
+  if (props.show) setTabBarVisible(false);
+});
+watch(
+  () => props.show,
+  (v) => setTabBarVisible(!v),
+);
+onUnmounted(() => setTabBarVisible(true));
 
 const emit = defineEmits<{
   (e: "update:show", value: boolean): void;
@@ -74,8 +95,6 @@ const useNative = isToutiaoPlatform();
     :root-portal="rootPortal"
     :z-index="zIndex"
     :close-on-click-modal="closeOnClickModal"
-    :round="round"
-    :safe-area-inset-bottom="safeAreaInsetBottom"
     :custom-style="customStyle !== '' ? customStyle : POPUP_TRANSPARENT_STYLE"
     @close="onClose"
     @update:model-value="onModelValueUpdate"
@@ -131,6 +150,8 @@ const useNative = isToutiaoPlatform();
 }
 .base-popup-native.is-bottom .base-popup-native__box {
   width: 100%;
+  max-width: none; /* 🔴CR2：基础块 `max-width:80%` 会把底部弹层封顶成窄卡 */
+  padding: 0; /* 🔴CR2：基础块 32rpx 内边距会让弹层四周透出遮罩、离屏 32rpx */
   background: transparent; /* 面由内容卡片承载（SCSS token）⇒ 两端同源 */
   border-radius: 0;
 }
