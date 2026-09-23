@@ -16,18 +16,28 @@ interface UniChooseRes {
   tempFiles?: Array<{ size?: number }>;
 }
 
+/** 取容器 API：**优先 `globalThis.uni`（测试桩/H5），再回落裸 `uni`**（mp 产物由编译器改写）。
+ *  2026-09-23 统一口径（同 `album-save.uniApi()`）：此前 chooser/upload/feedback 只认裸 `uni`，
+ *  在「先有桩、后无裸标识符」或编译器改写差异的环境下会静默降级（选图/上传直接判为容器不支持）。 */
+function uniApi<T>(): T | undefined {
+  const injected = (globalThis as { uni?: T }).uni;
+  if (injected != null) return injected;
+  return typeof uni !== "undefined" ? (uni as unknown as T) : undefined;
+}
+
 export function createUniPhotoChooser(): PhotoChooserPort {
   return {
     choose(): Promise<PickedPhoto | null> {
       return new Promise((resolve) => {
-        if (typeof uni === "undefined" || typeof uni.chooseImage !== "function") {
+        const u = uniApi<{ chooseImage?: (o: Record<string, unknown>) => void }>();
+        if (typeof u?.chooseImage !== "function") {
           resolve(null);
           return;
         }
         try {
           // 窄化调用：@dcloudio/types 对 chooseImage 的 options/回调签名更严（与容器实参不一致），
           // 且各端 res 形态不完全相同 ⇒ 与 transport/upload 适配同口径，按 Record 收窄后自行解析。
-          const api = uni as unknown as {
+          const api = u as unknown as {
             chooseImage: (options: Record<string, unknown>) => void;
           };
           api.chooseImage({

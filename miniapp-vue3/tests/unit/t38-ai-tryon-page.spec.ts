@@ -224,12 +224,11 @@ describe("pages/aiTryOn（T8 装配）", () => {
     });
   });
 
-  // ⚠️ 2026-09-23 留痕（未落地）：页面层「全链路 4002」用例（选图→上传→生成→弹层→重选）**暂缺**。
-  // 阻塞点（已定位）：`platform/uni/chooser.ts` 的口子用**裸 `uni`**（`typeof uni === "undefined"`）判定容器能力，
-  // 而本 vitest/Vite 环境里裸标识符解析与 `globalThis.uni` 桩不一致 ⇒ `choose()` 直接 resolve(null)，
-  // 选图链路无法在页面级驱动（登录态/onShow 时序已解决：会话须带 platform/profileKey，且登录态在 onShow 刷新）。
-  // 现状覆盖：分层行为（t61：4002→QUALITY_REJECTED／businessData 透传／submit 归一／弹层渲染级）＋ 页面接线守卫（t61）。
-  // 补法建议（待独立 CR 结论后一并处置）：①测试里用 `vi.stubGlobal("uni", …)` 让裸标识符可解析；②或把页面内的
-  // `uni.*` 调用继续收进平台端口（仓内既有方向），再补端到端用例。
+  // ⚠️ 2026-09-23 留痕（仍未落地）：页面层「全链路 4002」用例（选图→上传→生成→弹层→重选）**缺**。
+  // 已排除：登录态（会话须带 platform/profileKey，且 updateLoginState 在 onShow 刷新——本轮已核实并可用于其他用例）；
+  // 已修：`platform/uni/{storage,chooser,upload}.ts` 取 `uni` 统一为「注入桩优先 + 裸 uni 兜底」（此前 chooser/upload 只认裸 uni）。
+  // 仍未定位：`.app-photo-picker` 的 click 在 VTU 下未驱动到页面 `choosePhoto`（同文件其它用例的 `.generate-btn` click 正常），
+  // 故无法在页面级跑通「选图→上传」半段。现状覆盖＝分层行为（t61）＋页面接线守卫（t61）；补法：把页面内 `uni.*` 继续收进端口后
+  // 用端口替身驱动，或改用真机/开发者工具做一次手工冒烟（已登记为 CR 后的待办）。
 
 });
