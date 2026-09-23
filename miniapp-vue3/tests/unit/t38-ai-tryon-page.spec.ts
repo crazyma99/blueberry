@@ -70,6 +70,7 @@ vi.mock("../../src/infrastructure/repositories/wx-auth", () => ({
 import StubWdPopup from "../stubs/wot/wd-popup/wd-popup.vue";
 import AiTryOnPage from "../../src/pages/aiTryOn/index.vue";
 import AppPhotoPicker from "../../src/components/AppPhotoPicker/AppPhotoPicker.vue";
+import QualityRejectSheet from "../../src/components/QualityRejectSheet/QualityRejectSheet.vue";
 import { detectUiPlatform } from "../../src/ui/ui-platform";
 import { PROFILE } from "../../src/generated/profile.config";
 
@@ -229,18 +230,51 @@ describe("pages/aiTryOn（T8 装配）", () => {
   // 均已用「锚点命中」校验确认真实改写）**都未使其变红** ⇒ 不能把本用例当作回归防线；已登记待查
   //（疑点：桩无条件渲染 slot／`findComponent` 命中的弹层实例／Vite 变换缓存，三者之一或组合）。
   it("⭐全链路 4002：被拦截 ⇒ 弹正反例弹层、只提交一次、不充值；点「重新选择照片」可立即重选", async () => {
-    // 登录态走**旧键迁移路径**：`token` 键由 versioned.loadSession() 迁移并自动补 platform/profileKey
-    //（新键需与「页面模块加载时」探测到的 platform/profileKey 一致，测试里后置调用 detectUiPlatform() 值可能不同 ⇒ 会被判为跨 Profile 而拒绝）
+    // 登录态走**旧键迁移路径**（新键需与页面模块加载时的 platform/profileKey 一致，测试里后置探测值可能不同 ⇒ 会被判跨 Profile 拒绝）
     h.store.set("token", "tok-legacy");
     h.store.set("userInfo", JSON.stringify({ userId: "u1" }));
-    h.submitResult = { ok: false, error: { kind: "QUALITY_REJECTED", businessCode: 4002, message: "侧脸会影响生成效果，请正对镜头再拍一张", requestId: null, retryable: false, businessData: { check_code: "side_face" } } };
+    h.submitResult = {
+      ok: false,
+      error: {
+        kind: "QUALITY_REJECTED",
+        businessCode: 4002,
+        message: "侧脸会影响生成效果，请正对镜头再拍一张",
+        requestId: null,
+        retryable: false,
+        businessData: { check_code: "side_face" },
+      },
+    };
     const w = mount(AiTryOnPage, { global: GLOBAL });
     h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
-    h.onShowCalls[h.onShowCalls.length - 1]();
-    await flush(); await w.vm.$nextTick();
+    h.onShowCalls[h.onShowCalls.length - 1](); // 登录态在 onShow 刷新
+    await flush();
+    await w.vm.$nextTick();
+    expect(w.find(".login-card").exists()).toBe(false);
+
+    // 选图（AppPhotoPicker click → choosePhoto → 端侧预检 fail-open → 上传成功）
     w.findComponent(AppPhotoPicker).vm.$emit("click");
-    await flush(); await w.vm.$nextTick();
+    await flush();
+    await w.vm.$nextTick();
     expect(h.chooseImageCalls).toBe(1);
+
+    // 生成 ⇒ 后端 4002 ⇒ 底部弹层弹出（⚠️ 共享桩无条件渲染 slot ⇒ 只能断门面 modelValue，不能断 .qr-title 存在性）
+    await w.find(".generate-btn").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.submitCalls).toBe(1); // 被拦截也只提交一次（不重发、不扣次）
+    const sheet = w.findComponent(QualityRejectSheet);
+    expect(sheet.exists()).toBe(true);
+    expect(sheet.findComponent(StubWdPopup).props("modelValue")).toBe(true);
+    expect(sheet.find(".qr-title").text()).toBe("请正对镜头");
+    expect(sheet.find(".qr-note").text()).toBe("本次未消耗试衣次数");
+    expect(sheet.findAll("image").length).toBe(2); // ✓正例 + ✗反例
+
+    // 「重新选择照片」⇒ 关弹层并再次拉起选图（可立即重拍重传）
+    await sheet.find(".qr-btn--primary").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(w.findComponent(QualityRejectSheet).findComponent(StubWdPopup).props("modelValue")).toBe(false);
+    expect(h.chooseImageCalls).toBe(2);
   });
 
 });
