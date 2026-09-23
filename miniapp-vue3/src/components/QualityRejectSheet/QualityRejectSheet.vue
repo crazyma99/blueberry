@@ -15,8 +15,11 @@ const props = withDefaults(
     show?: boolean;
     /** 后端 `data.check_code`（未知码走兜底文案且只展示正例） */
     code?: string;
+    /** 文案覆盖（端侧拦截用：无对应 4 码时保留端侧原话，避免指错方向）；留空则用该码的契约文案 */
+    titleOverride?: string;
+    textOverride?: string;
   }>(),
-  { show: false, code: "unknown" },
+  { show: false, code: "unknown", titleOverride: "", textOverride: "" },
 );
 
 const emit = defineEmits<{
@@ -24,7 +27,12 @@ const emit = defineEmits<{
   (e: "close"): void;
 }>();
 
-const copy = computed(() => resolvePhotoGateCopy(props.code));
+const base = computed(() => resolvePhotoGateCopy(props.code));
+const copy = computed(() => ({
+  ...base.value,
+  title: props.titleOverride !== "" ? props.titleOverride : base.value.title,
+  text: props.textOverride !== "" ? props.textOverride : base.value.text,
+}));
 </script>
 
 <template>

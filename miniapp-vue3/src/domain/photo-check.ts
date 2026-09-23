@@ -1,12 +1,15 @@
 // T8 S3b 照片质量判定（纯领域规则，旧端 utils/photoCheck.uts 逐字移植的可测部分）。
-// 检查顺序（短路，旧端 :76-133）：① 分辨率 ② 模糊（降采样 ≤256px 灰度图拉普拉斯方差）③ 人脸检出/人数 ④ 人脸占比。
+// 检查顺序（短路，旧端 :76-133）：① 分辨率 ② 模糊（降采样 ≤256px 灰度图拉普拉斯方差）③ 人脸检出/人数 ④ 人脸占比（**仅下限**）。
 // 失败策略 fail-open（旧端 :138-141）：检测环节自身异常一律放行（由平台层 catch 后返回 ok:true）。
-// 阈值与文案逐字保留——文案直接面向用户，改动需产品确认。
+// 阈值与文案：2026-09-23 主人拍板「按调研结论与最终建议执行」⇒ **删除人脸占比上限 0.65 硬拦**：
+//   后端 4002 只有 4 条规则（人脸数=1／**下限**单轴线性比 ≥10%／角度 ≤30°），**无上限** ⇒ 端侧拦「脸过大」纯属误杀
+//   （特写/大头自拍会被端侧拦下、而后端判合格）。**下限保持 0.02（面积比）不动**——注意量纲差异：
+//   端侧是**面积比**（width*height），后端是**单轴线性比**（宽度或高度任一 <10%，等价面积 ≈0.01）；
+//   0.02 面积 ≈ 线性 14%，已比后端更严；若今后要收紧，必须先用 `~/文档/face-quality-api/cases/` 语料标定，勿凭感觉拍数字。
 
 export const PHOTO_MIN_SIDE = 480;
 export const PHOTO_BLUR_THRESHOLD = 100;
 export const PHOTO_FACE_AREA_MIN = 0.02;
-export const PHOTO_FACE_AREA_MAX = 0.65;
 
 export interface PhotoCheckResult {
   ok: boolean;
@@ -81,9 +84,6 @@ export function evaluatePhotoCheck(input: {
     const area = input.faceArea ?? 0;
     if (area < PHOTO_FACE_AREA_MIN) {
       return { ok: false, reason: "人脸在照片中占比太小，请靠近一些或裁剪后上传" };
-    }
-    if (area > PHOTO_FACE_AREA_MAX) {
-      return { ok: false, reason: "人脸占照片比例过大，请适当拉远距离后拍摄" };
     }
   }
   return { ok: true, reason: "" };

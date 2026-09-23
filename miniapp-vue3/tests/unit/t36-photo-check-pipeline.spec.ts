@@ -139,11 +139,9 @@ describe("platform/weixin/photo-check（T8 S3b 管线）", () => {
       ok: false,
       reason: "人脸在照片中占比太小，请靠近一些或裁剪后上传",
     });
+    // 占比上限已按主人拍板删除 ⇒ 大特写不再被端侧拦截（放行，交后端/生成端兜底）
     installWx({ pattern: "checker", vk: true, faces: [{ type: 3, size: { width: 0.9, height: 0.9 } }] });
-    await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({
-      ok: false,
-      reason: "人脸占照片比例过大，请适当拉远距离后拍摄",
-    });
+    await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
     installWx({ pattern: "checker", vk: true, faces: [{ type: 3, size: { width: 0.2, height: 0.2 } }] });
     await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
   });

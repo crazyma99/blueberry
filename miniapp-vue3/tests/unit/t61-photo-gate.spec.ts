@@ -16,6 +16,8 @@ import {
 } from "../../src/application/photo-gate";
 import QualityRejectSheet from "../../src/components/QualityRejectSheet/QualityRejectSheet.vue";
 import { createTryOnSubmitter, type SubmitInput } from "../../src/application/ai-tryon-submit";
+import { resolveEndSideRejection } from "../../src/application/photo-gate";
+import { createUniAnalytics } from "../../src/platform/uni/analytics";
 
 const root = resolve(__dirname, "../..");
 const read = (p: string): string => readFileSync(resolve(root, p), "utf-8");
@@ -227,4 +229,62 @@ describe("弹层样式守卫（解 CR m9 假绿：样式零覆盖）", () => {
     expect(s).toMatch(/\.qr-img \{[^}]*box-sizing: border-box/s);
   });
 });
+});
+
+describe("端侧拦截 → 弹层呈现（2026-09-23 主人拍板：与后端 4002 统一 UX）", () => {
+  it("端侧 4 类 reason 各自映射到对应码与契约文案", () => {
+    expect(resolveEndSideRejection("未检测到人脸，请上传清晰的正面照片").code).toBe("no_face");
+    expect(resolveEndSideRejection("检测到多张人脸，请上传单人照片").code).toBe("multi_face");
+    expect(resolveEndSideRejection("人脸在照片中占比太小，请靠近一些或裁剪后上传").code).toBe("face_too_small");
+    expect(resolveEndSideRejection("人脸在照片中占比太小，请靠近一些或裁剪后上传").text).toBe(
+      PHOTO_GATE_COPY.face_too_small.text,
+    );
+  });
+
+  it("无对应 4 码（模糊/分辨率过低）⇒ unknown 码但**保留端侧原话**（避免指错方向），空值走兜底", () => {
+    const blur = resolveEndSideRejection("照片有点模糊，请重新拍摄清晰的照片");
+    expect(blur.code).toBe("unknown");
+    expect(blur.text).toBe("照片有点模糊，请重新拍摄清晰的照片");
+    expect(resolveEndSideRejection("").text).toBe("换一张照片试试吧");
+  });
+
+  it("弹层支持端侧文案覆盖；留空则回落该码契约文案", () => {
+    const withOverride = mount(QualityRejectSheet, {
+      props: { show: true, code: "no_face", titleOverride: "照片未通过检测", textOverride: "照片有点模糊，请重新拍摄清晰的照片" },
+      global: { components: { "wd-popup": StubWdPopup } },
+    });
+    expect(withOverride.find(".qr-title").text()).toBe("照片未通过检测");
+    expect(withOverride.find(".qr-text").text()).toBe("照片有点模糊，请重新拍摄清晰的照片");
+    expect(withOverride.findAll("image").length).toBe(1); // unknown 码无反例图 ⇒ 只出正例
+    const noOverride = mount(QualityRejectSheet, {
+      props: { show: true, code: "multi_face" },
+      global: { components: { "wd-popup": StubWdPopup } },
+    });
+    expect(noOverride.find(".qr-title").text()).toBe(PHOTO_GATE_COPY.multi_face.title);
+  });
+});
+
+describe("埋点端口（契约 §7 `ai_tryon_quality_reject`；fail-soft、无第三方 SDK）", () => {
+  it("⭐有 reportEvent 时按其签名上报 name+params", () => {
+    const calls: Array<[string, Record<string, string | number> | undefined]> = [];
+    const g = globalThis as { uni?: unknown };
+    g.uni = { reportEvent: (n: string, d?: Record<string, string | number>) => calls.push([n, d]) };
+    try {
+      createUniAnalytics().reportEvent("ai_tryon_quality_reject", { check_code: "side_face", source: "server" });
+      expect(calls).toEqual([["ai_tryon_quality_reject", { check_code: "side_face", source: "server" }]]);
+    } finally {
+      delete g.uni;
+    }
+  });
+
+  it("容器无该 API / API 抛错 ⇒ 静默（绝不抛、绝不阻断主流程）", () => {
+    const g = globalThis as { uni?: unknown };
+    createUniAnalytics().reportEvent("ai_tryon_quality_reject", { check_code: "no_face" }); // 无 uni
+    g.uni = { reportEvent: () => { throw new Error("boom"); } };
+    try {
+      expect(() => createUniAnalytics().reportEvent("ai_tryon_quality_reject", { check_code: "no_face" })).not.toThrow();
+    } finally {
+      delete g.uni;
+    }
+  });
 });

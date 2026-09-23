@@ -74,3 +74,20 @@ export function readCheckCodeFromBusinessData(data: unknown): PhotoGateCheckCode
 export function resolvePhotoGateCopy(rawCode: unknown): PhotoGateCopy {
   return PHOTO_GATE_COPY[resolvePhotoGateCode(rawCode)];
 }
+
+/** 端侧（VK/分辨率/模糊）拦截结果的呈现映射：尽量复用后端 4 码的示例图与文案，无对应码时用端侧原话覆盖正文 */
+export interface EndSideRejection {
+  code: PhotoGateCheckCode | "unknown";
+  title: string;
+  text: string;
+}
+
+/** 端侧 reason（`domain/photo-check.ts` 逐字文案）→ 弹层呈现（**编码只用于挑反例图**，文案以端侧原话为准，避免指错方向） */
+export function resolveEndSideRejection(reason: string): EndSideRejection {
+  const r = typeof reason === "string" ? reason : "";
+  if (r.includes("未检测到人脸")) return { code: "no_face", title: PHOTO_GATE_COPY.no_face.title, text: PHOTO_GATE_COPY.no_face.text };
+  if (r.includes("多张人脸")) return { code: "multi_face", title: PHOTO_GATE_COPY.multi_face.title, text: PHOTO_GATE_COPY.multi_face.text };
+  if (r.includes("占比太小")) return { code: "face_too_small", title: PHOTO_GATE_COPY.face_too_small.title, text: PHOTO_GATE_COPY.face_too_small.text };
+  // 分辨率过低 / 模糊 / 其它：后端 4 码无对应 ⇒ 通用标题 + **保留端侧原话**（比兜底文案更具体）
+  return { code: "unknown", title: PHOTO_GATE_COPY.unknown.title, text: r !== "" ? r : PHOTO_GATE_COPY.unknown.text };
+}

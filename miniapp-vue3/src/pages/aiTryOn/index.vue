@@ -25,6 +25,8 @@ import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
 import { toast, showLoading, hideLoading, showModal } from "../../platform/uni/feedback";
 import QualityRejectSheet from "../../components/QualityRejectSheet/QualityRejectSheet.vue";
+import { resolveEndSideRejection } from "../../application/photo-gate";
+import { createUniAnalytics } from "../../platform/uni/analytics";
 import type { PhotoGateCheckCode } from "../../application/photo-gate";
 import { createCaptureGuard, enableShareMenu, requestTaskNotify } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
@@ -160,8 +162,18 @@ const isUploading = ref(false);
 const isSubmitting = ref(false);
 
 // 2026-09-23：后端 4002 照片质量拦截——弹「拦截提示」底部弹层（正反例对比＋重拍引导；拦截不扣次数/不扣费）
+const analytics = createUniAnalytics();
 const showQualityReject = ref(false);
 const qualityRejectCode = ref<PhotoGateCheckCode | "unknown">("unknown");
+const qualityRejectTitle = ref(""); // 端侧拦截时用端侧原话/映射标题覆盖（空 ⇒ 用该码契约文案）
+const qualityRejectText = ref("");
+/** 清空已选/已上传照片（拦截后必须重选；防止旧照片被再次提交） */
+function clearPhotoSelection(): void {
+  photoPath.value = "";
+  photoPreviewUrl.value = "";
+  uploadedFilename.value = "";
+}
+
 /** 弹层「重新选择照片」⇒ 关弹层并复用既有 选图→端侧预检→上传 链路 */
 function onQualityRejectRetry(): void {
   showQualityReject.value = false;
@@ -383,7 +395,14 @@ async function choosePhoto(): Promise<void> {
   }
   hideLoading();
   if (!check.ok) {
-    showModal("照片未通过检测", `${check.reason}，请重新上传`);
+    // 2026-09-23 主人拍板：端侧拦截**改走与后端 4002 同一个底部弹层**（统一 UX：正反例图＋重拍引导＋未消耗次数安抚）
+    const mapped = resolveEndSideRejection(check.reason);
+    clearPhotoSelection(); // 防「以为换了图、实际仍持旧图」被再次提交
+    qualityRejectCode.value = mapped.code;
+    qualityRejectTitle.value = mapped.title;
+    qualityRejectText.value = mapped.text;
+    showQualityReject.value = true;
+    analytics.reportEvent("ai_tryon_quality_reject", { check_code: mapped.code, source: "end_side" });
     return;
   }
   photoPath.value = picked.path;
@@ -450,8 +469,13 @@ async function runSubmitFlow(): Promise<void> {
       toast(out.message);
       return;
     case "quality-rejected":
+      // 后端 4002：清掉已上传/已选照片（拦截不扣次；避免旧照片被再次提交），弹同一弹层并上报埋点
+      clearPhotoSelection();
       qualityRejectCode.value = out.checkCode;
+      qualityRejectTitle.value = "";
+      qualityRejectText.value = "";
       showQualityReject.value = true;
+      analytics.reportEvent("ai_tryon_quality_reject", { check_code: out.checkCode, source: "server" });
       return;
     case "need-recharge":
       creditBalance.value = 0;
@@ -689,6 +713,8 @@ function safeDecode(v: string): string {
     <QualityRejectSheet
       :show="showQualityReject"
       :code="qualityRejectCode"
+      :title-override="qualityRejectTitle"
+      :text-override="qualityRejectText"
       @retry="onQualityRejectRetry"
       @close="showQualityReject = false"
     />
