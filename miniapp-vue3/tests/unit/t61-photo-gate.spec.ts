@@ -59,7 +59,7 @@ describe("契约单一事实源（application/photo-gate）", () => {
       const c = PHOTO_GATE_COPY[code];
       expect(c.title.length, code).toBeGreaterThan(0);
       expect(c.text.length, code).toBeGreaterThan(0);
-      expect(c.rejectAsset, code).toMatch(/^\/static\/quality-gate\/reject_.*\.jpg$/);
+      expect(c.rejectAsset, code).toMatch(/reject_.*\.jpg$/); // 打包器引用（不再写 /static 绝对路径）
     }
     expect(PHOTO_GATE_COPY.unknown.title).toBe("照片未通过检测");
     expect(PHOTO_GATE_COPY.unknown.text).toBe("换一张照片试试吧"); // ← 主人 2026-09-23 指定
@@ -92,7 +92,7 @@ describe("示例图资产（主人 2026-09-23 提供；已压缩入包）", () =
       "reject_multi_face",
       "reject_face_too_small",
       "reject_side_face",
-    ].map((n) => `src/static/quality-gate/${n}.jpg`);
+    ].map((n) => `src/assets/quality-gate/${n}.jpg`);
     let total = 0;
     for (const f of files) {
       const size = statSync(resolve(root, f)).size;
@@ -101,7 +101,7 @@ describe("示例图资产（主人 2026-09-23 提供；已压缩入包）", () =
       total += size;
     }
     expect(total).toBeLessThanOrEqual(200 * 1024);
-    expect(PHOTO_GATE_ACCEPT_ASSET).toBe("/static/quality-gate/accept_normal.jpg");
+    expect(PHOTO_GATE_ACCEPT_ASSET).toMatch(/accept_normal\.jpg$/);
   });
 });
 
@@ -119,7 +119,9 @@ describe("QualityRejectSheet 渲染级（底部弹层＋正反例对比）", () 
     expect(w.find(".qr-title").text()).toBe("请正对镜头");
     expect(w.find(".qr-text").text()).toContain("正对镜头");
     const imgs = w.findAll("image").map((i) => i.attributes("src"));
-    expect(imgs).toEqual(["/static/quality-gate/accept_normal.jpg", "/static/quality-gate/reject_side_face.jpg"]);
+    expect(imgs.length).toBe(2);
+    expect(imgs[0]).toMatch(/accept_normal\.jpg$/);
+    expect(imgs[1]).toMatch(/reject_side_face\.jpg$/);
     expect(w.find(".qr-note").text()).toBe("本次未消耗试衣次数");
     await w.find(".qr-btn--primary").trigger("click");
     expect(w.emitted("retry")?.length).toBe(1);

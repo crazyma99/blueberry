@@ -17,30 +17,38 @@ export interface PhotoGateCopy {
   rejectAsset: string | null;
 }
 
+// 资产走**打包器引用**（`src/assets/**` 由 Vite/uni 按「谁 import 才打谁」处理）：
+// 2026-09-23 自检发现——放在 `src/static/**` 会被**无差别拷贝到所有平台**（抖音包里白塞 157KB 死资源，因 AI 六页仅微信注册）。
+import acceptNormalAsset from "../assets/quality-gate/accept_normal.jpg";
+import rejectFaceTooSmallAsset from "../assets/quality-gate/reject_face_too_small.jpg";
+import rejectMultiFaceAsset from "../assets/quality-gate/reject_multi_face.jpg";
+import rejectNoFaceAsset from "../assets/quality-gate/reject_no_face.jpg";
+import rejectSideFaceAsset from "../assets/quality-gate/reject_side_face.jpg";
+
 /** ✓ 正例图（所有码共用；与反例并排构成「正反例对比」） */
-export const PHOTO_GATE_ACCEPT_ASSET = "/static/quality-gate/accept_normal.jpg";
+export const PHOTO_GATE_ACCEPT_ASSET = acceptNormalAsset;
 
 /** 4 码 + unknown 的文案/反例图（文案基线取自后端契约文档，`unknown` 按主人指定） */
 export const PHOTO_GATE_COPY: Record<PhotoGateCheckCode | "unknown", PhotoGateCopy> = {
   no_face: {
     title: "未检测到清晰人脸",
     text: "未检测到人脸，请上传单人正面照，可参考示例图",
-    rejectAsset: "/static/quality-gate/reject_no_face.jpg",
+    rejectAsset: rejectNoFaceAsset,
   },
   multi_face: {
     title: "检测到多张人脸",
     text: "请上传单人照片，避免合照",
-    rejectAsset: "/static/quality-gate/reject_multi_face.jpg",
+    rejectAsset: rejectMultiFaceAsset,
   },
   face_too_small: {
     title: "人脸太小",
     text: "请靠近一些或裁剪后上传",
-    rejectAsset: "/static/quality-gate/reject_face_too_small.jpg",
+    rejectAsset: rejectFaceTooSmallAsset,
   },
   side_face: {
     title: "请正对镜头",
     text: "侧脸会影响生成效果，请正对镜头再拍一张",
-    rejectAsset: "/static/quality-gate/reject_side_face.jpg",
+    rejectAsset: rejectSideFaceAsset,
   },
   unknown: {
     title: "照片未通过检测",
