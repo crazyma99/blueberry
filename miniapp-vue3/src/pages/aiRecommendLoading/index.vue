@@ -89,6 +89,11 @@ import {
 } from "../../application/ai-recommend-flow";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
+import BaseButton from "../../ui/BaseButton.vue";
+import { tokens } from "../../generated/tokens";
+
+/** 主按钮品牌金：经 wot CSS 变量绑 tokens（按钮统一走门面 BaseButton） */
+const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};`;
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
 import { shouldResumeStartedAt } from "../../application/wait-resume";
@@ -502,9 +507,14 @@ function redirectTo(url: string): void {
     <view v-if="status === 'failed'" class="center-content fail-overlay">
       <view class="fail-wrapper">
         <text class="fail-text">AI分析失败，请重试</text>
-        <view class="retry-btn" hover-class="press-dim" @click="handleRetry">
-          <text class="retry-btn-text">重试</text>
-        </view>
+        <BaseButton
+            class="retry-btn"
+            label="重试"
+            block
+            round
+            :custom-style="PRIMARY_BTN_STYLE"
+            @click="handleRetry"
+          />
         <view class="back-btn-wrapper" hover-class="press-dim" @click="handleBack">
           <text class="back-btn-text">返回</text>
         </view>
