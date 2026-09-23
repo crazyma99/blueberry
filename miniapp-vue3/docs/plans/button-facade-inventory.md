@@ -87,7 +87,10 @@
 
 > 注：全部经 `platform/uni/feedback.ts` 的 `toast/showLoading/hideLoading/showModal` 调用（**没有**任何页面直接调 `uni.showToast`）⇒ 迁移面＝这些调用点的**实现通道**，不是调用点本身。
 
-**进度（2026-09-23 第 19 轮）**：① `aiRecommendLoading` **已完成**（`7f75a8f`：11 toast ＋ 1 组 loading；该页此前仅 1 处 loading 调用点与 11 处 toast）。② `aiRecommendResult` **已完成**（`f6859bf`：2 处 toast）。③ `aiTryOnHistory` **已完成**（`99befd0`：3 处 toast）。④ `aiRecommend` **已完成**（`ebbf3c5`：22 toast ＋ 4/6 loading；`showModal` 1 处保持原生待口径）。⑤ `aiTryOnResult` **已完成**（`dba9933`：13 toast ＋ 2/3 loading；`showModal` 3 处保持原生待口径）。**余 1 页**：`aiTryOn`（原试点页，包装＋弹层＋埋点已落地，仅需复核口径一致）。
+**进度（2026-09-23 第 19 轮）**：① `aiRecommendLoading` **已完成**（`7f75a8f`：11 toast ＋ 1 组 loading；该页此前仅 1 处 loading 调用点与 11 处 toast）。② `aiRecommendResult` **已完成**（`f6859bf`：2 处 toast）。③ `aiTryOnHistory` **已完成**（`99befd0`：3 处 toast）。④ `aiRecommend` **已完成**（`ebbf3c5`：22 toast ＋ 4/6 loading；`showModal` 1 处保持原生待口径）。⑤ `aiTryOnResult` **已完成**（`dba9933`：13 toast ＋ 2/3 loading；`showModal` 3 处保持原生待口径）。⑥ **`aiTryOn` 复核通过**：其包装即本配方的来源（口径一致），并由新守卫 `t63` 一并扫描通过。
+
+**B2 完成（6/6，2026-09-23 第 20 轮）**，并新增**机器守卫** `tests/unit/t63-ai-feedback-facade-guard.spec.ts`（`64063db`）：①直连原生 `toast/showLoading/hideLoading` 即红（只允许 `as nativeXxx` 回落别名）②有调用未挂门面即红 ③门面契约未回退 ④原生通道仍在。**双向变异实测变红**（删挂载／改回直连导入）。
+> **仍待主人拍板**：`showModal` 4 处（`aiRecommend` 1、`aiTryOnResult` 3）是否改 `BaseDialog` 门面——属交互形态变化，未擅动。
 
 **⭐测试口径（本轮新增，务必沿用——否则会写成假绿）**：页面级测试观测轻提示**必须给门面配桩**：
 ```ts
