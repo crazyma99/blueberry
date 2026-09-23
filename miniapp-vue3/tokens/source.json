@@ -46,7 +46,8 @@
     "fontSizeCaption": "{primitive.fontCaption}",
     "fontSizeSubTitle": "{primitive.fontSubTitle}",
     "sizeHitArea": "{primitive.hitAreaMin}",
-    "sizeTabBarAvoid": "{primitive.tabBarAvoid}"
+    "sizeTabBarAvoid": "{primitive.tabBarAvoid}",
+    "colorPopupCard": "#262626"
   },
   "component": {
     "albumTitleLikeGapRpx": 10,

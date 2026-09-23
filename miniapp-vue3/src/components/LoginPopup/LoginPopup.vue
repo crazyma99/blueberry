@@ -43,7 +43,7 @@ const emit = defineEmits<{
 
 <template>
   <!-- 2026-09-22 主人第③项：弹窗统一走 **wot Popup 门面** `ui/BasePopup`（内部＝wot `wd-popup`）；遮罩点击关闭由门面 `cancel` 转发 -->
-  <BasePopup :show="true" position="center" @cancel="emit('close')">
+  <BasePopup :show="true" position="bottom" :z-index="1200" @cancel="emit('close')">
     <view class="login-card font-harmony">
       <!-- 顶部氛围光 -->
       <view class="card-aura"></view>
@@ -87,15 +87,18 @@ const emit = defineEmits<{
 /* 居中卡片 */
 .login-card {
   position: relative;
-  width: 620rpx;
-  background: #262626; /* 旧 var(--color-popup-card) #262626（App.uvue :90） */
-  border-radius: 48rpx; /* 旧 var(--radius-2xl) 48rpx（App.uvue :104） */
+  box-sizing: border-box; /* 修：width:100%+左右 padding 在 content-box 下会溢出屏幕（主人报「内容比弹窗宽」） */
+  padding-bottom: calc(32rpx + constant(safe-area-inset-bottom)); /* 底部安全区（两端通用，非 CSS 变量） */
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+  width: 100%; /* 底部弹层：通栏（面/圆角/安全区由 wot 弹层承载） */
+  background: $color-popup-card; /* 面色=**主题 token**（旧端 --color-popup-card 同值）；不依赖 CSS 变量 ⇒ 微信/抖音同源 */ /* 旧 var(--color-popup-card) #262626（App.uvue :90） */
+  border-radius: #{$popup-radius-rpx * 2}rpx #{$popup-radius-rpx * 2}rpx 0 0; /* 底部弹层上圆角（token 档位） */ /* 旧 var(--radius-2xl) 48rpx（App.uvue :104） */
   padding: 56rpx 48rpx 44rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
-  animation: cardPopIn 0.28s ease-out;
+  /* 底部弹层用 wot `position=bottom` 自带上滑过渡，不再叠加卡片缩放动画 */
 
   font-family: 'HarmonyOS-Sans-SC'; /* 组件样式隔离（默认 isolated）⇒ app.wxss 的 page/.font-harmony 进不来，必须自带 */}
 @keyframes cardPopIn {

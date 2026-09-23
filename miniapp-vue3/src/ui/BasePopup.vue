@@ -22,8 +22,17 @@ withDefaults(
     zIndex?: number;
     /** 🟡CR4：把「遮罩点击是否关闭」从 wot 上游默认值变成**门面合同**（`wd-popup` 默认 true） */
     closeOnClickModal?: boolean;
+    /** wot `round`：开启后**按弹出位置自动适配圆角**（底部弹出→上圆角）——底部弹层接管圆角，勿手写（`npx wot info Popup`） */
+    round?: boolean;
+    /** wot `safe-area-inset-bottom`：底部弹层是否适配底部安全区（同上，由组件负责，勿手写 padding hack） */
+    safeAreaInsetBottom?: boolean;
+    /** 覆盖弹层 surface（如 `--wot-popup-bg: <主题 token 色>`；默认透明 = 由内容自带面） */
+    customStyle?: string;
   }>(),
-  { show: false, title: "", position: "center", closable: false, rootPortal: true, zIndex: 1001, closeOnClickModal: true },
+  {
+    show: false, title: "", position: "center", closable: false, rootPortal: true, zIndex: 1001, closeOnClickModal: true,
+    round: false, safeAreaInsetBottom: false, customStyle: "",
+  },
 );
 
 /** 🔴CR2（2026-09-22）：wot `wd-popup` 根节点自带**不透明**默认底色（`.wd-popup{background:var(--wot-popup-bg,…white)}`，本仓未定义任何 `--wot-*`）
@@ -65,7 +74,9 @@ const useNative = isToutiaoPlatform();
     :root-portal="rootPortal"
     :z-index="zIndex"
     :close-on-click-modal="closeOnClickModal"
-    :custom-style="POPUP_TRANSPARENT_STYLE"
+    :round="round"
+    :safe-area-inset-bottom="safeAreaInsetBottom"
+    :custom-style="customStyle !== '' ? customStyle : POPUP_TRANSPARENT_STYLE"
     @close="onClose"
     @update:model-value="onModelValueUpdate"
   >
@@ -74,7 +85,7 @@ const useNative = isToutiaoPlatform();
       <slot />
     </view>
   </wd-popup>
-  <view v-else-if="show" class="base-popup-native" :style="{ zIndex }">
+  <view v-else-if="show" :class="position === 'bottom' ? 'base-popup-native is-bottom' : 'base-popup-native'" :style="{ zIndex }">
     <view class="base-popup-native__mask" @click="onClose" @touchmove.stop.prevent />
     <view class="base-popup-native__box">
       <view v-if="closable" class="base-popup-native__close" @click="onClose">
@@ -114,6 +125,14 @@ const useNative = isToutiaoPlatform();
   bottom: 0;
   left: 0;
   background: rgba(0, 0, 0, 0.5);
+}
+.base-popup-native.is-bottom {
+  align-items: flex-end; /* 抖音自绘分支：底部弹层对齐（wot 的 position/round/safe-area 在 TTSS 下不可用，此处等价实现） */
+}
+.base-popup-native.is-bottom .base-popup-native__box {
+  width: 100%;
+  background: transparent; /* 面由内容卡片承载（SCSS token）⇒ 两端同源 */
+  border-radius: 0;
 }
 .base-popup-native__box {
   position: relative;

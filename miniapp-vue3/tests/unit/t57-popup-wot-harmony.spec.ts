@@ -14,6 +14,9 @@ const StubWdPopup = defineComponent({
   name: "StubWdPopup",
   props: {
     modelValue: { type: Boolean, default: false },
+    position: { type: String, default: "center" },
+    round: { type: Boolean, default: false },
+    safeAreaInsetBottom: { type: Boolean, default: false },
     zIndex: { type: Number, default: 10 },
     customStyle: { type: String, default: "" },
     closeOnClickModal: { type: Boolean, default: true },
@@ -95,12 +98,31 @@ describe("渲染级：弹窗经门面确实拿到透明面/层级，遮罩与卡
     const w = mount(ProfilePopup, { global: { components: { "wd-popup": StubWdPopup } } });
     expect(w.find(".profile-card").exists()).toBe(true);
     const stub = w.findComponent(StubWdPopup);
-    expect(stub.props("zIndex")).toBe(1001);
-    expect(stub.props("customStyle")).toContain("--wot-popup-bg: transparent");
+    expect(stub.props("zIndex")).toBe(1200); // 底部弹层：须高于 Tab 栏（已下调 900）与自绘栏 998
+    expect(stub.props("position")).toBe("bottom"); // 底部弹层（主人指示）
+    expect(stub.props("round")).toBe(false); // 圆角改由卡片 token 提供（两端一致）
+    expect(stub.props("safeAreaInsetBottom")).toBe(false);
+    expect(stub.props("customStyle")).toContain("--wot-popup-bg: transparent"); // 弹层保持透明面；**面色由卡片 SCSS token 承载**（抖音 TTSS 不支持 CSS 变量）
     expect(stub.props("closeOnClickModal")).toBe(true);
     await w.find(".stub-popup__mask").trigger("click");
     expect(w.emitted("skip")?.length).toBe(1);
     await w.find(".profile-card").trigger("click"); // 遮罩为兄弟节点 ⇒ 卡片内点击不得关闭
     expect(w.emitted("skip")?.length).toBe(1);
+  });
+
+  // ===== 2026-09-22 主人报 v1.0.45 两处 UI 异常：内容溢出 + 被底部 Tab 栏压着 =====
+  it("底部弹层几何：两卡片 `box-sizing:border-box`（通栏+左右 padding 不溢出）", () => {
+    for (const f of ["src/components/ProfilePopup/ProfilePopup.vue", "src/components/LoginPopup/LoginPopup.vue"]) {
+      const s = read(f);
+      expect(s, f).toContain("box-sizing: border-box");
+      expect(s, f).toContain("width: 100%");
+    }
+  });
+
+  it("层级：弹层显式 z-index 1200；Tab 栏下调至 900（弹层须覆盖 Tab 栏）", () => {
+    for (const f of ["src/components/ProfilePopup/ProfilePopup.vue", "src/components/LoginPopup/LoginPopup.vue"]) {
+      expect(read(f), f).toContain(':z-index="1200"');
+    }
+    expect(read("src/custom-tab-bar/index.wxss")).toContain("z-index: 900");
   });
 });

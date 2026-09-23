@@ -5,7 +5,7 @@
   bottom: 0;
   background: #160f04;
   border-top: 1rpx solid #000;
-  z-index: 999;
+  z-index: 900; /* 2026-09-22 主人报「弹窗被底部 Tab 栏压着」：弹层（wot popup z-index≥1001）须覆盖 Tab 栏；Tab 栏只需高于页面内容 */
 }
 
 .tabbar-inner {
