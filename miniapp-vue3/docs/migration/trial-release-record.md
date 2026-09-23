@@ -26,6 +26,7 @@ wechat-devtools-cli upload --project "$PWD/dist/build/mp-weixin" -v "v1.0.25" -d
 ## 3. 记录
 | # | 时间 | 版本 | 描述 | 结果 | 备注 |
 |---|---|---|---|---|---|
+| 29 | 2026-09-23 | **v1.0.55** | `[g85ca7e8] 按钮全覆盖收口：业务页自绘按钮清零（白名单 16→4 处）＋ AI 六页反馈通道统一（loading/Toast 走门面）＋ 3 道机器守卫 t62/t63/t64 ＋ 独立 CR 🔴 12 处文字色修复` | ✅ **成功** | 主人口径「按钮组件要覆盖所有其他的按钮 …… 后续全部要使用组件来做」的收口版：**`src/pages/**` 与 `src/components/**` 自绘按钮清零**，白名单仅剩门面内部登记豁免 `2` 文件/`4` 处（`ui/BasePicker` 2、`ui/BaseDialog` 2）；**AI 六页反馈通道**全部改走门面（`toast`→`BaseFeedback`、`showLoading/hideLoading`→`BaseLoadingPopup`，抖音端回落原生），**调用点零改动**；新增机器守卫 `t62`（自绘按钮只减不增，**已升级为标签级扫描**）／`t63`（反馈通道不得直连原生）／`t64`（样式常量必须显式 `color:`），三者均以**变异实测变红**自证。**独立 CR 回执处置**：🔴 wot `base` 变体文字色取 `--wot-button-main-color`（非 `--wot-button-primary-color`）⇒ **12 处常量补显式 `color:`**；🟡1 百分比尺寸改由宿主承担；🟡2 守卫漏检 ⇒ 标签级扫描后**新抓出 4 处漏检按钮并全部组件化**。CLI 实测 `TOTAL 1,896,660 B`（较 v1.0.54 **+11,635 B**）／`vitest 562 passed/3 skipped`／`vue-tsc` 0／微信+抖音构建 exit 0。**流程**：清缓存（`dist/build`＋vite cache）→ 重建 → `pkill -x nw/exe` 重启 IDE（`exe` 已跑 57 分钟、CPU 80.9% 的坏状态）→ `open` → `upload` **一次通过**（未踩「项目句柄失效」坑）。 |
 | 1 | 2026-09-17 18:46 | v1.0.25 | `[gc0ed7b4] 迁移试运行` | ❌ **失败** | `wxss 编译错误 … error at token \`*\``（`pages/index`、`pages/priceHomePage`）⇒ 通配选择器不合法，见 deviations **#13** |
 | 2 | 2026-09-17 18:5x | v1.0.25 | 同上 | ❌ **失败** | 修掉 `*` 后转为 `app.json: 在项目根目录未找到` ⇒ **IDE 持有失效项目句柄**（我删过 `dist/trial-nonpm`，工具仍记着它） |
 | 3 | 2026-09-17 19:0x | **v1.0.25** | `[gc0ed7b4] 迁移试运行` | ✅ **成功** | **重启工具服务**后重试即通过：`✔ Using AppID: wxb19ad7426dfb8bd4`｜`TOTAL 1.5 MB (1,542,072 B)`｜`✔ upload`｜exit 0 |
