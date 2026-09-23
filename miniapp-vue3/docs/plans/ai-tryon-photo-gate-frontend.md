@@ -36,7 +36,7 @@
 | 5 | `src/application/ai-tryon-submit.ts:38-44` `SubmitOutcome` | `ignored/need-login/toast/need-recharge/submitted` —— **无拦截态** | **新增 `{ kind: "quality-rejected"; checkCode: PhotoGateCheckCode }`** |
 | 6 | `src/application/ai-tryon-submit.ts:122-127` | 已有 4001 归一化（插入点参照） | 在 4001 分支前/后加 `QUALITY_REJECTED` 归一化 + `check_code` 解析（未知码兜底） |
 | 7 | `src/pages/aiTryOn/index.vue:432` `switch (out.kind)` | 无拦截分支 | **新增 `case "quality-rejected"`**：隐藏 loading → 弹拦截弹层 → 支持立即重传 |
-| 8 | 素材 | ⚠️ `src/static/demo1.png`／`demo2.png` 实为**门店/景区宣传图**（红河水乡、太平湖），**不是**上传引导示例图；**测试用例图已定位**＝`~/文档/face-quality-api/cases/`（百度人脸 V3 兼容服务的 10 例测试集，含 `result.json` 与 `TEST-RESULT.md`） | 见 **§5.3.1 联调造数清单**；弹层示例图素材仍需主人确认（见 §6 #1） |
+| 8 | 素材 | ⚠️ `src/static/demo1.png`／`demo2.png` 实为**门店/景区宣传图**（红河水乡、太平湖），**不是**上传引导示例图；**测试用例图已定位**＝`~/文档/face-quality-api/cases/`（百度人脸 V3 兼容服务的 10 例测试集） | **弹层示例图需求已定稿**（正反例对比／AI 真实感／复用现有 IconPark／**JPG 或 PNG**）⇒ 素材**待产出**，见 **§5.3.2**；联调造数清单见 §5.3.1 |
 | 9 | 埋点 | 全仓 **无埋点端口**（`track/report/beacon` 零命中） | 新增最小端口（见 §4.5），或本期仅登记待办 |
 | 10 | 端侧预检 `src/domain/photo-check.ts` + `src/platform/weixin/vk-face.ts` | 已存在 | **保留不动**（文案风格可与云端统一，非必须） |
 
@@ -140,6 +140,22 @@ export function resolvePhotoGateCopy(raw: unknown): PhotoGateCopy;
 
 > 另有坑：`cases/05_facemask/` 的图**内容与文件名不符**（实为树影斑驳人像、无口罩），`TEST-RESULT.md` 已如实记录 ⇒ 不要用它做「遮挡」用例。
 
+### 5.3.2 弹层美术素材需求（2026-09-23 主人定稿；**待产出**）
+
+> 主人决定：**形式＝正反例对比**（✓ 正例 / ✗ 反例）｜**风格＝AI 真实感**｜**图标＝复用现有 IconPark（不新增图标）**｜**格式＝JPG 或 PNG**。
+
+| # | 素材 | 数量 | 说明与规格 |
+|---|---|---|---|
+| 1 | ✗ 反例图 | **4 张** | 对应 `no_face`／`multi_face`／`face_too_small`／`side_face`；**AI 真实感人像**（合成，无真人肖像授权问题）；1:1，**750×750 px**（@2x，显示约 240rpx 见方）；**JPG（q≈80，≤40KB/张）优先**，PNG 仅当需透明背景时用（≤80KB） |
+| 2 | ✓ 正例图 | **1 张** | 标准正面免冠、光线充足单人照示意；与反例**同风格同构图**（便于并排对比）；规格同上 |
+| 3 | 对比版式 | 0 | **不出图**：✓/✗ 角标、描边、圆角、底色全部由代码 + token 实现（避免图内嵌装饰，便于主题化） |
+| 4 | 图标 | 0 | **复用** `src/static/iconpark/`：`face-scan`（无人脸/检测）、`eyes`（侧脸）、`check-white`（正例角标）、`camera` 若需另画则改用现有 `picture`／`plan` 语义替代（主人已定「复用现有」） |
+
+- 命名与路径：`src/static/quality-gate/{reject_no_face,reject_multi_face,reject_face_too_small,reject_side_face,accept_normal}.jpg`（PNG 则同后缀改 `.png`）。
+- 通用规范：**图内不嵌中文字/不画圆角/不留白底**（文案与圆角走代码与 token）；暗底（`#160F04`）观感优先；四张反例建议**同一位虚拟模特/同一构图**，仅变换「场景缺陷」；总增包体目标 **≤150KB**。
+- 交付方式（二选一）：⒜ 主人/设计直接给图；⒝ **我按图库口径先产出 5 张图的生图提示词**（按公司硬约定先加载 `gpt-image-prompt-library` skill，**只出提示词、不生图**）交您定稿后再产出。
+- 关联待办：知识库 04 分册**待办项 6**（JPG/PNG 美术素材需求）＋ 03 分册 §十 10.20。
+
 ### 5.4 PRD 验收 → 实现映射
 
 | PRD 验收项 | 落点 |
@@ -155,7 +171,7 @@ export function resolvePhotoGateCopy(raw: unknown): PhotoGateCopy;
 
 | # | 事项 | 我的建议 |
 |---|---|---|
-| 1 | **弹层示例图素材**（PRD 要求「复用上传引导的示例图」） | 已核：`src/static/demo1/demo2` **不是**引导示例图 ⇒ 需主人指明「上传引导示例图」到底是哪张（或确认新建一张标准正面照示意）。**联调造数图已就位**（§5.3.1），但那批含真人/AI 人像、**不宜打包**；若需「✓正例/✗反例」示意，我可按图库口径出**生图提示词**（只出提示词，不生图）由您定稿 |
+| 1 | ~~弹层示例图素材~~ → **已定稿（2026-09-23 主人）**：正反例对比／AI 真实感／复用现有 IconPark／JPG 或 PNG | **待产出**（需求见 §5.3.2；KB 04 待办项 6）：由主人/设计给图，或我先出**生图提示词**（先加载 `gpt-image-prompt-library` skill，只出提示词不生图）供定稿 |
 | 2 | **埋点是否本期做** | 建议本期只做「端口 + fail-soft 调用」，不接第三方 SDK |
 | 3 | **弹层形态** | 建议底部弹层（与本次改造同口径）；若您偏好居中弹窗/全屏引导页，我改 |
 | 4 | **未知码文案优先级** | 建议以本地映射为准，`unknown` 时若后端 `message` 非空则优先展示 `message`（更具体） |
