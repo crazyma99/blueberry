@@ -59,7 +59,7 @@ import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
-import { toast, showLoading, hideLoading, showModal, navigateTo } from "../../platform/uni/feedback";
+import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, showModal, navigateTo } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
 import { createWeixinPayments } from "../../platform/weixin/payments";
@@ -86,12 +86,44 @@ import {
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import AppPhotoPicker from "../../components/AppPhotoPicker/AppPhotoPicker.vue";
 import BottomActionBar from "../../components/BottomActionBar/BottomActionBar.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
+import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import ProfilePopup from "../../components/ProfilePopup/ProfilePopup.vue";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
 const detected = detectUiPlatform();
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
+
+// —— 反馈通道统一（2026-09-23 B2；主人「选项一，都应该改」）——
+// 加载态：微信端走门面弹层（Token 化）；抖音端（AI 六页不注册，理论不进入）仍走原生，避免「两套 loading 同时出现」。
+// 轻提示：优先门面 wot Toast，门面未就绪时回落原生。**调用点（22 处 toast ＋ 4/6 处 loading）零改动**。
+const loadingPopupVisible = ref(false);
+const loadingPopupText = ref("");
+function showLoading(text: string): void {
+  if (detected === "mp-toutiao") {
+    nativeShowLoading(text);
+    return;
+  }
+  loadingPopupText.value = text;
+  loadingPopupVisible.value = true;
+}
+function hideLoading(): void {
+  if (detected === "mp-toutiao") {
+    nativeHideLoading();
+    return;
+  }
+  loadingPopupVisible.value = false;
+}
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
 const env = PROFILE.environment;
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
 const uniStorage = createUniStorage();
@@ -635,6 +667,10 @@ function isLoggedIn(): boolean {
       @submit="submitProfile"
       @skip="skipProfile"
     />
+
+    <!-- 反馈通道门面（2026-09-23 B2）：受控加载弹层 ＋ wot Toast 挂载点 -->
+    <BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />
+    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 
