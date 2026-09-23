@@ -38,7 +38,6 @@ function handDrawnButtons(src: string): number {
 /** 替换进行中的白名单（B3 完成后应清空） */
 const ALLOWLIST = new Map<string, number>([
     ["src/pages/aiRecommendLoading/index.vue", 1], // 1 处为 back-btn-wrapper（可交互非按钮，免替换）
-    ["src/pages/aiTryOnResult/index.vue", 5],
     ["src/ui/BaseDialog.vue", 1],
     ["src/ui/BasePicker.vue", 2],
 ]);

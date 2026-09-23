@@ -101,6 +101,22 @@ import { parseServerTimeMs } from "../../application/wait-resume";
  *  ③ 文字 32rpx / #160F04（原 `.action-bar .btn-primary text`）由按钮节点继承（全仓无 `text` 元素级全局规则，实测安全性）。 */
 const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);--wot-button-primary-bg-active: linear-gradient(135deg, #D5BA83 0%, #CAAB78 45%, #B68C4C 100%);--wot-button-primary-color: #160F04;color: #160F04;height: 92rpx;border-radius: 999rpx;padding: 0 40rpx;font-size: 32rpx;line-height: 1.2;border: 1rpx solid #160F04;`;
 
+/** 金色次要按钮（等价搬入：`App.vue:93` 全局 `.btn-secondary` ＋ 本页 `.gen-actions .gen-btn` 盒模型）
+ *  ——「逛逛其他客片／查看生成队列」两枚。宿主**不挂** `.btn-secondary`（全局类会与内联视觉叠加成双底）。 */
+const SECONDARY_BTN_STYLE = `--wot-button-primary-bg: rgba(241, 205, 145, 0.1);--wot-button-primary-bg-active: rgba(241, 205, 145, 0.06);--wot-button-primary-color: #F1CD91;height: 92rpx;min-width: 240rpx;margin: 0 10rpx;padding: 0 40rpx;font-size: 32rpx;line-height: 1;border: 1rpx solid rgba(241, 205, 145, 0.5);border-radius: 999rpx;box-sizing: border-box;`;
+
+/** 「分享到朋友圈」图标按钮（原原生 `<button class="share-btn btn-secondary">` ＋ 36rpx 图标）：
+ *  盒模型＝本页 `.share-btn`（`margin:20rpx 0 0 32rpx`／`min-width:160rpx`／`height:92rpx`），配色同次要按钮。 */
+const SHARE_ICON_BTN_STYLE = `--wot-button-primary-bg: rgba(241, 205, 145, 0.1);--wot-button-primary-bg-active: rgba(241, 205, 145, 0.06);--wot-button-primary-color: #F1CD91;height: 92rpx;min-width: 160rpx;line-height: 1;margin: 20rpx 0 0 32rpx;padding: 0 40rpx;border: 1rpx solid rgba(241, 205, 145, 0.5);border-radius: 999rpx;box-sizing: border-box;`;
+
+/** 失败态「重试」（本页 `.retry-btn`：白底黑字／48rpx 圆角／`24rpx 80rpx` 内边距／底距 24rpx）；
+ *  文字样式仍由槽位内 `.retry-btn-text` 提供（槽位内容归页面样式管辖）。 */
+const RETRY_BTN_STYLE = `--wot-button-primary-bg: #fff;--wot-button-primary-bg-active: #D5D4D2;--wot-button-primary-color: #000;color: #000;height: auto;border: none;border-radius: 48rpx;padding: 24rpx 80rpx;margin-bottom: 24rpx;box-sizing: border-box;`;
+
+/** 失败态「返回」（本页 `.back-btn-wrapper`：纯文字／`24rpx 80rpx` 内边距／无底色无描边）；
+ *  文字色与字号由槽位内 `.back-btn-text` 提供。 */
+const BACK_BTN_STYLE = `--wot-button-primary-bg: transparent;--wot-button-primary-bg-active: rgba(241, 205, 145, 0.08);--wot-button-primary-color: rgba(241, 205, 145, 0.9);height: auto;border: none;border-radius: 0;padding: 24rpx 80rpx;box-sizing: border-box;`;
+
 // —— 装配（顺序与 pages/aiTryOn/index.vue 完全同口径）——
 const detected = detectUiPlatform();
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
@@ -869,8 +885,16 @@ async function loadFooterPair(): Promise<void> {
 
     <!-- 底部双按钮（与结果落地页同构：页脚之上、文档流内居中，主人指示） -->
     <view v-if="status === 'processing' && !initializing && !shareReadOnly" class="gen-actions">
-      <button class="gen-btn btn-secondary" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
-      <button class="gen-btn btn-secondary" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
+      <BaseButton
+        label="逛逛其他客片"
+        :custom-style="SECONDARY_BTN_STYLE"
+        @click="goBrowseAlbums"
+      />
+      <BaseButton
+        label="查看生成队列"
+        :custom-style="SECONDARY_BTN_STYLE"
+        @click="goGenerationQueue"
+      />
     </view>
 
     <!-- 成功态 -->
@@ -933,9 +957,12 @@ async function loadFooterPair(): Promise<void> {
           </view>
         </view>
         <button class="share-btn btn-secondary" open-type="share" hover-class="press-dim">分享</button>
-        <button class="share-btn btn-secondary" @click="guideShareTimeline" hover-class="press-dim">
+        <BaseButton
+          :custom-style="SHARE_ICON_BTN_STYLE"
+          @click="guideShareTimeline"
+        >
           <image class="moments-icon" src="/static/iconpark/share-three.svg" mode="aspectFit"></image>
-        </button>
+        </BaseButton>
       </view>
     </view>
 
@@ -947,18 +974,25 @@ async function loadFooterPair(): Promise<void> {
         <!-- 失败文案保持通用：后端 error_message 仅记 console 日志，避免向用户泄露内部错误（CR 🟡） -->
         <text v-else-if="failCount >= 3" class="fail-text">当前服务繁忙，请稍后再试</text>
         <text v-else class="fail-text">生成失败，请重试</text>
-        <view v-if="!shareReadOnly && failCount < 3" class="retry-btn" hover-class="press-dim" @click="handleRetry">
+        <BaseButton
+          v-if="!shareReadOnly && failCount < 3"
+          :custom-style="RETRY_BTN_STYLE"
+          @click="handleRetry"
+        >
           <text class="retry-btn-text">重试</text>
-        </view>
+        </BaseButton>
         <BaseButton
           v-if="shareReadOnly"
           label="我也要试"
           :custom-style="PRIMARY_BTN_STYLE"
           @click="tryThisOut"
         />
-        <view class="back-btn-wrapper" hover-class="press-dim" @click="handleBack">
+        <BaseButton
+          :custom-style="BACK_BTN_STYLE"
+          @click="handleBack"
+        >
           <text class="back-btn-text">返回</text>
-        </view>
+        </BaseButton>
       </view>
     </view>
 
@@ -1056,20 +1090,9 @@ async function loadFooterPair(): Promise<void> {
   padding-right: 24rpx;
   padding-bottom: 32rpx;
 }
-/* 双按钮（button 组件，主人指示）：尺寸对齐结果落地页操作栏按钮（92rpx 高 / 32rpx 字 / 40rpx 内边距）；
-   视觉（金描边+金字+金底、pill 圆角）由就地还原的 .btn-secondary 提供，此处只做尺寸覆盖 */
-.gen-actions .gen-btn {
-  height: 92rpx;
-  min-width: 240rpx;
-  padding: 0 40rpx;
-  margin: 0 10rpx; /* 旧 var(--spacing-xs) */
-  box-sizing: border-box;
-  font-size: 32rpx;
-  line-height: 1;
-}
-.gen-btn::after {
-  border: none;
-}
+/* 双按钮：2026-09-23 起走门面 `BaseButton`（`SECONDARY_BTN_STYLE` 内联）——原 `.gen-actions .gen-btn`
+   尺寸覆盖与 `.gen-btn::after{border:none}`（抹平原生 button 默认边框）随之失效并删除；
+   宿主不再挂 `.btn-secondary`/`.gen-btn`（防双底）。 */
 
 /* 加载态（旧 :1097-1133） */
 .loading-wrapper {
@@ -1252,19 +1275,13 @@ async function loadFooterPair(): Promise<void> {
   margin-bottom: 48rpx;
   text-align: center;
 }
-.retry-btn {
-  background: #fff; /* 旧 :1284 同值——失败态重试按钮白底黑字为旧端原设计，非亮色残留（2026-09-19 核对） */
-  border-radius: 48rpx; /* 旧 var(--radius-2xl) */
-  padding: 24rpx 80rpx;
-  margin-bottom: 24rpx;
-}
+/* 失败态按钮：2026-09-23 起走门面 `BaseButton`——原 `.retry-btn` 盒模型（白底/48rpx/padding/底距）与
+   `.back-btn-wrapper`（padding）已搬入 `RETRY_BTN_STYLE`/`BACK_BTN_STYLE` 内联；下方两条**文字**样式
+   仍是槽位内容的样式来源，保留。 */
 .retry-btn-text {
   font-size: 32rpx;
   color: #000;
   font-weight: 400;
-}
-.back-btn-wrapper {
-  padding: 24rpx 80rpx;
 }
 .back-btn-text {
   font-size: 28rpx; /* 旧 var(--font-size-body-plus)=28rpx */
