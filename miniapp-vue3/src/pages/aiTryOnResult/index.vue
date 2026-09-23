@@ -91,6 +91,7 @@ import PageFooter from "../../components/PageFooter/PageFooter.vue";
 // （内部＝wd-popup 遮罩/居中 ＋ 门面 BaseLoading＝wd-loading；token 卡片面）⇒ 本页不再自绘遮罩与卡片。
 import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
+import { parseServerTimeMs } from "../../application/wait-resume";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue 完全同口径）——
 const detected = detectUiPlatform();
@@ -157,15 +158,6 @@ const elapsedSeconds = ref(0); // 等待时长（内核每秒回调；伪进度�
  * 试衣侧**优先取服务端任务 `created_at`**（跨设备一致，最佳实践）；解析失败/时钟偏差则保持 0 ⇒ 回落旧行为。
  */
 const startedAtMs = ref(0);
-/** 解析服务端时间：兼容 `YYYY-MM-DD HH:mm:ss`（服务端本地时区）与 ISO；未来时间视为无效 */
-function parseServerTimeMs(raw: unknown): number {
-  if (typeof raw !== "string" || raw === "") return 0;
-  const iso = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw) ? raw.replace(" ", "T") : raw;
-  const ms = Date.parse(iso);
-  if (!Number.isFinite(ms) || ms <= 0) return 0;
-  if (ms > Date.now()) return 0; // 客户端与服务端时钟偏差 ⇒ 不恢复
-  return ms;
-}
 const imageLoaded = ref(false);
 const imageUseOriginal = ref(false); // 缩略图异常时回退原图（防白屏）
 const imageErrored = ref(false); // 图片彻底失败：骨架图不再无限转圈

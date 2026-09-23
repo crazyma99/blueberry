@@ -91,6 +91,7 @@ import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
+import { shouldResumeStartedAt } from "../../application/wait-resume";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
 const detected = detectUiPlatform();
@@ -155,26 +156,36 @@ const elapsedSeconds = ref(0);
  * 推荐接口「只调一次、不可轮询重发」⇒ 用**本地持久化起始时间**续算（服务端无任务可查）。
  * 陈旧保护：超过 UI 超时窗口（180s）的起始时间视为该次尝试已失败 ⇒ 忽略，避免「永远 99%」。
  */
-const RECOMMEND_STARTED_AT_KEY = "aiRecommend:startedAt";
+/** 存储键：走 `lm.*.v1` 版本化命名 + **按 op 作用域**（shopId+filename）⇒ 换店铺/换照片不会误吃旧起始时间（CR §5.4） */
+const RECOMMEND_STARTED_AT_KEY_PREFIX = "lm.aiRecommend.startedAt.v1";
+function recommendStartedAtKey(): string {
+  return `${RECOMMEND_STARTED_AT_KEY_PREFIX}:${shopId.value}:${filename.value}`;
+}
 const startedAtMs = ref(0);
 function readResumeStartedAt(): number {
   try {
-    const raw = uni.getStorageSync(RECOMMEND_STARTED_AT_KEY);
+    const raw = uniStorage.get(recommendStartedAtKey());
     const ms = Number(raw);
     if (!Number.isFinite(ms) || ms <= 0) return 0;
-    const ageSec = (Date.now() - ms) / 1000;
-    if (ageSec < 0 || ageSec > RECOMMEND_UI_TIMEOUT_SECONDS) return 0; // 时钟偏差／陈旧 ⇒ 不恢复
-    return ms;
+    // 判定抽到纯函数（可行为测试；CR 收尾项 ⒟ 消灭源码断言假绿）
+    return shouldResumeStartedAt(Date.now(), ms, RECOMMEND_UI_TIMEOUT_SECONDS) ? ms : 0;
   } catch {
     return 0;
   }
 }
 function clearRecommendStartedAt(): void {
   try {
-    uni.removeStorageSync(RECOMMEND_STARTED_AT_KEY);
+    uniStorage.remove(recommendStartedAtKey());
   } catch {
     /* 存储不可用：静默 */
   }
+}
+
+/** 失败终态**统一出口**：停表 + 置失败 + 清起始时间（CR 🟡5：此前网络异常/业务失败两条路径漏清 ⇒ 失败后重试会「一上来就 60%」） */
+function finishAsFailed(): void {
+  stopAll();
+  status.value = "failed";
+  clearRecommendStartedAt();
 }
 const progressDone = ref(false); // 任务完成时置真 → 伪进度走满 100%
 const isPaying = ref(false); // 支付流程进行中（防连点；门闩由 coordinator 持有）
@@ -235,7 +246,7 @@ onLoad((options?: Record<string, unknown>) => {
     startAnalysis();
   } else {
     // 无 filename 直接失败（旧端 :67-69），不发请求、不扣费
-    status.value = "failed";
+    finishAsFailed();
   }
 });
 
@@ -264,7 +275,7 @@ function startAnalysis(): void {
   elapsedSeconds.value = resumed > 0 ? Math.max(0, Math.floor((Date.now() - resumed) / 1000)) : 0;
   if (resumed === 0) {
     try {
-      uni.setStorageSync(RECOMMEND_STARTED_AT_KEY, String(Date.now()));
+      uniStorage.set(recommendStartedAtKey(), String(Date.now()));
     } catch {
       /* 存储不可用：退化为旧行为 */
     }
@@ -275,9 +286,7 @@ function startAnalysis(): void {
     elapsedSeconds.value += 1;
     // 超时 180 秒（3 分钟），展示失败；**绝不自动重发**（每次 POST 都会再扣一次推荐次数，P3-16）
     if (elapsedSeconds.value >= RECOMMEND_UI_TIMEOUT_SECONDS) {
-      stopAll();
-      status.value = "failed";
-      clearRecommendStartedAt(); // 终态清理（避免下次进页误续算）
+      finishAsFailed(); // 180s 超时终态
     }
   }, 1000);
 
@@ -300,8 +309,7 @@ async function callRecommend(): Promise<void> {
     // 网络异常/超时：不自动重发（重发会再次扣费），展示失败由用户手动重试（旧端 :172-177）
     console.error("[aiRecommendLoading] AI推荐请求失败:", err);
     if (gen !== runGeneration) return; // 旧代次：丢弃
-    stopAll();
-    status.value = "failed";
+    finishAsFailed(); // 终态（CR 🟡5：停表＋置失败＋清起始时间）
     return;
   }
   // P3-20：离页/重试/超时后的旧响应一律丢弃，绝不回写新状态
@@ -330,8 +338,7 @@ async function callRecommend(): Promise<void> {
   }
 
   // 其他失败（业务错误/网络/登录过期）：展示失败，由用户手动重试（旧端 :166-171）
-  stopAll();
-  status.value = "failed";
+  finishAsFailed(); // 终态（CR 🟡5：停表＋置失败＋清起始时间）
   if (out.kind === "AUTH_EXPIRED") {
     toast("登录已过期，请返回重新登录"); // 偏差⑤：新端无 login-required 事件总线，页面显式给出恢复入口
   } else if (out.kind === "BUSINESS" && out.message !== "") {
@@ -363,7 +370,7 @@ async function handleRecharge(): Promise<void> {
   try {
     const shopIdNum = parseInt(shopId.value, 10) || 0;
     if (shopIdNum <= 0) {
-      status.value = "failed";
+      finishAsFailed(); // 终态（CR 🟡5）
       resumeAfterCredit = false;
       toast("缺少店铺信息，请稍后重试");
       return;
@@ -386,7 +393,7 @@ async function handleRecharge(): Promise<void> {
       return;
     }
     // 以下失败分支一律落 failed 态 ⇒ 界面给出明确恢复入口（重试 / 返回），且不再自动扣费
-    status.value = "failed";
+    finishAsFailed(); // 终态（CR 🟡5）
     resumeAfterCredit = false;
     if (out.phase === "cancelled") {
       toast("已取消支付"); // 旧端 :231-232 逐字
@@ -407,7 +414,7 @@ async function handleRecharge(): Promise<void> {
     }
     toast("支付未完成，请重试"); // 旧端 :235 逐字
   } catch (err) {
-    status.value = "failed";
+    finishAsFailed(); // 终态（CR 🟡5）
     resumeAfterCredit = false;
     console.error("[aiRecommendLoading] 创建充值订单失败:", err);
     toast("下单失败，请重试"); // 旧端 :243 逐字

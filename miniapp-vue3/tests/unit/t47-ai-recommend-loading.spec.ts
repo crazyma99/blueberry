@@ -1,5 +1,7 @@
 // T9b P3-20 页级场景测试（aiRecommendLoading）：单次 POST、失败不自增、显式重试才再发、4001/弱网均给恢复入口。
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { mount } from "@vue/test-utils";
 
 const h = vi.hoisted(() => ({
@@ -198,7 +200,7 @@ describe("等待页进度：随时间推进（驱动圆环动画）与回页续�
     try {
       h.mode = "hang";
       const now = Date.now();
-      uniStub().getStorageSync = (k: string) => (k === "aiRecommend:startedAt" ? String(now - 5000) : "");
+      uniStub().getStorageSync = (k: string) => (k === "lm.aiRecommend.startedAt.v1:7:up.png" ? String(now - 5000) : "");
       const w = boot();
       await vi.advanceTimersByTimeAsync(30);
       const pct = parseInt(w.find(".gp-percent").text().replace("%", ""), 10);
@@ -214,12 +216,18 @@ describe("等待页进度：随时间推进（驱动圆环动画）与回页续�
     try {
       h.mode = "hang";
       const now = Date.now();
-      uniStub().getStorageSync = (k: string) => (k === "aiRecommend:startedAt" ? String(now - 181000) : "");
+      uniStub().getStorageSync = (k: string) => (k === "lm.aiRecommend.startedAt.v1:7:up.png" ? String(now - 181000) : "");
       const w = boot();
       await vi.advanceTimersByTimeAsync(30);
       expect(w.find(".gp-percent").text()).toBe("0%");
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("失败终态统一出口（CR 🟡5/N3）：finishAsFailed 覆盖≥4 处终态（超时/异常/非 ok/支付流程）", () => {
+    const src = readFileSync(resolve(__dirname, "../..", "src/pages/aiRecommendLoading/index.vue"), "utf-8");
+    expect(src).toContain("function finishAsFailed()");
+    expect(src.match(/finishAsFailed\(\)/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
   });
 });

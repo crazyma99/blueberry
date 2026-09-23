@@ -20,8 +20,16 @@ interface UniLike {
   saveImageToPhotosAlbum?: (o: Record<string, unknown>) => void;
 }
 
+/**
+ * 取 uni API：**优先 `globalThis.uni`（测试桩/H5），再回落裸 `uni`**。
+ * 2026-09-23 独立 CR 🟡1 实证：`mp-weixin` 产物里 `globalThis.uni` **不存在**（vendor.js 只 `globalThis.wx=…`），
+ * 裸 `uni.*` 会被编译器改写成 `common_vendor.index.*` ⇒ 只查 globalThis 会让本端口在真机 **fail-closed 恒失败**
+ * （保存到相册不可用；测试因桩了 globalThis 而测不出）。
+ */
 function uniApi(): UniLike | undefined {
-  return (globalThis as { uni?: UniLike }).uni;
+  const injected = (globalThis as { uni?: UniLike }).uni;
+  if (injected != null) return injected;
+  return typeof uni !== "undefined" ? (uni as unknown as UniLike) : undefined;
 }
 
 export function createAlbumSaver(): AlbumSaverPort {

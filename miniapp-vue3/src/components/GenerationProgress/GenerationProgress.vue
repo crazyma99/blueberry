@@ -66,7 +66,7 @@ withDefaults(
     <!-- 2026-09-23 主人：「进度文案没有动画」⇒ 环形进度（wot `wd-circle` 经门面 `BaseCircle`，token 绑定）
          ＋ 百分比文案每次变化重播入场动画（`:key="percent"` 强制重挂载） ⇒ 环形平滑 + 文案有动效 -->
     <view class="gp-progress">
-      <BaseCircle :model-value="percent" :speed="60">
+      <BaseCircle :model-value="percent">
         <text :key="percent" class="gp-percent">{{ percent }}%</text>
       </BaseCircle>
     </view>
@@ -204,6 +204,8 @@ $gp-node-size: 64rpx;
   margin-top: 20rpx;
 }
 .gp-percent {
+  display: inline-block; /* <text> 默认 inline 时 transform 被忽略（CR 🟡3① 实测）⇒ 环内文案的缩放动效才生效 */
+  line-height: 1; /* 光学居中：消除 strut 造成的 ~1.5px 下移（CR 🟡6①） */
   font-size: 22rpx; /* 旧 var(--font-size-body-sm)=22rpx（token 无该档，保留并注释） */
   color: $color-action; /* token：品牌金 */
   animation: gpPercentIn 0.45s ease-out; /* 数值变化时重播（配合模板 :key） */
