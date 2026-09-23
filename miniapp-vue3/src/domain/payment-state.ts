@@ -48,7 +48,12 @@ export class PayGuard {
   }
 }
 
-export type BusinessErrorKind = "INSUFFICIENT_CREDITS" | "BUSINESS" | "UNKNOWN";
+export type BusinessErrorKind =
+  | "INSUFFICIENT_CREDITS"
+  | "BUSINESS"
+  | "UNKNOWN"
+  /** 2026-09-23：AI 试衣照片质量拦截（后端 `code=4002`，`data.check_code` 见 `application/photo-gate.ts`） */
+  | "QUALITY_REJECTED";
 
 /**
  * T9a 支付协调状态机（phases Phase 3 冻结）：
@@ -81,6 +86,10 @@ export interface BusinessError {
 export function mapBusinessCode(code: unknown, message = "", requestId: string | null = null): BusinessError {
   if (code === 4001) {
     return { kind: "INSUFFICIENT_CREDITS", businessCode: 4001, message, requestId };
+  }
+  if (code === 4002) {
+    // 照片质量拦截：**不扣次数、不扣费**（后端在扣次前判定）⇒ 前端不得走充值/退次路径
+    return { kind: "QUALITY_REJECTED", businessCode: 4002, message, requestId };
   }
   if (typeof code === "number") {
     return { kind: "BUSINESS", businessCode: code, message, requestId };

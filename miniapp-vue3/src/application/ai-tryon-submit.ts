@@ -9,6 +9,7 @@
 // 有意偏差（已声明）：`loadCredit` 成功判定＝客户端 Result.ok（兼容 aiface 的 code 0 与 200）；旧端此处**严格 ===200**，
 // 会把 code 0 误判为失败（旧端自身口径不一致），新端按全站口径统一。
 import type { RequestContext } from "../ports/context";
+import { readCheckCodeFromBusinessData, type PhotoGateCheckCode } from "./photo-gate";
 import type { RepoResult } from "../infrastructure/repositories/carousels";
 
 export interface AiTemplateLike {
@@ -40,6 +41,8 @@ export type SubmitOutcome =
   | { kind: "need-login" }
   | { kind: "toast"; message: string }
   | { kind: "need-recharge"; reason: "no-credits" | "insufficient" }
+  /** 2026-09-23：后端 `4002` 照片质量拦截（**不扣次数/不扣费**）⇒ 由页面弹「拦截提示」底部弹层 */
+  | { kind: "quality-rejected"; checkCode: PhotoGateCheckCode | "unknown" }
   | { kind: "submitted"; taskId: number; shopId: number; balanceAfter: number };
 
 export interface AiSubmitRepositoryLike {
@@ -122,6 +125,10 @@ export function createTryOnSubmitter(deps: {
     // 次数不足（4001 → client 映射 INSUFFICIENT_CREDITS，旧端按 code===4001 处理）→ 交由共享支付协调器
     if (!res.ok && res.error.kind === "INSUFFICIENT_CREDITS") {
       return { kind: "need-recharge", reason: "insufficient" };
+    }
+    // 照片质量拦截（4002）：读 `data.check_code` 并按识别码渲染提示（未知识别码走兜底文案）
+    if (!res.ok && res.error.kind === "QUALITY_REJECTED") {
+      return { kind: "quality-rejected", checkCode: readCheckCodeFromBusinessData(res.error.businessData) };
     }
     // 其余业务错误：优先服务端 message（旧端 submitRes.message || '提交失败'）
     const message = !res.ok && typeof res.error.message === "string" && res.error.message !== "" ? res.error.message : "提交失败";

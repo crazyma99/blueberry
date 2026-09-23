@@ -129,7 +129,7 @@ export function createHttpClient(deps: {
     }
     return {
       ok: false,
-      error: mapBusinessFailure(http.businessCode, http.message ?? "", http.requestId ?? ctx.requestId),
+      error: mapBusinessFailure(http.businessCode, http.message ?? "", http.requestId ?? ctx.requestId, http.data), // 2026-09-23：失败也要保留 data（4002 的 check_code）
     };
   }
 

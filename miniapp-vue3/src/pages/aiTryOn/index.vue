@@ -24,6 +24,8 @@ import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
 import { toast, showLoading, hideLoading, showModal } from "../../platform/uni/feedback";
+import QualityRejectSheet from "../../components/QualityRejectSheet/QualityRejectSheet.vue";
+import type { PhotoGateCheckCode } from "../../application/photo-gate";
 import { createCaptureGuard, enableShareMenu, requestTaskNotify } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
 import { createWeixinPayments } from "../../platform/weixin/payments";
@@ -156,6 +158,15 @@ const photoPreviewUrl = ref("");
 const uploadedFilename = ref("");
 const isUploading = ref(false);
 const isSubmitting = ref(false);
+
+// 2026-09-23：后端 4002 照片质量拦截——弹「拦截提示」底部弹层（正反例对比＋重拍引导；拦截不扣次数/不扣费）
+const showQualityReject = ref(false);
+const qualityRejectCode = ref<PhotoGateCheckCode | "unknown">("unknown");
+/** 弹层「重新选择照片」⇒ 关弹层并复用既有 选图→端侧预检→上传 链路 */
+function onQualityRejectRetry(): void {
+  showQualityReject.value = false;
+  void choosePhoto();
+}
 const showLoginPopup = ref(false);
 const loginAgreementChecked = ref(false);
 const showProfilePopup = ref(false);
@@ -438,6 +449,10 @@ async function runSubmitFlow(): Promise<void> {
     case "toast":
       toast(out.message);
       return;
+    case "quality-rejected":
+      qualityRejectCode.value = out.checkCode;
+      showQualityReject.value = true;
+      return;
     case "need-recharge":
       creditBalance.value = 0;
       resumeGenerateAfterCredit.value = true; // 到账后自动继续生成
@@ -668,6 +683,14 @@ function safeDecode(v: string): string {
       @update-nickname="onProfileNicknameInput"
       @submit="submitProfile"
       @skip="skipProfile"
+    />
+
+    <!-- 4002 照片质量拦截提示（底部弹层；门面 BasePopup + Tokens；正反例对比 + 重拍引导 + 未扣次数安抚） -->
+    <QualityRejectSheet
+      :show="showQualityReject"
+      :code="qualityRejectCode"
+      @retry="onQualityRejectRetry"
+      @close="showQualityReject = false"
     />
   </view>
 </template>

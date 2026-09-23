@@ -14,6 +14,11 @@ export interface AppError {
   businessCode: number | null;
   message: string;
   requestId: string | null;
+  /**
+   * 业务失败响应体里的 `data`（可选）。2026-09-23：`4002` 照片质量拦截需要 `data.check_code`
+   * 才能按识别码渲染拦截提示 ⇒ 失败路径必须保留信封 `data`（此前被丢弃，`check_code` 到不了页面）。
+   */
+  businessData?: unknown;
   /** P2-05 重放策略输入：仅幂等读可据此重发；扣次/下单/兑换码类禁止自动重发 */
   retryable: boolean;
 }
@@ -38,6 +43,8 @@ export function mapBusinessFailure(
   code: unknown,
   message = "",
   requestId: string | null = null,
+  /** 业务信封的 `data`（可选；`4002` 时承载 `check_code`） */
+  data?: unknown,
 ): AppError {
   const base: BusinessError = mapBusinessCode(code, message, requestId);
   return {
@@ -45,6 +52,7 @@ export function mapBusinessFailure(
     businessCode: base.businessCode,
     message: base.message,
     requestId: base.requestId,
+    businessData: data,
     retryable: false,
   };
 }
