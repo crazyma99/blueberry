@@ -36,7 +36,7 @@
 | 5 | `src/application/ai-tryon-submit.ts:38-44` `SubmitOutcome` | `ignored/need-login/toast/need-recharge/submitted` —— **无拦截态** | **新增 `{ kind: "quality-rejected"; checkCode: PhotoGateCheckCode }`** |
 | 6 | `src/application/ai-tryon-submit.ts:122-127` | 已有 4001 归一化（插入点参照） | 在 4001 分支前/后加 `QUALITY_REJECTED` 归一化 + `check_code` 解析（未知码兜底） |
 | 7 | `src/pages/aiTryOn/index.vue:432` `switch (out.kind)` | 无拦截分支 | **新增 `case "quality-rejected"`**：隐藏 loading → 弹拦截弹层 → 支持立即重传 |
-| 8 | 素材 `src/static/` | 未见「上传引导示例图」命名素材（`guide/example` 零命中） | **待主人指定** 4 张示例图（或复用上传引导区现有图） |
+| 8 | 素材 | ⚠️ `src/static/demo1.png`／`demo2.png` 实为**门店/景区宣传图**（红河水乡、太平湖），**不是**上传引导示例图；**测试用例图已定位**＝`~/文档/face-quality-api/cases/`（百度人脸 V3 兼容服务的 10 例测试集，含 `result.json` 与 `TEST-RESULT.md`） | 见 **§5.3.1 联调造数清单**；弹层示例图素材仍需主人确认（见 §6 #1） |
 | 9 | 埋点 | 全仓 **无埋点端口**（`track/report/beacon` 零命中） | 新增最小端口（见 §4.5），或本期仅登记待办 |
 | 10 | 端侧预检 `src/domain/photo-check.ts` + `src/platform/weixin/vk-face.ts` | 已存在 | **保留不动**（文案风格可与云端统一，非必须） |
 
@@ -125,6 +125,21 @@ export function resolvePhotoGateCopy(raw: unknown): PhotoGateCopy;
 环境 `https://crazyma99.xyz`；确认开关 `aiface.tryon_filter.enabled` 已开；样例造数：`no_face`＝风景图／`multi_face`＝双人合照／`face_too_small`＝远景人像／`side_face`＝大侧脸／合格＝正面单人照。
 逐条核：① 1–2s 内被拦且提示含原因+示例图+引导；② 拦截后可**立即重传**、流程不卡死；③ 拦截**不扣次数**（前后各查一次次数记录）；④ 合格照片**无感**进入生成；⑤ 未知码兜底（抓包改响应模拟）；⑥ 埋点带 `check_code`。
 
+### 5.3.1 联调造数清单（素材已定位：`~/文档/face-quality-api/cases/`）
+
+> 该目录是「人脸质量检测服务」（**百度人脸 V3 接口兼容**，drop-in 换 baseurl）的 10 例测试集，每例含测试图 + `result.json`（完整接口返回），汇总见 `cases/TEST-RESULT.md`。**仅用于本地联调/验收造数，不做进小程序包**（含真人/AI 合成人像，需隐私与版权确认）。
+
+| 目标 `check_code` | 用图 | 备注（来自 `TEST-RESULT.md`） |
+|---|---|---|
+| `no_face` | `cases/06_non_face/test_6_non-face.png` | 低置信度误检框不计入有效人脸 ⇒ 命中「未检测到人脸」 |
+| `multi_face` | `cases/02_multi_face/test_2_multi_face.png` | 3 张有效人脸（**15 MB 大图**，联调上传注意体积/压缩）|
+| `face_too_small` | `cases/03_small_face/test_3_small_face.png` | 脸框最小边占比 **8.4%**（阈值 <10%）|
+| `side_face` | ⚠️ **无严格侧脸用例**；近似用 `cases/04_half_face/test_4_half_face.png`（半边脸被裁切 ⇒ 命中「人脸不完整+歪脸」，首条文案即「请正对镜头再拍一张」）| 严格侧脸（侧转 >30°）需另行造数 |
+| 合格（无感进入生成） | `cases/01_normal/test_1_normal.png` | 11 项检查全通过 |
+| （本轮契约外，备用） | `07_low_resolution`（模糊）／`08_anime_face`（非真人）／`09_close_eyes`（闭眼）／`10_facemask_real`（遮挡）| 后端本期只下发 4 种码；这些对应端侧预检或后续迭代 |
+
+> 另有坑：`cases/05_facemask/` 的图**内容与文件名不符**（实为树影斑驳人像、无口罩），`TEST-RESULT.md` 已如实记录 ⇒ 不要用它做「遮挡」用例。
+
 ### 5.4 PRD 验收 → 实现映射
 
 | PRD 验收项 | 落点 |
@@ -140,7 +155,7 @@ export function resolvePhotoGateCopy(raw: unknown): PhotoGateCopy;
 
 | # | 事项 | 我的建议 |
 |---|---|---|
-| 1 | **4 张示例图素材**（现有 `src/static` 未见上传引导示例图） | 复用上传引导区图；若需「✓正例/✗反例」对比图请给素材或确认由我按图库口径生成提示词（只出提示词，不生图） |
+| 1 | **弹层示例图素材**（PRD 要求「复用上传引导的示例图」） | 已核：`src/static/demo1/demo2` **不是**引导示例图 ⇒ 需主人指明「上传引导示例图」到底是哪张（或确认新建一张标准正面照示意）。**联调造数图已就位**（§5.3.1），但那批含真人/AI 人像、**不宜打包**；若需「✓正例/✗反例」示意，我可按图库口径出**生图提示词**（只出提示词，不生图）由您定稿 |
 | 2 | **埋点是否本期做** | 建议本期只做「端口 + fail-soft 调用」，不接第三方 SDK |
 | 3 | **弹层形态** | 建议底部弹层（与本次改造同口径）；若您偏好居中弹窗/全屏引导页，我改 |
 | 4 | **未知码文案优先级** | 建议以本地映射为准，`unknown` 时若后端 `message` 非空则优先展示 `message`（更具体） |
