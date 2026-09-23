@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseCircle from "../../ui/BaseCircle.vue"; // 门面：环形进度（wot wd-circle；业务组件零 wd-* 直用）
 // GenerationProgress — 生成等待横向步骤条（组件级重构）
 // 旧端源：/home/majunhi/blueberry/src/components/GenerationProgress/GenerationProgress.uvue（192 行）
 // 忠实移植：模板 :2-36（横向步骤条 :4-33 ＋ 进度数字 :35）；props :42-62；样式 :67-192 逐值。
@@ -62,7 +63,13 @@ withDefaults(
       </view>
     </view>
     <!-- 进度数字（主人指示：按参考图改版但保留进度数字；伪进度封顶 99%，任务完成时由父级置 100） -->
-    <text class="gp-percent">{{ percent }}%</text>
+    <!-- 2026-09-23 主人：「进度文案没有动画」⇒ 环形进度（wot `wd-circle` 经门面 `BaseCircle`，token 绑定）
+         ＋ 百分比文案每次变化重播入场动画（`:key="percent"` 强制重挂载） ⇒ 环形平滑 + 文案有动效 -->
+    <view class="gp-progress">
+      <BaseCircle :model-value="percent" :speed="60">
+        <text :key="percent" class="gp-percent">{{ percent }}%</text>
+      </BaseCircle>
+    </view>
   </view>
 </template>
 
@@ -185,13 +192,39 @@ $gp-node-size: 64rpx;
 .gp-label-active {
   color: #f1cd91; /* 旧 var(--color-primary) → tokens.semantic.colorAction */
   font-weight: 500;
-}
+
+  /* 2026-09-23 主人：当前步骤**文案**加动效（脉动），三段式步骤条结构不变（增量） */
+  animation: gpLabelPulse 1.6s ease-in-out infinite;}
 .gp-label-pending {
   color: rgba(255, 255, 255, 0.35);
 }
-.gp-percent {
+.gp-progress {
+  display: flex;
+  justify-content: center;
   margin-top: 20rpx;
-  font-size: 22rpx; /* 旧 var(--font-size-body-sm)=22rpx */
-  color: #f1cd91; /* 旧 var(--color-primary) */
+}
+.gp-percent {
+  font-size: 22rpx; /* 旧 var(--font-size-body-sm)=22rpx（token 无该档，保留并注释） */
+  color: $color-action; /* token：品牌金 */
+  animation: gpPercentIn 0.45s ease-out; /* 数值变化时重播（配合模板 :key） */
+}
+@keyframes gpPercentIn {
+  from {
+    transform: scale(0.86);
+    opacity: 0.35;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes gpLabelPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }
 </style>

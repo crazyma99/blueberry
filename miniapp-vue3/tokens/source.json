@@ -58,6 +58,8 @@
     "cardPaddingRpx": 24,
     "listGapRpx": 16,
     "sectionGapRpx": 32,
-    "pullRefreshLoadingSizeRpx": 48
+    "pullRefreshLoadingSizeRpx": 48,
+    "progressCircleSizeRpx": 200,
+    "progressCircleStrokeRpx": 12
   }
 }
