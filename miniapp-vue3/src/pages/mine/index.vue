@@ -40,6 +40,11 @@ import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import ProfilePopup from "../../components/ProfilePopup/ProfilePopup.vue";
 import BottomActionBarSecondary from "../../components/BottomActionBarSecondary/BottomActionBarSecondary.vue";
+import BaseButton from "../../ui/BaseButton.vue";
+
+/** 退出登录按钮视觉（旧端 .logout-btn 字面值原样搬入；#ff6b6b 为旧端字面色、未映射 token 以保持复刻一致）：
+ *  经 wot CSS 变量绑定 ⇒ 保留 wot 自身的按压态（`--active`）反馈，且不受组件样式隔离影响。 */
+const LOGOUT_BTN_STYLE = `--wot-button-primary-bg: rgba(255, 255, 255, 0.08);--wot-button-primary-bg-active: rgba(255, 255, 255, 0.16);--wot-button-primary-color: #ff6b6b;width: calc(100% - 64rpx);margin: 0 32rpx;height: 88rpx;border-radius: 44rpx;font-size: 28rpx;font-weight: 400;border: 2rpx solid rgba(255, 107, 107, 0.45);`;
 
 // —— 装配（同 index/demoDetail/priceList）——
 const detected = detectUiPlatform();
@@ -443,7 +448,12 @@ function handleMenuClick(item: MenuItem): void {
     />
 
     <BottomActionBarSecondary v-if="isLoggedIn" bottom-offset="calc(116rpx + env(safe-area-inset-bottom) + 24rpx)">
-      <view class="logout-btn" hover-class="press-dim" @click.stop="confirmLogout">退出登录</view>
+      <BaseButton
+        class="logout-btn"
+        label="退出登录"
+        :custom-style="LOGOUT_BTN_STYLE"
+        @click="confirmLogout"
+      />
     </BottomActionBarSecondary>
 
     <view v-if="isMpWeixin" class="tabbar-safe-spacer"></view>
@@ -602,23 +612,8 @@ function handleMenuClick(item: MenuItem): void {
 .logout-spacer {
   height: 200rpx;
 }
-/* 退出登录按钮（旧端 :616-632，view 实现避开 button 原生样式） */
-.logout-btn {
-  width: calc(100% - 64rpx);
-  margin: 0 32rpx;
-  height: 88rpx;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  border-radius: 44rpx;
-  background: rgba(255, 255, 255, 0.08);
-  color: #ff6b6b;
-  font-size: 28rpx;
-  font-weight: 400;
-  border: 2rpx solid rgba(255, 107, 107, 0.45);
-}
+/* 退出登录按钮（旧端 :616-632）：视觉已迁入门面 `BaseButton` 的 `LOGOUT_BTN_STYLE`
+   （经 wot CSS 变量 + 内联样式下发）⇒ 单一来源，避免组件样式隔离导致的「类名不生效」。 */
 .footer-space {
   height: 48rpx;
 }

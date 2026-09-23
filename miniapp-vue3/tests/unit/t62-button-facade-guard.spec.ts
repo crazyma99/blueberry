@@ -40,7 +40,6 @@ const ALLOWLIST = new Map<string, number>([
     ["src/pages/aiRecommendLoading/index.vue", 1], // 1 处为 back-btn-wrapper（可交互非按钮，免替换）
     ["src/pages/aiTryOn/index.vue", 2],
     ["src/pages/aiTryOnResult/index.vue", 9],
-    ["src/pages/mine/index.vue", 1],
     ["src/ui/BaseDialog.vue", 1],
     ["src/ui/BasePicker.vue", 2],
 ]);
