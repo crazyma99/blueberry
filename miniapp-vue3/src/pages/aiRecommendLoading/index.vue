@@ -62,7 +62,7 @@ import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
-import { toast, showLoading, hideLoading } from "../../platform/uni/feedback";
+import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
@@ -90,6 +90,8 @@ import {
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
 import BaseButton from "../../ui/BaseButton.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
+import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
 import { tokens } from "../../generated/tokens";
 
 /** 主按钮品牌金：经 wot CSS 变量绑 tokens（按钮统一走门面 BaseButton） */
@@ -105,6 +107,37 @@ import { shouldResumeStartedAt } from "../../application/wait-resume";
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
 const detected = detectUiPlatform();
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
+
+// —— 反馈通道统一（2026-09-23 B2；主人「选项一，都应该改」）——
+// 加载态：微信端走门面弹层（Token 化）；抖音端（AI 六页不注册，理论不进入）仍走原生，
+// 避免「两套 loading 同时出现」。轻提示：优先门面 wot Toast，门面未就绪时回落原生。
+// 调用点（`toast/showLoading/hideLoading`）保持零改动 ⇒ 迁移面只有本段实现。
+const loadingPopupVisible = ref(false);
+const loadingPopupText = ref("");
+function showLoading(text: string): void {
+  if (detected === "mp-toutiao") {
+    nativeShowLoading(text);
+    return;
+  }
+  loadingPopupText.value = text;
+  loadingPopupVisible.value = true;
+}
+function hideLoading(): void {
+  if (detected === "mp-toutiao") {
+    nativeHideLoading();
+    return;
+  }
+  loadingPopupVisible.value = false;
+}
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
 const env = PROFILE.environment;
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
 const uniStorage = createUniStorage();
@@ -532,6 +565,10 @@ function redirectTo(url: string): void {
          PageFooter 共享组件收敛 page-footer > divide + bottomdesc 块——深色变体 + safe-area 内边距） -->
     <!-- 单实例 + 动态 props（旧端 CR 🟡：避免 v-if/v-else 重建组件、重复拉取 OPS 版权配置） -->
     <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="bottomdesc-dark" safe-area />
+
+    <!-- 反馈通道门面（2026-09-23 B2）：受控加载弹层 ＋ wot Toast 挂载点 -->
+    <BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />
+    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 
