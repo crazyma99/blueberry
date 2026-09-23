@@ -154,7 +154,7 @@ export function resolvePhotoGateCopy(raw: unknown): PhotoGateCopy;
 **ⓘ 交付实况（2026-09-23 主人提供 `归档.zip`，已核对与压缩入包）**：
 - 源图：`正例.jpg`／`no_face.jpg`／`multi_face.jpg`／`face_too_small.jpg`／`side_face.jpg`，均 **1254×1254**、合计 857KB；
 - **内容逐张核对无误**（正例＝正面单人清晰；`no_face`＝背影无脸；`multi_face`＝三人合照；`face_too_small`＝远景点比例小；`side_face`＝大侧脸），风格统一（同一 AI 合成虚拟模特／同场景／同服装）⇒ **正反例对比达成**；
-- **压缩**：875KB → **157KB**（`480×480`／JPEG q80／progressive；显示尺寸仅约 120px CSS ⇒ 3x 上限 360px，480 足够），产物总包 **1462KB**，距微信主包 2MB 上限余量 **586KB**；
+- **压缩**：857KB（879,378 B）→ **159KB（162,609 B，158.8 KiB）**（`480×480`／JPEG q80／progressive；显示尺寸仅约 120px CSS ⇒ 3x 上限 360px，480 足够），产物总包 **1462KB**，距微信主包 2MB 上限余量 **586KB**；
 - 入包路径：`src/static/quality-gate/{accept_normal,reject_no_face,reject_multi_face,reject_face_too_small,reject_side_face}.jpg`；
 - 知识库存档：`assets/quality-gate/`（同 5 件，basename 已登记索引「图片资源清单」）。
 

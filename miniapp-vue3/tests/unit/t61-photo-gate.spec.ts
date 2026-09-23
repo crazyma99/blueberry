@@ -202,4 +202,29 @@ describe("页面接线守卫（pages/aiTryOn）", () => {
     expect(s).toContain("showQualityReject");
     expect(s).toContain('from "../../application/photo-gate"');
   });
+
+describe("弹层样式守卫（解 CR m9 假绿：样式零覆盖）", () => {
+  const sheet = (): string => read("src/components/QualityRejectSheet/QualityRejectSheet.vue");
+
+  it("卡片面/上圆角/溢出裁剪在位（BasePopup 把 wot 面置透明 ⇒ 内容必须自带面）", () => {
+    const s = sheet();
+    expect(s).toContain("background: $color-popup-card");
+    expect(s).toMatch(/border-radius: #\{\$popup-radius-rpx \* 2\}rpx #\{\$popup-radius-rpx \* 2\}rpx 0 0;/);
+    expect(s).toContain("overflow: hidden");
+  });
+
+  it("安全区不得写进 `padding` 简写（不认 constant() 的运行时会导致整条简写失效）", () => {
+    const s = sheet();
+    expect(s).toMatch(/padding: \$space-lg;/);
+    expect(s).toContain("padding-bottom: calc(#{$space-lg} + constant(safe-area-inset-bottom))");
+    expect(s).toContain("padding-bottom: calc(#{$space-lg} + env(safe-area-inset-bottom))");
+    expect(s).not.toMatch(/padding: [^;]*constant\(/);
+  });
+
+  it("按钮高度用 token；图片盒模型为 border-box（有描边）", () => {
+    const s = sheet();
+    expect(s).toContain("#{$button-height-rpx}rpx");
+    expect(s).toMatch(/\.qr-img \{[^}]*box-sizing: border-box/s);
+  });
+});
 });
