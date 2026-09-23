@@ -68,3 +68,30 @@
 7. **样式隔离**：`class` 交给组件时页面 scoped 样式**不可靠**（组件 `styleIsolation: isolated`）；视觉一律走 `custom-style` 内联（配色用 wot CSS 变量 `--wot-button-*-bg/-bg-active/-color` ⇒ 连按压态都交给 wot 自身 `hover-class`）。已实测产物 `wd-button.wxml`：`<button style="{{i}}" class="wd-button …">`。
 
 **已知瑕疵（如实留痕）**：①空提交 `4e85572`（信息夸大为"清理"，实际未改动）——因已推送且禁止改写历史，仅登记、不追溯。②第 17 轮"变异测试"首跑为空跑（锚点缩进抄错）却当成验证结论 ⇒ 已在「方法固化」第 6 条固化防呆，本轮已用正确锚点重做并取得真实红。
+
+---
+
+## B2 待办：AI 六页「反馈通道」统一（主人已选「选项一，都应该改」；2026-09-23 第 18 轮盘点）
+
+**现状（本仓实测 `grep`，非估算）**
+
+| 页面 | `toast(` | `showLoading(` | `hideLoading(` | `showModal(` | 已用门面 |
+|---|---|---|---|---|---|
+| `pages/aiRecommend/index.vue` | 22 | 4 | 6 | 1 | 无 |
+| `pages/aiRecommendLoading/index.vue` | 11 | 1 | 1 | 0 | 无 |
+| `pages/aiRecommendResult/index.vue` | 2 | 0 | 0 | 0 | 无 |
+| `pages/aiTryOnHistory/index.vue` | 3 | 0 | 0 | 0 | 无 |
+| `pages/aiTryOn/index.vue` | 18 | 6 | 6 | 0 | 局部包装（`BaseLoadingPopup`＋`BaseFeedback`＋`QualityRejectSheet`，已接埋点） |
+| `pages/aiTryOnResult/index.vue` | 13 | 2 | 3 | 3 | 仅 `BaseLoadingPopup` |
+| **合计** | **69** | **13** | **16** | **4** | — |
+
+> 注：全部经 `platform/uni/feedback.ts` 的 `toast/showLoading/hideLoading/showModal` 调用（**没有**任何页面直接调 `uni.showToast`）⇒ 迁移面＝这些调用点的**实现通道**，不是调用点本身。
+
+**配方（沿用 `aiTryOn` 已跑通的做法，零改调用点）**
+1. 页面 script 内定义**同名局部包装**：`showLoading(text)` → 微信端置 `loadingPopupVisible/loadingPopupText`；`hideLoading()` → 置 false；`toast(text, icon?)` → `feedbackRef.value.show(...)`（非微信端回落原生）。
+2. 模板挂载 `<BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />` 与 `<BaseFeedback ref="feedbackRef" />`。
+3. **删除** `platform/uni/feedback` 的对应 import（只保留仍直接使用 `navigateTo` 等）⇒ 调用点一行都不动（`grep` 计数不变即迁移完成）。
+4. `showModal`（4 处：`aiRecommend` 1、`aiTryOnResult` 3）需先定口径：是否改为 `BaseDialog` 门面（若改，属**交互形态变化**，须主人拍板；我可先只统一 loading/toast，showModal 单独列项）。
+5. 每页一提交，跑：`vue-tsc` ＋ `t62` ＋ 全量 `vitest` ＋ 微信/抖音构建 ＋ 产物核 `base-loading-popup`/`base-feedback` 注册；抖音端 AI 六页不构建（`#ifdef MP-WEIXIN`）⇒ 抖音只验构建通过。
+
+**已知覆盖缺口（如实留痕）**：门面 `BaseFeedback.show` 经 `defineExpose` 暴露 ⇒ 在 vitest 里既 **spy 不到**（页面持有的 exposed 代理与 `vm.show` 非同一引用）也**不会真渲染** toast ⇒ **轻提示通道当前无单测覆盖**（已在 `t38` 登记）；页面级弹层断言用容器 `modelValue`（如 `t38` 的 `StubWdPopup`）这一替代法。
