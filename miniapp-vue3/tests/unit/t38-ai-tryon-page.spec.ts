@@ -13,6 +13,10 @@ const h = vi.hoisted(() => ({
   toasts: [] as string[],
   shareCalls: [] as Array<() => unknown>,
   timelineCalls: [] as Array<() => unknown>,
+  // 2026-09-23：4002 全链路用例用——可配置提交结果 + 调用计数（默认成功）
+  submitResult: null as unknown,
+  submitCalls: 0,
+  chooseImageCalls: 0,
 }));
 
 vi.mock("@dcloudio/uni-app", () => ({
@@ -31,7 +35,10 @@ vi.mock("../../src/infrastructure/repositories/ai", () => ({
       return { ok: true, value: h.templatesByQuery(q) };
     },
     getTasks: async () => ({ ok: true, value: [] }),
-    submitTryOnTask: async () => ({ ok: true, value: { task_id: 1 } }),
+    submitTryOnTask: async () => {
+      h.submitCalls += 1;
+      return (h.submitResult ?? { ok: true, value: { task_id: 1 } }) as never;
+    },
   }),
 }));
 
@@ -62,6 +69,9 @@ vi.mock("../../src/infrastructure/repositories/wx-auth", () => ({
 
 import StubWdPopup from "../stubs/wot/wd-popup/wd-popup.vue";
 import AiTryOnPage from "../../src/pages/aiTryOn/index.vue";
+import AppPhotoPicker from "../../src/components/AppPhotoPicker/AppPhotoPicker.vue";
+import { detectUiPlatform } from "../../src/ui/ui-platform";
+import { PROFILE } from "../../src/generated/profile.config";
 
 /** wot 桩（CR 🟡10）：门面 BasePopup 内部是 `wd-popup`，不注册会打 Vue warn 且断言退化为「裸元素」 */
 const GLOBAL = { components: { "wd-popup": StubWdPopup } };
@@ -74,6 +84,9 @@ beforeEach(() => {
   h.toasts.length = 0;
   h.shareCalls.length = 0;
   h.timelineCalls.length = 0;
+  h.submitResult = null;
+  h.submitCalls = 0;
+  h.chooseImageCalls = 0;
   h.store.clear();
   (globalThis as { uni?: unknown }).uni = {
     getStorageSync: (k: string) => h.store.get(k) ?? "",
@@ -91,6 +104,18 @@ beforeEach(() => {
     showModal: () => undefined,
     navigateTo: () => undefined,
     getSystemInfoSync: () => ({ statusBarHeight: 20 }),
+    // 全链路 4002 用例：选图 → 上传（服务端返回 filename）
+    chooseImage: (o: Record<string, unknown>) => {
+      h.chooseImageCalls += 1;
+      (o.success as (r: unknown) => void)({ tempFilePaths: ["/tmp/pick.jpg"], tempFiles: [{ size: 1024 * 1024 }] });
+    },
+    uploadFile: (o: Record<string, unknown>) => {
+      (o.success as (r: unknown) => void)({ statusCode: 200, data: JSON.stringify({ code: 200, data: { filename: "f.jpg" } }) });
+      return { onProgressUpdate: () => undefined, abort: () => undefined };
+    },
+    getImageInfo: (o: Record<string, unknown>) => {
+      (o.success as (r: unknown) => void)({ width: 1200, height: 1600 });
+    },
   };
 });
 
@@ -198,4 +223,13 @@ describe("pages/aiTryOn（T8 装配）", () => {
       h.templatesByQuery = (q: Record<string, string>) => (q.album_id != null ? [] : [{ id: 11, imageUrl: "https://lanmei66.cloud/t.png" }]);
     });
   });
+
+  // ⚠️ 2026-09-23 留痕（未落地）：页面层「全链路 4002」用例（选图→上传→生成→弹层→重选）**暂缺**。
+  // 阻塞点（已定位）：`platform/uni/chooser.ts` 的口子用**裸 `uni`**（`typeof uni === "undefined"`）判定容器能力，
+  // 而本 vitest/Vite 环境里裸标识符解析与 `globalThis.uni` 桩不一致 ⇒ `choose()` 直接 resolve(null)，
+  // 选图链路无法在页面级驱动（登录态/onShow 时序已解决：会话须带 platform/profileKey，且登录态在 onShow 刷新）。
+  // 现状覆盖：分层行为（t61：4002→QUALITY_REJECTED／businessData 透传／submit 归一／弹层渲染级）＋ 页面接线守卫（t61）。
+  // 补法建议（待独立 CR 结论后一并处置）：①测试里用 `vi.stubGlobal("uni", …)` 让裸标识符可解析；②或把页面内的
+  // `uni.*` 调用继续收进平台端口（仓内既有方向），再补端到端用例。
+
 });
