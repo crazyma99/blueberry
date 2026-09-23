@@ -7,6 +7,8 @@
 // 组件样式隔离（微信默认 `isolated`）⇒ **字体须在组件内显式声明**（沿弹窗族既有结论）。
 import { computed } from "vue";
 import BasePopup from "../../ui/BasePopup.vue";
+import BaseButton from "../../ui/BaseButton.vue";
+import { tokens } from "../../generated/tokens";
 import { PHOTO_GATE_ACCEPT_ASSET, resolvePhotoGateCopy } from "../../application/photo-gate";
 
 const props = withDefaults(
@@ -28,6 +30,11 @@ const emit = defineEmits<{
 }>();
 
 const base = computed(() => resolvePhotoGateCopy(props.code));
+// 按钮统一走门面 `BaseButton`（wot `wd-button`）：主按钮品牌金、次按钮 `variant="plain"` 描边；
+// 颜色经 wot 官方 CSS 变量（`npx wot token Button`）绑定 **tokens**，不写死、不接触 wot 内部类名。
+const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};`;
+const GHOST_BTN_STYLE = `--wot-button-primary-plain-bg: transparent;--wot-button-primary-plain-border: ${tokens.semantic.colorBorder};--wot-button-primary-color: ${tokens.semantic.colorAction};`;
+
 const copy = computed(() => ({
   ...base.value,
   title: props.titleOverride !== "" ? props.titleOverride : base.value.title,
@@ -59,12 +66,24 @@ const copy = computed(() => ({
       <text class="qr-note">本次未消耗试衣次数</text>
 
       <view class="qr-actions">
-        <view class="qr-btn qr-btn--primary" @click="emit('retry')">
-          <text class="qr-btn-text qr-btn-text--primary">重新选择照片</text>
-        </view>
-        <view class="qr-btn qr-btn--ghost" @click="emit('close')">
-          <text class="qr-btn-text qr-btn-text--ghost">知道了</text>
-        </view>
+        <!-- 门面组件（原为自绘 view）：主按钮品牌金 / 次按钮 plain 描边；类名保留以兼容既有用例选择器 -->
+        <BaseButton
+          class="qr-btn qr-btn--primary"
+          label="重新选择照片"
+          block
+          round
+          :custom-style="PRIMARY_BTN_STYLE"
+          @click="emit('retry')"
+        />
+        <BaseButton
+          class="qr-btn qr-btn--ghost"
+          label="知道了"
+          variant="plain"
+          block
+          round
+          :custom-style="GHOST_BTN_STYLE"
+          @click="emit('close')"
+        />
       </view>
     </view>
   </BasePopup>
@@ -138,6 +157,7 @@ const copy = computed(() => ({
   color: $color-text-muted;
 }
 .qr-actions {
+  /* 两个按钮由门面 BaseButton 渲染；此处仅负责纵向布局 */
   margin-top: $space-lg;
   width: 100%;
   display: flex;
@@ -152,22 +172,5 @@ const copy = computed(() => ({
   justify-content: center;
   border-radius: 999rpx; /* 仓内无 pill token（登记为待补） */
   box-sizing: border-box;
-}
-.qr-btn--primary {
-  /* 主按钮渐变与全站主按钮同口径（起点/终点 token，中段沿用既有品牌金渐变常量） */
-  background: linear-gradient(135deg, $color-action-soft 0%, $color-action 45%, #d9a75c 100%);
-}
-.qr-btn--ghost {
-  margin-top: $space-sm;
-  border: 2rpx solid $color-border;
-}
-.qr-btn-text {
-  font-size: $font-size-body;
-}
-.qr-btn-text--primary {
-  color: $color-action-text;
-}
-.qr-btn-text--ghost {
-  color: $color-action;
 }
 </style>
