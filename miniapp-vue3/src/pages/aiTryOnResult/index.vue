@@ -90,8 +90,16 @@ import PageFooter from "../../components/PageFooter/PageFooter.vue";
 // 2026-09-21 主人：分享准备 loading 改用 **wot popup ＋ wot loading 的公共组件** `ui/BaseLoadingPopup`
 // （内部＝wd-popup 遮罩/居中 ＋ 门面 BaseLoading＝wd-loading；token 卡片面）⇒ 本页不再自绘遮罩与卡片。
 import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
+import BaseButton from "../../ui/BaseButton.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
 import { parseServerTimeMs } from "../../application/wait-resume";
+
+/** 金色主按钮视觉（等价搬入：全局 `.btn-primary`（`App.vue:75`）＋ 本页 `.action-bar .btn-primary{height:92rpx}`）：
+ *  ① 经 `custom-style` 内联下发到 wot 真实 `button` 节点 ⇒ 不受组件样式隔离影响，且**宿主节点不再挂 `.btn-primary`**
+ *     （否则全局类会在宿主上再画一层，出现双底）；
+ *  ② 按压态用 `--active` 变量近似复刻原 `hover-class="press-dim"`（`opacity:.82` 叠在 #160F04 上 ⇒ ≈ #D5BA83→#B68C4C）；
+ *  ③ 文字 32rpx / #160F04（原 `.action-bar .btn-primary text`）由按钮节点继承（全仓无 `text` 元素级全局规则，实测安全性）。 */
+const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);--wot-button-primary-bg-active: linear-gradient(135deg, #D5BA83 0%, #CAAB78 45%, #B68C4C 100%);--wot-button-primary-color: #160F04;color: #160F04;height: 92rpx;border-radius: 999rpx;padding: 0 40rpx;font-size: 32rpx;line-height: 1.2;border: 1rpx solid #160F04;`;
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue 完全同口径）——
 const detected = detectUiPlatform();
@@ -894,23 +902,32 @@ async function loadFooterPair(): Promise<void> {
       </view>
       <!-- 分享落地只读：仅结果图 + 「我也要试」（bug #8 只读模式） -->
       <view v-if="shareReadOnly" class="action-bar">
-        <view class="btn-primary" hover-class="press-dim" @click="tryThisOut">
-          <text>我也要试</text>
-        </view>
+        <BaseButton
+          label="我也要试"
+          :custom-style="PRIMARY_BTN_STYLE"
+          @click="tryThisOut"
+        />
       </view>
       <view v-else class="action-bar">
         <!-- 付费模式且无剩余次数且未买断：价格按钮，点击直接拉起支付（已买断永久免费保存） -->
         <view v-if="isPaidMode && creditBalance <= 0 && !taskBought" class="save-btn-wrap">
-          <view class="btn-primary" hover-class="press-dim" @click="saveToAlbum">
-            <text>¥{{ priceText }}</text>
-            <text> 保存到相册</text>
-          </view>
+          <BaseButton
+            :custom-style="PRIMARY_BTN_STYLE"
+            @click="saveToAlbum"
+          >
+            <view class="btn-primary-inner">
+              <text>¥{{ priceText }}</text>
+              <text> 保存到相册</text>
+            </view>
+          </BaseButton>
         </view>
         <!-- 非付费模式或有剩余次数：原按钮，有次数时右上角展示角标 -->
         <view v-else class="save-btn-wrap">
-          <view class="btn-primary" hover-class="press-dim" @click="saveToAlbum">
-            <text>保存到相册</text>
-          </view>
+          <BaseButton
+            label="保存到相册"
+            :custom-style="PRIMARY_BTN_STYLE"
+            @click="saveToAlbum"
+          />
           <view v-if="isPaidMode && (creditBalance > 0 || taskBought)" class="save-btn-badge">
             <text class="save-btn-badge-text">{{ saveBadge }}</text>
           </view>
@@ -933,9 +950,12 @@ async function loadFooterPair(): Promise<void> {
         <view v-if="!shareReadOnly && failCount < 3" class="retry-btn" hover-class="press-dim" @click="handleRetry">
           <text class="retry-btn-text">重试</text>
         </view>
-        <view v-if="shareReadOnly" class="btn-primary" hover-class="press-dim" @click="tryThisOut">
-          <text>我也要试</text>
-        </view>
+        <BaseButton
+          v-if="shareReadOnly"
+          label="我也要试"
+          :custom-style="PRIMARY_BTN_STYLE"
+          @click="tryThisOut"
+        />
         <view class="back-btn-wrapper" hover-class="press-dim" @click="handleBack">
           <text class="back-btn-text">返回</text>
         </view>
@@ -1194,15 +1214,16 @@ async function loadFooterPair(): Promise<void> {
   font-size: 20rpx; /* 旧 var(--font-size-body-xs)=20rpx */
   color: #fff;
 }
-/* 操作栏按钮：view 与 button 原生差异抹平——统一高度 92rpx（button 原生表单组件自带默认样式，不能只靠类名对齐） */
-.action-bar .btn-primary {
-  height: 92rpx;
-  box-sizing: border-box;
-}
-.action-bar .btn-primary text {
-  color: $color-action-text; /* 旧 var(--color-bg)，金色面上墨色 */
-  font-size: 32rpx;
-  line-height: 1.2;
+/* 操作栏按钮：`view` → 门面 `BaseButton`（2026-09-23 主人「按钮全覆盖」）后，盒模型/配色/文字全部走
+   `PRIMARY_BTN_STYLE` 内联（见 script 注释）；原 `.action-bar .btn-primary{height:92rpx}` 与
+   `.action-bar .btn-primary text{...}` 两条本页覆盖随之失效并删除（全局 `.btn-primary` 仍供他页使用）。
+   多文本按钮（价格 + 保存到相册）的 12rpx 间距由槽位内层 `.btn-primary-inner` 承担。 */
+.btn-primary-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
 }
 .share-btn {
   margin: 20rpx 0 0 32rpx; /* 旧 var(--spacing-sm) / var(--spacing-lg) */
