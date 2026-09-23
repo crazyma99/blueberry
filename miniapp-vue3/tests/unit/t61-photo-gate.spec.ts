@@ -15,6 +15,7 @@ import {
   resolvePhotoGateCopy,
 } from "../../src/application/photo-gate";
 import QualityRejectSheet from "../../src/components/QualityRejectSheet/QualityRejectSheet.vue";
+import { createTryOnSubmitter, type SubmitInput } from "../../src/application/ai-tryon-submit";
 
 const root = resolve(__dirname, "../..");
 const read = (p: string): string => readFileSync(resolve(root, p), "utf-8");
@@ -138,5 +139,65 @@ describe("QualityRejectSheet 渲染级（底部弹层＋正反例对比）", () 
     const w = mountSheet("no_face");
     await w.find(".stub-popup__mask").trigger("click");
     expect(w.emitted("close")?.length).toBe(1);
+  });
+});
+
+describe("submit 归一（createTryOnSubmitter）：4002 → quality-rejected，绝不走充值", () => {
+  const input = (over: Partial<SubmitInput> = {}): SubmitInput =>
+    ({
+      uploadedFilename: "f.jpg",
+      photoPath: "/tmp/a.jpg",
+      isUploading: false,
+      isSubmitting: false,
+      isLoggedIn: true,
+      shopId: "7",
+      templates: [{ id: 11 }],
+      currentTemplateIndex: 0,
+      isPaidMode: false,
+      creditBalance: 0,
+      ...over,
+    }) as unknown as SubmitInput;
+
+  const submitterWith = (error: unknown) =>
+    createTryOnSubmitter({
+      ai: { submitTryOnTask: async () => ({ ok: false, error }) as never },
+      nextContext: () => ({}) as never,
+    });
+
+  it("⭐4002（带 check_code）⇒ {kind:'quality-rejected', checkCode}（不是 toast、不触发充值）", async () => {
+    const out = await submitterWith({
+      kind: "QUALITY_REJECTED",
+      businessCode: 4002,
+      message: "未检测到人脸，请上传单人正面照",
+      requestId: null,
+      retryable: false,
+      businessData: { check_code: "multi_face" },
+    }).submit(input());
+    expect(out).toEqual({ kind: "quality-rejected", checkCode: "multi_face" });
+  });
+
+  it("4002 但 check_code 缺失/脏值 ⇒ checkCode 兜底 unknown（文案「换一张照片试试吧」）", async () => {
+    const out = await submitterWith({
+      kind: "QUALITY_REJECTED", businessCode: 4002, message: "", requestId: null, retryable: false, businessData: {},
+    }).submit(input());
+    expect(out).toEqual({ kind: "quality-rejected", checkCode: "unknown" });
+  });
+
+  it("4001 行为不变（仍走充值）", async () => {
+    const out = await submitterWith({
+      kind: "INSUFFICIENT_CREDITS", businessCode: 4001, message: "", requestId: null, retryable: false,
+    }).submit(input());
+    expect(out).toEqual({ kind: "need-recharge", reason: "insufficient" });
+  });
+});
+
+describe("页面接线守卫（pages/aiTryOn）", () => {
+  it("switch 分支 + 弹层组件 + retry 接线 + import 均在位", () => {
+    const s = read("src/pages/aiTryOn/index.vue");
+    expect(s).toContain('case "quality-rejected":');
+    expect(s).toContain("QualityRejectSheet");
+    expect(s).toContain('@retry="onQualityRejectRetry"');
+    expect(s).toContain("showQualityReject");
+    expect(s).toContain('from "../../application/photo-gate"');
   });
 });
