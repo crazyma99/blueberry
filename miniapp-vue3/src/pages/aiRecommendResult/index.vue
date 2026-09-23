@@ -50,7 +50,7 @@ import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
-import { navigateTo, toast } from "../../platform/uni/feedback";
+import { navigateTo, toast as nativeToast } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
@@ -64,6 +64,21 @@ import { cosThumb } from "../../application/image";
 import { normalizeFinalScore, shouldShowScore } from "../../application/ai-recommend-flow";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
+
+
+// —— 反馈通道门面（2026-09-23 主人：「AI 推荐的相关 Loading Popup 和 弹窗 Popup 都没有和 AI 试衣上传照片时的
+//    拦截相关内容一致」⇒ 与 `pages/aiTryOn` 同口径）：加载 → `ui/BaseLoadingPopup`；轻提示 → `ui/BaseFeedback`；
+//    抖音端（AI 六页不注册）仍走原生，避免「两套 loading 同时出现」。**调用点保持零改动**。
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
 const detected = detectUiPlatform();
@@ -321,6 +336,9 @@ function safeDecode(value: string): string {
 
     <!-- 底部 Copyright（旧端 :70-73；PageFooter 共享组件收敛 page-footer > divide + bottomdesc 块，深色变体） -->
     <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="bottomdesc-dark" />
+
+    <!-- wot Toast 宿主（门面） -->
+    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 

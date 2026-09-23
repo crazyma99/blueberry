@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { defineComponent } from "vue";
 import { mount } from "@vue/test-utils";
 
 const h = vi.hoisted(() => ({
@@ -54,8 +55,24 @@ import AiRecommendLoading from "../../src/pages/aiRecommendLoading/index.vue";
 
 const flush = () => new Promise((r) => setTimeout(r, 30));
 
+
+/** 反馈门面桩（2026-09-23 起轻提示通道＝`ui/BaseFeedback`）：vitest 下平台判定为 `"other"`、wot Toast 不真渲染，
+ *  故以桩替换门面并把「页面要求展示的文案」记进 `h.toasts`（断言口径不变：用户看到的那句话＝页面交给门面的那句话）。
+ *  自证：把 `show` 改成空实现，`h.toasts` 断言即变红（测的是门面通道，不是原生回落）。 */
+const BaseFeedbackStub = defineComponent({
+  name: "BaseFeedback",
+  setup(_props, { expose }) {
+    expose({ show: (text: string) => h.toasts.push(text), hide: () => undefined });
+    return () => null;
+  },
+});
+
+function mountPage() {
+  return mount(AiRecommendLoading, { global: { stubs: { BaseFeedback: BaseFeedbackStub } } });
+}
+
 function boot(options: Record<string, unknown> = { filename: "up.png", shopId: "7" }) {
-  const w = mount(AiRecommendLoading);
+  const w = mountPage();
   h.onLoadCalls[h.onLoadCalls.length - 1](options);
   return w;
 }

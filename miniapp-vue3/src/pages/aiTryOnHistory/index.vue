@@ -19,7 +19,7 @@ import type { Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
-import { toast } from "../../platform/uni/feedback";
+import { toast as nativeToast } from "../../platform/uni/feedback";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
@@ -36,6 +36,21 @@ import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
 import { createPullRefresh } from "../../composables/use-pull-refresh";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
+
+
+// —— 反馈通道门面（2026-09-23 主人：「AI 推荐的相关 Loading Popup 和 弹窗 Popup 都没有和 AI 试衣上传照片时的
+//    拦截相关内容一致」⇒ 与 `pages/aiTryOn` 同口径）：加载 → `ui/BaseLoadingPopup`；轻提示 → `ui/BaseFeedback`；
+//    抖音端（AI 六页不注册）仍走原生，避免「两套 loading 同时出现」。**调用点保持零改动**。
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
 
 // —— 装配（同 mine/favorites）——
 const detected = detectUiPlatform();
@@ -230,6 +245,9 @@ function pad(n: number): string {
 
     <!-- 页脚：PageFooter 共享组件（原 :220-225 page-footer > divide + copyright 块收敛；样式随之入组件） -->
     <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="copyright" />
+
+    <!-- wot Toast 宿主（门面） -->
+    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 

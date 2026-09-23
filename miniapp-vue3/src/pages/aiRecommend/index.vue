@@ -59,7 +59,7 @@ import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
-import { toast, showLoading, hideLoading, showModal, navigateTo } from "../../platform/uni/feedback";
+import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, navigateTo } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
 import { createWeixinPayments } from "../../platform/weixin/payments";
@@ -85,6 +85,14 @@ import {
 } from "../../application/ai-photo-upload";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import AppPhotoPicker from "../../components/AppPhotoPicker/AppPhotoPicker.vue";
+// 2026-09-23 主人：「AI 推荐的相关 Loading Popup 和 弹窗 Popup 都没有和 AI 试衣上传照片时的拦截相关内容一致」
+// ⇒ 本页与 `pages/aiTryOn` 完全同源：加载 → `ui/BaseLoadingPopup`（wot 弹层，Token 化）；
+//    轻提示 → `ui/BaseFeedback`（wot Toast）；端侧照片质量拦截 → 同一个 `QualityRejectSheet` 底部弹层（正反例图＋重拍引导）。
+import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
+import QualityRejectSheet from "../../components/QualityRejectSheet/QualityRejectSheet.vue";
+import { resolveEndSideRejection } from "../../application/photo-gate";
+import type { PhotoGateCheckCode } from "../../application/photo-gate";
 import BottomActionBar from "../../components/BottomActionBar/BottomActionBar.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import ProfilePopup from "../../components/ProfilePopup/ProfilePopup.vue";
@@ -167,6 +175,52 @@ const photoPreviewUrl = ref("");
 const uploadedFilename = ref("");
 const uploading = ref(false);
 // 登录弹窗
+// —— 反馈通道门面（与 aiTryOn 完全同口径）——
+// 加载态：微信端走门面弹层；抖音端（AI 六页不注册，理论不进入）仍走原生，避免「两套 loading 同时出现」。
+const loadingPopupVisible = ref(false);
+const loadingPopupText = ref("");
+function showLoading(text: string): void {
+  if (detected === "mp-toutiao") {
+    nativeShowLoading(text);
+    return;
+  }
+  loadingPopupText.value = text;
+  loadingPopupVisible.value = true;
+}
+function hideLoading(): void {
+  if (detected === "mp-toutiao") {
+    nativeHideLoading();
+    return;
+  }
+  loadingPopupVisible.value = false;
+}
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
+
+// —— 端侧照片质量拦截（与 aiTryOn 同一个底部弹层；不再是微信原生 showModal）——
+const showQualityReject = ref(false);
+const qualityRejectCode = ref<PhotoGateCheckCode | "unknown">("unknown");
+const qualityRejectTitle = ref(""); // 端侧拦截时用端侧原话/映射标题覆盖（空 ⇒ 用该码契约文案）
+const qualityRejectText = ref("");
+/** 清空已选/已上传照片（拦截后必须重选；防止旧照片被再次提交） */
+function clearPhotoSelection(): void {
+  photoPath.value = "";
+  photoPreviewUrl.value = "";
+  uploadedFilename.value = "";
+}
+/** 弹层「重新选择照片」⇒ 关弹层并复用既有 选图→端侧预检 链路 */
+function onQualityRejectRetry(): void {
+  showQualityReject.value = false;
+  void choosePhoto();
+}
+
 const showLoginPopup = ref(false);
 const loginAgreementChecked = ref(false);
 // 头像昵称弹窗
@@ -271,7 +325,13 @@ async function checkAndAcceptPhoto(filePath: string): Promise<void> {
   }
   hideLoading();
   if (!check.ok) {
-    showModal("照片未通过检测", `${check.reason}，请重新上传`);
+    // 2026-09-23 主人：与「AI 试衣上传照片时的拦截」保持一致 ⇒ 同一个底部弹层（正反例图＋重拍引导＋未消耗次数安抚）
+    const mapped = resolveEndSideRejection(check.reason);
+    clearPhotoSelection(); // 防「以为换了图、实际仍持旧图」被再次提交
+    qualityRejectCode.value = mapped.code;
+    qualityRejectTitle.value = mapped.title;
+    qualityRejectText.value = mapped.text;
+    showQualityReject.value = true;
     return;
   }
   photoPath.value = filePath;
@@ -634,6 +694,19 @@ function isLoggedIn(): boolean {
       @update-nickname="onProfileNicknameInput"
       @submit="submitProfile"
       @skip="skipProfile"
+    />
+
+    <!-- 加载弹层（门面，Token 化）＋ wot Toast 宿主：本页所有 showLoading/hideLoading/toast 的最终呈现 -->
+    <BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />
+    <BaseFeedback ref="feedbackRef" />
+
+    <QualityRejectSheet
+      :show="showQualityReject"
+      :code="qualityRejectCode"
+      :title-override="qualityRejectTitle"
+      :text-override="qualityRejectText"
+      @retry="onQualityRejectRetry"
+      @close="showQualityReject = false"
     />
   </view>
 </template>

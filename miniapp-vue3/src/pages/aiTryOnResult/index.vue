@@ -37,7 +37,7 @@ import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createAlbumSaver } from "../../platform/uni/album-save";
-import { toast, showLoading, hideLoading, showModal } from "../../platform/uni/feedback";
+import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, showModal } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
@@ -90,8 +90,40 @@ import PageFooter from "../../components/PageFooter/PageFooter.vue";
 // 2026-09-21 主人：分享准备 loading 改用 **wot popup ＋ wot loading 的公共组件** `ui/BaseLoadingPopup`
 // （内部＝wd-popup 遮罩/居中 ＋ 门面 BaseLoading＝wd-loading；token 卡片面）⇒ 本页不再自绘遮罩与卡片。
 import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
 import { parseServerTimeMs } from "../../application/wait-resume";
+
+
+// —— 反馈通道门面（2026-09-23 主人：「AI 推荐的相关 Loading Popup 和 弹窗 Popup 都没有和 AI 试衣上传照片时的
+//    拦截相关内容一致」⇒ 与 `pages/aiTryOn` 同口径）：加载 → `ui/BaseLoadingPopup`；轻提示 → `ui/BaseFeedback`；
+//    抖音端（AI 六页不注册）仍走原生，避免「两套 loading 同时出现」。**调用点保持零改动**。
+const loadingPopupVisible = ref(false);
+const loadingPopupText = ref("");
+function showLoading(text: string): void {
+  if (detected === "mp-toutiao") {
+    nativeShowLoading(text);
+    return;
+  }
+  loadingPopupText.value = text;
+  loadingPopupVisible.value = true;
+}
+function hideLoading(): void {
+  if (detected === "mp-toutiao") {
+    nativeHideLoading();
+    return;
+  }
+  loadingPopupVisible.value = false;
+}
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue 完全同口径）——
 const detected = detectUiPlatform();
@@ -950,6 +982,10 @@ async function loadFooterPair(): Promise<void> {
 
     <!-- 分享准备中 loading（点击分享后生成封面期间展示）：公共组件 BaseLoadingPopup＝wot `wd-popup`＋`wd-loading`＋token -->
     <BaseLoadingPopup :show="sharePreparing" text="正在准备分享…" direction="vertical" />
+
+    <!-- 通用加载弹层（门面）＋ wot Toast 宿主（与「分享准备中」弹层状态各自独立） -->
+    <BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />
+    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 

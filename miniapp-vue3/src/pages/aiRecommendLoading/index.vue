@@ -62,7 +62,7 @@ import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
-import { toast, showLoading, hideLoading } from "../../platform/uni/feedback";
+import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
@@ -90,8 +90,41 @@ import {
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
+import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
 import { shouldResumeStartedAt } from "../../application/wait-resume";
+
+
+// —— 反馈通道门面（2026-09-23 主人：「AI 推荐的相关 Loading Popup 和 弹窗 Popup 都没有和 AI 试衣上传照片时的
+//    拦截相关内容一致」⇒ 与 `pages/aiTryOn` 同口径）：加载 → `ui/BaseLoadingPopup`；轻提示 → `ui/BaseFeedback`；
+//    抖音端（AI 六页不注册）仍走原生，避免「两套 loading 同时出现」。**调用点保持零改动**。
+const loadingPopupVisible = ref(false);
+const loadingPopupText = ref("");
+function showLoading(text: string): void {
+  if (detected === "mp-toutiao") {
+    nativeShowLoading(text);
+    return;
+  }
+  loadingPopupText.value = text;
+  loadingPopupVisible.value = true;
+}
+function hideLoading(): void {
+  if (detected === "mp-toutiao") {
+    nativeHideLoading();
+    return;
+  }
+  loadingPopupVisible.value = false;
+}
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
 const detected = detectUiPlatform();
@@ -515,6 +548,10 @@ function redirectTo(url: string): void {
          PageFooter 共享组件收敛 page-footer > divide + bottomdesc 块——深色变体 + safe-area 内边距） -->
     <!-- 单实例 + 动态 props（旧端 CR 🟡：避免 v-if/v-else 重建组件、重复拉取 OPS 版权配置） -->
     <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="bottomdesc-dark" safe-area />
+
+    <!-- 加载弹层（门面，Token 化）＋ wot Toast 宿主 -->
+    <BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />
+    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 
