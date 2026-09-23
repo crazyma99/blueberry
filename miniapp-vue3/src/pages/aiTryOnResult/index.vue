@@ -37,7 +37,7 @@ import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createAlbumSaver } from "../../platform/uni/album-save";
-import { toast, showLoading, hideLoading, showModal } from "../../platform/uni/feedback";
+import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, showModal } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
@@ -90,6 +90,7 @@ import PageFooter from "../../components/PageFooter/PageFooter.vue";
 // 2026-09-21 主人：分享准备 loading 改用 **wot popup ＋ wot loading 的公共组件** `ui/BaseLoadingPopup`
 // （内部＝wd-popup 遮罩/居中 ＋ 门面 BaseLoading＝wd-loading；token 卡片面）⇒ 本页不再自绘遮罩与卡片。
 import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
 import BaseButton from "../../ui/BaseButton.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
 import { parseServerTimeMs } from "../../application/wait-resume";
@@ -119,6 +120,37 @@ const BACK_BTN_STYLE = `--wot-button-primary-bg: transparent;--wot-button-primar
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue 完全同口径）——
 const detected = detectUiPlatform();
+
+// —— 反馈通道统一（2026-09-23 B2；主人「选项一，都应该改」）——
+// 加载态：微信端走门面弹层（Token 化；与页面既有的「分享准备中」弹层互不干扰——两者状态各自独立）；
+// 抖音端（AI 六页不注册，理论不进入）仍走原生，避免「两套 loading 同时出现」。
+// 轻提示：优先门面 wot Toast，门面未就绪时回落原生。**调用点（13 处 toast ＋ 2/3 处 loading）零改动**。
+const loadingPopupVisible = ref(false);
+const loadingPopupText = ref("");
+function showLoading(text: string): void {
+  if (detected === "mp-toutiao") {
+    nativeShowLoading(text);
+    return;
+  }
+  loadingPopupText.value = text;
+  loadingPopupVisible.value = true;
+}
+function hideLoading(): void {
+  if (detected === "mp-toutiao") {
+    nativeHideLoading();
+    return;
+  }
+  loadingPopupVisible.value = false;
+}
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
 const env = PROFILE.environment;
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
@@ -1004,6 +1036,10 @@ async function loadFooterPair(): Promise<void> {
 
     <!-- 分享准备中 loading（点击分享后生成封面期间展示）：公共组件 BaseLoadingPopup＝wot `wd-popup`＋`wd-loading`＋token -->
     <BaseLoadingPopup :show="sharePreparing" text="正在准备分享…" direction="vertical" />
+
+    <!-- 反馈通道门面（2026-09-23 B2）：通用加载弹层 ＋ wot Toast 挂载点 -->
+    <BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />
+    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 
