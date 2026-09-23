@@ -33,21 +33,24 @@
 
 > 判定口径：只有「表单/操作类按钮」才纳入替换；平台 `open-type` 按钮与门面实现细节**免替换**（守卫 `t62` 的启发式只统计带 `@click/@tap` 且 class 含 btn/button/cta 的元素或带 `@click` 的原生 `<button>`，天然不计入 `open-type` 按钮）。
 
-## 交接状态（2026-09-23 第 15 轮更新；本条即"接手即用"）
+## 交接状态（2026-09-23 第 17 轮更新；本条即"接手即用"）
+
+**推送目标（务必注意）**：本分支 upstream ＝ **`fork`**（`crazyma99/blueberry`，可写）；`origin` 是上游 `linziyanleo/blueberry`，**`git push origin` 必 403**。推送后必须用 `git ls-remote fork refs/heads/<branch>` 与 `git rev-list --count HEAD..fork/feat/backend-tryon-photo-gate`（＝0）双向核实，**不要**相信 `git push | tail` 的退出码（管道会吞掉失败）。
 
 **已组件化（含提交号）**
 - B1 `QualityRejectSheet` 2 处 → `aeb3270`
-- B3 ① `ProfilePopup` 1 处 → `e4686f7`；② `aiRecommendLoading.retry-btn` 1 处 → `030a87e`；③ `demoDetail` 1 处 → `02b2c29`；④ `targetPhotoDetail` 2 处（`retry` → `26b7214`；`btn-primary` 图文/多行块 → `b3f95a3`，内容经插槽保留 → `180778c`）；⑤ `aiTryOn.tpl-empty-btn` 1 处 → `eee8150`
+- B3 ① `ProfilePopup` 1 处 → `e4686f7`；② `aiRecommendLoading.retry-btn` 1 处 → `030a87e`；③ `demoDetail` 1 处 → `02b2c29`；④ `targetPhotoDetail` 2 处（`retry` → `26b7214`；`btn-primary` 图文/多行块 → `b3f95a3`，内容经插槽保留 → `180778c`）；⑤ `aiTryOn.tpl-empty-btn` 1 处 → `eee8150`；⑥ `mine.logout-btn` 1 处 → `40b5efa`
 
-**剩余（＝守卫 `t62` 白名单，替换后必须同步下调）**
+**剩余（＝守卫 `t62` 白名单现值 5 文件/15 处，替换后必须同步下调）**
 | 文件 | 待替换 |
 |---|---|
 | `pages/aiTryOnResult/index.vue` | 9 |
 | `pages/aiTryOn/index.vue` | 2 |
 | `ui/BasePicker.vue` | 2 |
 | `pages/aiRecommendLoading/index.vue` | 1 |
-| `pages/mine/index.vue` | 1 |
 | `ui/BaseDialog.vue` | 1 |
+
+> 口径提示：`ui/BasePicker`、`ui/BaseDialog` 属"门面自身（ui/**）"登记项；`aiRecommendLoading` 那 1 处是 `back-btn-wrapper`（可交互非按钮）——两者是否需改口径（改用组件／从启发式中豁免）待主人拍板，暂留白名单。
 
 **方法固化（务必沿用——我已踩过的坑）**
 1. **定位**：`grep -n "<类名>"` 看真实形态；**不要**用 `<template>…</template>` 切片（本仓部分文件根标签带属性，会取错片段 ⇒ 我曾连续 MISS 两轮）。
@@ -55,5 +58,7 @@
 3. **判定器注意**：统计"子节点"时要排除元素**自身**的 `<view` 标签。
 4. **每页一提交**，提交前必跑：`npx vue-tsc --noEmit` ＋ `npx vitest run tests/unit/t62-button-facade-guard.spec.ts` ＋ 全量 `npx vitest run` ＋ `npx uni build -p mp-weixin`（产物再核 `base-button` 注册/渲染）。
 5. 含 `open-type` 的原生 `<button>`（chooseAvatar／getPhoneNumber）与门面内部自绘**免替换**（见上文「免替换清单」）。
+6. **变异验证必须断言锚点命中**：第 17 轮我做"注入自绘按钮应使 t62 变红"时，注入脚本的锚点缩进抄错（写 6 空格，实际 4 空格）⇒ `str.replace` 静默无改动 ⇒ 得到**假绿**。凡用字符串替换做变异，脚本内必须 `assert anchor in s and s2 != s`，并在跑测后 `grep -c` 确认注入物真的在文件里。
+7. **样式隔离**：`class` 交给组件时页面 scoped 样式**不可靠**（组件 `styleIsolation: isolated`）；视觉一律走 `custom-style` 内联（配色用 wot CSS 变量 `--wot-button-*-bg/-bg-active/-color` ⇒ 连按压态都交给 wot 自身 `hover-class`）。已实测产物 `wd-button.wxml`：`<button style="{{i}}" class="wd-button …">`。
 
-**已知瑕疵（如实留痕）**：空提交 `4e85572`（信息夸大为"清理"，实际未改动）——因已推送且禁止改写历史，仅登记、不追溯。
+**已知瑕疵（如实留痕）**：①空提交 `4e85572`（信息夸大为"清理"，实际未改动）——因已推送且禁止改写历史，仅登记、不追溯。②第 17 轮"变异测试"首跑为空跑（锚点缩进抄错）却当成验证结论 ⇒ 已在「方法固化」第 6 条固化防呆，本轮已用正确锚点重做并取得真实红。
