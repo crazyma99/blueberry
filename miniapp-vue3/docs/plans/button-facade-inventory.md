@@ -38,20 +38,20 @@
 
 **已组件化（含提交号）**
 - B1 `QualityRejectSheet` 2 处 → `aeb3270`
-- B3 ① `ProfilePopup` 1 处 → `e4686f7`；② `aiRecommendLoading.retry-btn` 1 处 → `030a87e`；③ `demoDetail` 1 处 → `02b2c29`；④ `targetPhotoDetail` 2 处（`retry` → `26b7214`；`btn-primary` 图文/多行块 → `b3f95a3`，内容经插槽保留 → `180778c`）；⑤ `aiTryOn.tpl-empty-btn` 1 处 → `eee8150`；⑥ `mine.logout-btn` 1 处 → `40b5efa`；⑦ `aiTryOn.generate-btn` 2 处（图文，含插槽＋`generateBtnStyle`）→ `5b40a1f`；⑧ `aiTryOnResult` 主按钮组 4 处（`.btn-primary`；label/插槽两种形态）→ `eb2759a`；⑨ `aiTryOnResult` 余 5 处（`gen-btn`×2 原生 button／`share-btn` 图标／`retry-btn`／`back-btn-wrapper`）→ `c4ea2ab`**（该页自绘按钮清零）**
+- B3 ① `ProfilePopup` 1 处 → `e4686f7`；② `aiRecommendLoading.retry-btn` 1 处 → `030a87e`；③ `demoDetail` 1 处 → `02b2c29`；④ `targetPhotoDetail` 2 处（`retry` → `26b7214`；`btn-primary` 图文/多行块 → `b3f95a3`，内容经插槽保留 → `180778c`）；⑤ `aiTryOn.tpl-empty-btn` 1 处 → `eee8150`；⑥ `mine.logout-btn` 1 处 → `40b5efa`；⑦ `aiTryOn.generate-btn` 2 处（图文，含插槽＋`generateBtnStyle`）→ `5b40a1f`；⑧ `aiTryOnResult` 主按钮组 4 处（`.btn-primary`；label/插槽两种形态）→ `eb2759a`；⑨ `aiTryOnResult` 余 5 处（`gen-btn`×2 原生 button／`share-btn` 图标／`retry-btn`／`back-btn-wrapper`）→ `c4ea2ab`**（该页自绘按钮清零）**；⑩ `aiRecommendLoading.back-btn-wrapper` 1 处（纯文字返回，与结果页同形）→ `1636e65`**（所有业务页自绘按钮清零）**
 
-**剩余（＝守卫 `t62` 白名单现值 3 文件/4 处，替换后必须同步下调）**
-| 文件 | 待替换 |
-|---|---|
-| `pages/aiTryOnResult/index.vue` | 9 |
-| `ui/BasePicker.vue` | 2 |
-| `pages/aiRecommendLoading/index.vue` | 1 |
-| `ui/BaseDialog.vue` | 1 |
+**剩余（＝守卫 `t62` 白名单现值 2 文件/3 处，**全部为门面内部自绘的登记豁免**）**
+| 文件 | 登记豁免项 | 理由 |
+|---|---|---|
+| `ui/BasePicker.vue` | 2 | 门面自身（抖音分支 ＋ 确定/取消），已在 `ui/**` 内用 `wd-*`，不再套一层门面 |
+| `ui/BaseDialog.vue` | 1 | 同上（对话框自身按钮） |
+
+> **业务侧结论（2026-09-23）**：`src/pages/**` 与 `src/components/**` 的**自绘按钮已全部清零**；白名单仅剩 `src/ui/**` 门面内部自绘（登记豁免）。免替换另含平台强制原生 `<button open-type=…>`（`chooseAvatar`／`getPhoneNumber`／`share`）。
 
 > **主人拍板（2026-09-23）**：按压反馈「没事，之前按压的反馈按组件的来就行」⇒ 一律以 **wot 组件自带的按压机制**为准（`hover-class="wd-button--active"` ＋ `--wot-button-*-bg-active`），**不再**要求还原旧 `press-dim` 的透明度观感、也无需真机比对后定。落在代码里＝各页 style 常量中的 `--active` 值即最终口径。
-> **仍待拍板**：`aiTryOnResult` 的 `open-type="share"` 原生分享按钮是否也组件化（需给门面扩 `openType` 透传；`ProfilePopup` 的 chooseAvatar/getPhoneNumber 另需转发事件 payload）；`aiRecommendLoading.back-btn-wrapper`（非按钮）是否换算按钮或从启发式豁免。
+> **仍待拍板**：`aiTryOnResult` 的 `open-type="share"` 原生分享按钮是否也组件化（需给门面扩 `openType` 透传；`ProfilePopup` 的 chooseAvatar/getPhoneNumber 另需转发事件 payload）；~~`aiRecommendLoading.back-btn-wrapper`（非按钮）是否换算按钮或从启发式豁免~~ ⇒ **已处置**：按主人口径统一组件化（见 ⑩）。
 
-> 口径提示：`ui/BasePicker`、`ui/BaseDialog` 属"门面自身（ui/**）"登记项；`aiRecommendLoading` 那 1 处是 `back-btn-wrapper`（可交互非按钮）——两者是否需改口径（改用组件／从启发式中豁免）待主人拍板，暂留白名单。
+> 口径提示：`ui/BasePicker`、`ui/BaseDialog` 属"门面自身（ui/**）"登记项——**结论：保持自绘并登记豁免**（它们本就在门面层、内部用 `wd-*`，再套一层门面只会增加层级与回归面）。
 
 **方法固化（务必沿用——我已踩过的坑）**
 1. **定位**：`grep -n "<类名>"` 看真实形态；**不要**用 `<template>…</template>` 切片（本仓部分文件根标签带属性，会取错片段 ⇒ 我曾连续 MISS 两轮）。
