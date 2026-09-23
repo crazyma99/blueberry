@@ -87,7 +87,7 @@
 
 > 注：全部经 `platform/uni/feedback.ts` 的 `toast/showLoading/hideLoading/showModal` 调用（**没有**任何页面直接调 `uni.showToast`）⇒ 迁移面＝这些调用点的**实现通道**，不是调用点本身。
 
-**进度（2026-09-23 第 19 轮）**：① `aiRecommendLoading` **已完成**（`7f75a8f`：11 toast ＋ 1 组 loading；该页此前仅 1 处 loading 调用点与 11 处 toast）。余 5 页：`aiRecommend`（22/4/6/1）、`aiRecommendResult`（2）、`aiTryOnHistory`（3）、`aiTryOn`（18/6/6，已有局部包装，待换成本配方并接线埋点）、`aiTryOnResult`（13/2/3/3，仅 loading 已接门面）。
+**进度（2026-09-23 第 19 轮）**：① `aiRecommendLoading` **已完成**（`7f75a8f`：11 toast ＋ 1 组 loading；该页此前仅 1 处 loading 调用点与 11 处 toast）。② `aiRecommendResult` **已完成**（`f6859bf`：2 处 toast）。余 4 页：`aiRecommend`（22/4/6/1）、`aiTryOnHistory`（3）、`aiTryOn`（18/6/6，已有局部包装，待接线埋点并复核）、`aiTryOnResult`（13/2/3/3，仅 loading 已接门面）。
 
 **⭐测试口径（本轮新增，务必沿用——否则会写成假绿）**：页面级测试观测轻提示**必须给门面配桩**：
 ```ts
