@@ -87,6 +87,18 @@
 
 > 注：全部经 `platform/uni/feedback.ts` 的 `toast/showLoading/hideLoading/showModal` 调用（**没有**任何页面直接调 `uni.showToast`）⇒ 迁移面＝这些调用点的**实现通道**，不是调用点本身。
 
+**进度（2026-09-23 第 19 轮）**：① `aiRecommendLoading` **已完成**（`7f75a8f`：11 toast ＋ 1 组 loading；该页此前仅 1 处 loading 调用点与 11 处 toast）。余 5 页：`aiRecommend`（22/4/6/1）、`aiRecommendResult`（2）、`aiTryOnHistory`（3）、`aiTryOn`（18/6/6，已有局部包装，待换成本配方并接线埋点）、`aiTryOnResult`（13/2/3/3，仅 loading 已接门面）。
+
+**⭐测试口径（本轮新增，务必沿用——否则会写成假绿）**：页面级测试观测轻提示**必须给门面配桩**：
+```ts
+const BaseFeedbackStub = defineComponent({
+  name: "BaseFeedback",
+  setup(_p, { expose }) { expose({ show: (t: string) => h.toasts.push(t), hide: () => undefined }); return () => null; },
+});
+mount(Page, { global: { stubs: { BaseFeedback: BaseFeedbackStub } } });
+```
+原因：vitest 下 `detectUiPlatform()` 为 `"other"`（无 `UNI_PLATFORM`、stub 的 `getSystemInfoSync()` 无 `uniPlatform`）⇒ `isToutiaoPlatform()` 为 false ⇒ 门面走 wot Toast，而 wot Toast 在 vitest 不真渲染；若仍用 `uni.showToast` 桩断言，命中的是**回落路径**，测不到门面。**自证方法**：把桩的 `show` 改成空实现，断言应变红（本轮已实测变红）。
+
 **配方（沿用 `aiTryOn` 已跑通的做法，零改调用点）**
 1. 页面 script 内定义**同名局部包装**：`showLoading(text)` → 微信端置 `loadingPopupVisible/loadingPopupText`；`hideLoading()` → 置 false；`toast(text, icon?)` → `feedbackRef.value.show(...)`（非微信端回落原生）。
 2. 模板挂载 `<BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />` 与 `<BaseFeedback ref="feedbackRef" />`。
