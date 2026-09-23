@@ -28,8 +28,9 @@ const copy = computed(() => resolvePhotoGateCopy(props.code));
 </script>
 
 <template>
-  <!-- 底部弹层：门面内部走 wot `wd-popup`（position=bottom）；z-index 显式抬到 2000（高于自绘栏 998 / Tab 栏 900） -->
-  <BasePopup :show="show" position="bottom" :z-index="2000" @cancel="emit('close')">
+  <!-- 底部弹层：门面内部走 wot `wd-popup`（position=bottom）；z-index 显式 2000（＝仓内底部弹层惯例档，同 LoginPopup/ProfilePopup）；
+       `root-portal=false` 与同页两弹层同口径（AI 试衣页非 tab 页，当前不触发失效，仍显式声明以免日后迁移踩坑） -->
+  <BasePopup :show="show" position="bottom" :root-portal="false" :z-index="2000" @cancel="emit('close')">
     <view class="qr-sheet">
       <text class="qr-title">{{ copy.title }}</text>
       <text class="qr-text">{{ copy.text }}</text>
@@ -67,8 +68,15 @@ const copy = computed(() => resolvePhotoGateCopy(props.code));
   font-family: 'HarmonyOS-Sans-SC';
   box-sizing: border-box;
   width: 100%;
-  padding: $space-lg $space-lg calc($space-lg + constant(safe-area-inset-bottom));
-  padding-bottom: calc($space-lg + env(safe-area-inset-bottom));
+  /* 卡片面（🔴CR：门面 `BasePopup` 把 wot 弹层面置透明 ⇒ 内容必须自带面与上圆角；同 LoginPopup/ProfilePopup 写法） */
+  background: $color-popup-card;
+  border-radius: #{$popup-radius-rpx * 2}rpx #{$popup-radius-rpx * 2}rpx 0 0;
+  overflow: hidden;
+  /* 🔴CR：安全区**不得写进 `padding` 简写**（运行时若不认 `constant()` ⇒ 整条简写失效、padding 全为 0）；
+     统一为「纯简写 ＋ 两条 longhand」（沿 LoginPopup:106-107 / ProfilePopup:114-116 的加固写法） */
+  padding: $space-lg;
+  padding-bottom: calc(#{$space-lg} + constant(safe-area-inset-bottom));
+  padding-bottom: calc(#{$space-lg} + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -99,8 +107,9 @@ const copy = computed(() => resolvePhotoGateCopy(props.code));
   align-items: center;
 }
 .qr-img {
-  width: 240rpx;
+  width: 240rpx; /* 仓内无该档 token（登记为待补） */
   height: 240rpx;
+  box-sizing: border-box; /* 🟡CR：有 2rpx 描边 ⇒ content-box 实渲染 244rpx */
   border-radius: #{$popup-radius-rpx}rpx;
   border: 2rpx solid $color-border;
   background: $color-page;
@@ -129,11 +138,11 @@ const copy = computed(() => resolvePhotoGateCopy(props.code));
 }
 .qr-btn {
   width: 100%;
-  height: 88rpx;
+  height: #{$button-height-rpx}rpx; /* token：按钮高度 88rpx */
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999rpx;
+  border-radius: 999rpx; /* 仓内无 pill token（登记为待补） */
   box-sizing: border-box;
 }
 .qr-btn--primary {

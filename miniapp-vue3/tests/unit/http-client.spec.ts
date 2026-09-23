@@ -116,3 +116,31 @@ describe("createHttpClient 响应与错误映射（P2-01/05）", () => {
     if (!r2.ok) expect(r2.error.message).toContain("stale session");
   });
 });
+
+describe("4002 照片质量拦截信封（2026-09-23 对接后端 staging）", () => {
+  it("⭐业务失败也保留信封 data ⇒ businessData.check_code 到达调用方（补「client 未传 data」的变异假绿）", async () => {
+    const t = makeTransport(() => ({
+      ok: true,
+      value: { status: 200, businessCode: 4002, message: "未检测到人脸，请上传单人正面照", requestId: "r", data: { check_code: "no_face" } },
+    }));
+    const c = createHttpClient({ transport: t.port, authCoordinator: okAuth });
+    const res = await c.request({ method: "POST", url: "/api/aiface/tasks", context: ctx });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.kind).toBe("QUALITY_REJECTED"); // 单一事实源：4002 → QUALITY_REJECTED
+      expect(res.error.businessCode).toBe(4002);
+      expect((res.error.businessData as { check_code?: string }).check_code).toBe("no_face");
+    }
+  });
+
+  it("既有业务失败不回归：无 data ⇒ businessData 为 undefined，kind 仍 BUSINESS", async () => {
+    const t = makeTransport(() => ({ ok: true, value: { status: 200, businessCode: 500, message: "boom", requestId: "r" } }));
+    const c = createHttpClient({ transport: t.port, authCoordinator: okAuth });
+    const res = await c.request({ method: "GET", url: "/api/x", context: ctx });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.kind).toBe("BUSINESS");
+      expect(res.error.businessData).toBeUndefined();
+    }
+  });
+});
