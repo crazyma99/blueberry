@@ -8,11 +8,28 @@ const props = withDefaults(
     disabled?: boolean;
     busy?: boolean;
     type?: "primary" | "success" | "info" | "warning" | "danger";
+    /** wot `variant`（`npx wot info Button` 事实源）：base｜plain｜dashed｜soft｜subtle｜text
+     *  —— `plain`＝描边/幽灵按钮、`text`＝纯文字按钮（此前误以为 wot 无变体，2026-09-23 主人纠正） */
+    variant?: "base" | "plain" | "dashed" | "soft" | "subtle" | "text";
+    /** 透传 wot `custom-class`/`custom-style`（品牌 token 覆盖用；业务方不必接触 wot 内部对象） */
+    customClass?: string;
+    customStyle?: string;
     size?: "mini" | "small" | "medium" | "large";
     block?: boolean;
     round?: boolean;
   }>(),
-  { label: "", disabled: false, busy: false, type: "primary", size: "medium", block: false, round: false },
+  {
+    label: "",
+    disabled: false,
+    busy: false,
+    type: "primary",
+    variant: "base",
+    size: "medium",
+    block: false,
+    round: false,
+    customClass: "",
+    customStyle: "",
+  },
 );
 
 const emit = defineEmits<{ (e: "click"): void }>();
@@ -27,6 +44,9 @@ function onClick() {
 <template>
   <wd-button
     :type="type"
+    :variant="variant"
+    :custom-class="customClass"
+    :custom-style="customStyle"
     :size="size"
     :block="block"
     :round="round"
