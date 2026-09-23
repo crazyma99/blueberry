@@ -129,6 +129,11 @@ async function loadStaticContent(): Promise<void> {
   contact.value = await pageContent.loadContact(ctxFactory.next());
 }
 const statusBarHeight = ref(20);
+/** 品牌馆悬浮入口（等价搬入本页 `.home-btn` 467-478：fixed 定位／72rpx 圆形／半透明黑底／z-index 999）：
+ *  动态 `top`（`statusBarHeight + 8` px）原为 `:style` 绑定，现与基础视觉一起经 `custom-style` 内联下发；
+ *  图标（`.home-btn-icon`）走槽位，仍由页面样式管辖。⚠️ 显式 `color:`＝守卫 `t64` 口径（图标按钮无文字，为之无害）。 */
+const HOME_BTN_STYLE = "position: fixed;left: 16rpx;z-index: 999;width: 72rpx;height: 72rpx;border-radius: 50%;padding: 0;--wot-button-primary-bg: rgba(0, 0, 0, 0.35);--wot-button-primary-bg-active: rgba(0, 0, 0, 0.5);--wot-button-primary-color: #ffffff;color: #ffffff;";
+const homeBtnStyle = computed(() => `${HOME_BTN_STYLE}top: ${statusBarHeight.value + 8}px;`);
 try {
   if (typeof uni !== "undefined" && typeof uni.getSystemInfoSync === "function") {
     const info = uni.getSystemInfoSync() as { statusBarHeight?: number };
@@ -315,14 +320,14 @@ onMounted(() => {
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
 
     <!-- 品牌馆入口：圆形悬浮左上角，开关驱动默认不渲染（旧端 index:4-8 语义） -->
-    <view
+    <BaseButton
       v-if="brandHubOn"
       class="home-btn"
-      :style="{ top: statusBarHeight + 8 + 'px' }"
+      :custom-style="homeBtnStyle"
       @click="goBrandHub"
     >
       <image class="home-btn-icon" src="/static/iconpark/shop.svg" mode="aspectFit" />
-    </view>
+    </BaseButton>
 
     <!-- 骨架屏：hero 通栏 → 客片欣赏标题/副标题 → 店铺卡片区（旧端 :9-23 结构还原；
          卡片用 48% 宽 + space-between，不用 flex:1+gap——抖音端组件宿主尺寸计算会致两块重合，2026-09-19 实测反馈） -->
@@ -464,18 +469,8 @@ onMounted(() => {
   min-height: 100vh;
   background: $color-page;
 }
-.home-btn {
-  position: fixed;
-  left: 16rpx;
-  z-index: 999;
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* 品牌馆入口盒模型/配色已迁入门面 `BaseButton` 的 `HOME_BTN_STYLE`（内联下发）；`.home-btn` 类保留作
+   选择器钩子（`t6-index.spec.ts` 断言开关关时不存在），故此处不再重复声明视觉。 */
 .home-btn-icon {
   width: 40rpx;
   height: 40rpx;

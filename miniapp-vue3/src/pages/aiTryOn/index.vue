@@ -71,7 +71,7 @@ import ProfilePopup from "../../components/ProfilePopup/ProfilePopup.vue";
 import BaseButton from "../../ui/BaseButton.vue";
 import { tokens } from "../../generated/tokens";
 /** 按钮统一走门面 BaseButton；品牌金经 wot CSS 变量绑 tokens */
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};`;
+const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};`;
 
 /** 「生成效果」图文按钮视觉（旧端 `.generate-btn` 812-822 原样搬入；配色＝旧 `--gradient-btn-primary` 字面值）：
  *  ① 视觉经 `custom-style` 内联下发到 wot 的真实 `button` 节点 ⇒ 不受组件样式隔离影响；

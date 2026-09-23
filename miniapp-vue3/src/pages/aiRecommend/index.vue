@@ -63,6 +63,7 @@ import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as 
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
 import { createWeixinPayments } from "../../platform/weixin/payments";
+import { tokens } from "../../generated/tokens";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
@@ -86,6 +87,7 @@ import {
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import AppPhotoPicker from "../../components/AppPhotoPicker/AppPhotoPicker.vue";
 import BottomActionBar from "../../components/BottomActionBar/BottomActionBar.vue";
+import BaseButton from "../../ui/BaseButton.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
@@ -115,6 +117,13 @@ function hideLoading(): void {
   }
   loadingPopupVisible.value = false;
 }
+/** 「开始AI分析推荐」主按钮（等价搬入本页 `.action-btn` 710-719：宽 100%／高 88rpx／44rpx 圆角／品牌金底）
+ *  ＋ 禁态 `.action-btn-disabled{opacity:.4}`（**仅外观**：点击仍须放行，走登录/上传/充值引导）。
+ *  ⚠️ wot base 变体文字色取 `--wot-button-main-color`（白）⇒ **必须显式 `color:`**（守卫 `t64`）。 */
+const ACTION_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};width: 100%;height: 88rpx;border-radius: 44rpx;padding: 0;`;
+/** 禁分析态仅降透明度（沿用旧 `.action-btn-disabled`） */
+const actionBtnStyle = computed(() => (canStart.value ? ACTION_BTN_STYLE : `${ACTION_BTN_STYLE}opacity: 0.4;`));
+
 const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
 function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
   const f = feedbackRef.value;
@@ -619,24 +628,22 @@ function isLoggedIn(): boolean {
     <BottomActionBar :footer-main-line="footer.mainLine" :footer-support-line="footer.supportLine">
       <!-- 付费模式且无剩余次数：价格按钮，点击引导充值，到账后自动继续分析（旧端 :23-33） -->
       <view v-if="isPaidMode && creditBalance <= 0" class="action-btn-wrap">
-        <view
-          :class="canStart ? 'action-btn' : 'action-btn action-btn-disabled'"
-          hover-class="press-dim"
+        <BaseButton
+          :custom-style="actionBtnStyle"
           @click="handleStartAnalysis"
         >
           <text class="action-btn-price">¥{{ priceText }}</text>
           <text class="action-btn-text"> 马上开启AI分析推荐</text>
-        </view>
+        </BaseButton>
       </view>
       <!-- 非付费模式或有剩余次数：原按钮，有限免时右上角展示角标（旧端 :34-46） -->
       <view v-else class="action-btn-wrap">
-        <view
-          :class="canStart ? 'action-btn' : 'action-btn action-btn-disabled'"
-          hover-class="press-dim"
+        <BaseButton
+          :custom-style="actionBtnStyle"
           @click="handleStartAnalysis"
         >
           <text class="action-btn-text">{{ uploading ? "上传中..." : "开始AI分析推荐" }}</text>
-        </view>
+        </BaseButton>
         <view v-if="isPaidMode && creditBalance > 0" class="action-btn-badge">
           <text class="action-btn-badge-text">限时免费 {{ creditBalance }} 次</text>
         </view>
@@ -707,19 +714,8 @@ function isLoggedIn(): boolean {
 }
 
 /* 分析按钮 — 与AI试衣生成按钮一致的渐变背景（旧端 :619-641 逐值） */
-.action-btn {
-  width: 100%;
-  height: 88rpx;
-  border-radius: 44rpx; /* 旧 --radius-xl */
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  background: $color-action; /* 旧 var(--color-primary) #F1CD91 */
-}
-.action-btn-disabled {
-  opacity: 0.4;
-}
+/* 「开始AI分析推荐」盒模型/配色/禁态已迁入门面 `BaseButton` 的 `ACTION_BTN_STYLE`／`actionBtnStyle`（内联下发，
+   不受组件样式隔离影响）；`action-btn-text`／`action-btn-price`（槽位内容）与 `action-btn-wrap`／角标样式保留。 */
 .action-btn-text {
   font-size: 32rpx;
   color: $color-action-text; /* 旧 --color-bg（金色面上墨色 #160F04） */

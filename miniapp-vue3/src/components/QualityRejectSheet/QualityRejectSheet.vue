@@ -32,8 +32,8 @@ const emit = defineEmits<{
 const base = computed(() => resolvePhotoGateCopy(props.code));
 // 按钮统一走门面 `BaseButton`（wot `wd-button`）：主按钮品牌金、次按钮 `variant="plain"` 描边；
 // 颜色经 wot 官方 CSS 变量（`npx wot token Button`）绑定 **tokens**，不写死、不接触 wot 内部类名。
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};`;
-const GHOST_BTN_STYLE = `--wot-button-primary-plain-bg: transparent;--wot-button-primary-plain-border: ${tokens.semantic.colorBorder};--wot-button-primary-color: ${tokens.semantic.colorAction};`;
+const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};`;
+const GHOST_BTN_STYLE = `--wot-button-primary-plain-bg: transparent;--wot-button-primary-plain-border: ${tokens.semantic.colorBorder};--wot-button-primary-color: ${tokens.semantic.colorAction};color: ${tokens.semantic.colorAction};`;
 
 const copy = computed(() => ({
   ...base.value,

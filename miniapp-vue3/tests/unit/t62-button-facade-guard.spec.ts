@@ -23,21 +23,31 @@ function vueFiles(dir: string): string[] {
   return out;
 }
 
-/** 统计模板内自绘按钮（口径见文件头） */
+/** 统计模板内自绘按钮（口径见文件头）
+ *  ⚠️ 2026-09-23 独立 CR 🟡2：原实现**逐行**匹配 ⇒ 属性**分行书写**时整块漏检（假阴性），
+ *  而单行 `<BaseButton class="xx-btn" @click>` 反被误计（假阳性）。现改为**标签级**扫描：
+ *  先把模板里的开始标签整段取出（跨行），再判断属性。 */
 function handDrawnButtons(src: string): number {
   const m = /<template>([\s\S]*)<\/template>/.exec(src);
   const tpl = m ? m[1] : "";
+  const tagRe = /<([a-zA-Z][\w-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)>/g;
   let n = 0;
-  for (const line of tpl.split("\n")) {
-    if ((line.includes("@click") || line.includes("@tap")) && /class="[^"]*(btn|button|cta)[^"]*"/.test(line)) n += 1;
-    else if (/<button\b/.test(line) && line.includes("@click")) n += 1;
+  for (const t of tpl.matchAll(tagRe)) {
+    const name = t[1];
+    const attrs = t[2];
+    if (name === "BaseButton" || name === "wd-button") continue; // 门面用法＝目标态，不计
+    if (/open-type=/.test(attrs)) continue; // 平台强制原生（chooseAvatar/getPhoneNumber/share）＝免替换
+    const hasClick = /@click|@tap/.test(attrs);
+    if (!hasClick) continue;
+    const hasBtnClass = /(^|\s)(:?class)="[^"]*(btn|button|cta)[^"]*"/.test(attrs);
+    if (name === "button" || hasBtnClass) n += 1; // 原生 button（无 open-type）或 带按钮类名的任意标签
   }
   return n;
 }
 
 /** 替换进行中的白名单（B3 完成后应清空） */
 const ALLOWLIST = new Map<string, number>([
-    ["src/ui/BaseDialog.vue", 1],
+    ["src/ui/BaseDialog.vue", 2], // 升级为标签级扫描后补齐：原生自绘对话框的「取消/确定」两枚（门面内部，登记豁免）
     ["src/ui/BasePicker.vue", 2],
 ]);
 

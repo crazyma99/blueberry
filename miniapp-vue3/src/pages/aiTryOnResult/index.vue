@@ -104,11 +104,11 @@ const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: linear-gradient(135deg, #FFD
 
 /** 金色次要按钮（等价搬入：`App.vue:93` 全局 `.btn-secondary` ＋ 本页 `.gen-actions .gen-btn` 盒模型）
  *  ——「逛逛其他客片／查看生成队列」两枚。宿主**不挂** `.btn-secondary`（全局类会与内联视觉叠加成双底）。 */
-const SECONDARY_BTN_STYLE = `--wot-button-primary-bg: rgba(241, 205, 145, 0.1);--wot-button-primary-bg-active: rgba(241, 205, 145, 0.06);--wot-button-primary-color: #F1CD91;height: 92rpx;min-width: 240rpx;margin: 0 10rpx;padding: 0 40rpx;font-size: 32rpx;line-height: 1;border: 1rpx solid rgba(241, 205, 145, 0.5);border-radius: 999rpx;box-sizing: border-box;`;
+const SECONDARY_BTN_STYLE = `--wot-button-primary-bg: rgba(241, 205, 145, 0.1);--wot-button-primary-bg-active: rgba(241, 205, 145, 0.06);--wot-button-primary-color: #F1CD91;color: #F1CD91;height: 92rpx;min-width: 240rpx;margin: 0 10rpx;padding: 0 40rpx;font-size: 32rpx;line-height: 1;border: 1rpx solid rgba(241, 205, 145, 0.5);border-radius: 999rpx;box-sizing: border-box;`;
 
 /** 「分享到朋友圈」图标按钮（原原生 `<button class="share-btn btn-secondary">` ＋ 36rpx 图标）：
  *  盒模型＝本页 `.share-btn`（`margin:20rpx 0 0 32rpx`／`min-width:160rpx`／`height:92rpx`），配色同次要按钮。 */
-const SHARE_ICON_BTN_STYLE = `--wot-button-primary-bg: rgba(241, 205, 145, 0.1);--wot-button-primary-bg-active: rgba(241, 205, 145, 0.06);--wot-button-primary-color: #F1CD91;height: 92rpx;min-width: 160rpx;line-height: 1;margin: 20rpx 0 0 32rpx;padding: 0 40rpx;border: 1rpx solid rgba(241, 205, 145, 0.5);border-radius: 999rpx;box-sizing: border-box;`;
+const SHARE_ICON_BTN_STYLE = `--wot-button-primary-bg: rgba(241, 205, 145, 0.1);--wot-button-primary-bg-active: rgba(241, 205, 145, 0.06);--wot-button-primary-color: #F1CD91;color: #F1CD91;height: 92rpx;min-width: 160rpx;line-height: 1;margin: 20rpx 0 0 32rpx;padding: 0 40rpx;border: 1rpx solid rgba(241, 205, 145, 0.5);border-radius: 999rpx;box-sizing: border-box;`;
 
 /** 失败态「重试」（本页 `.retry-btn`：白底黑字／48rpx 圆角／`24rpx 80rpx` 内边距／底距 24rpx）；
  *  文字样式仍由槽位内 `.retry-btn-text` 提供（槽位内容归页面样式管辖）。 */
@@ -116,7 +116,7 @@ const RETRY_BTN_STYLE = `--wot-button-primary-bg: #fff;--wot-button-primary-bg-a
 
 /** 失败态「返回」（本页 `.back-btn-wrapper`：纯文字／`24rpx 80rpx` 内边距／无底色无描边）；
  *  文字色与字号由槽位内 `.back-btn-text` 提供。 */
-const BACK_BTN_STYLE = `--wot-button-primary-bg: transparent;--wot-button-primary-bg-active: rgba(241, 205, 145, 0.08);--wot-button-primary-color: rgba(241, 205, 145, 0.9);height: auto;border: none;border-radius: 0;padding: 24rpx 80rpx;box-sizing: border-box;`;
+const BACK_BTN_STYLE = `--wot-button-primary-bg: transparent;--wot-button-primary-bg-active: rgba(241, 205, 145, 0.08);--wot-button-primary-color: rgba(241, 205, 145, 0.9);color: rgba(241, 205, 145, 0.9);height: auto;border: none;border-radius: 0;padding: 24rpx 80rpx;box-sizing: border-box;`;
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue 完全同口径）——
 const detected = detectUiPlatform();

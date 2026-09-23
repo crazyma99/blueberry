@@ -41,7 +41,7 @@ import BaseFeedback from "../../ui/BaseFeedback.vue";
 import BaseButton from "../../ui/BaseButton.vue";
 import { tokens } from "../../generated/tokens";
 /** 按钮统一走门面 BaseButton；品牌金经 wot CSS 变量绑 tokens */
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};`;
+const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};`;
 import type { AlbumBrief } from "../../infrastructure/repositories/albums";
 
 // —— 装配（同 index：容器安全回落；登录占位不假装成功）——

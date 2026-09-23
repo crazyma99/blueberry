@@ -39,7 +39,7 @@ withDefaults(
 );
 
 /** 主按钮品牌金：经 wot 官方 CSS 变量绑 tokens（按钮统一走门面 BaseButton） */
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};`;
+const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};`;
 
 const emit = defineEmits<{
   (e: "choose-avatar", event: unknown): void;

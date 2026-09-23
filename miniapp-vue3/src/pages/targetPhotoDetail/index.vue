@@ -42,7 +42,7 @@ import { hapticTap } from "../../application/haptics";
 import { navigateTo } from "../../platform/uni/feedback";
 import BaseButton from "../../ui/BaseButton.vue";
 import { tokens } from "../../generated/tokens";
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};`;
+const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};`;
 
 // —— 装配（同 index/demoDetail）——
 const detected = detectUiPlatform();

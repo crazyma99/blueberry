@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import BaseButton from "../../ui/BaseButton.vue";
+
+/** 未勾选协议态的一键登录按钮（等价搬入：全局 `.btn-primary`（`App.vue:75`）＋ 本组件 `.login-btn` 尺寸）：
+ *  ⚠️ wot base 变体的文字色取 `--wot-button-main-color`（默认白），`--wot-button-primary-color` 只对 `plain` 生效
+ *  ⇒ **必须显式声明 `color:`**（守卫 `t64`）。按钮自身 `width:100%`，故宿主无需定宽。 */
+const LOGIN_BTN_STYLE = `--wot-button-primary-bg: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);--wot-button-primary-bg-active: linear-gradient(135deg, #D5BA83 0%, #CAAB78 45%, #B68C4C 100%);--wot-button-primary-color: #160F04;color: #160F04;width: 100%;height: 92rpx;border-radius: 999rpx;padding: 0;font-size: 28rpx;line-height: 1.2;border: 1rpx solid #160F04;`;
 import BasePopup from "../../ui/BasePopup.vue";
 // LoginPopup — 手机号快捷登录弹窗（全局居中弹窗 · 品牌视觉统一）
 // 旧端源：/home/majunhi/blueberry/src/components/LoginPopup/LoginPopup.uvue（198 行）
@@ -73,12 +79,12 @@ const emit = defineEmits<{
         open-type="getPhoneNumber"
         @getphonenumber="emit('get-phone', $event)"
       >一键登录</button>
-      <button
+      <BaseButton
         v-else
-        class="login-btn btn-primary"
-        hover-class="press-dim"
+        label="一键登录"
+        :custom-style="LOGIN_BTN_STYLE"
         @click="emit('show-toast')"
-      >一键登录</button>
+      />
 
       <view class="login-skip" hover-class="press-dim" @click="emit('close')">暂不登陆</view>
     </view>
