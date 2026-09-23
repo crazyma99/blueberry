@@ -224,13 +224,23 @@ describe("pages/aiTryOn（T8 装配）", () => {
     });
   });
 
-  // ⚠️ 2026-09-23 留痕（仍未落地，勿当已覆盖）：页面层「全链路 4002」用例（选图→上传→生成→弹层→重选）**缺**。
-  // 已排除/已修：①登录态（会话须带 platform/profileKey；updateLoginState 在 onShow 刷新）②端口取 uni 口径已统一
-  //   （platform/uni/{storage,chooser,upload}.ts ＝ 注入桩优先＋裸 uni 兜底）。
-  // 仍未定位：`AppPhotoPicker` 的 click（DOM `trigger("click")` 与组件 `vm.$emit("click")` 两种方式均已试）在 VTU 下
-  //   都未驱动到页面 `choosePhoto` ⇒「选图→上传」半段无法在页面级跑通；同文件 `.generate-btn` 的 click 正常。
-  // 现状覆盖＝分层行为（t61：4002→QUALITY_REJECTED／businessData 透传／submit 归一／弹层渲染级／资产守卫）＋页面接线守卫（t61）。
-  // 补法（待 CR 结论一并处置）：⒜ 把页面内 `uni.*` 继续收进平台端口，用端口替身驱动端到端；⒝ 或改用微信开发者工具做一次手工冒烟（
-  //   选 5 张样例图 → 观察四种码与未知码的弹层文案/正反例图/未扣次数）。
+  // ⚠️ 守卫力未证实（如实登记 · 2026-09-23）：本用例已能在当前代码上跑通「选图→上传→生成→弹层→重选」，
+  // 但两次变异（①删页面 `case "quality-rejected"` 分支 ②删 `onQualityRejectRetry` 里的 `choosePhoto()` 调用，
+  // 均已用「锚点命中」校验确认真实改写）**都未使其变红** ⇒ 不能把本用例当作回归防线；已登记待查
+  //（疑点：桩无条件渲染 slot／`findComponent` 命中的弹层实例／Vite 变换缓存，三者之一或组合）。
+  it("⭐全链路 4002：被拦截 ⇒ 弹正反例弹层、只提交一次、不充值；点「重新选择照片」可立即重选", async () => {
+    // 登录态走**旧键迁移路径**：`token` 键由 versioned.loadSession() 迁移并自动补 platform/profileKey
+    //（新键需与「页面模块加载时」探测到的 platform/profileKey 一致，测试里后置调用 detectUiPlatform() 值可能不同 ⇒ 会被判为跨 Profile 而拒绝）
+    h.store.set("token", "tok-legacy");
+    h.store.set("userInfo", JSON.stringify({ userId: "u1" }));
+    h.submitResult = { ok: false, error: { kind: "QUALITY_REJECTED", businessCode: 4002, message: "侧脸会影响生成效果，请正对镜头再拍一张", requestId: null, retryable: false, businessData: { check_code: "side_face" } } };
+    const w = mount(AiTryOnPage, { global: GLOBAL });
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
+    h.onShowCalls[h.onShowCalls.length - 1]();
+    await flush(); await w.vm.$nextTick();
+    w.findComponent(AppPhotoPicker).vm.$emit("click");
+    await flush(); await w.vm.$nextTick();
+    expect(h.chooseImageCalls).toBe(1);
+  });
 
 });
