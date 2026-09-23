@@ -87,7 +87,7 @@
 
 > 注：全部经 `platform/uni/feedback.ts` 的 `toast/showLoading/hideLoading/showModal` 调用（**没有**任何页面直接调 `uni.showToast`）⇒ 迁移面＝这些调用点的**实现通道**，不是调用点本身。
 
-**进度（2026-09-23 第 19 轮）**：① `aiRecommendLoading` **已完成**（`7f75a8f`：11 toast ＋ 1 组 loading；该页此前仅 1 处 loading 调用点与 11 处 toast）。② `aiRecommendResult` **已完成**（`f6859bf`：2 处 toast）。③ `aiTryOnHistory` **已完成**（`99befd0`：3 处 toast）。余 3 页：`aiRecommend`（22/4/6/1，最大面）、`aiTryOn`（已落地包装＋弹层＋埋点，仅需复核口径）、`aiTryOnResult`（13/2/3/3；loading 已接，待接 toast，`showModal` 3 处待口径）。
+**进度（2026-09-23 第 19 轮）**：① `aiRecommendLoading` **已完成**（`7f75a8f`：11 toast ＋ 1 组 loading；该页此前仅 1 处 loading 调用点与 11 处 toast）。② `aiRecommendResult` **已完成**（`f6859bf`：2 处 toast）。③ `aiTryOnHistory` **已完成**（`99befd0`：3 处 toast）。④ `aiRecommend` **已完成**（`ebbf3c5`：22 toast ＋ 4/6 loading；`showModal` 1 处保持原生待口径）。余 2 页：`aiTryOn`（已落地包装＋弹层＋埋点，仅需复核口径）、`aiTryOnResult`（13/2/3/3；loading 已接，待接 toast，`showModal` 3 处待口径）。
 
 **⭐测试口径（本轮新增，务必沿用——否则会写成假绿）**：页面级测试观测轻提示**必须给门面配桩**：
 ```ts
@@ -106,4 +106,4 @@ mount(Page, { global: { stubs: { BaseFeedback: BaseFeedbackStub } } });
 4. `showModal`（4 处：`aiRecommend` 1、`aiTryOnResult` 3）需先定口径：是否改为 `BaseDialog` 门面（若改，属**交互形态变化**，须主人拍板；我可先只统一 loading/toast，showModal 单独列项）。
 5. 每页一提交，跑：`vue-tsc` ＋ `t62` ＋ 全量 `vitest` ＋ 微信/抖音构建 ＋ 产物核 `base-loading-popup`/`base-feedback` 注册；抖音端 AI 六页不构建（`#ifdef MP-WEIXIN`）⇒ 抖音只验构建通过。
 
-**已知覆盖缺口（如实留痕）**：门面 `BaseFeedback.show` 经 `defineExpose` 暴露 ⇒ 在 vitest 里既 **spy 不到**（页面持有的 exposed 代理与 `vm.show` 非同一引用）也**不会真渲染** toast ⇒ **轻提示通道当前无单测覆盖**（已在 `t38` 登记）；页面级弹层断言用容器 `modelValue`（如 `t38` 的 `StubWdPopup`）这一替代法。
+**已知覆盖缺口（如实留痕；2026-09-23 第 20 轮更新）**：轻提示通道已在 `t47`/`t46`/`t30` 三页用**门面桩**取得实证覆盖（每页都用「桩改空实现应变红」自证）；**加载通道（`BaseLoadingPopup` 的 `show/text`）仍无页面级覆盖**——`aiRecommendLoading` 的 loading 由支付协调器 `onPhase` 回调触发，测试里不便驱动；后续若要做，可在 `t47` 直接 `findComponent(BaseLoadingPopup)` 断言 props 并手工触发一次 `onPhase`（需先暴露可注入的 phase 钩子）。原文口径：门面 `BaseFeedback.show` 经 `defineExpose` 暴露 ⇒ 在 vitest 里既 **spy 不到**（页面持有的 exposed 代理与 `vm.show` 非同一引用）也**不会真渲染** toast ⇒ **轻提示通道当前无单测覆盖**（已在 `t38` 登记）；页面级弹层断言用容器 `modelValue`（如 `t38` 的 `StubWdPopup`）这一替代法。
