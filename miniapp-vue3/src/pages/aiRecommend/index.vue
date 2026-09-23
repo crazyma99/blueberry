@@ -774,6 +774,11 @@ function isLoggedIn(): boolean {
   width: 100%;
   /* 左右边距：固定栏组件无横向 padding，此处补齐（旧 --spacing-sm 20rpx / --spacing-lg 32rpx） */
   padding: 20rpx 32rpx 0;
+  /* ⚠️ 必须显式 border-box（主人 2026-09-23 报「按钮宽度紧贴屏幕两侧、没有 margin」）：
+     旧端 **uvue 默认就是 `box-sizing: border-box`**，迁到 WXSS/浏览器（默认 content-box）后
+     `width:100%` ＋ 左右 padding 会把容器**撑宽 64rpx**（父级 `align-items:center` 下向两侧各溢 32rpx）
+     ⇒ 子按钮 `width:100%` 变成整屏宽、边距归零。补上后宽度＝栏宽−64rpx，与旧端逐值一致。 */
+  box-sizing: border-box;
 }
 /* 限免角标（整体落在容器 padding 预留空间内，不用负偏移，避免被裁剪；旧端 :651-659） */
 .action-btn-badge {
