@@ -255,7 +255,7 @@ describe("端侧拦截 → 弹层呈现（2026-09-23 主人拍板：与后端 40
     });
     expect(withOverride.find(".qr-title").text()).toBe("照片未通过检测");
     expect(withOverride.find(".qr-text").text()).toBe("照片有点模糊，请重新拍摄清晰的照片");
-    expect(withOverride.findAll("image").length).toBe(1); // unknown 码无反例图 ⇒ 只出正例
+    expect(withOverride.findAll("image").length).toBe(2); // no_face 有反例图 ⇒ ✓正例＋✗反例（unknown 只出正例的断言在另一用例）
     const noOverride = mount(QualityRejectSheet, {
       props: { show: true, code: "multi_face" },
       global: { components: { "wd-popup": StubWdPopup } },
