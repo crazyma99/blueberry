@@ -94,6 +94,10 @@ import { tokens } from "../../generated/tokens";
 
 /** 主按钮品牌金：经 wot CSS 变量绑 tokens（按钮统一走门面 BaseButton） */
 const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};`;
+/** 失败态「返回」纯文字按钮（等价搬入本页 `.back-btn-wrapper`：`padding:24rpx 80rpx`、无底色无描边）；
+ *  文字色/字号仍由槽位内 `.back-btn-text` 提供（槽位内容归页面样式管辖）。
+ *  与 `aiTryOnResult` 的「返回」同形同口径 ⇒ 一并走门面（主人 2026-09-23「按钮全部用组件来做」）。 */
+const BACK_BTN_STYLE = `--wot-button-primary-bg: transparent;--wot-button-primary-bg-active: rgba(241, 205, 145, 0.08);--wot-button-primary-color: rgba(241, 205, 145, 0.9);height: auto;border: none;border-radius: 0;padding: 24rpx 80rpx;box-sizing: border-box;`;
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
 import { shouldResumeStartedAt } from "../../application/wait-resume";
@@ -515,9 +519,12 @@ function redirectTo(url: string): void {
             :custom-style="PRIMARY_BTN_STYLE"
             @click="handleRetry"
           />
-        <view class="back-btn-wrapper" hover-class="press-dim" @click="handleBack">
+        <BaseButton
+          :custom-style="BACK_BTN_STYLE"
+          @click="handleBack"
+        >
           <text class="back-btn-text">返回</text>
-        </view>
+        </BaseButton>
       </view>
     </view>
 
@@ -603,9 +610,7 @@ function redirectTo(url: string): void {
   color: #000;
   font-weight: 400;
 }
-.back-btn-wrapper {
-  padding: 24rpx 80rpx;
-}
+/* 「返回」盒模型已迁入门面 `BaseButton` 的 `BACK_BTN_STYLE`（内联）；下方文字样式仍是槽位内容的样式来源，保留。 */
 .back-btn-text {
   font-size: 28rpx; /* 旧 --font-size-body-plus=28rpx */
   color: rgba(241, 205, 145, 0.9); /* 旧端字面值（金 90%） */
