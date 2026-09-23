@@ -40,6 +40,9 @@ import { createShareCardResolver, DEFAULT_SHARE_CARDS, type ShareCard } from "..
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 import { hapticTap } from "../../application/haptics";
 import { navigateTo } from "../../platform/uni/feedback";
+import BaseButton from "../../ui/BaseButton.vue";
+import { tokens } from "../../generated/tokens";
+const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};`;
 
 // —— 装配（同 index/demoDetail）——
 const detected = detectUiPlatform();
@@ -311,7 +314,14 @@ onLoad((options) => {
 
     <view v-else class="detail-error">
       <text>{{ error != null ? error : "加载失败" }}</text>
-      <view class="retry-btn" @click="onRetry">重试</view>
+      <BaseButton
+        class="retry-btn"
+        label="重试"
+        size="small"
+        round
+        :custom-style="PRIMARY_BTN_STYLE"
+        @click="onRetry"
+      />
     </view>
 
     <BaseFeedback ref="feedbackRef" />
