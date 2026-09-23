@@ -1,0 +1,153 @@
+# AI 试衣「上传照片质量拦截（4002 + check_code）」前端处理与设计方案
+
+> **版本** v0.1（**待主人评审**，本轮只做设计、未改任何实现代码）
+> **需求来源**：《C端小程序 AI试衣交互链路优化 PRD》环节三 · 上传前质量拦截
+> **后端契约**：`lanmei-backend-golang` → `docs/api-tryon-photo-gate.md` v1.0（2026-09-23）；后端分支 `dev-dtw-AI链路(拦截图片提示优化)` ＝ `staging`（提交 `d444e98`），对接人：天文
+> **前端落点**：`blueberry-vue3-migration` / 分支 `feat/vue3-migration` / 应用根 `miniapp-vue3`
+> **一句话**：把「`4002` + `check_code`」从 HTTP 信封**一路带到 `aiTryOn` 页面**，用**底部弹层**展示「具体原因 + 示例图 + 重拍引导 + 本次未消耗试衣次数」，拦截后**可立即重传**（重走创建任务，不再额外扣次）。
+
+---
+
+## 1. 契约速查（后端已就绪）
+
+| code | 含义 | 前端处理 |
+|---|---|---|
+| `200` | 创建成功（`data.task_id`） | 进入等待页（**现有逻辑不动**） |
+| `4001` | 次数不足 | 引导充值/兑换（**现有逻辑不动**） |
+| **`4002`** | **照片质量拦截（本次新增）** | 读 `data.check_code` → 弹拦截提示（原因+示例图+重拍引导） |
+| `401` | 未登录 | 跳登录（现有逻辑） |
+| `500` | 通用业务错误 | toast `message`（现有逻辑） |
+
+- 影响接口：**仅** `POST /api/aiface/tasks`（创建试衣任务）；**请求参数完全不变**；上传接口与 `recommend` 本期不动。
+- HTTP **恒 200**，业务结果看 `code`（与 4001 同风格）；`4002` 发生在**扣次之前** ⇒ **不扣次数、不扣费**（前端**不得**出现「已退次」类文案）。
+- `check_code` 枚举（**只有这 4 种**，后端单测锁死）：`no_face` ／ `multi_face` ／ `face_too_small` ／ `side_face`；**未知码必须兜底**「照片未通过检测，请重新上传」。
+- 后端 **fail-open**：判定服务异常/开关关闭时**放行**（前端不可假设「没拦截＝照片合格」）。
+- **端侧预检保留**（双保险）：现有 `photoCheck`（分辨率/模糊/VK 人脸）继续跑，云端判定兜底。
+- 埋点（PRD 第六节）：`ai_tryon_quality_reject`，携带 `check_code`。
+
+## 2. 现状盘点（改动点，均为实证）
+
+| # | 位置 | 现状 | 方案 |
+|---|---|---|---|
+| 1 | `src/domain/payment-state.ts:81-89` `mapBusinessCode()` | 仅 `4001 → INSUFFICIENT_CREDITS`，其余数字码 → `BUSINESS` | **新增 `4002 → QUALITY_REJECTED`**（错误种类单一事实源，`AppErrorKind` 由 `BusinessError["kind"]` 自动扩展） |
+| 2 | `src/infrastructure/http/errors.ts:12-19` `AppError` | 字段仅 `kind/businessCode/message/requestId/retryable` —— **没有 `data`** ⇒ `check_code` **到不了页面** | **新增可选 `businessData?: unknown`**（后端文档 3.3 已预警「若封装丢弃 data 需小改」） |
+| 3 | `src/infrastructure/http/errors.ts:37-47` `mapBusinessFailure()` | 未接收业务 `data` | 增形参 `data`，贯穿到 `AppError.businessData` |
+| 4 | `src/infrastructure/http/client.ts:127-132` 信封解码 | 失败分支只传 `businessCode/message/requestId` | 同步传 **`http.data`**（成功路径零改动） |
+| 5 | `src/application/ai-tryon-submit.ts:38-44` `SubmitOutcome` | `ignored/need-login/toast/need-recharge/submitted` —— **无拦截态** | **新增 `{ kind: "quality-rejected"; checkCode: PhotoGateCheckCode }`** |
+| 6 | `src/application/ai-tryon-submit.ts:122-127` | 已有 4001 归一化（插入点参照） | 在 4001 分支前/后加 `QUALITY_REJECTED` 归一化 + `check_code` 解析（未知码兜底） |
+| 7 | `src/pages/aiTryOn/index.vue:432` `switch (out.kind)` | 无拦截分支 | **新增 `case "quality-rejected"`**：隐藏 loading → 弹拦截弹层 → 支持立即重传 |
+| 8 | 素材 `src/static/` | 未见「上传引导示例图」命名素材（`guide/example` 零命中） | **待主人指定** 4 张示例图（或复用上传引导区现有图） |
+| 9 | 埋点 | 全仓 **无埋点端口**（`track/report/beacon` 零命中） | 新增最小端口（见 §4.5），或本期仅登记待办 |
+| 10 | 端侧预检 `src/domain/photo-check.ts` + `src/platform/weixin/vk-face.ts` | 已存在 | **保留不动**（文案风格可与云端统一，非必须） |
+
+## 3. 设计目标与原则
+
+1. **契约唯一事实源**：识别码类型与文案映射集中在应用层，UI 组件**不自带文案**。
+2. **最小侵入**：只在信封解码处补 `data` 透传；不新造错误通道、不影响成功路径与 4001/401/500 既有行为。
+3. **fail-open 对齐**：前端不把「未拦截」当作「合格」的保证；不新增任何基于拦截的本地扣次/退款逻辑。
+4. **可测**：每个新增分支都有单测 + 变异；页面级断言「无第二次 POST」「不走充值」「可立即重传」。
+5. **门面纪律**：弹层复用 `src/ui/*` 门面（`BasePopup`/`BaseDialog`），业务组件零 `wd-*` 直用；样式走 token。
+
+## 4. 方案
+
+### 4.1 数据流
+
+```
+用户点「生成」 → submitTryOnTask → POST /api/aiface/tasks
+   → client 解信 → code===200 ? 成功 : mapBusinessFailure(code, message, requestId, **data**)
+       → mapBusinessCode: 4002 → kind=QUALITY_REJECTED
+   → repo 原样返回 Result<_, AppError>
+   → ai-tryon-submit 归一：QUALITY_REJECTED → { kind:"quality-rejected", checkCode }
+   → pages/aiTryOn switch(out.kind) → 弹 QualityRejectSheet（原因/示例图/引导/未扣次安抚）
+   → 用户「重新选择照片」→ 既有选图 + photoCheck + 上传链路 → 再走 submitTryOnTask
+```
+
+### 4.2 类型与单一事实源（新增 `src/application/photo-gate.ts`）
+
+```ts
+export type PhotoGateCheckCode = "no_face" | "multi_face" | "face_too_small" | "side_face";
+
+/** 与后端 enum 对齐；`unknown` 兜底（契约：后端只会 4 种，但必须向前兼容） */
+export interface PhotoGateCopy { title: string; text: string; asset: string }
+export const PHOTO_GATE_COPY: Record<PhotoGateCheckCode | "unknown", PhotoGateCopy> = { … };
+
+/** 解析任意服务端返回值 ⇒ 已知码或 "unknown"（永不抛） */
+export function resolvePhotoGateCode(raw: unknown): PhotoGateCheckCode | "unknown";
+export function resolvePhotoGateCopy(raw: unknown): PhotoGateCopy;
+```
+
+- 文案基线（取自后端文档，逐字可改）：`no_face`「未检测到清晰人脸」／「未检测到人脸，请上传单人正面照，可参考示例图」；`multi_face`「检测到多张人脸」／「请上传单人照片，避免合照」；`face_too_small`「人脸太小」／「请靠近一些或裁剪后上传」；`side_face`「请正对镜头」／「侧脸会影响生成效果，请正对镜头再拍一张」；`unknown`「照片未通过检测」／「请重新上传」。
+
+### 4.3 错误模型扩展（最小侵入、向后兼容）
+
+- `AppError.businessData?: unknown`（可选 ⇒ 既有所有读取方零影响）；`mapBusinessFailure(code, message, requestId, data?)`。
+- 约定：**只有业务失败**才可能带 `businessData`；成功路径（`res.ok`）不涉及。
+- 备选（若评审倾向不动 `AppError`）：在 `client.ts` 对 `4002` 单独短路，直接返回带 `check_code` 的领域错误。**不推荐**——会破坏「错误模型单一入口」的家法。
+
+### 4.4 交互与 UI（对齐 PRD 验收）
+
+- **形态**：**底部弹层**（复用 `BasePopup :position="bottom"`，与本次弹层改造同口径；样式走 token：色/圆角/间距/字体族）。
+- **内容**：① 标题＝具体原因；② 正文＝重拍引导；③ **示例图**（复用上传引导示例图；若为「✓正例/✗反例」对比图则并排展示）；④ 安抚文案「**本次未消耗试衣次数**」；⑤ 主按钮「重新选择照片」（→ 既有选图链路，**保留已选照片可即时重传**）、次按钮「知道了」（关闭，停留在上传页）。
+- **无感**：合格照片**不额外提示**，直接进入生成流程。
+- **时序**：拦截响应约 0.3~1s ⇒ 沿用现有「照片检测中…」loading，避免黑盒等待。
+- **老版本兼容**：未升级版本会按业务错误展示 `message`（后端保证可读）⇒ 无需强制升级提示。
+
+### 4.5 埋点（待主人拍板是否本期做）
+
+- 新增最小端口 `src/platform/uni/analytics.ts`：`reportEvent(name: string, params: Record<string, string | number>)`，**fail-soft**（无 SDK/上报地址时仅 `console.debug`，绝不抛错、不阻塞主流程）。
+- 事件：`ai_tryon_quality_reject { check_code }`（用于拦截率/成本节省）。
+- 若主人认为本期不宜引入埋点通道 ⇒ 先在偏差台账登记为待办，UI 与契约实现不受影响。
+
+### 4.6 不做（明确范围外）
+
+1. **AI 推荐入口本期不接**（后端 `recommend` 无此拦截；契约同款，后续迭代）；
+2. 上传接口 `/api/aiface/upload` 不动；3. 不新增扣费/退款/退次逻辑（拦截本不扣次）；
+4. 不改端侧预检阈值与判定；5. 不做后端开关的端侧镜像；6. 不改后端。
+
+## 5. 测试与验收
+
+### 5.1 单测清单（TDD，先红后绿）
+
+| # | 用例 | 断言要点 |
+|---|---|---|
+| 1 | `mapBusinessCode(4002)` | `kind === "QUALITY_REJECTED"`、`businessCode === 4002`；`4001` 行为不变 |
+| 2 | 信封解码（`client`） | `4002` 响应 ⇒ `AppError.businessData.check_code` 可达；成功路径与 401/500 行为不变 |
+| 3 | `submitTryOnTask` 归一 | `QUALITY_REJECTED` ⇒ `{kind:"quality-rejected", checkCode}`；未知码 ⇒ `"unknown"`；**不触发充值**、**不重发 POST** |
+| 4 | `photo-gate` 映射 | 4 码穷尽 + `unknown` 兜底；`resolvePhotoGateCode(null/123/"x")` ⇒ `"unknown"` |
+| 5 | 页面级（mount `aiTryOn` + mock 4002） | 弹层出现、标题/正文＝该码映射、**POST 恰好 1 次**、**未走 `need-recharge`**、关闭后可选新照片并成功重传 |
+
+### 5.2 变异验证（每条须变红）
+
+删 `unknown` 兜底／把 `check_code` 从 `businessData` 去掉／`4002` 映射改回 `BUSINESS`／submit 归一化改成 `toast`／页面 `case` 删除 ⇒ 分别应触发对应用例红。
+
+### 5.3 端到端联调（staging）
+
+环境 `https://crazyma99.xyz`；确认开关 `aiface.tryon_filter.enabled` 已开；样例造数：`no_face`＝风景图／`multi_face`＝双人合照／`face_too_small`＝远景人像／`side_face`＝大侧脸／合格＝正面单人照。
+逐条核：① 1–2s 内被拦且提示含原因+示例图+引导；② 拦截后可**立即重传**、流程不卡死；③ 拦截**不扣次数**（前后各查一次次数记录）；④ 合格照片**无感**进入生成；⑤ 未知码兜底（抓包改响应模拟）；⑥ 埋点带 `check_code`。
+
+### 5.4 PRD 验收 → 实现映射
+
+| PRD 验收项 | 落点 |
+|---|---|
+| 被拦 1–2s 内有具体原因+示例图+重拍引导 | `QualityRejectSheet` + `photo-gate` 映射 |
+| 拦截后可立即重传 | 页面 `case "quality-rejected"` 保留选图状态 + 既有选图链路 |
+| 拦截不扣免费次数 | 后端保证（拦截在扣次前）；前端**不写**退次逻辑 + 联调核验次数记录 |
+| 合格照片无感 | 成功路径零改动（不新增提示） |
+| 未知 check_code 兜底 | `resolvePhotoGateCopy` 的 `unknown` 分支（有单测 + 变异） |
+| 埋点携带 `check_code` | `platform/uni/analytics.ts`（**待拍板**） |
+
+## 6. 风险与**待主人拍板**项
+
+| # | 事项 | 我的建议 |
+|---|---|---|
+| 1 | **4 张示例图素材**（现有 `src/static` 未见上传引导示例图） | 复用上传引导区图；若需「✓正例/✗反例」对比图请给素材或确认由我按图库口径生成提示词（只出提示词，不生图） |
+| 2 | **埋点是否本期做** | 建议本期只做「端口 + fail-soft 调用」，不接第三方 SDK |
+| 3 | **弹层形态** | 建议底部弹层（与本次改造同口径）；若您偏好居中弹窗/全屏引导页，我改 |
+| 4 | **未知码文案优先级** | 建议以本地映射为准，`unknown` 时若后端 `message` 非空则优先展示 `message`（更具体） |
+| 5 | **上线时序** | 后端该功能仅在 `staging`／`dev-dtw-…`，**尚未进 `main`**；建议前端实现先合入迁移分支、体验版跟随后端 staging 联调，正式版按后端上 main 后再放量 |
+| 6 | **老版本兼容** | 维持「展示 message 兜底」，不加强制升级提示 |
+
+## 7. 实施步骤（评审通过后执行；含 CR/构建/体验版）
+
+1. `payment-state` ＋ `errors` ＋ `client`（+单测 1/2）→ 2. `ai-tryon-submit` 归一化（+单测 3）→ 3. `photo-gate` 映射模块（+单测 4）→ 4. `QualityRejectSheet` + 页面接线（+页面级单测 5）→ 5. **变异验证** → 6. **独立 CR**（子代理只读）并逐条处置 → 7. 微信＋抖音构建与产物核验 → 8. 体验版 `v1.0.5x` ＋ 发版台账 ＋ 真机验收清单 → 9. KB 落库（若主人同意）。
+量级：核心 4 步约 1 个工作日（不含素材等待与联调往返）。
