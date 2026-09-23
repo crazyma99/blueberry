@@ -1,6 +1,7 @@
 // T8（Phase 3）：AI 试衣记录页测试——骨架/空态/列表渲染、openid 缺失空态、静默刷新（bug #7）、
 // 状态遮罩与点击分流（completed/processing 跳结果页、failed 仅提示）、封面向口径、时间格式化。
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { defineComponent } from "vue";
 import { mount } from "@vue/test-utils";
 
 const h = vi.hoisted(() => ({
@@ -81,10 +82,25 @@ beforeEach(() => {
   };
 });
 
+/** 反馈门面桩（2026-09-23 B2 起轻提示通道＝`ui/BaseFeedback`）：vitest 下平台判定为 `"other"`、wot Toast
+ *  不真渲染，故以桩替换门面并把「页面要求展示的文案」记进 `h.toasts`（断言口径不变）。
+ *  自证：把 `show` 改成空实现，`h.toasts` 断言即变红（测的是门面通道，不是原生回落）。 */
+const BaseFeedbackStub = defineComponent({
+  name: "BaseFeedback",
+  setup(_props, { expose }) {
+    expose({ show: (text: string) => h.toasts.push(text), hide: () => undefined });
+    return () => null;
+  },
+});
+
+function mountPage() {
+  return mount(AiHistoryPage, { global: { stubs: { BaseFeedback: BaseFeedbackStub } } });
+}
+
 describe("pages/aiTryOnHistory（T8 记录页）", () => {
   it("有 openid：拉取列表并渲染卡片（封面 400 缩略、风格名缺省、时间格式化 MM-DD HH:mm）", async () => {
     seedUser("o1");
-    const w = mount(AiHistoryPage);
+    const w = mountPage();
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
     await w.vm.$nextTick();
@@ -103,7 +119,7 @@ describe("pages/aiTryOnHistory（T8 记录页）", () => {
   });
 
   it("无 openid：不请求、直接空态（旧 :116-122）", async () => {
-    const w = mount(AiHistoryPage);
+    const w = mountPage();
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
     await w.vm.$nextTick();
@@ -115,7 +131,7 @@ describe("pages/aiTryOnHistory（T8 记录页）", () => {
   it("接口失败/空列表：空态收敛；点击卡片分流（completed/processing 跳结果页、failed 仅提示）", async () => {
     seedUser("o1");
     h.tasksMode = "fail";
-    const w = mount(AiHistoryPage);
+    const w = mountPage();
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
     await w.vm.$nextTick();
@@ -138,7 +154,7 @@ describe("pages/aiTryOnHistory（T8 记录页）", () => {
 
   it("⭐静默刷新（旧 bug #7）：onShow 首跳一次；已有数据时刷新不再整页骨架", async () => {
     seedUser("o1");
-    const w = mount(AiHistoryPage);
+    const w = mountPage();
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
     await w.vm.$nextTick();
@@ -163,7 +179,7 @@ describe("AI试衣记录页 · 下拉刷新（2026-09-21 主人②）", () => {
     h.stops = 0;
     h.pullDownCalls.length = 0;
     h.onLoadCalls.length = 0;
-    const w = mount(AiHistoryPage);
+    const w = mountPage();
     await flush();
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
