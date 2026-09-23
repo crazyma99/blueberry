@@ -150,6 +150,32 @@ const filename = ref("");
 const shopId = ref("");
 const status = ref<"processing" | "failed">("processing");
 const elapsedSeconds = ref(0);
+/**
+ * 2026-09-23 主人报「离开等待页再回来进度从 0 重来，体感丢进度」：
+ * 推荐接口「只调一次、不可轮询重发」⇒ 用**本地持久化起始时间**续算（服务端无任务可查）。
+ * 陈旧保护：超过 UI 超时窗口（180s）的起始时间视为该次尝试已失败 ⇒ 忽略，避免「永远 99%」。
+ */
+const RECOMMEND_STARTED_AT_KEY = "aiRecommend:startedAt";
+const startedAtMs = ref(0);
+function readResumeStartedAt(): number {
+  try {
+    const raw = uni.getStorageSync(RECOMMEND_STARTED_AT_KEY);
+    const ms = Number(raw);
+    if (!Number.isFinite(ms) || ms <= 0) return 0;
+    const ageSec = (Date.now() - ms) / 1000;
+    if (ageSec < 0 || ageSec > RECOMMEND_UI_TIMEOUT_SECONDS) return 0; // 时钟偏差／陈旧 ⇒ 不恢复
+    return ms;
+  } catch {
+    return 0;
+  }
+}
+function clearRecommendStartedAt(): void {
+  try {
+    uni.removeStorageSync(RECOMMEND_STARTED_AT_KEY);
+  } catch {
+    /* 存储不可用：静默 */
+  }
+}
 const progressDone = ref(false); // 任务完成时置真 → 伪进度走满 100%
 const isPaying = ref(false); // 支付流程进行中（防连点；门闩由 coordinator 持有）
 const footerIdle = ref<FooterContent>({ mainLine: "", supportLine: "" });
@@ -184,6 +210,7 @@ const footer = computed<FooterContent>(() => (status.value === "processing" ? fo
 // 生成等待伪进度：10s 走满 99%，完成时 progressDone → 100（旧端 :82-117，已抽共享 composable；时长/图标/文案为本页定稿参数）
 const { progressPercent, currentProgressStep, progressIcons, progressSteps } = useFakeProgress(10, {
   elapsedSeconds,
+  startedAtMs, // 2026-09-23：真实起始时间 ⇒ 回页续算（见 use-fake-progress 注释）
   progressDone,
   // 四步节点图标（旧端 :97-105 逐字：IconPark 语义图标；已完成节点由组件统一显示白勾）
   icons: [
@@ -230,8 +257,18 @@ onUnload(() => {
 function startAnalysis(): void {
   stopAll(); // 作废旧代次 + 清计时器/转场定时器
   status.value = "processing";
-  elapsedSeconds.value = 0;
   progressDone.value = false;
+  // 续算：回页（含中途离开再回来）时接上真实起始时间；无可用记录则记下本次开始并持久化
+  const resumed = readResumeStartedAt();
+  startedAtMs.value = resumed;
+  elapsedSeconds.value = resumed > 0 ? Math.max(0, Math.floor((Date.now() - resumed) / 1000)) : 0;
+  if (resumed === 0) {
+    try {
+      uni.setStorageSync(RECOMMEND_STARTED_AT_KEY, String(Date.now()));
+    } catch {
+      /* 存储不可用：退化为旧行为 */
+    }
+  }
 
   // 计时器：每秒更新已等待时间（旧端 :125-133）
   countdownTimer = setInterval(() => {
@@ -240,6 +277,7 @@ function startAnalysis(): void {
     if (elapsedSeconds.value >= RECOMMEND_UI_TIMEOUT_SECONDS) {
       stopAll();
       status.value = "failed";
+      clearRecommendStartedAt(); // 终态清理（避免下次进页误续算）
     }
   }, 1000);
 
@@ -273,6 +311,7 @@ async function callRecommend(): Promise<void> {
     stopAll();
     // 任务结束不得仍停中间步骤 → 进度走满 100% 再跳结果页（旧端 :147-149）
     progressDone.value = true;
+    clearRecommendStartedAt(); // 成功终态清理
     const resultData = JSON.stringify(buildResultPayload(out.items));
     const shopIdSnapshot = shopId.value;
     // 转场定时器入账，stopAll 清除，防「成功后 260ms 内离页仍被强拉」（旧端 CR 🟡 :152-157）

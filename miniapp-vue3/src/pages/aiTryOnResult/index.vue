@@ -152,6 +152,20 @@ const resultImageUrl = ref("");
 const failCount = ref(0);
 const progressDone = ref(false); // 任务完成置真 → 伪进度走满 100%
 const elapsedSeconds = ref(0); // 等待时长（内核每秒回调；伪进度与自适应间隔共用）
+/**
+ * 任务真实起始时间（epoch ms）。2026-09-23 主人报「离开等待页再回来进度从 0 重来」：
+ * 试衣侧**优先取服务端任务 `created_at`**（跨设备一致，最佳实践）；解析失败/时钟偏差则保持 0 ⇒ 回落旧行为。
+ */
+const startedAtMs = ref(0);
+/** 解析服务端时间：兼容 `YYYY-MM-DD HH:mm:ss`（服务端本地时区）与 ISO；未来时间视为无效 */
+function parseServerTimeMs(raw: unknown): number {
+  if (typeof raw !== "string" || raw === "") return 0;
+  const iso = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw) ? raw.replace(" ", "T") : raw;
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms) || ms <= 0) return 0;
+  if (ms > Date.now()) return 0; // 客户端与服务端时钟偏差 ⇒ 不恢复
+  return ms;
+}
 const imageLoaded = ref(false);
 const imageUseOriginal = ref(false); // 缩略图异常时回退原图（防白屏）
 const imageErrored = ref(false); // 图片彻底失败：骨架图不再无限转圈
@@ -195,6 +209,7 @@ const watermarkText = computed<string>(() =>
 // 生成等待伪进度：28s 走满 99%，完成时 progressDone → 100（旧 :212-247，已抽共享 composable；时长/图标/文案为本页定稿参数）
 const { progressPercent, currentProgressStep, progressIcons, progressSteps } = useFakeProgress(28, {
   elapsedSeconds,
+  startedAtMs, // 2026-09-23：真实起始时间 ⇒ 回页续算（见 use-fake-progress 注释）
   progressDone,
   // 四步节点图标（旧 :227-235）
   icons: [
@@ -366,6 +381,10 @@ async function queryInitialTask(): Promise<void> {
     const res = await aiResultRepo.getResult(ctxFactory.next(), taskId.value);
     if (res.ok && res.value != null) {
       const data = res.value;
+      if (startedAtMs.value === 0) {
+        // 首查即拿到任务 ⇒ 用它自己的创建时间续算（回页/换设备均一致）
+        startedAtMs.value = parseServerTimeMs((data as { created_at?: unknown }).created_at);
+      }
       if (data.status === "completed") {
         applyCompleted(data);
       } else if (data.status === "failed") {

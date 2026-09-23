@@ -27,8 +27,15 @@ export interface FakeProgressSteps {
 }
 
 export interface FakeProgressSource {
-  /** 已等待秒数（页面计时器/轮询内核每秒回写） */
+  /** 已等待秒数（页面计时器/轮询内核每秒回写；**当 `startedAtMs` 有效时仅用于驱动重算**） */
   elapsedSeconds: Ref<number>;
+  /**
+   * 任务真实起始时间（epoch ms，**可选**）。2026-09-23 主人报「离开等待页再回来进度从 0 重来、体感丢进度」：
+   * 伪进度原先只认本页 `elapsedSeconds`（重新进页＝从 0）⇒ 传入真实起始时间后按**墙钟**推导，回页自动续算。
+   * 数据来源优先级：服务端任务 `created_at`（试衣，最佳实践：跨设备一致）＞ 本地持久化（推荐页，接口只调一次不可轮询）。
+   * 约定：`<= 0`／`NaN`／未来时间（时钟偏差）一律视为「无」⇒ 回落到本地 `elapsedSeconds`（即旧行为）。
+   */
+  startedAtMs?: Ref<number>;
   /** 任务完成置真 → 百分比直接走满 100 */
   progressDone: Ref<boolean>;
   /** 四步节点图标（已完成节点的白勾由 GenerationProgress 组件统一渲染） */
@@ -48,11 +55,21 @@ export interface FakeProgress {
   progressSteps: ComputedRef<string[]>;
 }
 
+/** 有效已等待秒数：有可信 `startedAtMs` 时按墙钟（回页续算），否则用本地累加（旧行为） */
+function effectiveElapsedSeconds(source: FakeProgressSource): number {
+  const started = source.startedAtMs?.value ?? 0;
+  // 无效起始时间：非数字／≤0／**未来**（客户端-服务端时钟偏差）⇒ 回落本地累加（旧行为）
+  if (!Number.isFinite(started) || started <= 0 || started > Date.now()) return source.elapsedSeconds.value;
+  const wall = (Date.now() - started) / 1000;
+  return wall > 0 ? wall : 0; // 时钟偏差导致的「负数等待」按 0 处理
+}
+
 export function useFakeProgress(durationSec: number, source: FakeProgressSource): FakeProgress {
   // 生成等待伪进度：durationSec 秒走满 99%，完成时 progressDone → 100
   const progressPercent = computed<number>(() => {
     if (source.progressDone.value) return 100;
-    const p = Math.floor((source.elapsedSeconds.value / durationSec) * 100);
+    const elapsed = effectiveElapsedSeconds(source);
+    const p = Math.floor((elapsed / durationSec) * 100);
     return p > FAKE_PROGRESS_CAP ? FAKE_PROGRESS_CAP : p;
   });
   // 当前步骤下标（阈值 20/45/75，两页逐字一致）
