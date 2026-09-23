@@ -87,7 +87,7 @@
 
 > 注：全部经 `platform/uni/feedback.ts` 的 `toast/showLoading/hideLoading/showModal` 调用（**没有**任何页面直接调 `uni.showToast`）⇒ 迁移面＝这些调用点的**实现通道**，不是调用点本身。
 
-**进度（2026-09-23 第 19 轮）**：① `aiRecommendLoading` **已完成**（`7f75a8f`：11 toast ＋ 1 组 loading；该页此前仅 1 处 loading 调用点与 11 处 toast）。② `aiRecommendResult` **已完成**（`f6859bf`：2 处 toast）。③ `aiTryOnHistory` **已完成**（`99befd0`：3 处 toast）。④ `aiRecommend` **已完成**（`ebbf3c5`：22 toast ＋ 4/6 loading；`showModal` 1 处保持原生待口径）。余 2 页：`aiTryOn`（已落地包装＋弹层＋埋点，仅需复核口径）、`aiTryOnResult`（13/2/3/3；loading 已接，待接 toast，`showModal` 3 处待口径）。
+**进度（2026-09-23 第 19 轮）**：① `aiRecommendLoading` **已完成**（`7f75a8f`：11 toast ＋ 1 组 loading；该页此前仅 1 处 loading 调用点与 11 处 toast）。② `aiRecommendResult` **已完成**（`f6859bf`：2 处 toast）。③ `aiTryOnHistory` **已完成**（`99befd0`：3 处 toast）。④ `aiRecommend` **已完成**（`ebbf3c5`：22 toast ＋ 4/6 loading；`showModal` 1 处保持原生待口径）。⑤ `aiTryOnResult` **已完成**（`dba9933`：13 toast ＋ 2/3 loading；`showModal` 3 处保持原生待口径）。**余 1 页**：`aiTryOn`（原试点页，包装＋弹层＋埋点已落地，仅需复核口径一致）。
 
 **⭐测试口径（本轮新增，务必沿用——否则会写成假绿）**：页面级测试观测轻提示**必须给门面配桩**：
 ```ts
