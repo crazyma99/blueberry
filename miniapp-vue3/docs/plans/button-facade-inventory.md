@@ -22,3 +22,13 @@
 - ✅ B1 弹层按钮（`QualityRejectSheet` 2 处）→ 已组件化（提交 `aeb3270`）
 - ✅ B4 守卫（`t62`）已上线：新增自绘按钮即红（提交 `cc1c574`）
 - ⏳ B3 其余文件：按上表自上而下替换
+
+## 免替换清单（2026-09-23 第 6 轮登记）
+
+| 类别 | 实例 | 原因 |
+|---|---|---|
+| **平台能力按钮** | `<button open-type="chooseAvatar">`（`ProfilePopup` 头像选择）、`<button open-type="getPhoneNumber">`（`LoginPopup` 手机号一键登录） | 微信**强制要求**用原生 `<button>` 承载 `open-type`；换成 `BaseButton` 会失去平台能力（可在门面后续支持 `open-type` 透传后再评估） |
+| **门面内部自绘** | `src/ui/BasePicker.vue` 的 `base-picker-native__btn*` | 门面自身为**抖音自绘分支**的实现细节，非业务按钮 |
+| 可交互但非按钮 | 卡片/选项卡/图标按钮/导航返回/列表项（如 `.tpl-card`、tab 项、`.custom-navbar` 返回） | 属"可点区域"而非表单按钮，替换会破坏布局语义（如需要，另立"可点区域统一"专项） |
+
+> 判定口径：只有「表单/操作类按钮」才纳入替换；平台 `open-type` 按钮与门面实现细节**免替换**（守卫 `t62` 的启发式只统计带 `@click/@tap` 且 class 含 btn/button/cta 的元素或带 `@click` 的原生 `<button>`，天然不计入 `open-type` 按钮）。

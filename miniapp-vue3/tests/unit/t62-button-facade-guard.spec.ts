@@ -3,6 +3,8 @@
 // 原生 `<button>` 元素同样计入。**新增自绘按钮会被本用例拦下**：请改用 `ui/BaseButton`（门面已支持
 // type/variant(base|plain|dashed|soft|subtle|text)/size/block/round/disabled/busy/customStyle）。
 // B3 批次逐页替换时，同步下调本白名单；**全部替换完成后该白名单应为空**。
+// 免替换口径（见 docs/plans/button-facade-inventory.md「免替换清单」）：①平台强制 `<button open-type=…>`（chooseAvatar／getPhoneNumber）
+// ②门面内部自绘（ui/BasePicker 的抖音分支）③可交互但非按钮（卡片/选项卡/图标/导航）——本启发式天然不计入带 `open-type` 的原生按钮。
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
