@@ -68,6 +68,10 @@ import AppPhotoPicker from "../../components/AppPhotoPicker/AppPhotoPicker.vue";
 import BottomActionBar from "../../components/BottomActionBar/BottomActionBar.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import ProfilePopup from "../../components/ProfilePopup/ProfilePopup.vue";
+import BaseButton from "../../ui/BaseButton.vue";
+import { tokens } from "../../generated/tokens";
+/** 按钮统一走门面 BaseButton；品牌金经 wot CSS 变量绑 tokens */
+const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};`;
 
 // —— 装配 ——
 const detected = detectUiPlatform();
@@ -672,7 +676,15 @@ function safeDecode(v: string): string {
     <view v-if="templatesLoaded && templates.length === 0" class="tpl-empty">
       <text class="tpl-empty-title">暂无可试衣模板</text>
       <text class="tpl-empty-desc">分享链接可能缺少门店或相册信息，请返回首页重新进入</text>
-      <view class="tpl-empty-btn" hover-class="press-dim" @click="reloadTemplates">重新加载</view>
+      <BaseButton
+        class="tpl-empty-btn"
+        size="small"
+        round
+        :custom-style="PRIMARY_BTN_STYLE"
+        @click="reloadTemplates"
+      >
+        重新加载
+      </BaseButton>
     </view>
     <AiTemplatePicker
       v-else
