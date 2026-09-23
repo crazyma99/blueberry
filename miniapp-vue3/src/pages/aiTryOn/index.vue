@@ -68,17 +68,6 @@ import AppPhotoPicker from "../../components/AppPhotoPicker/AppPhotoPicker.vue";
 import BottomActionBar from "../../components/BottomActionBar/BottomActionBar.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import ProfilePopup from "../../components/ProfilePopup/ProfilePopup.vue";
-import BaseButton from "../../ui/BaseButton.vue";
-import { tokens } from "../../generated/tokens";
-/** 按钮统一走门面 BaseButton；品牌金经 wot CSS 变量绑 tokens */
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};`;
-
-/** 「生成效果」图文按钮视觉（旧端 `.generate-btn` 812-822 原样搬入；配色＝旧 `--gradient-btn-primary` 字面值）：
- *  ① 视觉经 `custom-style` 内联下发到 wot 的真实 `button` 节点 ⇒ 不受组件样式隔离影响；
- *  ② 原父级 `gap/row` 布局迁到槽位内层 `.generate-btn-inner`（槽位内容仍由页面样式管辖）；
- *  ③ 按压态用 wot `--active` 变量近似复刻原 `hover-class="press-dim"`（0.82 不透明度叠在 #160F04 底栏上 ⇒ ≈ #c9ab78→#d5caa3）；
- *  ④ 禁生成态＝旧 `.generate-btn-disabled{opacity:.4}`（仅外观：点击仍须放行，交给登录/上传引导，见 `handleGenerate`）。 */
-const GENERATE_BTN_STYLE = `--wot-button-primary-bg: linear-gradient(135deg, #f1cd91 0%, #fff3c6 100%);--wot-button-primary-bg-active: linear-gradient(135deg, #c9ab78 0%, #d5caa3 100%);--wot-button-primary-color: #160f04;color: #160f04;height: 88rpx;border-radius: 44rpx;padding: 0 40rpx;`;
 
 // —— 装配 ——
 const detected = detectUiPlatform();
@@ -251,8 +240,6 @@ const priceText = computed(() => {
 const bodyIndex = computed(() => (bodyType.value === "medium" ? 1 : bodyType.value === "fat" ? 2 : 0));
 const bodyTypeText = computed(() => (bodyType.value === "medium" ? "微胖" : bodyType.value === "fat" ? "胖" : "瘦"));
 const canGenerate = computed(() => uploadedFilename.value !== "" && !isUploading.value);
-/** 生成按钮内联样式（禁生成态仅降透明度；**不绑 wot `disabled`**，否则会吞掉登录/上传引导点击） */
-const generateBtnStyle = computed(() => (canGenerate.value ? GENERATE_BTN_STYLE : `${GENERATE_BTN_STYLE}opacity: 0.4;`));
 
 // —— 生命周期（旧端 :219-299）——
 onLoad((options?: Record<string, unknown>) => {
@@ -685,15 +672,7 @@ function safeDecode(v: string): string {
     <view v-if="templatesLoaded && templates.length === 0" class="tpl-empty">
       <text class="tpl-empty-title">暂无可试衣模板</text>
       <text class="tpl-empty-desc">分享链接可能缺少门店或相册信息，请返回首页重新进入</text>
-      <BaseButton
-        class="tpl-empty-btn"
-        size="small"
-        round
-        :custom-style="PRIMARY_BTN_STYLE"
-        @click="reloadTemplates"
-      >
-        重新加载
-      </BaseButton>
+      <view class="tpl-empty-btn" hover-class="press-dim" @click="reloadTemplates">重新加载</view>
     </view>
     <AiTemplatePicker
       v-else
@@ -720,34 +699,22 @@ function safeDecode(v: string): string {
       <!-- 付费模式且无剩余次数：价格按钮（旧端 :72-85） -->
       <view v-if="isPaidMode && creditBalance <= 0" class="gen-btn-wrap">
         <image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"></image>
-        <BaseButton
-          :class="canGenerate ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
-          :custom-style="generateBtnStyle"
-          @click="handleGenerate"
-        >
-          <view class="generate-btn-inner">
-            <text class="generate-btn-ai">¥{{ priceText }}</text>
-            <text class="generate-btn-text"> 马上生成 </text>
-            <image src="/static/aitry-text.png" class="generate-btn-ai-img" mode="aspectFill"></image>
-            <text class="generate-btn-text"> 效果</text>
-          </view>
-        </BaseButton>
+        <view :class="canGenerate ? 'generate-btn' : 'generate-btn generate-btn-disabled'" hover-class="press-dim" @click="handleGenerate">
+          <text class="generate-btn-ai">¥{{ priceText }}</text>
+          <text class="generate-btn-text"> 马上生成 </text>
+          <image src="/static/aitry-text.png" class="generate-btn-ai-img" mode="aspectFill"></image>
+          <text class="generate-btn-text"> 效果</text>
+        </view>
         <image src="/static/btn-right-icon.png" class="gen-btn-icon" mode="aspectFill"></image>
       </view>
       <!-- 非付费模式或有限免次数（旧端 :87-103） -->
       <view v-else class="gen-btn-wrap">
         <image src="/static/btn-left-icon.png" class="gen-btn-icon" mode="aspectFill"></image>
-        <BaseButton
-          :class="canGenerate ? 'generate-btn' : 'generate-btn generate-btn-disabled'"
-          :custom-style="generateBtnStyle"
-          @click="handleGenerate"
-        >
-          <view class="generate-btn-inner">
-            <text class="generate-btn-text">生成 </text>
-            <image src="/static/aitry-text.png" class="generate-btn-ai-img" mode="aspectFill"></image>
-            <text class="generate-btn-text"> 效果</text>
-          </view>
-        </BaseButton>
+        <view :class="canGenerate ? 'generate-btn' : 'generate-btn generate-btn-disabled'" hover-class="press-dim" @click="handleGenerate">
+          <text class="generate-btn-text">生成 </text>
+          <image src="/static/aitry-text.png" class="generate-btn-ai-img" mode="aspectFill"></image>
+          <text class="generate-btn-text"> 效果</text>
+        </view>
         <image src="/static/btn-right-icon.png" class="gen-btn-icon" mode="aspectFill"></image>
         <!-- 角标最后渲染，避免被右侧 icon 盖住（旧端 :99-102） -->
         <view v-if="isPaidMode && creditBalance > 0" class="gen-btn-badge">
@@ -830,16 +797,19 @@ function safeDecode(v: string): string {
   width: 104rpx;
   height: 86rpx;
 }
-/* 生成按钮（旧端 .generate-btn / .generate-btn-disabled）：盒模型与配色已迁入门面 `BaseButton`
-   的 `GENERATE_BTN_STYLE`（内联 ⇒ 不受组件样式隔离影响）；`generate-btn(-disabled)` 类保留作
-   测试/守卫选择器钩子（`t38` 用 `.generate-btn` 触发点击）。下方 `.generate-btn-inner` 承担
-   原父级的 row 布局与 gap（槽位内容由页面样式管辖）。 */
-.generate-btn-inner {
+.generate-btn {
+  height: 88rpx;
+  border-radius: 44rpx; /* 旧 --radius-xl */
+  padding: 0 40rpx;
+  gap: 12rpx;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
+  background: linear-gradient(135deg, #f1cd91 0%, #fff3c6 100%); /* 旧 --gradient-btn-primary */
+}
+.generate-btn-disabled {
+  opacity: 0.4;
 }
 .generate-btn-ai {
   font-size: 32rpx;

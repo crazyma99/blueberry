@@ -1,6 +1,5 @@
 // T9b P3-18/P3-19 页级渲染测试（aiRecommendResult）：finalScore 显示条件、理由渲染、脏数据不崩、gender 归一。
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent } from "vue";
 import { mount } from "@vue/test-utils";
 
 const h = vi.hoisted(() => ({
@@ -25,23 +24,8 @@ import AiRecommendResult from "../../src/pages/aiRecommendResult/index.vue";
 
 const flush = () => new Promise((r) => setTimeout(r, 20));
 
-/** 反馈门面桩（2026-09-23 B2 起轻提示通道＝`ui/BaseFeedback`）：vitest 下平台判定为 `"other"`、wot Toast
- *  不真渲染，故以桩替换门面并把「页面要求展示的文案」记进 `h.toasts`（断言口径不变）。
- *  自证：把 `show` 改成空实现，`h.toasts` 断言即变红（测的是门面通道，不是原生回落）。 */
-const BaseFeedbackStub = defineComponent({
-  name: "BaseFeedback",
-  setup(_props, { expose }) {
-    expose({ show: (text: string) => h.toasts.push(text), hide: () => undefined });
-    return () => null;
-  },
-});
-
-function mountPage() {
-  return mount(AiRecommendResult, { global: { stubs: { BaseFeedback: BaseFeedbackStub } } });
-}
-
 function load(payload: unknown, shopId = "7"): Promise<void> {
-  const w = mountPage();
+  const w = mount(AiRecommendResult);
   const data = encodeURIComponent(JSON.stringify(payload));
   h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId, data });
   return flush().then(() => w.vm.$nextTick().then(() => undefined)).then(() => undefined);
@@ -62,7 +46,7 @@ beforeEach(() => {
 
 describe("pages/aiRecommendResult（T9b P3-18/P3-19）", () => {
   it("⭐finalScore 显示条件：>0 才渲染「N分」；0 与缺失一律不渲染（不凑分）", async () => {
-    const w = mountPage();
+    const w = mount(AiRecommendResult);
     h.onLoadCalls[0]({
       shopId: "7",
       data: encodeURIComponent(
@@ -87,7 +71,7 @@ describe("pages/aiRecommendResult（T9b P3-18/P3-19）", () => {
   });
 
   it("脏数据不崩（偏差⑥）：recommendations 非数组 → 空列表；analysis 缺字段 → 不抛", async () => {
-    const w = mountPage();
+    const w = mount(AiRecommendResult);
     h.onLoadCalls[0]({
       shopId: "7",
       data: encodeURIComponent(JSON.stringify({ analysis: {}, recommendations: "not-an-array" })),
@@ -98,7 +82,7 @@ describe("pages/aiRecommendResult（T9b P3-18/P3-19）", () => {
   });
 
   it("非法 JSON → toast「结果解析失败，请重试」且不崩", async () => {
-    const w = mountPage();
+    const w = mount(AiRecommendResult);
     h.onLoadCalls[0]({ shopId: "7", data: "%7Bbroken" });
     await flush();
     await w.vm.$nextTick();

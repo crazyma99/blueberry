@@ -40,9 +40,6 @@ import { createShareCardResolver, DEFAULT_SHARE_CARDS, type ShareCard } from "..
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 import { hapticTap } from "../../application/haptics";
 import { navigateTo } from "../../platform/uni/feedback";
-import BaseButton from "../../ui/BaseButton.vue";
-import { tokens } from "../../generated/tokens";
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};`;
 
 // —— 装配（同 index/demoDetail）——
 const detected = detectUiPlatform();
@@ -300,18 +297,11 @@ onLoad((options) => {
       <BottomActionBar :footer-main-line="footer.mainLine" :footer-support-line="footer.supportLine">
         <view v-if="platform === 'mp-weixin' && detail.tryonDisabled !== true" class="ai-tryon-btn">
           <image src="/static/btn-left-icon.png" class="btn-icon" mode="aspectFill" />
-          <!-- 图文按钮：内层文案与 AI 试衣图原样保留（门面默认插槽；类名保留使原布局 CSS 继续生效） -->
-          <BaseButton
-            class="btn-primary"
-            block
-            round
-            :custom-style="PRIMARY_BTN_STYLE"
-            @click="goToAiTryOn"
-          >
+          <view class="btn-primary" hover-class="press-dim" @click="goToAiTryOn">
             <view>生成</view>
-            <image src="/static/aitry-text.png" class="text" mode="aspectFill"></image>
+            <image src="/static/aitry-text.png" class="text" mode="aspectFill" />
             <view>效果</view>
-          </BaseButton>
+          </view>
           <image src="/static/btn-right-icon.png" class="btn-icon" mode="aspectFill" />
         </view>
       </BottomActionBar>
@@ -321,14 +311,7 @@ onLoad((options) => {
 
     <view v-else class="detail-error">
       <text>{{ error != null ? error : "加载失败" }}</text>
-      <BaseButton
-        class="retry-btn"
-        label="重试"
-        size="small"
-        round
-        :custom-style="PRIMARY_BTN_STYLE"
-        @click="onRetry"
-      />
+      <view class="retry-btn" @click="onRetry">重试</view>
     </view>
 
     <BaseFeedback ref="feedbackRef" />

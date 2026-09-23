@@ -19,7 +19,7 @@ import type { Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
-import { toast as nativeToast } from "../../platform/uni/feedback";
+import { toast } from "../../platform/uni/feedback";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
@@ -36,7 +36,6 @@ import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
 import { createPullRefresh } from "../../composables/use-pull-refresh";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
-import BaseFeedback from "../../ui/BaseFeedback.vue";
 
 // —— 装配（同 mine/favorites）——
 const detected = detectUiPlatform();
@@ -76,18 +75,6 @@ const pageContent = createPageConfigContent({
 });
 
 // —— 页面状态（旧端 :84-92）——
-// —— 反馈通道统一（2026-09-23 B2；主人「选项一，都应该改」）——轻提示优先门面 wot Toast，未就绪回落原生；
-// 调用点 `toast(...)` 保持零改动 ⇒ 迁移面只有本段实现与模板挂载。
-const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
-function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
-  const f = feedbackRef.value;
-  if (f != null) {
-    f.show(text, icon as never);
-    return;
-  }
-  nativeToast(text, icon as never);
-}
-
 const loading = ref(true);
 const taskList = ref<AiTaskListItem[]>([]);
 const isEmpty = ref(false);
@@ -243,9 +230,6 @@ function pad(n: number): string {
 
     <!-- 页脚：PageFooter 共享组件（原 :220-225 page-footer > divide + copyright 块收敛；样式随之入组件） -->
     <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="copyright" />
-
-    <!-- 反馈通道门面（2026-09-23 B2）：wot Toast 挂载点 -->
-    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 

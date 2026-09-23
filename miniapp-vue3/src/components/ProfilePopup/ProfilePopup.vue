@@ -24,8 +24,6 @@
 // 墨色 → tokens.semantic.colorActionText；深色卡片/渐变/字号档位 → 硬编码并注释。
 import { ref } from "vue";
 import BasePopup from "../../ui/BasePopup.vue";
-import BaseButton from "../../ui/BaseButton.vue";
-import { tokens } from "../../generated/tokens";
 
 /** 🟡CR3：`placeholder-class` 在 scoped 下**永不命中**（基座自造 class，不带 data-v）⇒ 改内联 style（含字体，见 🔴1） */
 const PLACEHOLDER_STYLE = "font-family:'HarmonyOS-Sans-SC';color:rgba(255,255,255,0.35)";
@@ -37,9 +35,6 @@ withDefaults(
   }>(),
   { avatarUrl: "", nickname: "" },
 );
-
-/** 主按钮品牌金：经 wot 官方 CSS 变量绑 tokens（按钮统一走门面 BaseButton） */
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};`;
 
 const emit = defineEmits<{
   (e: "choose-avatar", event: unknown): void;
@@ -93,14 +88,7 @@ function onNicknameInput(e: unknown): void {
         </view>
       </view>
 
-      <BaseButton
-        class="confirm-btn btn-primary"
-        label="确认"
-        block
-        round
-        :custom-style="PRIMARY_BTN_STYLE"
-        @click="emit('submit')"
-      />
+      <button class="confirm-btn btn-primary" hover-class="press-dim" @click="emit('submit')">确认</button>
       <view class="profile-skip" hover-class="press-dim" @click="emit('skip')">跳过</view>
     </view>
   </BasePopup>

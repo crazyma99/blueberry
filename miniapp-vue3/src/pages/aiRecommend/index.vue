@@ -59,11 +59,10 @@ import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
-import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, showModal, navigateTo } from "../../platform/uni/feedback";
+import { toast, showLoading, hideLoading, showModal, navigateTo } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
 import { createWeixinPayments } from "../../platform/weixin/payments";
-import { tokens } from "../../generated/tokens";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
@@ -87,52 +86,12 @@ import {
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import AppPhotoPicker from "../../components/AppPhotoPicker/AppPhotoPicker.vue";
 import BottomActionBar from "../../components/BottomActionBar/BottomActionBar.vue";
-import BaseButton from "../../ui/BaseButton.vue";
-import BaseFeedback from "../../ui/BaseFeedback.vue";
-import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import ProfilePopup from "../../components/ProfilePopup/ProfilePopup.vue";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
 const detected = detectUiPlatform();
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
-
-// —— 反馈通道统一（2026-09-23 B2；主人「选项一，都应该改」）——
-// 加载态：微信端走门面弹层（Token 化）；抖音端（AI 六页不注册，理论不进入）仍走原生，避免「两套 loading 同时出现」。
-// 轻提示：优先门面 wot Toast，门面未就绪时回落原生。**调用点（22 处 toast ＋ 4/6 处 loading）零改动**。
-const loadingPopupVisible = ref(false);
-const loadingPopupText = ref("");
-function showLoading(text: string): void {
-  if (detected === "mp-toutiao") {
-    nativeShowLoading(text);
-    return;
-  }
-  loadingPopupText.value = text;
-  loadingPopupVisible.value = true;
-}
-function hideLoading(): void {
-  if (detected === "mp-toutiao") {
-    nativeHideLoading();
-    return;
-  }
-  loadingPopupVisible.value = false;
-}
-/** 「开始AI分析推荐」主按钮（等价搬入本页 `.action-btn` 710-719：宽 100%／高 88rpx／44rpx 圆角／品牌金底）
- *  ＋ 禁态 `.action-btn-disabled{opacity:.4}`（**仅外观**：点击仍须放行，走登录/上传/充值引导）。
- *  ⚠️ wot base 变体文字色取 `--wot-button-main-color`（白）⇒ **必须显式 `color:`**（守卫 `t64`）。 */
-const ACTION_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};width: 100%;height: 88rpx;border-radius: 44rpx;padding: 0;`;
-/** 禁分析态仅降透明度（沿用旧 `.action-btn-disabled`） */
-const actionBtnStyle = computed(() => (canStart.value ? ACTION_BTN_STYLE : `${ACTION_BTN_STYLE}opacity: 0.4;`));
-
-const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
-function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
-  const f = feedbackRef.value;
-  if (f != null) {
-    f.show(text, icon as never);
-    return;
-  }
-  nativeToast(text, icon as never);
-}
 const env = PROFILE.environment;
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
 const uniStorage = createUniStorage();
@@ -628,22 +587,24 @@ function isLoggedIn(): boolean {
     <BottomActionBar :footer-main-line="footer.mainLine" :footer-support-line="footer.supportLine">
       <!-- 付费模式且无剩余次数：价格按钮，点击引导充值，到账后自动继续分析（旧端 :23-33） -->
       <view v-if="isPaidMode && creditBalance <= 0" class="action-btn-wrap">
-        <BaseButton
-          :custom-style="actionBtnStyle"
+        <view
+          :class="canStart ? 'action-btn' : 'action-btn action-btn-disabled'"
+          hover-class="press-dim"
           @click="handleStartAnalysis"
         >
           <text class="action-btn-price">¥{{ priceText }}</text>
           <text class="action-btn-text"> 马上开启AI分析推荐</text>
-        </BaseButton>
+        </view>
       </view>
       <!-- 非付费模式或有剩余次数：原按钮，有限免时右上角展示角标（旧端 :34-46） -->
       <view v-else class="action-btn-wrap">
-        <BaseButton
-          :custom-style="actionBtnStyle"
+        <view
+          :class="canStart ? 'action-btn' : 'action-btn action-btn-disabled'"
+          hover-class="press-dim"
           @click="handleStartAnalysis"
         >
           <text class="action-btn-text">{{ uploading ? "上传中..." : "开始AI分析推荐" }}</text>
-        </BaseButton>
+        </view>
         <view v-if="isPaidMode && creditBalance > 0" class="action-btn-badge">
           <text class="action-btn-badge-text">限时免费 {{ creditBalance }} 次</text>
         </view>
@@ -674,10 +635,6 @@ function isLoggedIn(): boolean {
       @submit="submitProfile"
       @skip="skipProfile"
     />
-
-    <!-- 反馈通道门面（2026-09-23 B2）：受控加载弹层 ＋ wot Toast 挂载点 -->
-    <BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />
-    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 
@@ -714,8 +671,19 @@ function isLoggedIn(): boolean {
 }
 
 /* 分析按钮 — 与AI试衣生成按钮一致的渐变背景（旧端 :619-641 逐值） */
-/* 「开始AI分析推荐」盒模型/配色/禁态已迁入门面 `BaseButton` 的 `ACTION_BTN_STYLE`／`actionBtnStyle`（内联下发，
-   不受组件样式隔离影响）；`action-btn-text`／`action-btn-price`（槽位内容）与 `action-btn-wrap`／角标样式保留。 */
+.action-btn {
+  width: 100%;
+  height: 88rpx;
+  border-radius: 44rpx; /* 旧 --radius-xl */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  background: $color-action; /* 旧 var(--color-primary) #F1CD91 */
+}
+.action-btn-disabled {
+  opacity: 0.4;
+}
 .action-btn-text {
   font-size: 32rpx;
   color: $color-action-text; /* 旧 --color-bg（金色面上墨色 #160F04） */

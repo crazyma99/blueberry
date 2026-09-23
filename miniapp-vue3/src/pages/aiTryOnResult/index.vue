@@ -37,7 +37,7 @@ import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createAlbumSaver } from "../../platform/uni/album-save";
-import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, showModal } from "../../platform/uni/feedback";
+import { toast, showLoading, hideLoading, showModal } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
@@ -90,67 +90,11 @@ import PageFooter from "../../components/PageFooter/PageFooter.vue";
 // 2026-09-21 主人：分享准备 loading 改用 **wot popup ＋ wot loading 的公共组件** `ui/BaseLoadingPopup`
 // （内部＝wd-popup 遮罩/居中 ＋ 门面 BaseLoading＝wd-loading；token 卡片面）⇒ 本页不再自绘遮罩与卡片。
 import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
-import BaseFeedback from "../../ui/BaseFeedback.vue";
-import BaseButton from "../../ui/BaseButton.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
 import { parseServerTimeMs } from "../../application/wait-resume";
 
-/** 金色主按钮视觉（等价搬入：全局 `.btn-primary`（`App.vue:75`）＋ 本页 `.action-bar .btn-primary{height:92rpx}`）：
- *  ① 经 `custom-style` 内联下发到 wot 真实 `button` 节点 ⇒ 不受组件样式隔离影响，且**宿主节点不再挂 `.btn-primary`**
- *     （否则全局类会在宿主上再画一层，出现双底）；
- *  ② 按压态用 `--active` 变量近似复刻原 `hover-class="press-dim"`（`opacity:.82` 叠在 #160F04 上 ⇒ ≈ #D5BA83→#B68C4C）；
- *  ③ 文字 32rpx / #160F04（原 `.action-bar .btn-primary text`）由按钮节点继承（全仓无 `text` 元素级全局规则，实测安全性）。 */
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);--wot-button-primary-bg-active: linear-gradient(135deg, #D5BA83 0%, #CAAB78 45%, #B68C4C 100%);--wot-button-primary-color: #160F04;color: #160F04;height: 92rpx;border-radius: 999rpx;padding: 0 40rpx;font-size: 32rpx;line-height: 1.2;border: 1rpx solid #160F04;`;
-
-/** 金色次要按钮（等价搬入：`App.vue:93` 全局 `.btn-secondary` ＋ 本页 `.gen-actions .gen-btn` 盒模型）
- *  ——「逛逛其他客片／查看生成队列」两枚。宿主**不挂** `.btn-secondary`（全局类会与内联视觉叠加成双底）。 */
-const SECONDARY_BTN_STYLE = `--wot-button-primary-bg: rgba(241, 205, 145, 0.1);--wot-button-primary-bg-active: rgba(241, 205, 145, 0.06);--wot-button-primary-color: #F1CD91;color: #F1CD91;height: 92rpx;min-width: 240rpx;margin: 0 10rpx;padding: 0 40rpx;font-size: 32rpx;line-height: 1;border: 1rpx solid rgba(241, 205, 145, 0.5);border-radius: 999rpx;box-sizing: border-box;`;
-
-/** 「分享到朋友圈」图标按钮（原原生 `<button class="share-btn btn-secondary">` ＋ 36rpx 图标）：
- *  盒模型＝本页 `.share-btn`（`margin:20rpx 0 0 32rpx`／`min-width:160rpx`／`height:92rpx`），配色同次要按钮。 */
-const SHARE_ICON_BTN_STYLE = `--wot-button-primary-bg: rgba(241, 205, 145, 0.1);--wot-button-primary-bg-active: rgba(241, 205, 145, 0.06);--wot-button-primary-color: #F1CD91;color: #F1CD91;height: 92rpx;min-width: 160rpx;line-height: 1;margin: 20rpx 0 0 32rpx;padding: 0 40rpx;border: 1rpx solid rgba(241, 205, 145, 0.5);border-radius: 999rpx;box-sizing: border-box;`;
-
-/** 失败态「重试」（本页 `.retry-btn`：白底黑字／48rpx 圆角／`24rpx 80rpx` 内边距／底距 24rpx）；
- *  文字样式仍由槽位内 `.retry-btn-text` 提供（槽位内容归页面样式管辖）。 */
-const RETRY_BTN_STYLE = `--wot-button-primary-bg: #fff;--wot-button-primary-bg-active: #D5D4D2;--wot-button-primary-color: #000;color: #000;height: auto;border: none;border-radius: 48rpx;padding: 24rpx 80rpx;margin-bottom: 24rpx;box-sizing: border-box;`;
-
-/** 失败态「返回」（本页 `.back-btn-wrapper`：纯文字／`24rpx 80rpx` 内边距／无底色无描边）；
- *  文字色与字号由槽位内 `.back-btn-text` 提供。 */
-const BACK_BTN_STYLE = `--wot-button-primary-bg: transparent;--wot-button-primary-bg-active: rgba(241, 205, 145, 0.08);--wot-button-primary-color: rgba(241, 205, 145, 0.9);color: rgba(241, 205, 145, 0.9);height: auto;border: none;border-radius: 0;padding: 24rpx 80rpx;box-sizing: border-box;`;
-
 // —— 装配（顺序与 pages/aiTryOn/index.vue 完全同口径）——
 const detected = detectUiPlatform();
-
-// —— 反馈通道统一（2026-09-23 B2；主人「选项一，都应该改」）——
-// 加载态：微信端走门面弹层（Token 化；与页面既有的「分享准备中」弹层互不干扰——两者状态各自独立）；
-// 抖音端（AI 六页不注册，理论不进入）仍走原生，避免「两套 loading 同时出现」。
-// 轻提示：优先门面 wot Toast，门面未就绪时回落原生。**调用点（13 处 toast ＋ 2/3 处 loading）零改动**。
-const loadingPopupVisible = ref(false);
-const loadingPopupText = ref("");
-function showLoading(text: string): void {
-  if (detected === "mp-toutiao") {
-    nativeShowLoading(text);
-    return;
-  }
-  loadingPopupText.value = text;
-  loadingPopupVisible.value = true;
-}
-function hideLoading(): void {
-  if (detected === "mp-toutiao") {
-    nativeHideLoading();
-    return;
-  }
-  loadingPopupVisible.value = false;
-}
-const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
-function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
-  const f = feedbackRef.value;
-  if (f != null) {
-    f.show(text, icon as never);
-    return;
-  }
-  nativeToast(text, icon as never);
-}
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
 const env = PROFILE.environment;
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
@@ -917,16 +861,8 @@ async function loadFooterPair(): Promise<void> {
 
     <!-- 底部双按钮（与结果落地页同构：页脚之上、文档流内居中，主人指示） -->
     <view v-if="status === 'processing' && !initializing && !shareReadOnly" class="gen-actions">
-      <BaseButton
-        label="逛逛其他客片"
-        :custom-style="SECONDARY_BTN_STYLE"
-        @click="goBrowseAlbums"
-      />
-      <BaseButton
-        label="查看生成队列"
-        :custom-style="SECONDARY_BTN_STYLE"
-        @click="goGenerationQueue"
-      />
+      <button class="gen-btn btn-secondary" hover-class="press-dim" @click="goBrowseAlbums">逛逛其他客片</button>
+      <button class="gen-btn btn-secondary" hover-class="press-dim" @click="goGenerationQueue">查看生成队列</button>
     </view>
 
     <!-- 成功态 -->
@@ -958,43 +894,31 @@ async function loadFooterPair(): Promise<void> {
       </view>
       <!-- 分享落地只读：仅结果图 + 「我也要试」（bug #8 只读模式） -->
       <view v-if="shareReadOnly" class="action-bar">
-        <BaseButton
-          label="我也要试"
-          :custom-style="PRIMARY_BTN_STYLE"
-          @click="tryThisOut"
-        />
+        <view class="btn-primary" hover-class="press-dim" @click="tryThisOut">
+          <text>我也要试</text>
+        </view>
       </view>
       <view v-else class="action-bar">
         <!-- 付费模式且无剩余次数且未买断：价格按钮，点击直接拉起支付（已买断永久免费保存） -->
         <view v-if="isPaidMode && creditBalance <= 0 && !taskBought" class="save-btn-wrap">
-          <BaseButton
-            :custom-style="PRIMARY_BTN_STYLE"
-            @click="saveToAlbum"
-          >
-            <view class="btn-primary-inner">
-              <text>¥{{ priceText }}</text>
-              <text> 保存到相册</text>
-            </view>
-          </BaseButton>
+          <view class="btn-primary" hover-class="press-dim" @click="saveToAlbum">
+            <text>¥{{ priceText }}</text>
+            <text> 保存到相册</text>
+          </view>
         </view>
         <!-- 非付费模式或有剩余次数：原按钮，有次数时右上角展示角标 -->
         <view v-else class="save-btn-wrap">
-          <BaseButton
-            label="保存到相册"
-            :custom-style="PRIMARY_BTN_STYLE"
-            @click="saveToAlbum"
-          />
+          <view class="btn-primary" hover-class="press-dim" @click="saveToAlbum">
+            <text>保存到相册</text>
+          </view>
           <view v-if="isPaidMode && (creditBalance > 0 || taskBought)" class="save-btn-badge">
             <text class="save-btn-badge-text">{{ saveBadge }}</text>
           </view>
         </view>
         <button class="share-btn btn-secondary" open-type="share" hover-class="press-dim">分享</button>
-        <BaseButton
-          :custom-style="SHARE_ICON_BTN_STYLE"
-          @click="guideShareTimeline"
-        >
+        <button class="share-btn btn-secondary" @click="guideShareTimeline" hover-class="press-dim">
           <image class="moments-icon" src="/static/iconpark/share-three.svg" mode="aspectFit"></image>
-        </BaseButton>
+        </button>
       </view>
     </view>
 
@@ -1006,25 +930,15 @@ async function loadFooterPair(): Promise<void> {
         <!-- 失败文案保持通用：后端 error_message 仅记 console 日志，避免向用户泄露内部错误（CR 🟡） -->
         <text v-else-if="failCount >= 3" class="fail-text">当前服务繁忙，请稍后再试</text>
         <text v-else class="fail-text">生成失败，请重试</text>
-        <BaseButton
-          v-if="!shareReadOnly && failCount < 3"
-          :custom-style="RETRY_BTN_STYLE"
-          @click="handleRetry"
-        >
+        <view v-if="!shareReadOnly && failCount < 3" class="retry-btn" hover-class="press-dim" @click="handleRetry">
           <text class="retry-btn-text">重试</text>
-        </BaseButton>
-        <BaseButton
-          v-if="shareReadOnly"
-          label="我也要试"
-          :custom-style="PRIMARY_BTN_STYLE"
-          @click="tryThisOut"
-        />
-        <BaseButton
-          :custom-style="BACK_BTN_STYLE"
-          @click="handleBack"
-        >
+        </view>
+        <view v-if="shareReadOnly" class="btn-primary" hover-class="press-dim" @click="tryThisOut">
+          <text>我也要试</text>
+        </view>
+        <view class="back-btn-wrapper" hover-class="press-dim" @click="handleBack">
           <text class="back-btn-text">返回</text>
-        </BaseButton>
+        </view>
       </view>
     </view>
 
@@ -1036,10 +950,6 @@ async function loadFooterPair(): Promise<void> {
 
     <!-- 分享准备中 loading（点击分享后生成封面期间展示）：公共组件 BaseLoadingPopup＝wot `wd-popup`＋`wd-loading`＋token -->
     <BaseLoadingPopup :show="sharePreparing" text="正在准备分享…" direction="vertical" />
-
-    <!-- 反馈通道门面（2026-09-23 B2）：通用加载弹层 ＋ wot Toast 挂载点 -->
-    <BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />
-    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 
@@ -1126,9 +1036,20 @@ async function loadFooterPair(): Promise<void> {
   padding-right: 24rpx;
   padding-bottom: 32rpx;
 }
-/* 双按钮：2026-09-23 起走门面 `BaseButton`（`SECONDARY_BTN_STYLE` 内联）——原 `.gen-actions .gen-btn`
-   尺寸覆盖与 `.gen-btn::after{border:none}`（抹平原生 button 默认边框）随之失效并删除；
-   宿主不再挂 `.btn-secondary`/`.gen-btn`（防双底）。 */
+/* 双按钮（button 组件，主人指示）：尺寸对齐结果落地页操作栏按钮（92rpx 高 / 32rpx 字 / 40rpx 内边距）；
+   视觉（金描边+金字+金底、pill 圆角）由就地还原的 .btn-secondary 提供，此处只做尺寸覆盖 */
+.gen-actions .gen-btn {
+  height: 92rpx;
+  min-width: 240rpx;
+  padding: 0 40rpx;
+  margin: 0 10rpx; /* 旧 var(--spacing-xs) */
+  box-sizing: border-box;
+  font-size: 32rpx;
+  line-height: 1;
+}
+.gen-btn::after {
+  border: none;
+}
 
 /* 加载态（旧 :1097-1133） */
 .loading-wrapper {
@@ -1273,16 +1194,15 @@ async function loadFooterPair(): Promise<void> {
   font-size: 20rpx; /* 旧 var(--font-size-body-xs)=20rpx */
   color: #fff;
 }
-/* 操作栏按钮：`view` → 门面 `BaseButton`（2026-09-23 主人「按钮全覆盖」）后，盒模型/配色/文字全部走
-   `PRIMARY_BTN_STYLE` 内联（见 script 注释）；原 `.action-bar .btn-primary{height:92rpx}` 与
-   `.action-bar .btn-primary text{...}` 两条本页覆盖随之失效并删除（全局 `.btn-primary` 仍供他页使用）。
-   多文本按钮（价格 + 保存到相册）的 12rpx 间距由槽位内层 `.btn-primary-inner` 承担。 */
-.btn-primary-inner {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
+/* 操作栏按钮：view 与 button 原生差异抹平——统一高度 92rpx（button 原生表单组件自带默认样式，不能只靠类名对齐） */
+.action-bar .btn-primary {
+  height: 92rpx;
+  box-sizing: border-box;
+}
+.action-bar .btn-primary text {
+  color: $color-action-text; /* 旧 var(--color-bg)，金色面上墨色 */
+  font-size: 32rpx;
+  line-height: 1.2;
 }
 .share-btn {
   margin: 20rpx 0 0 32rpx; /* 旧 var(--spacing-sm) / var(--spacing-lg) */
@@ -1311,13 +1231,19 @@ async function loadFooterPair(): Promise<void> {
   margin-bottom: 48rpx;
   text-align: center;
 }
-/* 失败态按钮：2026-09-23 起走门面 `BaseButton`——原 `.retry-btn` 盒模型（白底/48rpx/padding/底距）与
-   `.back-btn-wrapper`（padding）已搬入 `RETRY_BTN_STYLE`/`BACK_BTN_STYLE` 内联；下方两条**文字**样式
-   仍是槽位内容的样式来源，保留。 */
+.retry-btn {
+  background: #fff; /* 旧 :1284 同值——失败态重试按钮白底黑字为旧端原设计，非亮色残留（2026-09-19 核对） */
+  border-radius: 48rpx; /* 旧 var(--radius-2xl) */
+  padding: 24rpx 80rpx;
+  margin-bottom: 24rpx;
+}
 .retry-btn-text {
   font-size: 32rpx;
   color: #000;
   font-weight: 400;
+}
+.back-btn-wrapper {
+  padding: 24rpx 80rpx;
 }
 .back-btn-text {
   font-size: 28rpx; /* 旧 var(--font-size-body-plus)=28rpx */

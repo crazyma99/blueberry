@@ -38,10 +38,6 @@ import { createShareCardResolver, DEFAULT_SHARE_CARDS, type ShareCard } from "..
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
-import BaseButton from "../../ui/BaseButton.vue";
-import { tokens } from "../../generated/tokens";
-/** 按钮统一走门面 BaseButton；品牌金经 wot CSS 变量绑 tokens */
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};`;
 import type { AlbumBrief } from "../../infrastructure/repositories/albums";
 
 // —— 装配（同 index：容器安全回落；登录占位不假装成功）——
@@ -422,14 +418,7 @@ onReachBottom(() => {
       </view>
       <view v-if="listVM.error.value !== null" class="list-error">
         <text>{{ listVM.error.value }}</text>
-        <BaseButton
-          class="search-btn"
-          label="重试"
-          size="small"
-          round
-          :custom-style="PRIMARY_BTN_STYLE"
-          @click="reloadList"
-        />
+        <view class="search-btn" @click="reloadList">重试</view>
       </view>
       <view v-if="albums.length === 0 && listVM.error.value === null" class="list-empty">
         <text>暂无客片</text>

@@ -62,7 +62,7 @@ import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
-import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading } from "../../platform/uni/feedback";
+import { toast, showLoading, hideLoading } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
@@ -89,17 +89,6 @@ import {
 } from "../../application/ai-recommend-flow";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import GenerationProgress from "../../components/GenerationProgress/GenerationProgress.vue";
-import BaseButton from "../../ui/BaseButton.vue";
-import BaseFeedback from "../../ui/BaseFeedback.vue";
-import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
-import { tokens } from "../../generated/tokens";
-
-/** 主按钮品牌金：经 wot CSS 变量绑 tokens（按钮统一走门面 BaseButton） */
-const PRIMARY_BTN_STYLE = `--wot-button-primary-bg: ${tokens.semantic.colorAction};--wot-button-primary-bg-active: #d9a75c;--wot-button-primary-color: ${tokens.semantic.colorActionText};color: ${tokens.semantic.colorActionText};`;
-/** 失败态「返回」纯文字按钮（等价搬入本页 `.back-btn-wrapper`：`padding:24rpx 80rpx`、无底色无描边）；
- *  文字色/字号仍由槽位内 `.back-btn-text` 提供（槽位内容归页面样式管辖）。
- *  与 `aiTryOnResult` 的「返回」同形同口径 ⇒ 一并走门面（主人 2026-09-23「按钮全部用组件来做」）。 */
-const BACK_BTN_STYLE = `--wot-button-primary-bg: transparent;--wot-button-primary-bg-active: rgba(241, 205, 145, 0.08);--wot-button-primary-color: rgba(241, 205, 145, 0.9);color: rgba(241, 205, 145, 0.9);height: auto;border: none;border-radius: 0;padding: 24rpx 80rpx;box-sizing: border-box;`;
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { useFakeProgress } from "../../composables/use-fake-progress";
 import { shouldResumeStartedAt } from "../../application/wait-resume";
@@ -107,37 +96,6 @@ import { shouldResumeStartedAt } from "../../application/wait-resume";
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
 const detected = detectUiPlatform();
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
-
-// —— 反馈通道统一（2026-09-23 B2；主人「选项一，都应该改」）——
-// 加载态：微信端走门面弹层（Token 化）；抖音端（AI 六页不注册，理论不进入）仍走原生，
-// 避免「两套 loading 同时出现」。轻提示：优先门面 wot Toast，门面未就绪时回落原生。
-// 调用点（`toast/showLoading/hideLoading`）保持零改动 ⇒ 迁移面只有本段实现。
-const loadingPopupVisible = ref(false);
-const loadingPopupText = ref("");
-function showLoading(text: string): void {
-  if (detected === "mp-toutiao") {
-    nativeShowLoading(text);
-    return;
-  }
-  loadingPopupText.value = text;
-  loadingPopupVisible.value = true;
-}
-function hideLoading(): void {
-  if (detected === "mp-toutiao") {
-    nativeHideLoading();
-    return;
-  }
-  loadingPopupVisible.value = false;
-}
-const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
-function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
-  const f = feedbackRef.value;
-  if (f != null) {
-    f.show(text, icon as never);
-    return;
-  }
-  nativeToast(text, icon as never);
-}
 const env = PROFILE.environment;
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
 const uniStorage = createUniStorage();
@@ -544,20 +502,12 @@ function redirectTo(url: string): void {
     <view v-if="status === 'failed'" class="center-content fail-overlay">
       <view class="fail-wrapper">
         <text class="fail-text">AI分析失败，请重试</text>
-        <BaseButton
-            class="retry-btn"
-            label="重试"
-            block
-            round
-            :custom-style="PRIMARY_BTN_STYLE"
-            @click="handleRetry"
-          />
-        <BaseButton
-          :custom-style="BACK_BTN_STYLE"
-          @click="handleBack"
-        >
+        <view class="retry-btn" hover-class="press-dim" @click="handleRetry">
+          <text class="retry-btn-text">重试</text>
+        </view>
+        <view class="back-btn-wrapper" hover-class="press-dim" @click="handleBack">
           <text class="back-btn-text">返回</text>
-        </BaseButton>
+        </view>
       </view>
     </view>
 
@@ -565,10 +515,6 @@ function redirectTo(url: string): void {
          PageFooter 共享组件收敛 page-footer > divide + bottomdesc 块——深色变体 + safe-area 内边距） -->
     <!-- 单实例 + 动态 props（旧端 CR 🟡：避免 v-if/v-else 重建组件、重复拉取 OPS 版权配置） -->
     <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="bottomdesc-dark" safe-area />
-
-    <!-- 反馈通道门面（2026-09-23 B2）：受控加载弹层 ＋ wot Toast 挂载点 -->
-    <BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />
-    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 
@@ -647,7 +593,9 @@ function redirectTo(url: string): void {
   color: #000;
   font-weight: 400;
 }
-/* 「返回」盒模型已迁入门面 `BaseButton` 的 `BACK_BTN_STYLE`（内联）；下方文字样式仍是槽位内容的样式来源，保留。 */
+.back-btn-wrapper {
+  padding: 24rpx 80rpx;
+}
 .back-btn-text {
   font-size: 28rpx; /* 旧 --font-size-body-plus=28rpx */
   color: rgba(241, 205, 145, 0.9); /* 旧端字面值（金 90%） */

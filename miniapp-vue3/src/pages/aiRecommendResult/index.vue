@@ -50,7 +50,7 @@ import { isPlatform, type Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
 import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
-import { navigateTo, toast as nativeToast } from "../../platform/uni/feedback";
+import { navigateTo, toast } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
@@ -63,7 +63,6 @@ import { createPageConfigRepository } from "../../infrastructure/repositories/pa
 import { cosThumb } from "../../application/image";
 import { normalizeFinalScore, shouldShowScore } from "../../application/ai-recommend-flow";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
-import BaseFeedback from "../../ui/BaseFeedback.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 
 // —— 装配（顺序与 pages/aiTryOn/index.vue、pages/aiTryOnResult/index.vue 完全同口径）——
@@ -121,18 +120,6 @@ const recommendations = ref<RecommendCard[]>([]);
 const gender = ref(""); // male | female（旧 :87/:107-112，供试衣跳转带参）
 const shopId = ref("");
 const footer = ref<FooterContent>({ mainLine: "", supportLine: "" });
-
-// —— 反馈通道统一（2026-09-23 B2；主人「选项一，都应该改」）——轻提示优先门面 wot Toast，
-// 门面未就绪（尚未挂载）时回落原生；调用点 `toast(...)` 保持零改动 ⇒ 迁移面只有本段实现与模板挂载。
-const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
-function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
-  const f = feedbackRef.value;
-  if (f != null) {
-    f.show(text, icon as never);
-    return;
-  }
-  nativeToast(text, icon as never);
-}
 
 // —— computed（旧端 :25-27 / :56）——
 // 风格关键词标签行：仅非空数组渲染（旧端 `analysis.styleKeywords.length > 0`）
@@ -334,9 +321,6 @@ function safeDecode(value: string): string {
 
     <!-- 底部 Copyright（旧端 :70-73；PageFooter 共享组件收敛 page-footer > divide + bottomdesc 块，深色变体） -->
     <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="bottomdesc-dark" />
-
-    <!-- 反馈通道门面（2026-09-23 B2）：wot Toast 挂载点 -->
-    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 
