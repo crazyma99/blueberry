@@ -23,11 +23,20 @@ import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
-import { toast, showLoading, hideLoading, showModal } from "../../platform/uni/feedback";
+import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, showModal } from "../../platform/uni/feedback";
+import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
 import QualityRejectSheet from "../../components/QualityRejectSheet/QualityRejectSheet.vue";
 import { resolveEndSideRejection } from "../../application/photo-gate";
 import { createUniAnalytics } from "../../platform/uni/analytics";
 import type { PhotoGateCheckCode } from "../../application/photo-gate";
+
+// —— 反馈/加载统一走门面（2026-09-23 主人报「上传检测结果弹窗还是微信原生风格」）——
+// 目面纪律：本页此前用 uni.showLoading/showToast（原生样式）⇒ 现统一：
+//   · 加载 → `ui/BaseLoadingPopup`（wot 弹层，Token 化）  · 轻提示 → `ui/BaseFeedback`（wot Toast）
+// 调用点（`showLoading/hideLoading/toast`）**一字不改**，只把实现换成门面；门面不可用时回落原生实现（fail-soft）。
+const loadingPopupVisible = ref(false);
+const loadingPopupText = ref("");
 import { createCaptureGuard, enableShareMenu, requestTaskNotify } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
 import { createWeixinPayments } from "../../platform/weixin/payments";
@@ -162,6 +171,34 @@ const isUploading = ref(false);
 const isSubmitting = ref(false);
 
 // 2026-09-23：后端 4002 照片质量拦截——弹「拦截提示」底部弹层（正反例对比＋重拍引导；拦截不扣次数/不扣费）
+
+// 加载态：**微信端走门面弹层（Token 化）**；抖音端（AI 六页不注册，理论不进入）仍走原生，避免「两套 loading 同时出现」
+function showLoading(text: string): void {
+  if (detected === "mp-toutiao") {
+    nativeShowLoading(text);
+    return;
+  }
+  loadingPopupText.value = text;
+  loadingPopupVisible.value = true;
+}
+function hideLoading(): void {
+  if (detected === "mp-toutiao") {
+    nativeHideLoading();
+    return;
+  }
+  loadingPopupVisible.value = false;
+}
+/** 轻提示：优先门面 wot Toast；feedbacRef 未就绪时回落原生 toast */
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string, icon?: "success" | "error" | "none" | "loading"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
+
 const analytics = createUniAnalytics();
 const showQualityReject = ref(false);
 const qualityRejectCode = ref<PhotoGateCheckCode | "unknown">("unknown");
@@ -710,6 +747,10 @@ function safeDecode(v: string): string {
     />
 
     <!-- 4002 照片质量拦截提示（底部弹层；门面 BasePopup + Tokens；正反例对比 + 重拍引导 + 未扣次数安抚） -->
+    <!-- 加载弹层（门面，Token 化）＋ wot Toast 宿主：本页所有 showLoading/hideLoading/toast 的最终呈现 -->
+    <BaseLoadingPopup :show="loadingPopupVisible" :text="loadingPopupText" />
+    <BaseFeedback ref="feedbackRef" />
+
     <QualityRejectSheet
       :show="showQualityReject"
       :code="qualityRejectCode"
