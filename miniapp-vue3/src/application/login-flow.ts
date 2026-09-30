@@ -59,6 +59,7 @@ export function createPhoneLoginFlow(deps: {
         platform: deps.platform,
         profileKey: deps.profileKey,
         authRevision: 0,
+        kind: "full", // 弹窗交互登录：UX 登录门唯一认可的会话（2026-09-28）
       });
       deps.userStore.save(toLocalUser(rawUser));
 

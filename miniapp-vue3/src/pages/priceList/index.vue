@@ -34,6 +34,7 @@ import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
 import { createPageConfigContent, type FooterContent } from "../../application/page-config-content";
+import { cosThumb } from "../../application/image";
 
 // —— 装配（同 index/demoDetail/priceHomePage）——
 const detected = detectUiPlatform();
@@ -140,7 +141,8 @@ async function loadPackages(shopId: string): Promise<void> {
       </view>
     </view>
     <view v-else>
-      <image class="price" :src="priceImage" mode="widthFix"></image>
+      <!-- PRD R2/R3：价目大图 750 WebP 缩略 + 懒加载（原图直出拖慢整页） -->
+      <image class="price" :src="cosThumb(priceImage, 750)" mode="widthFix" lazy-load></image>
       <view v-if="packages.length > 0" class="pkg-section">
         <view class="pkg-title-wrap">
           <text class="pkg-title font-noto-serif">套餐</text>
@@ -149,7 +151,7 @@ async function loadPackages(shopId: string): Promise<void> {
         <view class="pkg-list">
           <view v-for="(pkg, i) in packages" :key="i" class="pkg-card">
             <view class="pkg-img-wrap">
-              <image v-if="pkg.imageUrl" class="pkg-img" :src="pkg.imageUrl" mode="aspectFill"></image>
+              <image v-if="pkg.imageUrl" class="pkg-img" :src="cosThumb(pkg.imageUrl, 600)" mode="aspectFill" lazy-load></image>
               <view v-else class="pkg-img pkg-img-empty">
                 <text class="pkg-img-empty-text">套餐</text>
               </view>

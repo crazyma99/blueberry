@@ -70,8 +70,9 @@ function onNicknameInput(e: unknown): void {
 <template>
   <!-- 2026-09-22 主人两项：①「完善个人资料」弹窗文字须为 HarmonyOS Sans（本仓 HarmonyOS 靠全局类 `.font-harmony`，
        默认仍是系统字体）⇒ 容器挂类、所有文案继承（标题 font-noto-serif 优先）；②弹窗统一走 **wot Popup 门面** `ui/BasePopup`
-       （内部＝wot `wd-popup`，遮罩点击关闭由门面 `cancel` 转发为 `skip`，业务组件零 `wd-*` 直用）。 -->
-  <BasePopup :show="true" position="bottom" :root-portal="false" :z-index="2000" @cancel="emit('skip')">
+       （内部＝wot `wd-popup`，遮罩点击关闭由门面 `cancel` 转发为 `skip`，业务组件零 `wd-*` 直用）。
+       2026-09-29 还原旧端居中形态（同 LoginPopup）：旧端为 620rpx 定宽居中卡片（ProfilePopup.uvue :65-100），迁移期误用底部弹层。 -->
+  <BasePopup :show="true" position="center" :bare="true" :root-portal="false" :z-index="2000" @cancel="emit('skip')">
     <view class="profile-card font-harmony">
       <!-- 顶部氛围光 -->
       <view class="card-aura"></view>
@@ -110,24 +111,22 @@ function onNicknameInput(e: unknown): void {
 
 <style lang="scss" scoped>
 
-/* 居中卡片（与 LoginPopup login-card 同款视觉） */
+/* 居中卡片（与 LoginPopup login-card 同款视觉；旧端 ProfilePopup.uvue :84-100 还原：620rpx 定宽＋48rpx 全圆角；
+   迁移期底部弹层通栏/上圆角/安全区系偏差，2026-09-29 还原） */
 .profile-card {
   position: relative;
-  box-sizing: border-box; /* 修：width:100%+左右 padding 在 content-box 下会溢出屏幕（主人报「内容比弹窗宽」） */
-  width: 100%; /* 底部弹层：通栏（面/圆角/安全区由 wot 弹层承载） */
+  box-sizing: border-box;
+  width: 620rpx; /* 旧端 :85 定宽（底部弹层时期的 width:100% 系迁移偏差） */
   background: $color-popup-card; /* 面色=**主题 token**（旧端 --color-popup-card 同值）；不依赖 CSS 变量 ⇒ 微信/抖音同源 */ /* 旧 var(--color-popup-card) #262626（App.uvue :90） */
-  border-radius: #{$popup-radius-rpx * 2}rpx #{$popup-radius-rpx * 2}rpx 0 0; /* 底部弹层上圆角（token 档位） */ /* 旧 var(--radius-2xl) 48rpx（App.uvue :104） */
+  border-radius: #{$popup-radius-rpx * 2}rpx; /* 旧 var(--radius-2xl) 48rpx 全圆角（App.uvue :104） */
   padding: 56rpx 48rpx 44rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
-  /* 底部弹层用 wot `position=bottom` 自带上滑过渡，不再叠加卡片缩放动画 */
+  /* 居中弹层：微信 wd-popup 自带缩放过渡，抖音自绘分支随门面淡入，不再叠加卡片动画 */
 
   font-family: 'HarmonyOS-Sans-SC'; /* 组件样式隔离（默认 isolated）⇒ app.wxss 的 page/.font-harmony 进不来，必须自带 */
-  /* 🔴CR1：安全区必须写在 `padding:` 简写**之后**（同规则内后声明取胜；此前写在前面＝死代码） */
-  padding-bottom: calc(44rpx + constant(safe-area-inset-bottom));
-  padding-bottom: calc(44rpx + env(safe-area-inset-bottom));
 }
 /* 顶部金色氛围光 */
 .card-aura {

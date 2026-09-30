@@ -10,6 +10,7 @@
 import type { RequestContext } from "../ports/context";
 import type { BrandBrief } from "../infrastructure/repositories/brands";
 import type { PageConfigItem } from "../infrastructure/repositories/page-config";
+import { cosThumbJpg } from "./image-share";
 
 export interface ShareCard {
   title: string;
@@ -90,7 +91,9 @@ export function createShareCardResolver(deps: ShareCardResolverDeps) {
             for (const it of items as Array<{ bizName?: string; title?: string; imageUrl?: string }>) {
               if (it == null || it.bizName !== key) continue;
               if (it.title != null && it.title !== "") card.title = it.title;
-              if (it.imageUrl != null && it.imageUrl !== "") card.imageUrl = it.imageUrl;
+              // 2026-09-28 PRD R1/R3：分享卡片图走 CDN JPG 500 缩略（内含 COS 源站→CDN 改写；
+              // 卡片图只需小图，OPS 若误配源站/原图地址也在此收口）
+              if (it.imageUrl != null && it.imageUrl !== "") card.imageUrl = cosThumbJpg(it.imageUrl, 500);
               break;
             }
           }

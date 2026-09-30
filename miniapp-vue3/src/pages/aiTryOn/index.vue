@@ -28,6 +28,7 @@ import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import QualityRejectSheet from "../../components/QualityRejectSheet/QualityRejectSheet.vue";
 import { resolveEndSideRejection } from "../../application/photo-gate";
+import { confirmFaceConsent, grantFaceConsent, hasFaceConsent } from "../../application/face-consent";
 import { createUniAnalytics } from "../../platform/uni/analytics";
 import type { PhotoGateCheckCode } from "../../application/photo-gate";
 
@@ -39,12 +40,13 @@ const loadingPopupVisible = ref(false);
 const loadingPopupText = ref("");
 import { createCaptureGuard, enableShareMenu, requestTaskNotify } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
+import { createWeixinPhotoCompress } from "../../platform/weixin/photo-compress";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { buildTryonSharePath, buildTryonContextQuery } from "../../application/ai-share-routing";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
-import { createVersionedStorage } from "../../infrastructure/storage/versioned";
+import { createVersionedStorage, isFullSession } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createAiRepository } from "../../infrastructure/repositories/ai";
 import { createCreditRepository } from "../../infrastructure/repositories/credits";
@@ -62,6 +64,7 @@ import {
 } from "../../application/ai-photo-upload";
 import { createTryOnSubmitter, loadCreditInfo } from "../../application/ai-tryon-submit";
 import { createAlbumRepository } from "../../infrastructure/repositories/albums";
+import { cosThumbJpg } from "../../application/image-share";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import AiTemplatePicker from "../../components/AiTemplatePicker/AiTemplatePicker.vue";
 import AppPhotoPicker from "../../components/AppPhotoPicker/AppPhotoPicker.vue";
@@ -119,6 +122,8 @@ const uploader = createAiPhotoUploader({
     }),
 });
 const photoCheck = createWeixinPhotoCheck();
+// PRD R16/R17/R19：上传前压缩（长边≤1080、≤500KB、人脸框外扩裁剪）；fail-open 回退原图由服务端 R22 兜底
+const photoCompress = createWeixinPhotoCompress();
 const captureGuard = createCaptureGuard();
 // 旧端 :583/:622：仅提交请求在飞区间挂「提交中...」（守卫早退不挂）
 const submitter = createTryOnSubmitter({
@@ -296,7 +301,8 @@ onShareAppMessage(() => {
   return {
     title: tryonShareTitle(),
     path: buildTryonSharePath(tryonShareContext()),
-    ...(cur?.imageUrl != null && cur.imageUrl !== "" ? { imageUrl: cur.imageUrl } : {}),
+    // PRD R1/R20：分享封面走 CDN JPG 500 缩略（模板原图数 MB，微信卡片只需小图；cosThumbJpg 内含源站→CDN 改写）
+    ...(cur?.imageUrl != null && cur.imageUrl !== "" ? { imageUrl: cosThumbJpg(cur.imageUrl, 500) } : {}),
   };
 });
 onShareTimeline(() => ({
@@ -410,23 +416,46 @@ function selectAge(value: number | string): void {
   ageRange.value = ageOptions[index] ?? ageOptions[0];
 }
 
-// —— 选图 → 检测 → 上传（旧端 :430-530）——
+// —— 选图 → 压缩 → 检测 → 上传（旧端 :430-530；2026-09-28 PRD R16/R17/R19 插入压缩环节）——
 async function choosePhoto(): Promise<void> {
   if (isUploading.value) return;
   if (!isLoggedIn.value) {
     showLoginPopup.value = true; // 上传前先查登录态
     return;
   }
+  // PRD R27：人脸照片属敏感个人信息，首次选图前需单独同意（拒绝则不进入选图）
+  if (!hasFaceConsent(uniStorage, PROFILE.profileKey)) {
+    const agreed = await confirmFaceConsent();
+    if (!agreed) return;
+    grantFaceConsent(uniStorage, PROFILE.profileKey);
+    analytics.reportEvent("face_consent_grant", { ts: Date.now() });
+  }
   const picked = await chooser.choose();
   if (picked == null) return; // 取消/容器失败静默
-  if (picked.size > PHOTO_SIZE_LIMIT_BYTES) {
+  // PRD R16/R17/R19：压缩（长边≤1080、≤500KB、人脸框外扩裁剪）是唯一上传路径；
+  // 压缩不可用/异常 → fail-open 回退原图（体积红线由服务端 R22 二次压缩兜底）
+  showLoading("照片处理中...");
+  let finalPath = picked.path;
+  let finalSize = picked.size;
+  try {
+    const compressed = await photoCompress.compress(picked.path);
+    if (compressed != null) {
+      finalPath = compressed.path;
+      finalSize = compressed.size;
+    }
+  } catch (err) {
+    console.error("[aiTryOn] 照片压缩异常（回退原图）:", err);
+  }
+  hideLoading();
+  // 10MB 上限改为「压缩后仍超限才拒」：压缩产物必然远小于 10MB，仅 fail-open 回退原图时可能命中
+  if (finalSize > PHOTO_SIZE_LIMIT_BYTES) {
     toast("照片大小不能超过10MB");
     return;
   }
   showLoading("照片检测中...");
   let check = { ok: true, reason: "" };
   try {
-    check = await photoCheck.check(picked.path);
+    check = await photoCheck.check(finalPath);
   } catch (err) {
     console.error("[aiTryOn] 照片检测异常（放行）:", err);
   }
@@ -442,8 +471,8 @@ async function choosePhoto(): Promise<void> {
     analytics.reportEvent("ai_tryon_quality_reject", { check_code: mapped.code, source: "end_side" });
     return;
   }
-  photoPath.value = picked.path;
-  photoPreviewUrl.value = picked.path;
+  photoPath.value = finalPath;
+  photoPreviewUrl.value = finalPath;
   await uploadSelectedPhoto();
 }
 
@@ -453,7 +482,8 @@ async function uploadSelectedPhoto(): Promise<void> {
   uploadedFilename.value = "";
   showLoading("上传中...");
   try {
-    const res = await uploader.upload(photoPath.value);
+    // PRD R18：上传进度透出（弱网可见百分比，避免用户以为「卡死」）
+    const res = await uploader.upload(photoPath.value, (p) => showLoading(`上传中 ${p}%`));
     if (res.ok) {
       uploadedFilename.value = res.filename;
     } else {
@@ -576,7 +606,8 @@ async function handleRecharge(): Promise<void> {
 
 // —— 登录/资料弹窗（复用 P2-18 组件与 login-flow，口径同 mine 页）——
 function updateLoginState(): void {
-  isLoggedIn.value = versioned.loadSession() != null;
+  // 2026-09-28：只认弹窗交互登录（full）——静默换票会话不算「已登录」，否则 AI 试衣永不弹登录窗
+  isLoggedIn.value = isFullSession(versioned.loadSession());
   const info = userStore.load();
   profileAvatarUrl.value = info?.avatarUrl ?? "";
   profileNickname.value = info?.nickname ?? "";

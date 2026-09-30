@@ -10,14 +10,14 @@ onLaunch(() => {
     uni.loadFontFace({
       global: true,
       family: "NotoSerifSC-Bold",
-      source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/NotoSerifSC-Bold-subset.woff")',
+      source: 'url("https://www.lanmei66.cloud/font/NotoSerifSC-Bold-subset.woff")',
       success: () => console.log("[font] NotoSerifSC-Bold 加载成功"),
       fail: (err) => console.warn("NotoSerifSC-Bold 字体加载失败", err),
     });
     uni.loadFontFace({
       global: true,
       family: "HarmonyOS-Sans-SC",
-      source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/HarmonyOS_Sans_SC-subset.woff")',
+      source: 'url("https://www.lanmei66.cloud/font/HarmonyOS_Sans_SC-subset.woff")',
       success: () => console.log("[font] HarmonyOS-Sans-SC 加载成功"),
       fail: (err) => console.warn("HarmonyOS-Sans-SC 字体加载失败", err),
     });
@@ -49,15 +49,16 @@ onHide(() => {
 /* ========== 全局自定义字体（微信端在 App onLaunch 中通过 uni.loadFontFace 全局加载） ========== */
 /* 抖音端：小程序侧无 tt.loadFontFace（仅小游戏有 tt.loadFont），官方 FAQ 指定 TTSS @font-face 加载外部字体。
    微信 wxss 不支持远程 @font-face（只能靠 loadFontFace）⇒ 条件编译只进抖音 ttss。
-   ⚠️ 真机如需下载域名白名单：lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com 配到抖音后台 downloadFile 域名。 */
+   ⚠️ 字体一律走 CDN 域（2026-09-28 流量成本 PRD R1，与 COS 源站同 ETag 已实证）；
+   真机如需下载域名白名单：www.lanmei66.cloud 配到抖音后台 downloadFile 域名。 */
 /* #ifdef MP-TOUTIAO */
 @font-face {
 	font-family: 'NotoSerifSC-Bold';
-	src: url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/NotoSerifSC-Bold-subset.woff");
+	src: url("https://www.lanmei66.cloud/font/NotoSerifSC-Bold-subset.woff");
 }
 @font-face {
 	font-family: 'HarmonyOS-Sans-SC';
-	src: url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/HarmonyOS_Sans_SC-subset.woff");
+	src: url("https://www.lanmei66.cloud/font/HarmonyOS_Sans_SC-subset.woff");
 }
 /* #endif */
 /* 宋体标题：font-family: 'NotoSerifSC-Bold' */

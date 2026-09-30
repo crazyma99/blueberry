@@ -62,11 +62,12 @@ import { createUniUpload } from "../../platform/uni/upload";
 import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, navigateTo } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
+import { createWeixinPhotoCompress } from "../../platform/weixin/photo-compress";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
-import { createVersionedStorage } from "../../infrastructure/storage/versioned";
+import { createVersionedStorage, isFullSession } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createCreditRepository } from "../../infrastructure/repositories/credits";
 import { createShopRepository } from "../../infrastructure/repositories/shops";
@@ -92,6 +93,8 @@ import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import QualityRejectSheet from "../../components/QualityRejectSheet/QualityRejectSheet.vue";
 import { resolveEndSideRejection } from "../../application/photo-gate";
+import { confirmFaceConsent, grantFaceConsent, hasFaceConsent } from "../../application/face-consent";
+import { createUniAnalytics } from "../../platform/uni/analytics";
 import type { PhotoGateCheckCode } from "../../application/photo-gate";
 import BottomActionBar from "../../components/BottomActionBar/BottomActionBar.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
@@ -147,6 +150,9 @@ const uploader = createAiPhotoUploader({
     }),
 });
 const photoCheck = createWeixinPhotoCheck();
+// PRD R16/R17/R19：上传前压缩（长边≤1080、≤500KB、人脸框外扩裁剪）；fail-open 回退原图由服务端 R22 兜底
+const photoCompress = createWeixinPhotoCompress();
+const analytics = createUniAnalytics();
 const captureGuard = createCaptureGuard();
 const coordinator = createPaymentCoordinator({
   credits: creditRepo,
@@ -174,6 +180,8 @@ const photoPath = ref("");
 const photoPreviewUrl = ref("");
 const uploadedFilename = ref("");
 const uploading = ref(false);
+/** 上传进度（-1＝未知/未开始；PRD R18：按钮文案透出百分比） */
+const uploadPercent = ref(-1);
 // 登录弹窗
 // —— 反馈通道门面（与 aiTryOn 完全同口径）——
 // 加载态：微信端走门面弹层；抖音端（AI 六页不注册，理论不进入）仍走原生，避免「两套 loading 同时出现」。
@@ -247,6 +255,10 @@ const priceText = computed<string>(() => {
 });
 // 按钮可用条件（旧端内联表达式 `photoPreviewUrl !== '' && !payBusy`）：空图或支付流程中置灰
 const canStart = computed<boolean>(() => photoPreviewUrl.value !== "" && !isPaying.value);
+// PRD R18：上传中文案带进度百分比（无进度回调时退化为「上传中...」，与旧端逐字）
+const uploadBtnText = computed<string>(() =>
+  uploadPercent.value >= 0 ? `上传中 ${uploadPercent.value}%` : "上传中...",
+);
 
 // —— 生命周期（旧端 :134-183）——
 onLoad((options?: Record<string, unknown>) => {
@@ -302,16 +314,39 @@ async function resolveShopIfNeeded(): Promise<void> {
   if (isLoggedIn()) void loadCreditInfo();
 }
 
-// —— 选图 → 检测（旧端 :185-225；**上传留到点击按钮时**，与旧端一致）——
+// —— 选图 → 压缩 → 检测（旧端 :185-225；**上传留到点击按钮时**，与旧端一致）——
+// 2026-09-28 PRD R16/R17/R19：选图后先压缩（长边≤1080、≤500KB、人脸框外扩裁剪），压缩是唯一上传路径；
+// 压缩不可用/异常 → fail-open 回退原图（体积红线由服务端 R22 二次压缩兜底）
 async function choosePhoto(): Promise<void> {
   if (uploading.value) return;
+  // PRD R27：人脸照片属敏感个人信息，首次选图前需单独同意（拒绝则不进入选图）
+  if (!hasFaceConsent(uniStorage, PROFILE.profileKey)) {
+    const agreed = await confirmFaceConsent();
+    if (!agreed) return;
+    grantFaceConsent(uniStorage, PROFILE.profileKey);
+    analytics.reportEvent("face_consent_grant", { ts: Date.now() });
+  }
   const picked = await chooser.choose(); // count 1 / sizeType compressed / album+camera（旧端 :187-190）
   if (picked == null) return; // 取消/容器失败静默
-  if (picked.size > PHOTO_SIZE_LIMIT_BYTES) {
-    toast("照片大小不能超过10MB"); // 旧端 :193-196
+  showLoading("照片处理中...");
+  let finalPath = picked.path;
+  let finalSize = picked.size;
+  try {
+    const compressed = await photoCompress.compress(picked.path);
+    if (compressed != null) {
+      finalPath = compressed.path;
+      finalSize = compressed.size;
+    }
+  } catch (err) {
+    console.error("[aiRecommend] 照片压缩异常（回退原图）:", err);
+  }
+  hideLoading();
+  // 10MB 上限改为「压缩后仍超限才拒」（旧端 :193-196 的拒收语义保留，判定对象换成压缩产物）
+  if (finalSize > PHOTO_SIZE_LIMIT_BYTES) {
+    toast("照片大小不能超过10MB");
     return;
   }
-  await checkAndAcceptPhoto(picked.path);
+  await checkAndAcceptPhoto(finalPath);
 }
 
 // 照片质量拦截：未通过时弹窗告知重新上传（旧端 :204-225）
@@ -371,8 +406,11 @@ async function handleStartAnalysis(): Promise<void> {
   }
 
   uploading.value = true;
+  uploadPercent.value = -1;
   try {
-    const res = await uploader.upload(photoPath.value);
+    const res = await uploader.upload(photoPath.value, (p) => {
+      uploadPercent.value = p; // PRD R18：按钮文案透出上传百分比
+    });
     if (res.ok) {
       uploadedFilename.value = res.filename;
       uploading.value = false;
@@ -623,7 +661,8 @@ async function loadFooter(): Promise<void> {
 
 // —— 小工具 ——
 function isLoggedIn(): boolean {
-  return versioned.loadSession() != null;
+  // 2026-09-28：只认弹窗交互登录（full）——静默换票会话不算「已登录」
+  return isFullSession(versioned.loadSession());
 }
 </script>
 
@@ -663,7 +702,7 @@ function isLoggedIn(): boolean {
           hover-class="press-dim"
           @click="handleStartAnalysis"
         >
-          <text class="action-btn-text">{{ uploading ? "上传中..." : "开始AI分析推荐" }}</text>
+          <text class="action-btn-text">{{ uploading ? uploadBtnText : "开始AI分析推荐" }}</text>
         </view>
         <view v-if="isPaidMode && creditBalance > 0" class="action-btn-badge">
           <text class="action-btn-badge-text">限时免费 {{ creditBalance }} 次</text>

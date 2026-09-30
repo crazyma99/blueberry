@@ -1,7 +1,7 @@
 // P2-06 versioned storage：兼容读旧键/平台Profile有效性校验/幂等读旧写新/不删旧键/损坏安全失败。
 // 旧端键事实（旧仓实测）：token（auth.uts:23/37/48）、userInfo（auth.uts:62/79/113）、brand_id（brand.uts:17/31）。
 import { describe, expect, it } from "vitest";
-import { createVersionedStorage } from "../../src/infrastructure/storage/versioned";
+import { createVersionedStorage, isFullSession } from "../../src/infrastructure/storage/versioned";
 import type { StoragePort } from "../../src/ports/storage";
 
 function memStorage(init: Record<string, string> = {}): StoragePort & { data: Map<string, string>; sets: string[] } {
@@ -25,6 +25,7 @@ describe("createVersionedStorage（P2-06）", () => {
     expect(s).not.toBeNull();
     expect(s!.token).toBe("legacy-tok");
     expect(s!.userId).toBe("u9");
+    expect(s!.kind).toBe("full"); // 旧端 token 仅来自弹窗交互登录 ⇒ 迁移即 full（2026-09-28）
     expect(backend.data.has("lm.session.v1")).toBe(true); // 读旧写新
     expect(backend.data.get("token")).toBe("legacy-tok"); // 验证期间不删旧键
     expect(backend.data.get("userInfo")).not.toBeNull();
@@ -67,5 +68,17 @@ describe("createVersionedStorage（P2-06）", () => {
     vs.clearSession();
     expect(backend.data.has("lm.session.v1")).toBe(false);
     expect(backend.data.get("token")).toBe("t"); // 清新不删旧
+  });
+});
+
+describe("isFullSession（2026-09-28 UX 登录门口径：只认弹窗交互登录）", () => {
+  const base = { userId: "u", token: "t", platform: "mp-weixin" as const, profileKey: "blueberry", authRevision: 1 };
+  it("full → true；silent → false；无会话 → false", () => {
+    expect(isFullSession({ ...base, kind: "full" })).toBe(true);
+    expect(isFullSession({ ...base, kind: "silent" })).toBe(false);
+    expect(isFullSession(null)).toBe(false);
+  });
+  it("缺 kind（旧版本落盘会话）→ false（fail-closed，再弹一次登录）", () => {
+    expect(isFullSession(base)).toBe(false);
   });
 });

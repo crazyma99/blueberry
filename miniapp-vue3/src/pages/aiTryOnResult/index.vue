@@ -43,7 +43,7 @@ import { createWeixinPayments } from "../../platform/weixin/payments";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
-import { createVersionedStorage } from "../../infrastructure/storage/versioned";
+import { createVersionedStorage, isFullSession } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import { createAiRepository } from "../../infrastructure/repositories/ai";
@@ -67,7 +67,7 @@ import {
   saveBadgeText,
   type ResultPollState,
 } from "../../application/ai-result-flow";
-import { cosThumb } from "../../application/image";
+import { cosThumb, normalizeImageUrl } from "../../application/image";
 import { cosThumbJpg } from "../../application/image-share";
 import { generateFaceCenteredCard } from "../../platform/weixin/face-share-card";
 import { preloadImage } from "../../platform/uni/image-preload";
@@ -191,7 +191,7 @@ const elapsedSeconds = ref(0); // 等待时长（内核每秒回调；伪进度�
  */
 const startedAtMs = ref(0);
 const imageLoaded = ref(false);
-const imageUseOriginal = ref(false); // 缩略图异常时回退原图（防白屏）
+const imageUseJpgFallback = ref(false); // WebP 缩略异常时回退 JPG 缩略（防白屏；不回退原图——PRD R20）
 const imageErrored = ref(false); // 图片彻底失败：骨架图不再无限转圈
 const shopId = ref("");
 const isSaving = ref(false); // 保存流程防重入（扣费+下载保存期间拦重复点击）
@@ -218,9 +218,14 @@ const footerWaiting = ref<FooterContent>({ mainLine: "", supportLine: "" });
 const footerLines = computed<FooterContent>(() =>
   status.value === "processing" && !initializing.value ? footerWaiting.value : footerIdle.value,
 );
-// 展示用图片：原图是 Ark 全尺寸 JPEG（数 MB），统一走 COS 数据万象缩略图；原图 URL 仅用于保存/下载/分享（旧 :197-200）
+/**
+ * 展示用图片：原图是 Ark 全尺寸 JPEG（数 MB），统一走 COS 数据万象缩略图；原图 URL 仅用于保存/下载（旧 :197-200）。
+ * 2026-09-28 流量成本 PRD（R5/R20）：
+ *  · 赋值入口一律 `normalizeImageUrl` —— 服务端若下发 COS 源站域，先改写 CDN 域，**显示路径不出现源站请求**；
+ *  · 失败回退链改为「WebP 缩略 → JPG 缩略」——**不再回退原图**（用户点「保存到相册」前不请求任何原图）。
+ */
 const resultDisplayUrl = computed<string>(() =>
-  imageUseOriginal.value ? resultImageUrl.value : cosThumb(resultImageUrl.value, 1080),
+  imageUseJpgFallback.value ? cosThumbJpg(resultImageUrl.value, 1080) : cosThumb(resultImageUrl.value, 1080),
 );
 // 付费模式：已查询到余额且商户配置了单次价格（旧 :201-204）
 const isPaidMode = computed<boolean>(() => creditLoaded.value && priceFenPerCredit.value > 0);
@@ -433,9 +438,10 @@ async function queryInitialTask(): Promise<void> {
 // 完成态赋值（首查直达 ＋ 轮询完成共用；旧 :396-416）
 function applyCompleted(data: AiResultTask): void {
   imageLoaded.value = false;
-  imageUseOriginal.value = false;
+  imageUseJpgFallback.value = false;
   imageErrored.value = false;
-  resultImageUrl.value = data.result_image_url != null ? data.result_image_url : "";
+  // PRD R1：服务端若下发 COS 源站域，先改写 CDN 域（显示/预热/分享全链受益）
+  resultImageUrl.value = data.result_image_url != null ? normalizeImageUrl(data.result_image_url) : "";
   warmResultImage(); // 预热：进度 100% / 骨架图期间并行下载缩略图
   status.value = "completed";
   navTitle.value = "AI试衣结果";
@@ -458,10 +464,10 @@ async function loadSharedTask(): Promise<void> {
       shopName.value = out.shopName;
       if (out.shopId !== "") shopId.value = out.shopId;
       albumId.value = out.albumId;
-      resultImageUrl.value = out.resultImageUrl;
+      resultImageUrl.value = normalizeImageUrl(out.resultImageUrl);
       status.value = "completed";
       imageLoaded.value = false;
-      imageUseOriginal.value = false;
+      imageUseJpgFallback.value = false;
       imageErrored.value = false;
       warmResultImage();
     } else if (out.kind === "failed") {
@@ -540,7 +546,10 @@ function prepareShareCard(): Promise<void> {
     // 失败兜底（旧 catch 分支同口径）：非白名单域原样返回、空 URL 返回空串，绝不阻塞分享拉起
     // 2026-09-21 主人：「AI试衣结果分享的 VK 人脸算法裁切也遗漏了」⇒ 接回旧端 :567-586 口径：
     // 端侧 VK 人脸居中 5:4 卡片（本地临时图）优先；不可用/未检出/异常 → 回退网络 JPG（bug #11 口径不变）
-    void generateFaceCenteredCard(resultImageUrl.value).then((card) => {
+    // 端侧 VK 人脸居中 5:4 卡片（本地临时图）优先；不可用/未检出/异常 → 回退网络 JPG（bug #11 口径不变）
+    // 2026-09-28 PRD R20：入参由原图改 1080 JPG 缩略——卡片只需 750×600，拉全尺寸原图（数 MB）是纯浪费；
+    // cosThumbJpg 内部已做 COS 源站→CDN 域改写（R1），裁剪链路同样不触源站。
+    void generateFaceCenteredCard(cosThumbJpg(resultImageUrl.value, 1080)).then((card) => {
       shareCardImage.value = card != null && card.imagePath !== "" ? card.imagePath : cosThumbJpg(resultImageUrl.value, 400);
       shareCardReady.value = true;
       done();
@@ -612,10 +621,12 @@ function onImageLoad(): void {
   imageLoaded.value = true;
 }
 function onImageError(): void {
-  // 优先换一条 URL（缩略图 → 原图）重试；非本站域时 cosThumb 原样返回、换 URL 不生效 → 直接判失败
-  const thumb = cosThumb(resultImageUrl.value, 1080);
-  if (!imageUseOriginal.value && resultImageUrl.value !== "" && thumb !== resultImageUrl.value) {
-    imageUseOriginal.value = true;
+  // PRD R5/R20：失败只重试 CDN 的另一条处理链（WebP 缩略 → JPG 缩略），**不回退原图、不落 COS 源站**；
+  // 非本站域时 cosThumb/cosThumbJpg 原样返回、换 URL 不生效 → 直接判失败
+  const webp = cosThumb(resultImageUrl.value, 1080);
+  const jpg = cosThumbJpg(resultImageUrl.value, 1080);
+  if (!imageUseJpgFallback.value && resultImageUrl.value !== "" && jpg !== webp) {
+    imageUseJpgFallback.value = true;
     return;
   }
   imageErrored.value = true;
@@ -624,7 +635,7 @@ function retryImage(): void {
   if (!imageErrored.value) return;
   imageErrored.value = false;
   imageLoaded.value = false;
-  imageUseOriginal.value = !imageUseOriginal.value;
+  imageUseJpgFallback.value = !imageUseJpgFallback.value;
 }
 function warmResultImage(): void {
   if (resultImageUrl.value === "") return;
@@ -817,7 +828,8 @@ async function handleRecharge(): Promise<void> {
 
 // —— 登录态与页脚 ——
 function isLoggedIn(): boolean {
-  return versioned.loadSession() != null;
+  // 2026-09-28：只认弹窗交互登录（full）——静默换票会话不算「已登录」
+  return isFullSession(versioned.loadSession());
 }
 async function loadFooterPair(): Promise<void> {
   try {

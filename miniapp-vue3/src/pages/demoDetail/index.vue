@@ -1,8 +1,11 @@
 <script setup lang="ts">
 // T6 相册列表页（P2-11/13/14）：分类 tabs＋分页列表＋搜索＋点赞乐观更新。
 // 旧端行为事实：列表参数 shopId＋child.query 透传（demoDetail:478-482）；搜索同接口加 keyword（:551-556）；
-// liked 来自批量 getLikeStatus 合并（:613-619）；点赞乐观更新＋seq 守卫＋失败回滚（:660-693，use-like 移植）。
+// liked 来自批量 getLikeStatus 合并（:613-619，仅 full 会话才拉取——未登录态不展示收藏状态，旧端 :607 登录门）；
+// 点赞乐观更新＋seq 守卫＋失败回滚（:660-693，use-like 移植）。
 // 入参：idx=店铺id、from 来源标记（旧端 index:578-582）；缺 idx 安全失败停留空态。
+// 2026-09-28 登录门对齐旧端：旧端点赞走 login-required 订阅弹窗＋401 挂起队列登录成功后自动重试（flushPendingRequests）
+// ⇒ 新端页面门（isFullSession 只认 full 会话，静默换票不算已登录）＋ pending 补发——未登录点赞先弹登录窗，成功后自动补发该次点赞。
 import { computed, ref } from "vue";
 import { onLoad, onReachBottom, onShareAppMessage, onShareTimeline } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
@@ -15,10 +18,13 @@ import { createUniLoginCode } from "../../platform/uni/login";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
-import { createVersionedStorage } from "../../infrastructure/storage/versioned";
+import { createVersionedStorage, isFullSession } from "../../infrastructure/storage/versioned";
 import { enableShareMenu } from "../../platform/weixin/capabilities";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
+import { createUserInfoStore } from "../../application/user-info-store";
+import { createPhoneLoginFlow } from "../../application/login-flow";
+import { toast as nativeToast, showLoading, hideLoading } from "../../platform/uni/feedback";
 import { createAlbumRepository, type CategoryBrief } from "../../infrastructure/repositories/albums";
 import { createLikeRepository } from "../../infrastructure/repositories/likes";
 import { createAlbumListViewModel } from "../../composables/use-album-list";
@@ -28,6 +34,7 @@ import { formatAlbumTitle } from "../../domain/album-title";
 import { cosThumb } from "../../application/image";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 // 2026-09-21 主人：本页也要下拉刷新 ⇒ 指示器＋刷新内核走共享实现（5 页同源）
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
 import { createPullRefresh } from "../../composables/use-pull-refresh";
@@ -85,6 +92,20 @@ const ctxFactory = createContextFactory({
 });
 const listVM = createAlbumListViewModel({ albums: albumRepo });
 const liker = createLikeToggler({ likes: likeRepo });
+// 2026-09-28 登录门装配（同 aiTryOn 口径）：手机号弹窗登录流（runPhoneLogin 产出 full 会话）
+const userStore = createUserInfoStore({ backend: uniStorage });
+const phoneLoginFlow = createPhoneLoginFlow({
+  wxAuth,
+  authCoordinator,
+  userStore,
+  context: () => ctxFactory.next(),
+  platform,
+  profileKey: PROFILE.profileKey,
+});
+
+// 协议名（旧端 legal.uts:2-3；miniAppName 随 Profile）
+const userAgreementName = `《${PROFILE.miniAppName} 用户协议》`;
+const privacyPolicyName = `《${PROFILE.miniAppName} 隐私政策》`;
 
 // 分享卡片（2026-09-21 主人：「客片详情分享卡片迁移遗漏」⇒ 补迁；旧端 demoDetail.uvue:292-298/:384）
 const shareCards = createShareCardResolver({
@@ -112,6 +133,21 @@ const selectedChild = ref(0);
 const keyword = ref("");
 const searching = ref(false);
 const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+// —— 登录弹窗（2026-09-28 点赞登录门；装配口径同 aiTryOn，不配 ProfilePopup——资料补齐留给 mine 页）——
+const showLoginPopup = ref(false);
+const loginAgreementChecked = ref(false);
+/** 未登录点赞挂起的目标项；登录成功后自动补发（旧端 401 挂起队列 flushPendingRequests 语义） */
+const pendingLikeItem = ref<ListAlbum | null>(null);
+
+/** 轻提示：优先门面 BaseFeedback（wot Toast）；ref 未就绪时回落原生 toast（同 aiTryOn 写法） */
+function toast(text: string, icon?: "success" | "none"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
 
 const childTabs = computed<ChildTab[]>(() => {
   const parent = categories.value[selectedParent.value];
@@ -127,6 +163,10 @@ function currentQuery(): Record<string, string> | null {
 }
 
 async function refreshLikeStatus(): Promise<void> {
+  // 2026-09-29 未登录态不展示收藏状态（对齐旧端 demoDetail.uvue:607 `if (!isLoggedIn()) return`）：
+  // 新端 getLikeStatus 微信端 authRequired ⇒ 静默换票带票，后端会认出同一身份并返回其历史点赞，
+  // 不门控会把「已收藏」爱心带进未登录 UI。只认 full 会话（口径同本页点赞门）。
+  if (!isFullSession(versioned.loadSession())) return;
   const ids = albums.value.map((a) => a.id);
   if (ids.length === 0) return;
   const r = await likeRepo.getLikeStatus(ctxFactory.next(), ids.join(","));
@@ -222,10 +262,65 @@ function goAiTryOn(item: ListAlbum): void {
 }
 
 async function onToggleLike(item: ListAlbum): Promise<void> {
+  // 2026-09-28 登录门：只认 full 会话（弹窗交互登录）；静默换票会话不算已登录。
+  // 未登录（含仅静默）点赞/取消点赞 ⇒ 挂起本次动作并弹登录窗，登录成功后自动补发（旧端 401 挂起队列语义）
+  if (!isFullSession(versioned.loadSession())) {
+    pendingLikeItem.value = item;
+    showLoginPopup.value = true;
+    return;
+  }
   const outcome = await liker.toggle(ctxFactory.next(), item);
   if (outcome === "rolled-back") {
     feedbackRef.value?.show("操作失败，请重试");
   }
+}
+
+// —— 登录弹窗事件（口径同 aiTryOn :607-661；本页不配 ProfilePopup，phoneHasFullProfile=false 也只 toast 登录成功）——
+function closeLoginPopup(): void {
+  showLoginPopup.value = false;
+  loginAgreementChecked.value = false;
+  pendingLikeItem.value = null; // 取消登录即放弃挂起的点赞，避免下次登录误补发旧动作
+}
+function toggleLoginAgreement(): void {
+  loginAgreementChecked.value = !loginAgreementChecked.value;
+}
+function showLoginAgreementToast(): void {
+  toast("请先阅读并同意用户协议与隐私政策");
+}
+function openUserAgreement(): void {
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") uni.navigateTo({ url: "/pages/policies/user" });
+}
+function openPrivacyPolicy(): void {
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") uni.navigateTo({ url: "/pages/policies/privacy" });
+}
+async function onGetPhoneNumber(e: unknown): Promise<void> {
+  if (!loginAgreementChecked.value) {
+    showLoginAgreementToast();
+    return;
+  }
+  const detail = ((e as { detail?: Record<string, unknown> })?.detail ?? {}) as { errMsg?: string; code?: string };
+  if (detail.errMsg != null && detail.errMsg !== "getPhoneNumber:ok") {
+    toast(detail.errMsg.includes("deny") || detail.errMsg.includes("cancel") ? "已取消授权" : "授权失败，请重试");
+    return;
+  }
+  if (!detail.code) {
+    toast("获取手机号失败，请检查小程序认证状态");
+    return;
+  }
+  showLoading("登录中...");
+  const result = await phoneLoginFlow.runPhoneLogin(detail.code);
+  hideLoading();
+  if (!result.ok) {
+    toast(result.errorKind === "login" ? "获取登录凭证失败，请重试" : result.errorMsg || "登录失败");
+    return;
+  }
+  showLoginPopup.value = false;
+  loginAgreementChecked.value = false;
+  toast("登录成功", "success");
+  // 自动补发挂起的点赞（旧端 flushPendingRequests 语义）；此时会话已 full，门禁放行
+  const pending = pendingLikeItem.value;
+  pendingLikeItem.value = null;
+  if (pending != null) void onToggleLike(pending);
 }
 
 function goAiRecommend(): void {
@@ -427,6 +522,20 @@ onReachBottom(() => {
 
     <!-- 页脚：PageFooter 共享组件（原 :292-298 page-footer > divide + bottomdesc 块收敛；样式随之入组件） -->
     <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" />
+
+    <!-- 登录弹窗（2026-09-28 点赞登录门；props/事件绑定同 aiTryOn） -->
+    <LoginPopup
+      v-if="showLoginPopup"
+      :agreement-checked="loginAgreementChecked"
+      :user-agreement-name="userAgreementName"
+      :privacy-policy-name="privacyPolicyName"
+      @close="closeLoginPopup"
+      @toggle-agreement="toggleLoginAgreement"
+      @show-toast="showLoginAgreementToast"
+      @open-user="openUserAgreement"
+      @open-privacy="openPrivacyPolicy"
+      @get-phone="onGetPhoneNumber"
+    />
 
     <BaseFeedback ref="feedbackRef" />
   </view>

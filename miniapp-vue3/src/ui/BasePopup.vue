@@ -27,8 +27,12 @@ const props = withDefaults(
      *  ⚠️ 当前两弹窗底部弹层**不传**该 prop：面色/圆角/安全区由卡片 SCSS token 承载（抖音 TTSS 不支持 CSS 变量，
      *  `--wot-popup-bg` 在抖音无效）⇒ 这是跨端一致的正解。 */
     customStyle?: string;
+    /** 2026-09-29 居中卡片弹窗（LoginPopup/ProfilePopup，旧端为居中定宽卡片非底部弹层）：
+     *  仅抖音自绘分支消费——内容自带面色/圆角/定宽 ⇒ 裸盒（去底色/内边距/定宽），等同 `.is-bottom` 对盒子的中和。
+     *  微信分支无需此 prop（wd-popup 默认透明面 POPUP_TRANSPARENT_STYLE）。 */
+    bare?: boolean;
   }>(),
-  { show: false, title: "", position: "center", closable: false, rootPortal: true, zIndex: 1001, closeOnClickModal: true, customStyle: "" },
+  { show: false, title: "", position: "center", closable: false, rootPortal: true, zIndex: 1001, closeOnClickModal: true, customStyle: "", bare: false },
 );
 
 /** 🔴CR2（2026-09-22）：wot `wd-popup` 根节点自带**不透明**默认底色（`.wd-popup{background:var(--wot-popup-bg,…white)}`，本仓未定义任何 `--wot-*`）
@@ -106,7 +110,7 @@ const useNative = isToutiaoPlatform();
   </wd-popup>
   <view v-else-if="show" :class="position === 'bottom' ? 'base-popup-native is-bottom' : 'base-popup-native'" :style="{ zIndex }">
     <view class="base-popup-native__mask" @click="onClose" @touchmove.stop.prevent />
-    <view class="base-popup-native__box">
+    <view class="base-popup-native__box" :class="{ 'is-bare': bare }">
       <view v-if="closable" class="base-popup-native__close" @click="onClose">
         <text class="base-popup-native__close-text">×</text>
       </view>
@@ -162,6 +166,14 @@ const useNative = isToutiaoPlatform();
   border-radius: #{$popup-radius-rpx}rpx;
   background: $color-page;
   padding: $space-lg;
+}
+/* 裸盒（2026-09-29 居中卡片弹窗）：内容自带面色/圆角/定宽 ⇒ 盒子去底/去距/放开宽度（同 .is-bottom 中和口径） */
+.base-popup-native__box.is-bare {
+  width: auto;
+  max-width: none;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
 }
 .base-popup-native__close {
   position: absolute;

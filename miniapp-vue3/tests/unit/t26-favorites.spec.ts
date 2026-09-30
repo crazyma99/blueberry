@@ -1,6 +1,8 @@
 // T7 P2-19：收藏页冒烟＋红线回归（mock uni 生命周期＋favorites 仓储 stub；驱动方式同 t18/t19/t22/t23/t24）。
 // ⭐ 红线回归（phases P2-19）：默认列表一次性全部获取（loadData 进入即 noMore=true，无分页 UI）；
 // 分页仅存在于搜索模式（load-more 仅搜索态渲染）。别在迁移里偷偷引入默认分页。
+// 2026-09-28 登录门：非 full 会话（未登录/仅 silent）⇒ loadData 不请求、直接空态（旧端匿名拿不到列表；
+// 本页不弹窗——弹窗守卫在 mine 页菜单）；既有用例一律 seed full 会话保持原语义。
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
@@ -13,6 +15,7 @@ const h = vi.hoisted(() => ({
   searchCalls: [] as Array<{ keyword: string; page: number; size: number }>,
   navigateToCalls: [] as Array<{ url: string }>,
   navigateBackCalls: 0,
+  store: new Map<string, string>(),
   favList: [
     { id: 11, title: "红河民族风写真特辑长标题样例", coverImageUrl: "https://cos.example/f1.png", shopId: 1, likeCount: 128 },
     { id: 12, title: "短标题", coverImageUrl: "https://cos.example/f2.png", shopId: 2, likeCount: 6 },
@@ -55,6 +58,21 @@ import FavoritesPage from "../../src/pages/favorites/index.vue";
 
 const flush = () => new Promise((r) => setTimeout(r, 20));
 
+/** seed 弹窗交互登录会话（2026-09-28：UX 登录门只认 full；platform/profileKey 必须匹配否则 loadSession 拒绝） */
+function seedSession(kind: "silent" | "full"): void {
+  h.store.set(
+    "lm.session.v1",
+    JSON.stringify({
+      userId: "1",
+      token: "tk-" + kind,
+      platform: "mp-weixin",
+      profileKey: "blueberry",
+      authRevision: 1,
+      kind,
+    }),
+  );
+}
+
 beforeEach(() => {
   h.listMode = "ok";
   h.searchMode = "array";
@@ -62,10 +80,16 @@ beforeEach(() => {
   h.searchCalls.length = 0;
   h.navigateToCalls.length = 0;
   h.navigateBackCalls = 0;
+  h.store.clear();
+  seedSession("full"); // 既有用例默认已登录（full），保持门禁前的原语义
   (globalThis as { uni?: unknown }).uni = {
-    getStorageSync: () => "",
-    setStorageSync: () => {},
-    removeStorageSync: () => {},
+    getStorageSync: (k: string) => h.store.get(k) ?? "",
+    setStorageSync: (k: string, v: string) => {
+      h.store.set(k, v);
+    },
+    removeStorageSync: (k: string) => {
+      h.store.delete(k);
+    },
     navigateTo: (o: { url: string }) => {
       h.navigateToCalls.push(o);
     },
@@ -169,5 +193,54 @@ describe("pages/favorites（T7 P2-19 收藏页）", () => {
     await w.findAll(".photoItem-wrap")[0].trigger("click");
     expect(h.navigateToCalls.length).toBe(1);
     expect(h.navigateToCalls[0].url).toBe("/pages/targetPhotoDetail/index?idx=11&liked=true&type=1");
+  });
+});
+
+// ===== 2026-09-28 登录门（旧端匿名用户拿不到收藏列表 ⇒ 非 full 会话不请求、空态；本页不弹窗）=====
+describe("pages/favorites 登录门（只认 full 会话；静默会话不算已登录）", () => {
+  it("未登录（无会话）⇒ 不请求列表、直接空态（骨架/loading 关闭）", async () => {
+    h.store.clear();
+    const w = mount(FavoritesPage);
+    h.onLoadCalls[h.onLoadCalls.length - 1]();
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.listCalls).toBe(0); // 门禁在请求之前
+    expect(w.find(".sk-wrap").exists()).toBe(false); // loading 已关闭
+    expect(w.find(".empty-state").exists()).toBe(true);
+    expect(w.text()).toContain("还没有收藏任何内容哦");
+    w.unmount();
+  });
+
+  it("仅静默会话（kind:silent）⇒ 同样不请求、空态", async () => {
+    h.store.clear();
+    seedSession("silent");
+    const w = mount(FavoritesPage);
+    h.onLoadCalls[h.onLoadCalls.length - 1]();
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.listCalls).toBe(0);
+    expect(w.find(".empty-state").exists()).toBe(true);
+    w.unmount();
+  });
+
+  it("登录后返回（onShow 二次刷新）⇒ 走同一 loadData 自动恢复加载", async () => {
+    h.store.clear();
+    const w = mount(FavoritesPage);
+    h.onLoadCalls[h.onLoadCalls.length - 1]();
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.listCalls).toBe(0);
+    // 首次 onShow 跳过一次（firstShow 语义）
+    h.onShowCalls[h.onShowCalls.length - 1]();
+    await flush();
+    expect(h.listCalls).toBe(0);
+    // 用户在 mine 页完成弹窗登录（full 会话）后返回 ⇒ 二次 onShow 重拉
+    seedSession("full");
+    h.onShowCalls[h.onShowCalls.length - 1]();
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.listCalls).toBe(1);
+    expect(w.findAll(".photoItem-wrap").length).toBe(2);
+    w.unmount();
   });
 });

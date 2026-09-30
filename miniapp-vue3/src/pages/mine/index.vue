@@ -28,7 +28,7 @@ import { toast, showLoading, hideLoading } from "../../platform/uni/feedback";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
-import { createVersionedStorage } from "../../infrastructure/storage/versioned";
+import { createVersionedStorage, isFullSession } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import { createUserInfoRepository } from "../../infrastructure/repositories/user-info";
@@ -129,7 +129,8 @@ function getDefaultMenuItems(): MenuItem[] {
 }
 
 function updateLoginState(): void {
-  isLoggedIn.value = versioned.loadSession() != null;
+  // 2026-09-28：只认弹窗交互登录（full）——静默换票会话不算「已登录」
+  isLoggedIn.value = isFullSession(versioned.loadSession());
   const info = userStore.load();
   userAvatarUrl.value = info?.avatarUrl ?? "";
   userNickname.value = info?.nickname ?? "";

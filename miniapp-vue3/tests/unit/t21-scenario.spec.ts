@@ -4,9 +4,9 @@ import { progressivePhotoSrc, cosThumb } from "../../src/application/image";
 import { formatAlbumTitle } from "../../src/domain/album-title";
 
 describe("progressivePhotoSrc（P2-13 图片时序规则）", () => {
-  it("首图原图（高清主视觉）；其余 750 WebP 缩略；非 COS 域原样；空/undefined → 空串", () => {
+  it("首图 1080 预览（2026-09-28 PRD R2/R14 起不再原图直出）；其余 750 WebP 缩略；非 COS 域原样；空/undefined → 空串", () => {
     const cos = "https://lanmei66.cloud/a.jpg";
-    expect(progressivePhotoSrc(cos, 0)).toBe(cos);
+    expect(progressivePhotoSrc(cos, 0)).toBe(cosThumb(cos, 1080));
     expect(progressivePhotoSrc(cos, 1)).toBe(cosThumb(cos, 750));
     expect(progressivePhotoSrc(cos, 3)).toBe(cos + "?imageMogr2/format/webp/thumbnail/750x");
     const ext = "https://evil.example.com/b.jpg";

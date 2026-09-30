@@ -114,7 +114,7 @@ describe("application/silent-login（P2-03 静默换票 · fail-closed）", () =
     const f = make({ ok: true, value: { token: "TK", userInfo: { openid: "o1" } } });
     await expect(f.exchange(ctx)).resolves.toEqual({
       ok: true,
-      value: { userId: "o1", token: "TK", platform: "mp-weixin", profileKey: "blueberry", authRevision: 0 },
+      value: { userId: "o1", token: "TK", platform: "mp-weixin", profileKey: "blueberry", authRevision: 0, kind: "silent" },
     });
     expect(f.calls[0]).toEqual({ code: "CODE-1" });
   });

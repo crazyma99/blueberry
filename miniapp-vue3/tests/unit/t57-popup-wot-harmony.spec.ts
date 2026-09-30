@@ -99,8 +99,8 @@ describe("渲染级：弹窗经门面确实拿到透明面/层级，遮罩与卡
     const w = mount(ProfilePopup, { global: { components: { "wd-popup": StubWdPopup } } });
     expect(w.find(".profile-card").exists()).toBe(true);
     const stub = w.findComponent(StubWdPopup);
-    expect(stub.props("zIndex")).toBe(2000); // 底部弹层：须高于自绘栏 998 / Tab 栏 900（且**关闭 root-portal** 回到页面层叠）
-    expect(stub.props("position")).toBe("bottom"); // 底部弹层（主人指示）
+    expect(stub.props("zIndex")).toBe(2000); // 须高于自绘栏 998 / Tab 栏 900（且**关闭 root-portal** 回到页面层叠）
+    expect(stub.props("position")).toBe("center"); // 2026-09-29 还原旧端居中弹窗（旧端 620rpx 定宽居中卡片；迁移期底部弹层系偏差）
     
     expect(stub.props("customStyle")).toContain("--wot-popup-bg: transparent"); // 弹层保持透明面；**面色由卡片 SCSS token 承载**（抖音 TTSS 不支持 CSS 变量）
     expect(stub.props("closeOnClickModal")).toBe(true);
@@ -111,11 +111,12 @@ describe("渲染级：弹窗经门面确实拿到透明面/层级，遮罩与卡
   });
 
   // ===== 2026-09-22 主人报 v1.0.45 两处 UI 异常：内容溢出 + 被底部 Tab 栏压着 =====
-  it("底部弹层几何：两卡片 `box-sizing:border-box`（通栏+左右 padding 不溢出）", () => {
+  // 2026-09-29 居中还原：旧端两弹窗为 620rpx 定宽居中卡片（LoginPopup.uvue :98／ProfilePopup.uvue :85），迁移期通栏系偏差
+  it("居中卡片几何：两卡片 `box-sizing:border-box`＋旧端 620rpx 定宽", () => {
     for (const f of ["src/components/ProfilePopup/ProfilePopup.vue", "src/components/LoginPopup/LoginPopup.vue"]) {
       const s = read(f);
       expect(s, f).toContain("box-sizing: border-box");
-      expect(s, f).toContain("width: 100%");
+      expect(s, f).toContain("width: 620rpx");
     }
   });
 
@@ -128,35 +129,37 @@ describe("渲染级：弹窗经门面确实拿到透明面/层级，遮罩与卡
   });
 
   // ===== CR 🟡4：补两处假绿（LoginPopup 无渲染级覆盖；「Token 跟随主题色」零覆盖）=====
-  it("LoginPopup 渲染级：position=bottom／zIndex=1200／遮罩点击 cancel→close", async () => {
+  it("LoginPopup 渲染级：position=center／zIndex=2000／遮罩点击 cancel→close", async () => {
     const w = mount(LoginPopup, { global: { components: { "wd-popup": StubWdPopup } } });
     const stub = w.findComponent(StubWdPopup);
-    expect(stub.props("position")).toBe("bottom");
+    expect(stub.props("position")).toBe("center");
     expect(stub.props("zIndex")).toBe(2000);
     await w.find(".stub-popup__mask").trigger("click");
     expect(w.emitted("close")?.length).toBe(1);
   });
 
-  it("⭐Token 跟随主题色（CR 🟡4②）：两卡片面色与上圆角/安全区均走 SCSS token，且 token 源存在于 source.json", () => {
+  it("⭐Token 跟随主题色（CR 🟡4②）：两卡片面色与全圆角均走 SCSS token，且 token 源存在于 source.json", () => {
     for (const f of ["src/components/ProfilePopup/ProfilePopup.vue", "src/components/LoginPopup/LoginPopup.vue"]) {
       const s = read(f);
       expect(s, f).toContain("background: $color-popup-card");
       if (f.includes("ProfilePopup")) expect(s, f).toContain("border: 2rpx solid $color-popup-card"); // 头像角标描边同语义色（CR 🟡5）
-      expect(s, f).toMatch(/border-radius: #\{\$popup-radius-rpx \* 2\}rpx #\{\$popup-radius-rpx \* 2\}rpx 0 0;/);
-      expect(s, f).toMatch(/padding-bottom: calc\(44rpx \+ env\(safe-area-inset-bottom\)\)/);
-      // 🔴CR1：安全区必须在 `padding:` 简写之后（否则被覆盖＝死代码）
-      expect(s.indexOf("padding-bottom: calc(44rpx + env(")).toBeGreaterThan(s.indexOf("padding: 56rpx 48rpx 44rpx") > 0 ? s.indexOf("padding: 56rpx 48rpx 44rpx") : s.indexOf("padding: "));
+      // 2026-09-29 居中还原：48rpx 全圆角（旧 --radius-2xl）；不再贴底 ⇒ 底部弹层的 safe-area 适配随之移除（防回流）
+      expect(s, f).toMatch(/border-radius: #\{\$popup-radius-rpx \* 2\}rpx;/);
+      expect(s, f).not.toContain("safe-area-inset-bottom");
     }
     const src = JSON.parse(read("tokens/source.json"));
     expect(src.semantic.colorPopupCard).toBe("#262626");
   });
 
-  it("抖音自绘分支（CR 🔴2/🟡4⑥⑦）：is-bottom 判定存在、箱体重置 max-width/padding、按 position 绑类", () => {
+  it("抖音自绘分支（CR 🔴2/🟡4⑥⑦）：is-bottom 判定存在、箱体重置 max-width/padding、按 position 绑类；is-bare 裸盒供居中卡片", () => {
     const s = read("src/ui/BasePopup.vue");
     expect(s).toContain("base-popup-native.is-bottom");
     expect(s).toContain("max-width: none");
     expect(s).toContain("padding: 0");
     expect(s).toMatch(/position === 'bottom' \? 'base-popup-native is-bottom'/);
+    // 2026-09-29：居中卡片弹窗（LoginPopup/ProfilePopup）内容自带面 ⇒ 抖音自绘分支裸盒承载
+    expect(s).toContain("base-popup-native__box.is-bare");
+    expect(s).toMatch(/:class="\{ 'is-bare': bare \}"/);
   });
 
   it("门面无死 API（CR 🟡3）：两弹窗**不得**传 round／safe-area-inset-bottom／:custom-style", () => {

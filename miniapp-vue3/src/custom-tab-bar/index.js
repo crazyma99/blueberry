@@ -49,7 +49,7 @@ Component({
       wx.loadFontFace({
         global: true,
         family: 'NotoSerifSC-Bold',
-        source: 'url("https://lanmeiimgstore-1311468332.cos.ap-shanghai.myqcloud.com/font/NotoSerifSC-Bold-subset.woff")',
+        source: 'url("https://www.lanmei66.cloud/font/NotoSerifSC-Bold-subset.woff")',
       });
       // 首帧：优先用点击写入的共享值（attached 时路由可能还是旧页），否则按路由
       this.syncSelected(true);

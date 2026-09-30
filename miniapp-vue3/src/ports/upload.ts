@@ -15,6 +15,8 @@ export interface UploadRequest {
   /** 额外表单字段 */
   formData?: Readonly<Record<string, string>>;
   timeoutMs?: number;
+  /** 上传进度回调（0-100；2026-09-28 PRD R18：弱网下给用户可见的上传进度） */
+  onProgress?: (percent: number) => void;
 }
 
 export interface UploadResponse {

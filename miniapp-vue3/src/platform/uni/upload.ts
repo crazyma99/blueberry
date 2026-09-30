@@ -54,7 +54,24 @@ export function createUniUpload(deps?: { defaultTimeoutMs?: number }): UploadPor
               const msg = typeof (err as { errMsg?: unknown } | undefined)?.errMsg === "string" ? String((err as { errMsg: string }).errMsg) : "";
               resolve({ ok: false, reason: msg.includes("timeout") ? "timeout" : "network" });
             },
-          }) as { abort?: () => void } | undefined;
+          }) as { abort?: () => void; onProgressUpdate?: (cb: (res: { progress?: number }) => void) => void } | undefined;
+          // PRD R18：挂进度回调（容器不支持则静默跳过；回调异常绝不影响上传本身）
+          if (handle != null && typeof handle.onProgressUpdate === "function" && req.onProgress != null) {
+            try {
+              handle.onProgressUpdate((res) => {
+                const p = Number(res?.progress ?? 0);
+                if (p >= 0 && p <= 100) {
+                  try {
+                    req.onProgress?.(p);
+                  } catch {
+                    // 页面回调异常静默
+                  }
+                }
+              });
+            } catch {
+              // 容器异常静默
+            }
+          }
           if (!settled) task = handle ?? null;
         } catch {
           task = null;

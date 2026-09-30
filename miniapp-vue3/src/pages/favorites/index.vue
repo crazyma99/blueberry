@@ -16,6 +16,8 @@
 // 抖音 TTSS 不支持 CSS 变量故不写 var()）；
 // ⑥抖音端导航已对齐微信（2026-09-19 主人拍板）：pages.json 各页 navigationStyle custom 全平台生效，
 // CustomNavBar 抖音不再渲染空，slot 搜索框随之恢复。
+// 2026-09-28 登录门对齐旧端：旧端匿名用户拿不到收藏列表（401）⇒ 新端 loadData 非 full 会话直接空态不请求
+//（isFullSession 只认弹窗交互登录，静默换票不算已登录；本页不弹窗——弹窗守卫在 mine 页菜单）。
 import { ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
@@ -29,7 +31,7 @@ import { toast } from "../../platform/uni/feedback";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
-import { createVersionedStorage } from "../../infrastructure/storage/versioned";
+import { createVersionedStorage, isFullSession } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import {
@@ -133,6 +135,17 @@ function goBack(): void {
 
 // 收藏列表：一次性全部（红线：进入即视为已到底，旧端 :136-159）
 async function loadData(): Promise<void> {
+  // 2026-09-28 登录门：只认 full 会话（弹窗交互登录）；静默换票会话不算已登录。
+  // 非 full ⇒ 不请求、空态（旧端匿名用户拿不到收藏列表；本页不弹窗——弹窗守卫在 mine 页菜单）。
+  // onShow 刷新走同一 loadData：用户登录后返回本页会自动恢复加载。
+  if (!isFullSession(versioned.loadSession())) {
+    favoriteList.value = [];
+    isEmpty.value = true;
+    isSearching.value = false;
+    loading.value = false;
+    loadingMore.value = false;
+    return;
+  }
   try {
     loading.value = true;
     page.value = 1;

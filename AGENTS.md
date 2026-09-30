@@ -28,6 +28,11 @@
 ### 5. 数据库 / 服务端操作红线（见服务端仓库）
 - 本仓库只做纯前端；如需改服务端契约，走服务端仓库 SOP。
 
+### 6. 图片/字体资源一律走 CDN 域（2026-09-28 流量成本 PRD）
+- **禁止**在代码中硬编码或拼接 COS 源站域名（`*.cos.*.myqcloud.com`）——外网直连单价是 CDN 的 2.4 倍；
+- 图片 URL 一律经 `miniapp-vue3/src/application/image.ts`（`normalizeImageUrl`/`cosThumb`/`cosThumbJpg`）收口，源站域会被自动改写为 CDN 域；
+- 直连点清单与移交项见 `docs/traffic-cost-scan.md`。
+
 ## 二、快速操作流程
 ```bash
 # 开发 → 合并到基座（main 即开发主分支）

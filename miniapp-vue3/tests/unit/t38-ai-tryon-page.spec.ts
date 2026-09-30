@@ -17,6 +17,8 @@ const h = vi.hoisted(() => ({
   submitResult: null as unknown,
   submitCalls: 0,
   chooseImageCalls: 0,
+  modalConfirm: true, // R27 同意门桩默认放行
+  modalCalls: 0,
 }));
 
 vi.mock("@dcloudio/uni-app", () => ({
@@ -89,6 +91,8 @@ beforeEach(() => {
   h.submitResult = null;
   h.submitCalls = 0;
   h.chooseImageCalls = 0;
+  h.modalConfirm = true;
+  h.modalCalls = 0;
   h.store.clear();
   (globalThis as { uni?: unknown }).uni = {
     getStorageSync: (k: string) => h.store.get(k) ?? "",
@@ -103,7 +107,11 @@ beforeEach(() => {
     },
     showLoading: () => undefined,
     hideLoading: () => undefined,
-    showModal: () => undefined,
+    // 2026-09-28 PRD R27：人脸信息单独同意门——桩默认「同意」放行（拒绝场景见专项用例 h.modalConfirm=false）
+    showModal: (o: { success?: (r: { confirm: boolean }) => void }) => {
+      h.modalCalls += 1;
+      o.success?.({ confirm: h.modalConfirm });
+    },
     navigateTo: () => undefined,
     getSystemInfoSync: () => ({ statusBarHeight: 20 }),
     // 全链路 4002 用例：选图 → 上传（服务端返回 filename）
@@ -160,6 +168,35 @@ describe("pages/aiTryOn（T8 装配）", () => {
     expect(w.find(".login-card").exists()).toBe(true);
     expect(h.toasts).not.toContain("请先上传照片");
   });
+  it("人脸信息单独同意（PRD R27）：首次选图先弹授权；拒绝 ⇒ 不拉起选图；同意持久化后不再询问", async () => {
+    // 登录态走旧键迁移路径（同 4002 全链路用例）
+    h.store.set("token", "tok-legacy");
+    h.store.set("userInfo", JSON.stringify({ userId: "u1" }));
+    const w = mount(AiTryOnPage, { global: GLOBAL });
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
+    h.onShowCalls[h.onShowCalls.length - 1]();
+    await flush();
+    await w.vm.$nextTick();
+
+    // 拒绝 ⇒ 不进入选图（chooseImage 零调用）
+    h.modalConfirm = false;
+    w.findComponent(AppPhotoPicker).vm.$emit("click");
+    await flush();
+    expect(h.modalCalls).toBe(1);
+    expect(h.chooseImageCalls).toBe(0);
+
+    // 同意 ⇒ 持久化并拉起选图；再次选图不再询问（modal 调用数不增）
+    h.modalConfirm = true;
+    w.findComponent(AppPhotoPicker).vm.$emit("click");
+    await flush();
+    expect(h.chooseImageCalls).toBe(1);
+    w.findComponent(AppPhotoPicker).vm.$emit("click");
+    await flush();
+    expect(h.chooseImageCalls).toBe(2);
+    expect(h.modalCalls).toBe(2); // 拒绝 1 次 + 同意 1 次；之后持久化生效
+    w.unmount();
+  });
+
   // ===== 2026-09-22 主人报 Bug：A→B→C 二次转发后 C 打开空白 =====
   // 根因：结果页分享卡片的落地页是本页（试衣页），而本页**没有实现分享处理器** ⇒ B 从本页转发走微信默认转发、
   // 查询参数丢失 ⇒ C 冷启动落在无参页（无门店/相册/模板/品牌上下文）⇒ 模板列表为空、页面空白。
@@ -178,7 +215,7 @@ describe("pages/aiTryOn（T8 装配）", () => {
       expect(share.path).not.toContain("templateId=99");
       expect(share.path).toContain("shopId=1010");
       expect(share.path).toContain("brandId=brand9");
-      expect(share.imageUrl).toBe("https://lanmei66.cloud/t.png"); // 以当前模板图作封面
+      expect(share.imageUrl).toBe("https://lanmei66.cloud/t.png?imageMogr2/thumbnail/500x/format/jpg"); // 当前模板图走 CDN JPG 缩略作封面（2026-09-28 PRD R1/R20）
       expect(share.title).toContain("AI 换装");
     });
 

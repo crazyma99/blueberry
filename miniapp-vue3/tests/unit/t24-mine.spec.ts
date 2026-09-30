@@ -35,6 +35,7 @@ vi.mock("../../src/components/BottomActionBarSecondary/BottomActionBarSecondary.
 }));
 
 import MinePage from "../../src/pages/mine/index.vue";
+import { PROFILE } from "../../src/generated/profile.config";
 
 const flush = () => new Promise((r) => setTimeout(r, 20));
 
@@ -48,6 +49,7 @@ function seedLoggedIn(nickname: string | null, avatarUrl: string | null): void {
       platform: "mp-weixin",
       profileKey: "blueberry",
       authRevision: 1,
+      kind: "full", // 2026-09-28：UX 登录门只认弹窗交互登录（full）
     }),
   );
   h.store.set(
@@ -76,7 +78,9 @@ describe("pages/mine（T7 P2-18 我的页）", () => {
     await flush();
     await w.vm.$nextTick();
     expect(w.find(".nickname").text()).toBe("点击立即登陆");
-    expect(w.find(".user-sub").text()).toBe("登录后可收藏与体验AI试衣");
+    // 未登录副标题随生成期 Profile（features.mineHintText：微信「登录后可收藏与体验AI试衣」/抖音「登录后可收藏」）——
+    // 断言钉 Profile 值而非字面量，避免 profile 重生成（平台切换）后误红
+    expect(w.find(".user-sub").text()).toBe(PROFILE.features.mineHintText);
     expect(w.find(".avatar-img").exists()).toBe(false);
     expect(w.find(".logout-btn").exists()).toBe(false);
     expect(w.find(".stub-login-popup").exists()).toBe(false);

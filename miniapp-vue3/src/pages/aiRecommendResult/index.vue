@@ -309,6 +309,7 @@ function safeDecode(value: string): string {
             class="rec-preview"
             :src="previewThumb(rec.previewUrl)"
             mode="aspectFill"
+            lazy-load
             @load="onPreviewLoad(idx)"
           ></image>
           <view v-else class="rec-preview rec-preview-placeholder">

@@ -20,6 +20,15 @@ export interface VersionedStorage {
   saveBrandId(id: string): void;
 }
 
+/**
+ * 2026-09-28 UX 登录门口径：仅弹窗交互登录（kind==="full"）算「已登录」。
+ * 静默换票会话（silent）只给 authRequired 接口带票，不得通过 UX 门——
+ * 否则用户从不弹登录窗（AI 试衣/AI 推荐等转化场景失守）。
+ */
+export function isFullSession(s: Session | null): boolean {
+  return s != null && s.kind === "full";
+}
+
 export function createVersionedStorage(deps: {
   backend: StoragePort;
   platform: Platform;
@@ -62,6 +71,7 @@ export function createVersionedStorage(deps: {
       platform: deps.platform,
       profileKey: deps.profileKey,
       authRevision: 0,
+      kind: "full", // 旧端 token 仅来自弹窗交互登录（auth.uts loginSuccess）⇒ 迁移即 full（2026-09-28）
     };
     // 幂等读旧写新：仅在新键缺失时写入（本分支即缺失）；旧键保留不删
     deps.backend.set(K_SESSION, JSON.stringify(migrated));

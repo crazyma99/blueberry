@@ -34,6 +34,7 @@ export function createSilentIdentityExchange(deps: {
           platform: deps.platform,
           profileKey: deps.profileKey,
           authRevision: 0, // 协调器 completeLogin 会自增并覆盖
+          kind: "silent", // 静默换票会话：仅带票用，UX 登录门不认（2026-09-28）
         },
       };
     } catch (err) {

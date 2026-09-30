@@ -1,9 +1,11 @@
 <script setup lang="ts">
 // T6 客片详情页（P2-11 最后一页）：详情图渐进加载（首图原图、其余 750 WebP 缩略，旧端 :68-72）
-// ＋价格/套餐（:46-53）＋点赞（getLikeStatus 单 id 合并 :246-250 ＋ use-like 乐观更新）。
+// ＋价格/套餐（:46-53）＋点赞（getLikeStatus 单 id 合并 :246-250——仅 full 会话才查，未登录态不展示收藏状态＋ use-like 乐观更新）。
 // 加载态＝骨架屏 1:1 镜像真实布局（旧端 :13-35），且详情+点赞就绪后预加载前 3 张详情图再收起（旧端 :232-237）。
 // 非 shareToken 作品页（P2-11 边界）；BottomActionBar（AI 试衣按钮＋内置版权 footer）已随 2026-09-19 主人反馈补齐
 // ——AI 按钮仅微信渲染（AI 页不进抖音 Profile），版权栏全平台。
+// 2026-09-28 登录门对齐旧端：旧端点赞走 login-required 订阅弹窗＋401 挂起队列登录成功后自动重试（flushPendingRequests）
+// ⇒ 新端页面门（isFullSession 只认 full 会话，静默换票不算已登录）＋ pending 补发——未登录点赞先弹登录窗，成功后自动补发该次点赞。
 import { computed, ref } from "vue";
 import { onLoad, onShareAppMessage, onShareTimeline } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
@@ -17,9 +19,12 @@ import { createUniLoginCode } from "../../platform/uni/login";
 import { createAuthCoordinator } from "../../application/auth-coordinator";
 import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
-import { createVersionedStorage } from "../../infrastructure/storage/versioned";
+import { createVersionedStorage, isFullSession } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
+import { createUserInfoStore } from "../../application/user-info-store";
+import { createPhoneLoginFlow } from "../../application/login-flow";
+import { toast as nativeToast, showLoading, hideLoading } from "../../platform/uni/feedback";
 import { createAlbumRepository, type AlbumDetail } from "../../infrastructure/repositories/albums";
 import { createLikeRepository } from "../../infrastructure/repositories/likes";
 import { createLikeToggler, type LikeableItem } from "../../composables/use-like";
@@ -28,6 +33,7 @@ import { progressivePhotoSrc } from "../../application/image";
 import { preloadImages } from "../../platform/uni/image-preload";
 import { formatCount } from "../../application/format";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 // 2026-09-21 主人：本页也要下拉刷新 ⇒ 指示器＋刷新内核走共享实现（5 页同源）
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
 import { createPullRefresh } from "../../composables/use-pull-refresh";
@@ -70,6 +76,20 @@ const ctxFactory = createContextFactory({
   getBrandId: () => versioned.loadBrandId(),
 });
 const liker = createLikeToggler({ likes: likeRepo });
+// 2026-09-28 登录门装配（同 aiTryOn 口径）：手机号弹窗登录流（runPhoneLogin 产出 full 会话）
+const userStore = createUserInfoStore({ backend: uniStorage });
+const phoneLoginFlow = createPhoneLoginFlow({
+  wxAuth,
+  authCoordinator,
+  userStore,
+  context: () => ctxFactory.next(),
+  platform,
+  profileKey: PROFILE.profileKey,
+});
+
+// 协议名（旧端 legal.uts:2-3；miniAppName 随 Profile）
+const userAgreementName = `《${PROFILE.miniAppName} 用户协议》`;
+const privacyPolicyName = `《${PROFILE.miniAppName} 隐私政策》`;
 // 2026-09-21：`/api/page-config` 单一仓储实例（页脚内容 + 分享卡片共用，同 index 口径）
 const pageConfigRepo = createPageConfigRepository({ client });
 // 页脚用例（口径同 demoDetail/favorites：BottomActionBar 内置 AppFooter 为纯 props 组件，两行文案须由页面用例注入）
@@ -112,6 +132,21 @@ const subCategory = ref("");
 const styleText = ref("");
 const likeState = ref<LikeableItem | null>(null);
 const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+// —— 登录弹窗（2026-09-28 点赞登录门；装配口径同 aiTryOn，不配 ProfilePopup——资料补齐留给 mine 页）——
+const showLoginPopup = ref(false);
+const loginAgreementChecked = ref(false);
+/** 未登录点赞挂起标记；登录成功后自动补发（旧端 401 挂起队列 flushPendingRequests 语义） */
+const pendingLike = ref(false);
+
+/** 轻提示：优先门面 BaseFeedback（wot Toast）；ref 未就绪时回落原生 toast（同 aiTryOn 写法） */
+function toast(text: string, icon?: "success" | "none"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
 
 const images = computed<DetailImage[]>(() => {
   const list = detail.value != null ? (detail.value.images as DetailImage[] | undefined) : undefined;
@@ -132,9 +167,12 @@ async function init(id: string, type: string): Promise<void> {
     return;
   }
   detail.value = rd.value;
-  // liked 批量接口按单 id 查询合并（旧端 :246-250）
-  const rl = await likeRepo.getLikeStatus(ctxFactory.next(), id);
-  if (rl.ok && rl.value.length > 0) {
+  // liked 批量接口按单 id 查询合并（旧端 :246-250）。
+  // 2026-09-29 未登录态不展示收藏状态（同 demoDetail 一族）：仅 full 会话才查点赞态——
+  // 旧端无静默换票，匿名请求后端 liked 恒 false；新端 getLikeStatus 微信端 authRequired 静默换票带票，
+  // 不门控会把该身份的历史收藏带进未登录 UI（爱心误点亮）。
+  const rl = isFullSession(versioned.loadSession()) ? await likeRepo.getLikeStatus(ctxFactory.next(), id) : null;
+  if (rl != null && rl.ok && rl.value.length > 0) {
     const s = rl.value[0];
     likeState.value = { id: s.albumId, liked: s.liked, likeCount: s.likeCount };
   } else {
@@ -161,10 +199,65 @@ const { refreshing, indicatorTop } = createPullRefresh({
 
 async function onToggleLike(): Promise<void> {
   if (likeState.value == null) return;
+  // 2026-09-28 登录门：只认 full 会话（弹窗交互登录）；静默换票会话不算已登录。
+  // 未登录（含仅静默）点赞/取消点赞 ⇒ 挂起本次动作并弹登录窗，登录成功后自动补发（旧端 401 挂起队列语义）
+  if (!isFullSession(versioned.loadSession())) {
+    pendingLike.value = true;
+    showLoginPopup.value = true;
+    return;
+  }
   const outcome = await liker.toggle(ctxFactory.next(), likeState.value);
   if (outcome === "rolled-back") {
     feedbackRef.value?.show("操作失败，请重试");
   }
+}
+
+// —— 登录弹窗事件（口径同 aiTryOn :607-661；本页不配 ProfilePopup，phoneHasFullProfile=false 也只 toast 登录成功）——
+function closeLoginPopup(): void {
+  showLoginPopup.value = false;
+  loginAgreementChecked.value = false;
+  pendingLike.value = false; // 取消登录即放弃挂起的点赞，避免下次登录误补发旧动作
+}
+function toggleLoginAgreement(): void {
+  loginAgreementChecked.value = !loginAgreementChecked.value;
+}
+function showLoginAgreementToast(): void {
+  toast("请先阅读并同意用户协议与隐私政策");
+}
+function openUserAgreement(): void {
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") uni.navigateTo({ url: "/pages/policies/user" });
+}
+function openPrivacyPolicy(): void {
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") uni.navigateTo({ url: "/pages/policies/privacy" });
+}
+async function onGetPhoneNumber(e: unknown): Promise<void> {
+  if (!loginAgreementChecked.value) {
+    showLoginAgreementToast();
+    return;
+  }
+  const detail = ((e as { detail?: Record<string, unknown> })?.detail ?? {}) as { errMsg?: string; code?: string };
+  if (detail.errMsg != null && detail.errMsg !== "getPhoneNumber:ok") {
+    toast(detail.errMsg.includes("deny") || detail.errMsg.includes("cancel") ? "已取消授权" : "授权失败，请重试");
+    return;
+  }
+  if (!detail.code) {
+    toast("获取手机号失败，请检查小程序认证状态");
+    return;
+  }
+  showLoading("登录中...");
+  const result = await phoneLoginFlow.runPhoneLogin(detail.code);
+  hideLoading();
+  if (!result.ok) {
+    toast(result.errorKind === "login" ? "获取登录凭证失败，请重试" : result.errorMsg || "登录失败");
+    return;
+  }
+  showLoginPopup.value = false;
+  loginAgreementChecked.value = false;
+  toast("登录成功", "success");
+  // 自动补发挂起的点赞（旧端 flushPendingRequests 语义）；此时会话已 full，门禁放行
+  const again = pendingLike.value;
+  pendingLike.value = false;
+  if (again) void onToggleLike();
 }
 
 function onRetry(): void {
@@ -313,6 +406,20 @@ onLoad((options) => {
       <text>{{ error != null ? error : "加载失败" }}</text>
       <view class="retry-btn" @click="onRetry">重试</view>
     </view>
+
+    <!-- 登录弹窗（2026-09-28 点赞登录门；props/事件绑定同 aiTryOn） -->
+    <LoginPopup
+      v-if="showLoginPopup"
+      :agreement-checked="loginAgreementChecked"
+      :user-agreement-name="userAgreementName"
+      :privacy-policy-name="privacyPolicyName"
+      @close="closeLoginPopup"
+      @toggle-agreement="toggleLoginAgreement"
+      @show-toast="showLoginAgreementToast"
+      @open-user="openUserAgreement"
+      @open-privacy="openPrivacyPolicy"
+      @get-phone="onGetPhoneNumber"
+    />
 
     <BaseFeedback ref="feedbackRef" />
   </view>

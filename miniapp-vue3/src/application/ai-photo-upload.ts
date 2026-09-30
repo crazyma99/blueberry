@@ -65,12 +65,13 @@ export function createAiPhotoUploader(deps: {
   /** 每次上传时求值（会话/品牌可能变化） */
   headers: () => Record<string, string>;
 }) {
-  async function upload(path: string): Promise<UploadSuccess | UploadFailure> {
+  async function upload(path: string, onProgress?: (percent: number) => void): Promise<UploadSuccess | UploadFailure> {
     const res = await deps.upload.upload({
       url: deps.baseUrl.replace(/\/+$/, "") + "/api/aiface/upload",
       filePath: path,
       name: "photo",
       headers: deps.headers(),
+      onProgress, // PRD R18：上传进度透传（页面据此展示百分比）
     });
     if (!res.ok) {
       // 超时与普通失败区分（2026-09-17：模拟器/弱网下超时若无提示，用户会以为「卡死」）

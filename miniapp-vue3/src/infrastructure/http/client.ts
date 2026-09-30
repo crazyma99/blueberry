@@ -13,6 +13,13 @@ export interface Session {
   platform: Platform;
   profileKey: string;
   authRevision: number;
+  /**
+   * 2026-09-28 会话来源：静默换票（silent）／弹窗交互登录（full）。
+   * UX 登录门（AI 试衣上传/生成、AI 推荐、我的页、试衣结果页）只认 "full"——
+   * 旧端 token 仅来自弹窗交互登录；silent 会话仅用于 authRequired 接口带票，不算「已登录」。
+   * 缺省（旧版本落盘会话无此字段）按非 full 处理 ⇒ 门 fail-closed，再弹一次登录。
+   */
+  kind?: "silent" | "full";
 }
 
 /** client 消费的认证端口最小面（waitForLogin 语义见 P2-03：队列唤醒/取消全 reject） */

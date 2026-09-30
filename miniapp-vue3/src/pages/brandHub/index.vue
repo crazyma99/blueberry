@@ -34,6 +34,7 @@ import { createPageConfigRepository } from "../../infrastructure/repositories/pa
 import { createBrandRepository, type BrandBrief } from "../../infrastructure/repositories/brands";
 import { createBrandHubGate } from "../../application/brand-hub-gate";
 import { hapticTap } from "../../application/haptics";
+import { cosThumb } from "../../application/image";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 
@@ -153,7 +154,7 @@ function enterBrand(b: BrandBrief): void {
           @click="enterBrand(b)"
         >
           <view class="brand-logo-wrap">
-            <image v-if="b.logoUrl" class="brand-logo" :src="b.logoUrl" mode="aspectFill"></image>
+            <image v-if="b.logoUrl" class="brand-logo" :src="cosThumb(b.logoUrl, 200)" mode="aspectFill" lazy-load></image>
             <view v-else class="brand-logo brand-logo-default">
               <text class="brand-logo-text">{{ b.brandName.charAt(0) }}</text>
             </view>
