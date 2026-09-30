@@ -8,7 +8,8 @@
 //    templateId/brandId）→（随机相册先解析）loadTemplates；onShow 开防截屏＋监听 login-required＋已登录查次数（:271-287）；
 //    onHide 关防截屏（:288-294）；**onUnload 也必须关**（:295-299，旧端教训：redirectTo/reLaunch 只触发 onUnload，残留致全端无法截屏）
 //  · 业务语义：模板双入口（albub 精确 vs travel 店铺维度＋相册空列表回退本店全部并提示，:357-398）、
-//    选图→10MB 上限→质量检测→上传（:430-530）、提交守卫与 4001 处理（:531-628，见 application/ai-tryon-submit）、
+//    选图→压缩（R16/R19 fail-closed）→质量检测→上传（:430-530，R18 进度/剩余时间/弱网提示/失败一键重试）、
+//    提交守卫与 4001 处理（:531-628，见 application/ai-tryon-submit）、
 //    次数与定价（:629-643）、充值（**改用 T9a 共享 payment-coordinator，页面零自建轮询**）。
 // 有意偏差（已声明）：①主题保持旧端**深色页底**（`#160F04`，与 BottomActionBar 同口径）；②登录/资料弹窗复用新端组件与
 // login-flow（旧端直连 auth.uts/loginFlow.uts）；③充值轮询由 coordinator 承担（T9a 冻结：idle→creatingOrder→…→succeeded，
@@ -62,6 +63,7 @@ import {
   createAiPhotoUploader,
   PHOTO_SIZE_LIMIT_BYTES,
 } from "../../application/ai-photo-upload";
+import { formatUploadProgressText } from "../../application/upload-progress";
 import { createTryOnSubmitter, loadCreditInfo } from "../../application/ai-tryon-submit";
 import { createAlbumRepository } from "../../infrastructure/repositories/albums";
 import { cosThumbJpg } from "../../application/image-share";
@@ -122,7 +124,8 @@ const uploader = createAiPhotoUploader({
     }),
 });
 const photoCheck = createWeixinPhotoCheck();
-// PRD R16/R17/R19：上传前压缩（长边≤1080、≤500KB、人脸框外扩裁剪）；fail-open 回退原图由服务端 R22 兜底
+// PRD R16/R19：上传前压缩（长边≤1080、≤500KB；2026-09-30 PRD 更新：只压缩不裁剪）；
+// fail-closed：压缩不可用即阻断并提示重试，客户端无「上传原图」旁路（服务端 R22 二次压缩兜底）
 const photoCompress = createWeixinPhotoCompress();
 const captureGuard = createCaptureGuard();
 // 旧端 :583/:622：仅提交请求在飞区间挂「提交中...」（守卫早退不挂）
@@ -173,6 +176,9 @@ const photoPath = ref("");
 const photoPreviewUrl = ref("");
 const uploadedFilename = ref("");
 const isUploading = ref(false);
+/** 上传失败待重试（PRD R18：失败可一键重试——photoPath 保留，点「重试」直接重传，不重选照片） */
+const uploadFailed = ref(false);
+let uploadStartTs = 0; // R18：剩余时间/弱网判定基准
 const isSubmitting = ref(false);
 
 // 2026-09-23：后端 4002 照片质量拦截——弹「拦截提示」底部弹层（正反例对比＋重拍引导；拦截不扣次数/不扣费）
@@ -214,6 +220,7 @@ function clearPhotoSelection(): void {
   photoPath.value = "";
   photoPreviewUrl.value = "";
   uploadedFilename.value = "";
+  uploadFailed.value = false;
 }
 
 /** 弹层「重新选择照片」⇒ 关弹层并复用既有 选图→端侧预检→上传 链路 */
@@ -416,7 +423,7 @@ function selectAge(value: number | string): void {
   ageRange.value = ageOptions[index] ?? ageOptions[0];
 }
 
-// —— 选图 → 压缩 → 检测 → 上传（旧端 :430-530；2026-09-28 PRD R16/R17/R19 插入压缩环节）——
+// —— 选图 → 压缩 → 检测 → 上传（旧端 :430-530；2026-09-28 PRD R16/R19 插入压缩环节）——
 async function choosePhoto(): Promise<void> {
   if (isUploading.value) return;
   if (!isLoggedIn.value) {
@@ -432,22 +439,23 @@ async function choosePhoto(): Promise<void> {
   }
   const picked = await chooser.choose();
   if (picked == null) return; // 取消/容器失败静默
-  // PRD R16/R17/R19：压缩（长边≤1080、≤500KB、人脸框外扩裁剪）是唯一上传路径；
-  // 压缩不可用/异常 → fail-open 回退原图（体积红线由服务端 R22 二次压缩兜底）
+  // PRD R16/R19：压缩（长边≤1080、≤500KB；2026-09-30 PRD 更新：只压缩不裁剪）是唯一上传路径；
+  // fail-closed：压缩不可用/异常 → 阻断并提示重试，**不上传原图**（体积红线另有服务端 R22 二次压缩兜底）
   showLoading("照片处理中...");
-  let finalPath = picked.path;
-  let finalSize = picked.size;
+  let compressed: Awaited<ReturnType<typeof photoCompress.compress>> = null;
   try {
-    const compressed = await photoCompress.compress(picked.path);
-    if (compressed != null) {
-      finalPath = compressed.path;
-      finalSize = compressed.size;
-    }
+    compressed = await photoCompress.compress(picked.path);
   } catch (err) {
-    console.error("[aiTryOn] 照片压缩异常（回退原图）:", err);
+    console.error("[aiTryOn] 照片压缩异常:", err);
   }
   hideLoading();
-  // 10MB 上限改为「压缩后仍超限才拒」：压缩产物必然远小于 10MB，仅 fail-open 回退原图时可能命中
+  if (compressed == null) {
+    toast("照片处理失败，请重试");
+    return;
+  }
+  const finalPath = compressed.path;
+  const finalSize = compressed.size;
+  // 10MB 上限保留（旧端 :193-196 拒收语义；压缩产物必然远小于 10MB，正常路径不会命中）
   if (finalSize > PHOTO_SIZE_LIMIT_BYTES) {
     toast("照片大小不能超过10MB");
     return;
@@ -479,26 +487,36 @@ async function choosePhoto(): Promise<void> {
 async function uploadSelectedPhoto(): Promise<void> {
   if (photoPath.value === "") return;
   isUploading.value = true;
+  uploadFailed.value = false;
   uploadedFilename.value = "";
+  uploadStartTs = Date.now();
   showLoading("上传中...");
   try {
-    // PRD R18：上传进度透出（弱网可见百分比，避免用户以为「卡死」）
-    const res = await uploader.upload(photoPath.value, (p) => showLoading(`上传中 ${p}%`));
+    // PRD R18：上传进度透出（百分比＋剩余时间；弱网给明确提示，避免用户以为「卡死」）
+    const res = await uploader.upload(photoPath.value, (p) => showLoading(formatUploadProgressText(p, uploadStartTs)));
     if (res.ok) {
       uploadedFilename.value = res.filename;
     } else {
       uploadedFilename.value = "";
+      uploadFailed.value = true; // R18：保留 photoPath，模板出「重试」入口（一键重传，不重选照片）
       toast(res.message);
       if (res.authExpired === true) showLoginPopup.value = true; // 401 → 拉登录（不静默成功）
     }
   } catch (err) {
     console.error("照片上传失败:", err);
     uploadedFilename.value = "";
-    toast("照片上传失败，请重新选择");
+    uploadFailed.value = true;
+    toast("照片上传失败，请重试");
   } finally {
     isUploading.value = false;
     hideLoading();
   }
+}
+
+/** PRD R18：上传失败后一键重试（重传当前照片，不重新选图） */
+function retryUpload(): void {
+  if (isUploading.value || photoPath.value === "") return;
+  void uploadSelectedPhoto();
 }
 
 // —— 提交（旧端 :531-628；业务在 application/ai-tryon-submit）——
@@ -722,6 +740,10 @@ function safeDecode(v: string): string {
     <view class="section">
       <text class="section-label">上传你的照片：</text>
       <AppPhotoPicker :photo-url="photoPreviewUrl" :busy="isUploading" @click="choosePhoto" />
+      <!-- PRD R18：上传失败一键重试（重传当前照片，不重选） -->
+      <view v-if="uploadFailed && !isUploading" class="upload-retry" hover-class="press-dim" @click="retryUpload">
+        <text class="upload-retry-text">上传失败，点击重试</text>
+      </view>
     </view>
 
     <view class="bottom-spacer"></view>
@@ -895,6 +917,20 @@ function safeDecode(v: string): string {
   border: 1rpx solid rgba(241, 205, 145, 0.3);
   border-radius: 32rpx;
   font-size: 32rpx;
+  color: #F1CD91;
+}
+
+/* 上传失败一键重试条（PRD R18；与 tpl-empty-btn 同族金色描边胶囊） */
+.upload-retry {
+  margin-top: 16rpx;
+  padding: 12rpx 32rpx;
+  border: 1rpx solid rgba(241, 205, 145, 0.3);
+  border-radius: 32rpx;
+  display: flex;
+  justify-content: center;
+}
+.upload-retry-text {
+  font-size: 24rpx;
   color: #F1CD91;
 }
 </style>

@@ -151,7 +151,8 @@ async function loadPackages(shopId: string): Promise<void> {
         <view class="pkg-list">
           <view v-for="(pkg, i) in packages" :key="i" class="pkg-card">
             <view class="pkg-img-wrap">
-              <image v-if="pkg.imageUrl" class="pkg-img" :src="cosThumb(pkg.imageUrl, 600)" mode="aspectFill" lazy-load></image>
+              <!-- PRD R2：套餐图展示位仅 160rpx（≈240px@3x）⇒ 缩略宽度 600→300，够用且流量减半 -->
+              <image v-if="pkg.imageUrl" class="pkg-img" :src="cosThumb(pkg.imageUrl, 300)" mode="aspectFill" lazy-load></image>
               <view v-else class="pkg-img pkg-img-empty">
                 <text class="pkg-img-empty-text">套餐</text>
               </view>

@@ -33,6 +33,7 @@ import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import { createUserInfoRepository } from "../../infrastructure/repositories/user-info";
 import { createUserInfoStore } from "../../application/user-info-store";
+import { cosThumb } from "../../application/image";
 import { createPhoneLoginFlow, toLocalUser } from "../../application/login-flow";
 import { hapticTap } from "../../application/haptics";
 import { syncTabBarSelected } from "../../application/tabbar";
@@ -104,7 +105,8 @@ const profileNickname = ref("");
 const profileFromLogin = ref(false);
 
 // 显示用头像：未登录恒 ''（旧端 :148-151）
-const displayAvatar = computed(() => (isLoggedIn.value ? userAvatarUrl.value : ""));
+// PRD R2：头像展示位 108rpx ⇒ 自家 CDN 头像包一层 200px 缩略（微信 qlogo 等非自家域由 cosThumb 安全透传）
+const displayAvatar = computed(() => (isLoggedIn.value ? cosThumb(userAvatarUrl.value, 200) : ""));
 // 显示用昵称三态（旧端 :153-157）
 const displayNickname = computed(() => {
   if (!isLoggedIn.value) return "点击立即登陆";

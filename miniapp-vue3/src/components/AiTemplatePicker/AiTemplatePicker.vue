@@ -55,6 +55,19 @@ function tplThumb(url: string | undefined): string {
 function thThumb(url: string | undefined): string {
   return cosThumb(url ?? "", 200);
 }
+/**
+ * 主图按需加载（2026-09-30 流量成本 PRD R3，首屏图片请求 ≤6）：
+ * swiper 内 `lazy-load` 对交替项不可靠（微信 swiper 非滚动容器，懒加载判定有平台差异教训——红线 4 调研结论），
+ * 改为确定性窗口化：只给「当前 ±1（环形）」的 swiper-item 喂 src，其余给空串；
+ * 切换时 @change 更新 currentIndex → 新窗口立即加载（相邻项已预载，滑动无白屏）。
+ */
+function isMainActive(index: number): boolean {
+  const n = props.templates.length;
+  if (n <= 3) return true; // 模板数 ≤3 时全量加载（窗口已覆盖全部）
+  const c = props.currentIndex;
+  const d = Math.min(Math.abs(index - c), n - Math.abs(index - c)); // 环形距离
+  return d <= 1;
+}
 </script>
 
 <template>
@@ -68,7 +81,8 @@ function thThumb(url: string | undefined): string {
     <view class="swiper-wrap">
       <swiper class="template-swiper" :circular="true" :current="props.currentIndex" @change="onSwiperChange">
         <swiper-item v-for="(item, index) in props.templates" :key="index">
-          <image class="template-img" :src="tplThumb(item.imageUrl)" mode="aspectFill"></image>
+          <!-- 主图窗口化按需加载（R3）：非当前 ±1 项不喂 src，避免 N 张 750px 图首屏并发 -->
+          <image v-if="isMainActive(index)" class="template-img" :src="tplThumb(item.imageUrl)" mode="aspectFill"></image>
         </swiper-item>
       </swiper>
     </view>

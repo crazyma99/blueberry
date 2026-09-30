@@ -74,4 +74,27 @@ describe("AiTemplatePicker（T8 S2 模板与身形/年龄选择）", () => {
     expect(w.findAll("swiper-item").length).toBe(0);
     expect(w.find(".thumb-strip-label").text()).toBe("模板快速选择（0）");
   });
+
+  it("主图窗口化按需加载（PRD R3）：5 张模板时仅当前 ±1（环形）渲染 image，其余不喂 src", async () => {
+    const five = [1, 2, 3, 4, 5].map((id) => ({ id, imageUrl: `https://lanmei66.cloud/t${id}.png` }));
+    const w = mountPicker({ templates: five, currentIndex: 0 });
+    // current=0 ⇒ 激活 {4, 0, 1}（环形 ±1）；swiper-item 仍是 5 个，但 image 只渲染 3 个
+    expect(w.findAll("swiper-item").length).toBe(5);
+    const imgs = w.findAll(".template-img");
+    expect(imgs.length).toBe(3);
+    const srcs = imgs.map((i) => i.attributes("src") ?? "");
+    expect(srcs.some((s) => s.includes("t5.png"))).toBe(true); // 环形上一张
+    expect(srcs.some((s) => s.includes("t1.png"))).toBe(true);
+    expect(srcs.some((s) => s.includes("t2.png"))).toBe(true);
+    expect(srcs.some((s) => s.includes("t3.png"))).toBe(false);
+    expect(srcs.some((s) => s.includes("t4.png"))).toBe(false);
+    // 切到 2 ⇒ 激活 {1, 2, 3}
+    await w.setProps({ currentIndex: 2 });
+    const srcs2 = w.findAll(".template-img").map((i) => i.attributes("src") ?? "");
+    expect(srcs2.length).toBe(3);
+    expect(srcs2.some((s) => s.includes("t2.png") && s.includes("thumbnail/750x"))).toBe(true);
+    expect(srcs2.some((s) => s.includes("t3.png"))).toBe(true);
+    expect(srcs2.some((s) => s.includes("t4.png"))).toBe(true);
+    expect(srcs2.some((s) => s.includes("t1.png"))).toBe(false);
+  });
 });

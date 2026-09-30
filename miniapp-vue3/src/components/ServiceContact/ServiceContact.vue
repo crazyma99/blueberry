@@ -6,6 +6,10 @@
 // 有意偏差（已声明）：①主题：本区块沿用旧端深色卡片/金色描边——2026-09-19 colorPage 已恢复深色 #160F04，与旧端口径一致；
 // ②字号：旧端若干 CSS 变量（--font-size-slogan/--font-size-display 等）未盘点，按近似档硬编码并注释；
 // ③font-noto-serif 全局类新端未定义（沿用既有口径仅引用）。
+// 2026-09-30 流量成本 PRD R2/R3：客服二维码缩略（cosThumb 300，250rpx 展示位足够且仍可扫）＋懒加载；
+// 非自家 COS/CDN 域由 cosThumb 安全透传（不拼参数）。
+import { cosThumb } from "../../application/image";
+
 withDefaults(
   defineProps<{
     list?: string[];
@@ -60,7 +64,7 @@ withDefaults(
       <view class="tit font-noto-serif">长按下面二维码添加客服</view>
       <view class="contact-main">
         <image src="/static/contact-bg.png" class="contact-bg" mode="aspectFill" />
-        <image class="code" :src="qrSrc" mode="aspectFit" :show-menu-by-longpress="true"></image>
+        <image class="code" :src="cosThumb(qrSrc, 300)" mode="aspectFit" :show-menu-by-longpress="true" lazy-load></image>
         <view class="label">联系电话</view>
         <view class="val font-noto-serif">{{ phone }}</view>
         <view class="label">商务合作</view>

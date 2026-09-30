@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// T6 客片详情页（P2-11 最后一页）：详情图渐进加载（首图原图、其余 750 WebP 缩略，旧端 :68-72）
+// T6 客片详情页（P2-11 最后一页）：详情图渐进加载（首图 1080 WebP 预览、其余 750 WebP 缩略——
+// 2026-09-28 流量成本 PRD R2/R14 起不再原图直出，见 application/image.ts `progressivePhotoSrc`；旧端 :68-72）
 // ＋价格/套餐（:46-53）＋点赞（getLikeStatus 单 id 合并 :246-250——仅 full 会话才查，未登录态不展示收藏状态＋ use-like 乐观更新）。
 // 加载态＝骨架屏 1:1 镜像真实布局（旧端 :13-35），且详情+点赞就绪后预加载前 3 张详情图再收起（旧端 :232-237）。
 // 非 shareToken 作品页（P2-11 边界）；BottomActionBar（AI 试衣按钮＋内置版权 footer）已随 2026-09-19 主人反馈补齐
@@ -178,7 +179,7 @@ async function init(id: string, type: string): Promise<void> {
   } else {
     likeState.value = { id: Number(id), liked: false, likeCount: rd.value.likeCount ?? 0 };
   }
-  // 预加载前几张详情图（最多前3张，与渲染口径一致：首图原图、其余 750 缩略），就绪后再收起骨架屏（旧端 :232-237）
+  // 预加载前几张详情图（最多前3张，与渲染口径一致：首图 1080 WebP 预览、其余 750 缩略——R2/R14 起不再原图直出），就绪后再收起骨架屏（旧端 :232-237）
   const urls = images.value
     .slice(0, 3)
     .map((img, idx) => photoSrc(img.imageUrl, idx))

@@ -19,6 +19,11 @@ const h = vi.hoisted(() => ({
   chooseImageCalls: 0,
   modalConfirm: true, // R27 同意门桩默认放行
   modalCalls: 0,
+  // 2026-09-30 PRD R16/R19：压缩桩（默认成功产物；compressFail=true 模拟压缩不可用 → fail-closed 阻断）
+  compressFail: false,
+  // R18 一键重试用例用：uploadOk=false 时 uploadFile 走 fail
+  uploadOk: true,
+  uploadCalls: 0,
 }));
 
 vi.mock("@dcloudio/uni-app", () => ({
@@ -69,6 +74,15 @@ vi.mock("../../src/infrastructure/repositories/wx-auth", () => ({
   createWxAuthRepository: () => ({ exchange: async () => ({ ok: false, error: { kind: "unsupported" } }) }),
 }));
 
+// 2026-09-30 PRD R16/R19：压缩是 fail-closed 唯一上传路径——页面测试环境无 wx 画布能力，
+// 必须显式桩压缩模块（默认成功产物；compressFail=true 模拟不可用 → 页面应阻断且零上传）。
+vi.mock("../../src/platform/weixin/photo-compress", () => ({
+  createWeixinPhotoCompress: () => ({
+    compress: async () =>
+      h.compressFail ? null : { path: "/tmp/pick-compressed.jpg", size: 300 * 1024, width: 810, height: 1080 },
+  }),
+}));
+
 import StubWdPopup from "../stubs/wot/wd-popup/wd-popup.vue";
 import AiTryOnPage from "../../src/pages/aiTryOn/index.vue";
 import AppPhotoPicker from "../../src/components/AppPhotoPicker/AppPhotoPicker.vue";
@@ -93,6 +107,9 @@ beforeEach(() => {
   h.chooseImageCalls = 0;
   h.modalConfirm = true;
   h.modalCalls = 0;
+  h.compressFail = false;
+  h.uploadOk = true;
+  h.uploadCalls = 0;
   h.store.clear();
   (globalThis as { uni?: unknown }).uni = {
     getStorageSync: (k: string) => h.store.get(k) ?? "",
@@ -120,7 +137,12 @@ beforeEach(() => {
       (o.success as (r: unknown) => void)({ tempFilePaths: ["/tmp/pick.jpg"], tempFiles: [{ size: 1024 * 1024 }] });
     },
     uploadFile: (o: Record<string, unknown>) => {
-      (o.success as (r: unknown) => void)({ statusCode: 200, data: JSON.stringify({ code: 200, data: { filename: "f.jpg" } }) });
+      h.uploadCalls += 1;
+      if (h.uploadOk) {
+        (o.success as (r: unknown) => void)({ statusCode: 200, data: JSON.stringify({ code: 200, data: { filename: "f.jpg" } }) });
+      } else {
+        (o.fail as (r?: unknown) => void)?.({ errMsg: "uploadFile:fail network" });
+      }
       return { onProgressUpdate: () => undefined, abort: () => undefined };
     },
     getImageInfo: (o: Record<string, unknown>) => {
@@ -317,6 +339,54 @@ describe("pages/aiTryOn（T8 装配）", () => {
     await w.vm.$nextTick();
     expect(w.findComponent(QualityRejectSheet).findComponent(StubWdPopup).props("modelValue")).toBe(false);
     expect(h.chooseImageCalls).toBe(2);
+  });
+
+  it("⭐PRD R19 fail-closed：压缩不可用 ⇒ 阻断上传（零上传请求、不出现重试条、无原图旁路）", async () => {
+    h.store.set("token", "tok-legacy");
+    h.store.set("userInfo", JSON.stringify({ userId: "u1" }));
+    h.compressFail = true; // 压缩不可用
+    const w = mount(AiTryOnPage, { global: GLOBAL });
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
+    h.onShowCalls[h.onShowCalls.length - 1]();
+    await flush();
+    await w.vm.$nextTick();
+
+    w.findComponent(AppPhotoPicker).vm.$emit("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.chooseImageCalls).toBe(1);
+    expect(h.uploadCalls).toBe(0); // 阻断：绝不走「回退原图上传」旁路
+    expect(w.find(".upload-retry").exists()).toBe(false); // 未进入上传环节 ⇒ 无重试条
+    w.unmount();
+  });
+
+  it("⭐PRD R18：上传失败 ⇒ 出「点击重试」条；一键重试重传当前照片（不重选）成功后消失", async () => {
+    h.store.set("token", "tok-legacy");
+    h.store.set("userInfo", JSON.stringify({ userId: "u1" }));
+    h.uploadOk = false; // 首次上传失败
+    const w = mount(AiTryOnPage, { global: GLOBAL });
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
+    h.onShowCalls[h.onShowCalls.length - 1]();
+    await flush();
+    await w.vm.$nextTick();
+
+    w.findComponent(AppPhotoPicker).vm.$emit("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.uploadCalls).toBe(1);
+    expect(w.find(".upload-retry").exists()).toBe(true); // 一键重试入口出现
+    expect(w.find(".generate-btn").classes()).toContain("generate-btn-disabled"); // 未传成功不可生成
+
+    // 一键重试：不重选照片（chooseImage 不再调用），直接重传；恢复成功即收起
+    h.uploadOk = true;
+    await w.find(".upload-retry").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.chooseImageCalls).toBe(1);
+    expect(h.uploadCalls).toBe(2);
+    expect(w.find(".upload-retry").exists()).toBe(false);
+    expect(w.find(".generate-btn").classes()).not.toContain("generate-btn-disabled");
+    w.unmount();
   });
 
 });

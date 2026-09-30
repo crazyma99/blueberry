@@ -84,6 +84,7 @@ import {
   createAiPhotoUploader,
   PHOTO_SIZE_LIMIT_BYTES,
 } from "../../application/ai-photo-upload";
+import { formatUploadProgressText } from "../../application/upload-progress";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import AppPhotoPicker from "../../components/AppPhotoPicker/AppPhotoPicker.vue";
 // 2026-09-23 主人：「AI 推荐的相关 Loading Popup 和 弹窗 Popup 都没有和 AI 试衣上传照片时的拦截相关内容一致」
@@ -150,7 +151,8 @@ const uploader = createAiPhotoUploader({
     }),
 });
 const photoCheck = createWeixinPhotoCheck();
-// PRD R16/R17/R19：上传前压缩（长边≤1080、≤500KB、人脸框外扩裁剪）；fail-open 回退原图由服务端 R22 兜底
+// PRD R16/R19：上传前压缩（长边≤1080、≤500KB；2026-09-30 PRD 更新：只压缩不裁剪）；
+// fail-closed：压缩不可用即阻断并提示重试，客户端无「上传原图」旁路（服务端 R22 二次压缩兜底）
 const photoCompress = createWeixinPhotoCompress();
 const analytics = createUniAnalytics();
 const captureGuard = createCaptureGuard();
@@ -180,8 +182,9 @@ const photoPath = ref("");
 const photoPreviewUrl = ref("");
 const uploadedFilename = ref("");
 const uploading = ref(false);
-/** 上传进度（-1＝未知/未开始；PRD R18：按钮文案透出百分比） */
+/** 上传进度（-1＝未知/未开始；PRD R18：按钮文案透出百分比＋剩余时间＋弱网提示） */
 const uploadPercent = ref(-1);
+let uploadStartTs = 0; // R18：剩余时间/弱网判定基准
 // 登录弹窗
 // —— 反馈通道门面（与 aiTryOn 完全同口径）——
 // 加载态：微信端走门面弹层；抖音端（AI 六页不注册，理论不进入）仍走原生，避免「两套 loading 同时出现」。
@@ -255,9 +258,9 @@ const priceText = computed<string>(() => {
 });
 // 按钮可用条件（旧端内联表达式 `photoPreviewUrl !== '' && !payBusy`）：空图或支付流程中置灰
 const canStart = computed<boolean>(() => photoPreviewUrl.value !== "" && !isPaying.value);
-// PRD R18：上传中文案带进度百分比（无进度回调时退化为「上传中...」，与旧端逐字）
+// PRD R18：上传中文案带进度百分比＋剩余时间＋弱网提示（无进度回调时退化为「上传中...」，与旧端逐字）
 const uploadBtnText = computed<string>(() =>
-  uploadPercent.value >= 0 ? `上传中 ${uploadPercent.value}%` : "上传中...",
+  uploadPercent.value >= 0 ? formatUploadProgressText(uploadPercent.value, uploadStartTs) : "上传中...",
 );
 
 // —— 生命周期（旧端 :134-183）——
@@ -315,8 +318,8 @@ async function resolveShopIfNeeded(): Promise<void> {
 }
 
 // —— 选图 → 压缩 → 检测（旧端 :185-225；**上传留到点击按钮时**，与旧端一致）——
-// 2026-09-28 PRD R16/R17/R19：选图后先压缩（长边≤1080、≤500KB、人脸框外扩裁剪），压缩是唯一上传路径；
-// 压缩不可用/异常 → fail-open 回退原图（体积红线由服务端 R22 二次压缩兜底）
+// 2026-09-28 PRD R16/R19：选图后先压缩（长边≤1080、≤500KB；2026-09-30 PRD 更新：只压缩不裁剪），压缩是唯一上传路径；
+// fail-closed：压缩不可用/异常 → 阻断并提示重试，**不上传原图**（体积红线另有服务端 R22 二次压缩兜底）
 async function choosePhoto(): Promise<void> {
   if (uploading.value) return;
   // PRD R27：人脸照片属敏感个人信息，首次选图前需单独同意（拒绝则不进入选图）
@@ -329,24 +332,23 @@ async function choosePhoto(): Promise<void> {
   const picked = await chooser.choose(); // count 1 / sizeType compressed / album+camera（旧端 :187-190）
   if (picked == null) return; // 取消/容器失败静默
   showLoading("照片处理中...");
-  let finalPath = picked.path;
-  let finalSize = picked.size;
+  let compressed: Awaited<ReturnType<typeof photoCompress.compress>> = null;
   try {
-    const compressed = await photoCompress.compress(picked.path);
-    if (compressed != null) {
-      finalPath = compressed.path;
-      finalSize = compressed.size;
-    }
+    compressed = await photoCompress.compress(picked.path);
   } catch (err) {
-    console.error("[aiRecommend] 照片压缩异常（回退原图）:", err);
+    console.error("[aiRecommend] 照片压缩异常:", err);
   }
   hideLoading();
-  // 10MB 上限改为「压缩后仍超限才拒」（旧端 :193-196 的拒收语义保留，判定对象换成压缩产物）
-  if (finalSize > PHOTO_SIZE_LIMIT_BYTES) {
+  if (compressed == null) {
+    toast("照片处理失败，请重试");
+    return;
+  }
+  // 10MB 上限保留（旧端 :193-196 拒收语义；压缩产物必然远小于 10MB，正常路径不会命中）
+  if (compressed.size > PHOTO_SIZE_LIMIT_BYTES) {
     toast("照片大小不能超过10MB");
     return;
   }
-  await checkAndAcceptPhoto(finalPath);
+  await checkAndAcceptPhoto(compressed.path);
 }
 
 // 照片质量拦截：未通过时弹窗告知重新上传（旧端 :204-225）
@@ -407,9 +409,10 @@ async function handleStartAnalysis(): Promise<void> {
 
   uploading.value = true;
   uploadPercent.value = -1;
+  uploadStartTs = Date.now(); // R18：剩余时间/弱网判定基准
   try {
     const res = await uploader.upload(photoPath.value, (p) => {
-      uploadPercent.value = p; // PRD R18：按钮文案透出上传百分比
+      uploadPercent.value = p; // PRD R18：按钮文案透出上传百分比＋剩余时间＋弱网提示
     });
     if (res.ok) {
       uploadedFilename.value = res.filename;
