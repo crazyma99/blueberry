@@ -11,9 +11,11 @@
 - **禁止**把 `VITE_API_BASE=http://10.192.39.225:8155` 之类**本机/局域网地址**写进 `.env.local` 或任何提交/构建；
 - 包内 config 只允许出现上述两个自动分流字面量。
 
-### 2. 分支纪律（2026-09-14 主人指示更新：main 转正为开发主分支）
-- **开发/体验/正式基座 = `main`**（fork: crazyma99/blueberry）；
-- 原发版线 `feat/v0.0.1` 已于 2026-09-14 归档——tag **`archive/feat-v0.0.1-20260914`**（指向 `4d7b068`），远程分支已删除；历史内容已全量并入 main（0 差异）；
+### 2. 分支纪律（**2026-10-09 主人明确口径：两条线，勿混**）
+- **① 线上正式版 ＝ 旧端 `src/`，分支 fork `main`**（该端自 `2026-09-15`／`2fe70ac` 起**未再改动**）；
+- **② 体验版（微信＋抖音）＝ 新端 `miniapp-vue3/`，分支 `feat/vue3-migration`**（近期所有体验版出自此线）；
+- ⚠️ **两条线不混提交**：旧端改动落 `main`、新端改动落 `feat/vue3-migration`；**不确定先问主人**；
+- 原发版线 `feat/v0.0.1` 已于 2026-09-14 归档——tag **`archive/feat-v0.0.1-20260914`**（指向 `4d7b068`），fork 远程分支已删除（仅上游留存）；历史内容已全量并入 main（0 差异）；
 - 本仓库无 staging 分支；任何合并/发布前先确认。
 
 ### 3. 发布/体验版上传必须走脚本
@@ -25,6 +27,17 @@
 - uvue 禁止嵌套 CSS（.parent{ .child{...} }）——依赖编译器展开，缓存损坏会原样输出，微信 wcsc 报 unexpected {（2026-09-10 白屏教训）；一律写平铺后代选择器 .parent .child { ... }。
 - **新增 .uts/.uvue 文件后必须重启 dev watcher 或全量构建**：增量编译不刷新新文件的模块注册表，真机/工具报 module is not defined 页面无法渲染（2026-09-10 photoCheck 教训）。
 
+### 4.5 多端兼容与开发工序（**硬 SPEC · 强制**）
+- 本仓库小程序侧**适配多端**（微信／抖音／小红书（待开发））⇒ **任何改动都必须做兼容性评估**；
+  唯一权威：**[`miniapp-vue3/docs/migration/compat-and-dev-spec.md`](./miniapp-vue3/docs/migration/compat-and-dev-spec.md)**（四条结构纪律 ＋ 评估 5 问 ＋ `Compat:` trailer ＋ 9 步强制工序 ＋ 机器门 C1–C6/B1–B4）。
+- **平台差异只允许落在 `src/platform/**`**；其余层经 `src/ports/**` 抽象；
+  **逻辑层（`.ts`）零 `#ifdef`**（平台分支一律走运行时可判定结构，见 `src/ui/ui-platform.ts`）；
+  **禁止为平台分叉写两套文件**；例外必须**显式登记并写理由**（未登记即失败）。
+- **工序不可换序**：`git pull` → 准备 → 修改 → **单测**（新增守卫须变异自证）→ **独立 CR** → 完成交付（构建＋审核清单）→ **主人开发版测试** → **主人回执通过** → `commit`/`push`。
+- **触及 `miniapp-vue3/src/**` 的提交必须带 `Compat:` trailer**（CI 校验；⚠️ **CI 步骤待 `workflow` scope 开通后补**，在此之前**提交前自查**——见 SPEC §四）：
+  `Compat: ends=wx,tt | platform-api=no | fallback=n/a | tested=wx,tt | spec=n/a`
+- **未经主人回执不 commit / push**；**不同批次分次提交、不混**。
+
 ### 5. 数据库 / 服务端操作红线（见服务端仓库）
 - 本仓库只做纯前端；如需改服务端契约，走服务端仓库 SOP。
 
@@ -35,9 +48,9 @@
 
 ## 二、快速操作流程
 ```bash
-# 开发 → 合并到基座（main 即开发主分支）
-git checkout main
-# ... 提交到 fork/main（git add -> commit -> push fork main）
+# 新端（体验版线）：git checkout feat/vue3-migration → 提交到 fork feat/vue3-migration
+# 旧端（线上正式版线）：git checkout main → 提交到 fork main      ← 两条线不混提交
+# ⚠️ 提交前做「兼容性评估」并带 Compat: trailer（见 §4.5；触及 miniapp-vue3/src/** 时 CI 强制）
 
 # 上传体验版（忽略 env + 校验 + 上传 + 恢复）
 ./scripts/release-trial.sh 1.0.24 "本次更新说明"

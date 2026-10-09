@@ -130,3 +130,168 @@ export function scanConfigPlatformUsage(files) {
   }
   return violations;
 }
+
+// ——— 多端兼容守卫（`docs/migration/compat-and-dev-spec.md` v1.0：C3／C4／C5／C6）———
+//  纪律源头：`src/ui/ui-platform.ts` §8.12（平台分支一律运行时可判定；`#ifdef` 只允许出现在模板/样式且不得承载唯一逻辑）。
+//  C3 逻辑层（`.ts`/`.uts`）**零 `#ifdef`**  —— vitest 不处理条件编译 ⇒ 写在逻辑层必然测不到、且易漏端
+//  C4 条件编译块**无 `#else` 兜底 ⇒ 必须登记**（COMPAT_DECLARATIONS，带"影响端＋用户可见后果"）
+//  C5 `ports/*.ts` **× 三端矩阵齐全**（PORT_MATRIX）
+//  C6 `src/platform/<端或适配层>` **目录必须登记**（PLATFORM_DIRS）
+
+/** 多端闭集（与 `src/ports/context.ts` 的 `PLATFORMS` 对齐；新增端先改那里再改这里） */
+export const ENDS = ["wx", "tt", "xhs"];
+
+/** 端 → 条件编译宏 */
+export const END_MACROS = { wx: "MP-WEIXIN", tt: "MP-TOUTIAO", xhs: "MP-XHS" };
+
+/** C6 登记：`src/platform/` 下已登记的适配层/端目录 */
+export const PLATFORM_DIRS = ["ui-bridge", "uni", "weixin"];
+
+/** 条件编译**指令行**：注释开启符后**紧跟** `#ifdef/#ifndef/#else/#elif/#endif`。
+ *  刻意要求"紧跟"，以**不匹配散文里的提法**（如 `ui/ui-platform.ts` 的纪律说明、`BaseFeedback.vue` 的注释），避免误报。 */
+const DIRECTIVE_RE = /^\s*(?:\/\/|\/\*|<!--)\s*#(ifdef|ifndef|else|elif|endif)\b[ \t]*([A-Za-z0-9_|-]*)/;
+
+/** C4 登记：**无 `#else` 兜底**的条件编译块（键＝`file|macro`，见 SPEC §七①） */
+export const COMPAT_DECLARATIONS = [
+  {
+    file: "src/pages.json",
+    macro: "MP-WEIXIN",
+    ends: ["tt", "xhs"],
+    reason:
+      "抖音/小红书侧**不注册**这些页面（AI 六页＋微信专属页；2026-09-17 主人拍板），且两端入口亦不下发 ⇒ 用户看不到、无功能缺口。属**有意平台裁剪**，非漏兜底。",
+  },
+  {
+    file: "src/App.vue",
+    macro: "MP-TOUTIAO",
+    ends: ["wx", "xhs"],
+    reason:
+      "样式级 `@font-face` 差异：仅抖音端注入该字体族；其余端不命中该规则即回落全局字体（**样式级天然兜底**），微信端另有其字体注入位点 ⇒ 无功能缺口。",
+  },
+];
+
+/** C5 登记：端口 × 端矩阵（`src/ports/*.ts` 每个文件一条，**三端齐全**，见 SPEC §七②） */
+export const PORT_MATRIX = [
+  { port: "src/ports/context.ts",
+    wx: { status: "neutral", at: "src/ports/context.ts", note: "纯类型/闭集，无平台 API" },
+    tt: { status: "neutral", at: "src/ports/context.ts" },
+    xhs: { status: "neutral", at: "src/ports/context.ts" } },
+  { port: "src/ports/clock.ts",
+    wx: { status: "neutral", at: "src/ports/clock.ts", note: "纯 TS，由调用方注入；无平台 API" },
+    tt: { status: "neutral", at: "src/ports/clock.ts" },
+    xhs: { status: "neutral", at: "src/ports/clock.ts" } },
+  { port: "src/ports/http.ts",
+    wx: { status: "impl", at: "src/platform/uni/transport.ts（uni.request 跨端）" },
+    tt: { status: "impl", at: "src/platform/uni/transport.ts" },
+    xhs: { status: "impl", at: "src/platform/uni/transport.ts" } },
+  { port: "src/ports/storage.ts",
+    wx: { status: "impl", at: "src/platform/uni/storage.ts（＋infrastructure/storage/versioned.ts 版本化包装）" },
+    tt: { status: "impl", at: "src/platform/uni/storage.ts" },
+    xhs: { status: "impl", at: "src/platform/uni/storage.ts" } },
+  { port: "src/ports/upload.ts",
+    wx: { status: "impl", at: "src/platform/uni/upload.ts" },
+    tt: { status: "impl", at: "src/platform/uni/upload.ts" },
+    xhs: { status: "impl", at: "src/platform/uni/upload.ts" } },
+  { port: "src/ports/payments.ts",
+    wx: { status: "impl", at: "src/platform/weixin/payments.ts（微信 JSAPI）" },
+    tt: { status: "unsupported", reason: "抖音端**明确返回 unsupported**（不假装成功、不构造假单据）；抖音侧付费页不注册 ⇒ 用户看不到支付入口" },
+    xhs: { status: "unsupported", reason: "同抖音端：无微信支付能力，返回 unsupported；小红书端待开发（类目/备案门禁）" } },
+  { port: "src/ports/media.ts",
+    note: "⚠️ **悬空抽象（2026-10-09 实测）**：全仓零引用——`MediaPort`／`PickedImage`／`UploadResult` 在 `src`＋`tests` 的外部引用均为 **0 处**（无实现、无调用方；选图/上传/存相册实际走 `platform/uni/chooser.ts`／`album-save.ts`／`upload.ts` 既有通路）。待实现侧二选一：**补实现并接入页面**，或 **删除该端口文件**（删除属代码改动，需主人点头）",
+    wx: { status: "todo", issue: "见 note（端口整体悬空，非分端问题）" },
+    tt: { status: "todo", issue: "见 note" },
+    xhs: { status: "todo", issue: "见 note" } },
+  { port: "src/ports/identity.ts",
+    note: "⚠️ **悬空抽象（2026-10-09 实测）**：全仓零引用——`IdentityPort`／`IdentityTicket` 外部引用 **0 处**（无实现、无调用方；登录/换票实际走 `platform/uni/login.ts`＋`application/auth-coordinator.ts`／`login-flow.ts` 既有通路）。待实现侧二选一：**补实现并接入**，或 **删除该端口文件**（需主人点头）",
+    wx: { status: "todo", issue: "见 note（端口整体悬空，非分端问题）" },
+    tt: { status: "todo", issue: "见 note" },
+    xhs: { status: "todo", issue: "见 note" } },
+];
+
+/** 解析文件中的条件编译指令行（行号 1-based） */
+export function parseDirectives(src) {
+  const out = [];
+  src.split("\n").forEach((line, i) => {
+    const m = line.match(DIRECTIVE_RE);
+    if (!m) return;
+    const [, kind, macros] = m;
+    out.push({ kind, macros: macros.split("||").map((s) => s.trim()).filter(Boolean), line: i + 1 });
+  });
+  return out;
+}
+
+/** C3：逻辑层（`.ts`/`.uts`）出现任何条件编译指令即违规 */
+export function scanLogicLayerIfdefs(files) {
+  const violations = [];
+  for (const { file, src } of files) {
+    if (!/\.(ts|uts)$/.test(file)) continue;
+    for (const d of parseDirectives(src)) {
+      violations.push({ file, api: "logic-layer-ifdef:" + d.kind, at: file + ":" + d.line });
+    }
+  }
+  return violations;
+}
+
+/** C4：无 `#else` 兜底的块必须在 COMPAT_DECLARATIONS 登记（键＝file|macro） */
+export function scanUndeclaredIfdefs(files, decls = COMPAT_DECLARATIONS) {
+  const violations = [];
+  const declared = new Set(decls.flatMap((d) => (d.macro ? [d.file + "|" + d.macro] : [])));
+  for (const { file, src } of files) {
+    if (/\.(ts|uts)$/.test(file)) continue; // 逻辑层由 C3 直接禁掉，不重复报
+    const stack = [];
+    for (const d of parseDirectives(src)) {
+      if (d.kind === "ifdef" || d.kind === "ifndef") {
+        for (const macro of d.macros.length > 0 ? d.macros : ["<empty>"]) stack.push({ macro, line: d.line, hasElse: false });
+      } else if (d.kind === "else" || d.kind === "elif") {
+        if (stack.length > 0) stack[stack.length - 1].hasElse = true;
+      } else if (d.kind === "endif") {
+        const b = stack.pop();
+        if (b && !b.hasElse && !declared.has(file + "|" + b.macro)) {
+          violations.push({ file, api: "ifdef:no-fallback:" + b.macro, at: file + ":" + b.line });
+        }
+      }
+    }
+    for (const b of stack) {
+      if (!b.hasElse && !declared.has(file + "|" + b.macro)) {
+        violations.push({ file, api: "ifdef:unclosed-or-no-fallback:" + b.macro, at: file + ":" + b.line });
+      }
+    }
+  }
+  return violations;
+}
+
+/** C5：端口 × 三端矩阵齐全性（impl 必须给 at／unsupported 必须给 reason／todo 必须给 issue） */
+export function scanPortMatrix(portFiles, matrix = PORT_MATRIX) {
+  const violations = [];
+  const byPort = new Map(matrix.map((m) => [m.port, m]));
+  for (const port of portFiles) {
+    const entry = byPort.get(port);
+    if (entry == null) {
+      violations.push({ file: port, api: "port:unregistered" });
+      continue;
+    }
+    for (const end of ENDS) {
+      const e = entry[end];
+      if (e == null || typeof e.status !== "string") {
+        violations.push({ file: port, api: "port:missing-end:" + end });
+        continue;
+      }
+      if (!["impl", "neutral", "unsupported", "todo"].includes(e.status)) {
+        violations.push({ file: port, api: "port:bad-status:" + end + "=" + e.status });
+      } else if (e.status === "impl" && !e.at) {
+        violations.push({ file: port, api: "port:impl-without-at:" + end });
+      } else if (e.status === "unsupported" && !e.reason) {
+        violations.push({ file: port, api: "port:unsupported-without-reason:" + end });
+      } else if (e.status === "todo" && !e.issue) {
+        violations.push({ file: port, api: "port:todo-without-issue:" + end });
+      }
+    }
+  }
+  return violations;
+}
+
+/** C6：`src/platform/` 下的目录必须登记 */
+export function scanPlatformDirs(dirs, registered = PLATFORM_DIRS) {
+  return dirs
+    .filter((d) => !registered.includes(d))
+    .map((d) => ({ file: "src/platform/" + d, api: "platform:unregistered-dir" }));
+}
