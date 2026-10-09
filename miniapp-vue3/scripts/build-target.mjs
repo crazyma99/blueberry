@@ -15,10 +15,22 @@ import { verifyTarget } from "./verify-target.mjs";
 
 export const ENGINES = ["legacy", "vue3"];
 /** 模板白名单（P1-31）：node_modules/dist/.work/docs/tests 不进隔离目录 */
+/** ⚠️ 2026-10-09 修：**必须含 `scripts`**——副本里的 `package.json` 原样复制，其 `build:mp-*` 脚本写着
+ *  `node scripts/gen-profile-local.mjs <平台> && uni build -p <平台>`；若 `scripts` 不进副本，
+ *  副本内执行 `execFileSync(pnpmCmd, ["run", "build:" + req.platform])` 会直接
+ *  `Cannot find module .../scripts/gen-profile-local.mjs`（＋ `[ELIFECYCLE] Command failed with exit code 1`）
+ *  ⇒ 合成 Profile 端到端校验（CI 的 `e2e-build` 步骤）**必然失败**。
+ *  **失败窗口（独立 CR 实测更正）**：最后一次绿＝`2026-09-17`（run 35213612976）；
+ *  自提交 **`611c547`（2026-09-19 19:33 +0800，给 `build:mp-*` 加 `gen-profile-local` 前置）起连续红**。
+ *  副本内 `gen-profile-local.mjs` 因缺 `../profiles/*` 会**优雅跳过**（见该脚本注释），不影响产物。
+ *  ⚠️ **禁止把 `profiles` 加进白名单**：既无用（该脚本查的是副本的**上一级** `../profiles`，仍会 skip），
+ *  又会把真实 `profiles/<profile>/project.env`（含 appid／API 基址／品牌名）复制进构建目录。
+ *  门禁：`tests/pipeline/build-target.spec.ts` 四条用例（条目须存在／管线脚本引用须在白名单／
+ *  `copyTemplate` 行为级断言／白名单不得含重物）。 */
 export const TEMPLATE_WHITELIST = [
   "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml",
   "tsconfig.json", "vite.config.ts", "index.html", "shims-uni.d.ts",
-  "src", "tokens",
+  "src", "tokens", "scripts",
 ];
 
 const RUN_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;

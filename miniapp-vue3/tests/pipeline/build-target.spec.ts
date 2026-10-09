@@ -1,11 +1,13 @@
 // P1-29~34 流水线测试：BuildRequest 闭集/realpath 隔离、runId 唯一不覆盖、
 // 结构化应用 Profile、产物 verify（旧产物冒充新引擎/错 appid/路由不匹配/品牌残留每项必须失败）。
 import { describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import {
   validateBuildRequest, allocateWorkDir, applyProfile, profileDigestOf, expectedRoutesForPlatform, stripJsonc,
+  copyTemplate, TEMPLATE_WHITELIST,
 } from "../../scripts/build-target.mjs";
 import { verifyTarget } from "../../scripts/verify-target.mjs";
 
@@ -204,5 +206,84 @@ describe("P1-37 CR 回归（🔴1 条件编译保留／🔴2 期望集合按平�
     const d1 = allocateWorkDir(req, { repoRoot: dir });
     expect(existsSync(d1)).toBe(true);
     expect(() => allocateWorkDir(req, { repoRoot: dir })).toThrow(/already exists|non-empty/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2026-10-09 新增（防「隔离副本缺文件 ⇒ 管线必然失败」复发）：
+// 背景：副本里的 `package.json` 是**原样复制**的，其 `build:mp-*` 脚本写着
+//   `node scripts/gen-profile-local.mjs <平台> && uni build -p <平台>`；
+//   管线随后在副本里执行 `pnpm run build:<platform>`（build-target.mjs 的 execFileSync）。
+//   ⇒ **脚本引用的本地文件必须也在白名单里**，否则副本里 `Cannot find module`，
+//   合成 Profile 端到端校验（CI `e2e-build` 步骤）必然失败——2026-09-23 起 CI 长期红即此因。
+// 本用例把「白名单 ⊇ 构建脚本引用的本地文件顶层项」固化为机器门。
+// ─────────────────────────────────────────────────────────────────────────────
+describe("TEMPLATE_WHITELIST 契约（2026-10-09 修 CI 长期红；按独立 CR 🟡1/2/3/8 加固）", () => {
+  const pkg = JSON.parse(readFileSync(join(sourceRoot, "package.json"), "utf-8")) as { scripts?: Record<string, string> };
+  /** 管线在副本里会执行的脚本（build-target.mjs：`pnpm install --frozen-lockfile` ＋ `pnpm run build:<platform>`）：
+   *  含 pre/post 生命周期钩子与 install/prepare——漏掉它们会给同类缺陷留后门（CR 🟡2）。 */
+  const PIPELINE_SCRIPTS = /^(pre|post)?build:mp-|^(pre|post)?install$|^prepare$/;
+
+  /** 从 npm script 命令里提取「node [flags] <本地路径>」引用（剥引号、容忍 - 开头 flag；CR 🟡3）。
+   *  仅保留像路径的取值（含 `/` 或 `./`）——`node -e '...'` 之类的内联代码不算引用。 */
+  function nodePathRefs(cmd: string): string[] {
+    const out: string[] = [];
+    const re = /\bnode\b((?:\s+-{1,2}[^\s]+)*)\s+(?:"([^"]+)"|'([^']+)'|([^\s&|;)]+))/g;
+    for (const m of String(cmd).matchAll(re)) {
+      const raw = (m[2] ?? m[3] ?? m[4] ?? "").trim();
+      const rel = raw.replace(/^\.\//, "");
+      if (rel !== "" && !rel.startsWith("-") && /[./]/.test(rel)) out.push(rel);
+    }
+    return out;
+  }
+
+  it("⭐白名单每一项都必须在 sourceRoot 真实存在（否则 copyTemplate 运行时抛错、而单测假绿）", () => {
+    const absent = TEMPLATE_WHITELIST.filter((i) => !existsSync(join(sourceRoot, i)));
+    expect(absent, JSON.stringify(absent)).toEqual([]);
+  });
+
+  it("⭐管线会执行的脚本所引用的本地文件，其顶层项都必须在白名单内", () => {
+    const missing: string[] = [];
+    let checked = 0;
+    for (const [name, cmd] of Object.entries(pkg.scripts ?? {})) {
+      if (!PIPELINE_SCRIPTS.test(name)) continue;
+      for (const rel of nodePathRefs(String(cmd))) {
+        checked++;
+        const top = rel.split("/")[0];
+        if (!TEMPLATE_WHITELIST.includes(top)) missing.push(`${name} → ${rel}（顶层 "${top}" 不在白名单）`);
+      }
+    }
+    // 防「正则失效 ⇒ 空跑假绿」：必须真的扫到引用
+    expect(checked, "未扫到任何管线脚本的 node 引用，正则或 package.json 结构可能变了").toBeGreaterThan(0);
+    expect(missing, JSON.stringify(missing, null, 2)).toEqual([]);
+  });
+
+  it("⭐行为级：copyTemplate 后副本内构建前置脚本在手、重物不在（本次事故的直接锁定，CR 🟡8）", () => {
+    const dir = mkdtempSync(join(tmpdir(), "copy-"));
+    copyTemplate(sourceRoot, dir);
+    // ① 必须进副本——否则副本内 `pnpm run build:*` 直接 Cannot find module（CI 长期红即此因）
+    for (const f of [
+      "package.json", "src",
+      "scripts/gen-profile-local.mjs", "scripts/generate-profile.mjs", "scripts/profile-schema.mjs",
+    ]) {
+      expect(existsSync(join(dir, f)), `副本缺 ${f}`).toBe(true);
+    }
+    // ② 重物不得进副本（P1-31 原意）
+    for (const heavy of ["node_modules", "dist", ".work", "tests", "docs", "profiles"]) {
+      expect(existsSync(join(dir, heavy)), `副本不该含 ${heavy}`).toBe(false);
+    }
+    // ③ 副本内执行 build:* 的前置脚本：缺 ../profiles ⇒ 优雅跳过（exit 0），且不得覆盖管线合成的档
+    const genPath = join(dir, "src/generated/profile.config.ts");
+    const before = existsSync(genPath) ? readFileSync(genPath, "utf-8") : "<absent>";
+    const r = spawnSync(process.execPath, [join(dir, "scripts/gen-profile-local.mjs"), "mp-toutiao"], { cwd: dir, encoding: "utf-8" });
+    expect(r.status, `副本内 gen-profile-local 应 exit 0（优雅跳过）：stderr=${r.stderr}`).toBe(0);
+    const after = existsSync(genPath) ? readFileSync(genPath, "utf-8") : "<absent>";
+    expect(after, "副本内 gen-profile-local 不得覆盖管线合成的 profile.config.ts").toBe(before);
+  });
+
+  it("白名单是「只排重物」的白名单（P1-31 原意）", () => {
+    for (const heavy of ["node_modules", "dist", ".work", "docs", "tests", "profiles"]) {
+      expect(TEMPLATE_WHITELIST, `白名单不应含 ${heavy}`).not.toContain(heavy);
+    }
   });
 });

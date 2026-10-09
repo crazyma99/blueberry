@@ -81,12 +81,14 @@
    正确姿势：`text = '\n'.join(lines)` → 必要时 `write(tmp)` → `os.replace(tmp, path)`；**提交前先 `git diff --stat` 复核增删行数**。
    事故处置留痕见 commit `1b4ad0c`（从历史恢复＋差异校验为 1 insert/1 delete）。
 10. **macOS 本机工具链（2026-09-18 实测）**：系统 `pnpm@9.6` 不认 `pnpm-workspace.yaml` 的 `allowBuilds`（报 `packages field missing or empty`），且 `pnpm@11.7` 在 Node v20.20 下起不来（`ERR_UNKNOWN_BUILTIN_MODULE`）⇒ 一律用 **Node v22.22（nvm）＋ pnpm 11.7 shim**（`/tmp/pnpm11-shim/pnpm`，或 `npx pnpm@11.7.0`）；`build-target` 内部调 `pnpm`，跑管线前把 shim 目录放 PATH 最前。
-12. **`build-target.mjs` 规范通路对新端「不可构建」（2026-09-22 抖音发版实测，已取证；未修）**：
-   `copyTemplate` 的 `TEMPLATE_WHITELIST` 只带 `package.json／pnpm-lock.yaml／pnpm-workspace.yaml／tsconfig.json／vite.config.ts／index.html／shims-uni.d.ts／src／tokens`
-   ⇒ 隔离副本里**既无 `scripts/` 也无 `profiles/`**，而 `package.json` 的 `build:<platform>` 第一步是
+12. **（2026-10-09 已修）`build-target.mjs` 规范通路对新端「不可构建」（2026-09-22 抖音发版实测取证）**：
+   `copyTemplate` 的 `TEMPLATE_WHITELIST` 原只带 `package.json／pnpm-lock.yaml／pnpm-workspace.yaml／tsconfig.json／vite.config.ts／index.html／shims-uni.d.ts／src／tokens`
+   ⇒ 隔离副本里**无 `scripts/`**，而 `package.json` 的 `build:<platform>` 第一步是
    `node scripts/gen-profile-local.mjs <platform>` ⇒ 实测 `Cannot find module '…/scripts/gen-profile-local.mjs'` ＋ `[ELIFECYCLE] Command failed with exit code 1`。
-   **修法（二选一）**：①白名单补 `scripts`＋`profiles`；②`applyProfile` 把隔离副本 `build:<platform>` 改写为 `uni build -p <platform>`（profile 已由 `applyProfile`／`generateProfile` 注入）。
-   **绕行**：发版用普通通路 `node scripts/gen-profile-local.mjs <platform> && npx uni build -p <platform>`（抖音历轮产物同路）；
+   **影响面（独立 CR 实测更正）**：CI（`migration-ci.yml` 的 `e2e-build` 步骤）自提交 **`611c547`（2026-09-19 19:33 +0800）起连续红**，最后一次绿＝ **2026-09-17**。
+   **✅ 已修（2026-10-09）**：白名单**只补 `scripts`**；门禁＝ `tests/pipeline/build-target.spec.ts` 四条用例（白名单条目须存在／管线脚本引用须在白名单／`copyTemplate` 行为级断言／白名单不得含重物）。
+   ⚠️ **原「修法①」中的 `＋profiles` 已作废、且禁止采用**：`gen-profile-local.mjs` 查的是副本的**上一级** `../profiles`，加进白名单**照样 skip**（无用），却会把真实 `profiles/*/project.env`（含 appid／API 基址／品牌名）**复制进构建目录**。
+   **绕行（仍可用）**：发版用普通通路 `node scripts/gen-profile-local.mjs <platform> && npx uni build -p <platform>`（抖音历轮产物同路）；
    注意两条通路的**全局导航标题**口径不同——流水线按 profile 覆盖为「蓝梅旗袍·汉服·民...」，普通通路取 `src/pages.json` 的 `globalStyle.navigationBarTitleText`（2026-09-22 已由 `uni-app` 修为品牌名「蓝梅云」）。
 11. **wot-ui 相关一律先问工具（主人 2026-09-21 指示：「以后涉及 wotui 的部分都可以通过 wot skill 和 wot cli 来获取帮助」）**：
    本仓已装 `@wot-ui/cli@1.1.0` ⇒ 权威事实源＝`npx wot info <组件>`（props/events/slots/**CSS 变量**）、`npx wot doc <组件>`、`npx wot demo <组件>`、
