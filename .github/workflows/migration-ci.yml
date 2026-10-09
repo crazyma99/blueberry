@@ -45,6 +45,27 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: typecheck
         run: pnpm run typecheck
+      # 多端兼容与开发工序 SPEC（miniapp-vue3/docs/migration/compat-and-dev-spec.md §四）：
+      # **触及 miniapp-vue3/src/** 的每个提交都必须带 `Compat:` trailer**（变更级兼容性评估）。
+      - name: 多端兼容 · Compat trailer 校验（触及 src/** 时必带）
+        working-directory: ${{ github.workspace }}
+        run: |
+          BASE="${{ github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then BASE="HEAD^"; fi
+          FAIL=0
+          for c in $(git rev-list "$BASE..HEAD" -- miniapp-vue3/src/ 2>/dev/null || true); do
+            if git log -1 --format=%B "$c" | grep -qE '^Compat:'; then
+              echo "✅ $c 带 Compat trailer：$(git log -1 --format=%B "$c" | grep -E '^Compat:')"
+            else
+              echo "::error::提交 $c 触及 miniapp-vue3/src/** 但缺 Compat trailer（见 docs/migration/compat-and-dev-spec.md §四）"
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" != "0" ]; then
+            echo "模板：Compat: ends=wx,tt | platform-api=no | fallback=n/a | tested=wx,tt | spec=n/a"
+            exit 1
+          fi
+          echo "✅ 本区间触及 src/** 的提交均已带 Compat trailer（或无 src 改动）"
       - name: 单元/组件/流水线测试
         run: pnpm exec vitest run
       - name: 构建 mp-weixin

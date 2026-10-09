@@ -55,7 +55,7 @@ Compat: ends=wx,tt | platform-api=no | fallback=n/a | tested=wx,tt | spec=n/a
 - `ends`：影响端；`platform-api`：`yes`/`no`；`fallback`：兜底摘要（无则 `n/a`）；
   `tested`：实测端；`spec`：登记落点（`ports-matrix`/`compat-decl`/`deviations#N`/`n/a`）。
 - **门**：CI 校验——diff 触及 `miniapp-vue3/src/**` 而最新提交**无** `Compat:` 行 ⇒ **失败**并打印模板。
-  - ⚠️ **当前状态（2026-10-09）**：CI 步骤**尚未落地**——本机 `gh` token **缺 `workflow` scope**，GitHub 直接拒收 `.github/workflows/**` 的推送（实测 `remote rejected … without 'workflow' scope`）。**开通方式**：`gh auth refresh -s workflow`（需主人完成一次授权）后补该步骤；**在此之前以「提交前自查」执行**（人工核对 trailer 是否存在）。
+  - ✅ **已上线（2026-10-09）**：`migration-ci.yml` 的 `new-end-suite` lane 已含该步骤。此前因本机 `gh` token 缺 `workflow` scope 无法推送 `.github/workflows/**`，主人授权后补推。
 - 为什么用 trailer 而不是 PR 模板：本仓是**直推分支**工作流（CI `on.push.branches=[feat/vue3-migration]`），**没有 PR 强制点**；trailer 对直推同样有效、零成本、机器可判。
 
 ---
@@ -91,7 +91,7 @@ Compat: ends=wx,tt | platform-api=no | fallback=n/a | tested=wx,tt | spec=n/a
 | **C6 平台目录登记** | vitest | 同上 | 登记新端目录 |
 | B1 三端构建 | CI | `migration-ci.yml` `new-end-suite` | 修编译错误（**xhs 也须可编译**） |
 | B2 合成 Profile 端到端（锁抖音裁剪/appid/tt 前缀/跨品牌残留） | CI | 同上（`node scripts/e2e-build.mjs mp-toutiao both`） | 修平台作用域声明 |
-| **B3 `Compat:` trailer** | CI（**步骤待补：需 `workflow` scope**） | 同上 | 用 `git commit --amend` 补 trailer |
+| **B3 `Compat:` trailer** | CI（**已上线 2026-10-09**） | `migration-ci.yml` `new-end-suite` | 用 `git commit --amend` 补 trailer |
 | B4 旧端 `src/` 禁改（迁移期） | CI | `old-end-regression` | 回退对旧端的改动 |
 
 ---

@@ -34,7 +34,7 @@
   **逻辑层（`.ts`）零 `#ifdef`**（平台分支一律走运行时可判定结构，见 `src/ui/ui-platform.ts`）；
   **禁止为平台分叉写两套文件**；例外必须**显式登记并写理由**（未登记即失败）。
 - **工序不可换序**：`git pull` → 准备 → 修改 → **单测**（新增守卫须变异自证）→ **独立 CR** → 完成交付（构建＋审核清单）→ **主人开发版测试** → **主人回执通过** → `commit`/`push`。
-- **触及 `miniapp-vue3/src/**` 的提交必须带 `Compat:` trailer**（CI 校验；⚠️ **CI 步骤待 `workflow` scope 开通后补**，在此之前**提交前自查**——见 SPEC §四）：
+- **触及 `miniapp-vue3/src/**` 的提交必须带 `Compat:` trailer**（**CI 校验已上线 2026-10-09**，见 SPEC §四）：
   `Compat: ends=wx,tt | platform-api=no | fallback=n/a | tested=wx,tt | spec=n/a`
 - **未经主人回执不 commit / push**；**不同批次分次提交、不混**。
 
