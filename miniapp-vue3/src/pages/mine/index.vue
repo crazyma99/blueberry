@@ -18,6 +18,7 @@
 import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
+import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
@@ -47,7 +48,7 @@ const detected = detectUiPlatform();
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
 // 自定义 tabbar 仅微信端 ⇒ 底部占位仅微信需要（抖音原生 tab 不占页面区域，2026-09-19 主人反馈）
 const isMpWeixin = platform === "mp-weixin";
-const env = PROFILE.environment;
+const env = resolveRuntimeEnvironment(PROFILE.environment);
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
 const uniStorage = createUniStorage();
 const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });

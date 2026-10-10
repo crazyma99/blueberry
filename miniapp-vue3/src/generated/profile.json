@@ -3,9 +3,9 @@
   "packageName": "blueberry",
   "manifestName": "blueBerry",
   "description": "蓝莓",
-  "platform": "mp-weixin",
+  "platform": "mp-toutiao",
   "environment": "trial",
-  "appid": "wxb19ad7426dfb8bd4",
+  "appid": "ttd6aba01648cc1bf701",
   "appCode": "blueBerry",
   "miniAppName": "蓝梅云",
   "navigationTitle": "蓝梅旗袍·汉服·民...",
@@ -30,21 +30,14 @@
     "pages/favorites/index",
     "pages/webview/index",
     "pages/policies/user",
-    "pages/policies/privacy",
-    "pages/aiTryOn/index",
-    "pages/aiTryOnResult/index",
-    "pages/aiTryOnHistory/index",
-    "pages/aiRecommend/index",
-    "pages/aiRecommendLoading/index",
-    "pages/aiRecommendResult/index"
+    "pages/policies/privacy"
   ],
   "features": {
     "mineMenu": [
-      "favorites",
-      "aiTryOnHistory"
+      "favorites"
     ],
-    "mineHintText": "登录后可收藏与体验AI试衣",
-    "navStyle": "custom",
-    "tabBarCustom": true
+    "mineHintText": "登录后可收藏",
+    "navStyle": "default",
+    "tabBarCustom": false
   }
 }

@@ -9,6 +9,7 @@
 import { computed, ref } from "vue";
 import { onLoad, onReachBottom, onShareAppMessage, onShareTimeline } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
+import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
@@ -50,7 +51,7 @@ import type { AlbumBrief } from "../../infrastructure/repositories/albums";
 // —— 装配（同 index：容器安全回落；登录占位不假装成功）——
 const detected = detectUiPlatform();
 const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
-const env = PROFILE.environment;
+const env = resolveRuntimeEnvironment(PROFILE.environment);
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
 const uniStorage = createUniStorage();
 const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });
