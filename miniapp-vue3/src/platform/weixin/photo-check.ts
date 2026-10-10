@@ -30,7 +30,7 @@ interface WxCanvasLike {
 }
 
 function wxCanvas(): WxCanvasLike | undefined {
-  return (globalThis as { wx?: WxCanvasLike }).wx;
+  return (typeof globalThis === "undefined" ? undefined : (globalThis as { wx?: WxCanvasLike }).wx);
 }
 
 export interface PhotoCheckPort {

@@ -18,7 +18,7 @@ export function createUniStorage(): StoragePort {
 
   /** 惰性取容器 API：优先注入桩（`globalThis.uni`，测试/H5），再回落**裸 `uni`**（mp 产物由编译器改写） */
   function uniApi(): UniStorageLike | undefined {
-    const injected = (globalThis as { uni?: UniStorageLike }).uni;
+    const injected = (typeof globalThis === "undefined" ? undefined : (globalThis as { uni?: UniStorageLike }).uni);
     if (injected != null) return injected;
     return typeof uni !== "undefined" ? (uni as unknown as UniStorageLike) : undefined;
   }

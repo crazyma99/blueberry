@@ -61,7 +61,7 @@ interface OffscreenCanvasLike {
 }
 
 function wxCanvas(): WxCanvasLike | undefined {
-  return (globalThis as { wx?: WxCanvasLike }).wx;
+  return (typeof globalThis === "undefined" ? undefined : (globalThis as { wx?: WxCanvasLike }).wx);
 }
 
 export function createWeixinPhotoCompress(deps?: { timeoutMs?: number }): PhotoCompressPort {

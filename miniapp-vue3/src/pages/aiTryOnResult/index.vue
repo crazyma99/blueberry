@@ -332,7 +332,7 @@ onShareTimeline(() => ({
 // —— 分享菜单（旧 :293-300 的内联条件编译调用；容器安全：无 wx/无该 API 一律静默）——
 function openShareMenu(): void {
   try {
-    const wxLike = (globalThis as { wx?: { showShareMenu?: (o: { menus: string[] }) => void } }).wx;
+    const wxLike = (typeof globalThis === "undefined" ? undefined : (globalThis as { wx?: { showShareMenu?: (o: { menus: string[] }) => void } }).wx);
     if (wxLike == null || typeof wxLike.showShareMenu !== "function") return;
     wxLike.showShareMenu({ menus: ["shareAppMessage", "shareTimeline"] });
   } catch {

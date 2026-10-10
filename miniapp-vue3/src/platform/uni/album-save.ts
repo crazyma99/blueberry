@@ -27,7 +27,7 @@ interface UniLike {
  * （保存到相册不可用；测试因桩了 globalThis 而测不出）。
  */
 function uniApi(): UniLike | undefined {
-  const injected = (globalThis as { uni?: UniLike }).uni;
+  const injected = (typeof globalThis === "undefined" ? undefined : (globalThis as { uni?: UniLike }).uni);
   if (injected != null) return injected;
   return typeof uni !== "undefined" ? (uni as unknown as UniLike) : undefined;
 }

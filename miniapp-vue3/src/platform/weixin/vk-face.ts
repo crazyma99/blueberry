@@ -22,7 +22,7 @@ interface WxVkLike {
 }
 
 function wxVk(): WxVkLike | undefined {
-  return (globalThis as { wx?: WxVkLike }).wx;
+  return (typeof globalThis === "undefined" ? undefined : (globalThis as { wx?: WxVkLike }).wx);
 }
 
 /** VK 可用性：canIUse('createVKSession') 且（若存在）isVKSupport('v1') */

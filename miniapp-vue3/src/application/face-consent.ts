@@ -46,7 +46,7 @@ interface UniModalLike {
 
 /** 取容器 API：优先注入桩（`globalThis.uni`，测试/H5），再回落裸 `uni`（同 chooser/upload 口径） */
 function uniApi(): UniModalLike | undefined {
-  const injected = (globalThis as { uni?: UniModalLike }).uni;
+  const injected = (typeof globalThis === "undefined" ? undefined : (globalThis as { uni?: UniModalLike }).uni);
   if (injected != null) return injected;
   return typeof uni !== "undefined" ? (uni as unknown as UniModalLike) : undefined;
 }

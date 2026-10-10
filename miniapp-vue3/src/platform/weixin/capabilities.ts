@@ -10,7 +10,7 @@ interface WxLike {
 }
 
 function wxGlobal(): WxLike | undefined {
-  return (globalThis as { wx?: WxLike }).wx;
+  return (typeof globalThis === "undefined" ? undefined : (globalThis as { wx?: WxLike }).wx);
 }
 
 export interface CaptureGuard {

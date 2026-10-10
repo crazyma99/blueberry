@@ -34,7 +34,7 @@ const props = withDefaults(
  *  ⚠️ 必须用**裸 `uni`**：mp-weixin 产物把 `uni` 编译成 `common_vendor.index`，**不存在 `globalThis.uni`**
  *  （CR 🟡1 实证：产物 vendor.js 只 `globalThis.wx=e`）⇒ 用 globalThis 取会永远走兜底、环不随 rpx 缩放。 */
 function upx2px(rpx: number): number {
-  const injected = (globalThis as { uni?: { upx2px?: (n: number) => number } }).uni; // 测试桩/H5
+  const injected = (typeof globalThis === "undefined" ? undefined : (globalThis as { uni?: { upx2px?: (n: number) => number } }).uni); // 测试桩/H5
   if (typeof injected?.upx2px === "function") return injected.upx2px(rpx);
   if (typeof uni !== "undefined" && typeof uni.upx2px === "function") return uni.upx2px(rpx);
   return rpx / 2;

@@ -15,7 +15,7 @@ export const DEFAULT_UPLOAD_TIMEOUT_MS = 60000;
  *  2026-09-23 统一口径（同 `album-save.uniApi()`）：此前 chooser/upload/feedback 只认裸 `uni`，
  *  在「先有桩、后无裸标识符」或编译器改写差异的环境下会静默降级（选图/上传直接判为容器不支持）。 */
 function uniApi<T>(): T | undefined {
-  const injected = (globalThis as { uni?: T }).uni;
+  const injected = (typeof globalThis === "undefined" ? undefined : (globalThis as { uni?: T }).uni);
   if (injected != null) return injected;
   return typeof uni !== "undefined" ? (uni as unknown as T) : undefined;
 }

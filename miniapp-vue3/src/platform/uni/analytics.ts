@@ -12,7 +12,7 @@ interface UniAnalyticsLike {
 
 /** 惰性取容器 API：注入桩优先（测试/H5），再回落裸 `uni`（mp 产物由编译器改写），口径同 storage/chooser/upload */
 function uniApi(): UniAnalyticsLike | undefined {
-  const injected = (globalThis as { uni?: UniAnalyticsLike }).uni;
+  const injected = (typeof globalThis === "undefined" ? undefined : (globalThis as { uni?: UniAnalyticsLike }).uni);
   if (injected != null) return injected;
   return typeof uni !== "undefined" ? (uni as unknown as UniAnalyticsLike) : undefined;
 }

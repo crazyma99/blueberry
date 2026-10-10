@@ -49,7 +49,7 @@ interface OffscreenCanvasLike {
 }
 
 function wxCanvas(): WxCanvasLike | undefined {
-  return (globalThis as { wx?: WxCanvasLike }).wx;
+  return (typeof globalThis === "undefined" ? undefined : (globalThis as { wx?: WxCanvasLike }).wx);
 }
 
 function getImageInfo(wx: WxCanvasLike, src: string): Promise<{ width: number; height: number; path: string }> {
