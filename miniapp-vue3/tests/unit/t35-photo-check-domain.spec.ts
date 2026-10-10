@@ -1,4 +1,9 @@
-// T8 S3b：照片质量判定域层测试——阈值/降采样/灰度/拉普拉斯方差/短路顺序与文案逐字。
+// T8 S3b：照片质量判定域层测试——降采样/灰度/拉普拉斯方差/模糊阈值与文案逐字。
+//
+// 【2026-10-09 主人拍板 · 方案A】端侧只保留「模糊」一项 ⇒ 本用例同步调整：
+//   · 删除「分辨率过低（最短边 480）」用例 —— 端侧独有规则、后端 4 条里没有，属结构性误拦，已摘除；
+//   · 删除「未检出人脸／多张人脸／占比过小」三组用例 —— 人脸判定唯一裁决权交后端 `4002`；
+//   · 新增**防回归**用例：域层已无 `faceCount`／`faceArea` 入参，即便调用方误传（运行时）也不得产生人脸拦截。
 import { describe, expect, it } from "vitest";
 import {
   downsampleSize,
@@ -6,8 +11,6 @@ import {
   laplacianVariance,
   toGrayscale,
   PHOTO_BLUR_THRESHOLD,
-  PHOTO_FACE_AREA_MIN,
-  PHOTO_MIN_SIDE,
 } from "../../src/domain/photo-check";
 
 /** 构造常量灰度图（方差 0）与棋盘图（方差大） */
@@ -20,9 +23,9 @@ function checkerGray(w: number, h: number): number[] {
   return g;
 }
 
-describe("domain/photo-check（T8 S3b 纯规则）", () => {
-  it("阈值常量与旧端逐字一致（480 / 100 / 0.02 / 0.65）", () => {
-    expect([PHOTO_MIN_SIDE, PHOTO_BLUR_THRESHOLD, PHOTO_FACE_AREA_MIN]).toEqual([480, 100, 0.02]); // 2026-09-23 主人拍板：删除占比上限（后端无此规则，纯误杀）
+describe("domain/photo-check（T8 S3b 纯规则 · 方案A）", () => {
+  it("模糊阈值常量 = 100（分辨率 480／人脸占比 0.02 已随方案A 摘除）", () => {
+    expect(PHOTO_BLUR_THRESHOLD).toBe(100);
   });
 
   it("降采样：最长边压到 ≤256 且最短 64；小图不放大", () => {
@@ -45,37 +48,27 @@ describe("domain/photo-check（T8 S3b 纯规则）", () => {
     expect(laplacianVariance(flatGray(2, 2), 2, 2)).toBe(0); // 无内点
   });
 
-  it("⭐短路顺序与文案逐字：分辨率 → 模糊 → 未检出人脸 → 多张人脸 → 占比过小（上限已按主人拍板删除）", () => {
-    const lowRes = evaluatePhotoCheck({ width: 300, height: 800, variance: 999 });
-    expect(lowRes).toEqual({ ok: false, reason: "照片分辨率过低，请上传更清晰的照片（最短边不低于 480 像素）" });
-    // 分辨率未知（0）→ 跳过该检查
-    const unknownSize = evaluatePhotoCheck({ width: 0, height: 0, variance: 999 });
-    expect(unknownSize.ok).toBe(true);
-
-    const blurry = evaluatePhotoCheck({ width: 800, height: 800, variance: 50 });
-    expect(blurry).toEqual({ ok: false, reason: "照片有点模糊，请重新拍摄清晰的照片" });
-
-    const noFace = evaluatePhotoCheck({ width: 800, height: 800, variance: 500, faceCount: 0 });
-    expect(noFace).toEqual({ ok: false, reason: "未检测到人脸，请上传清晰的正面照片" });
-
-    const multi = evaluatePhotoCheck({ width: 800, height: 800, variance: 500, faceCount: 2 });
-    expect(multi).toEqual({ ok: false, reason: "检测到多张人脸，请上传单人照片" });
-
-    const tooSmall = evaluatePhotoCheck({ width: 800, height: 800, variance: 500, faceCount: 1, faceArea: 0.01 });
-    expect(tooSmall).toEqual({ ok: false, reason: "人脸在照片中占比太小，请靠近一些或裁剪后上传" });
-
-    // 2026-09-23 主人拍板（按调研结论）：**删除占比上限** —— 后端 4002 只有「下限（单轴线性比 ≥10%）」无上限，
-    // 端侧再拦「脸过大」纯属误杀（特写/大头自拍会被端侧拦、后端判合格）⇒ 占比很大也放行
-    const tooBig = evaluatePhotoCheck({ width: 800, height: 800, variance: 500, faceCount: 1, faceArea: 0.9 });
-    expect(tooBig).toEqual({ ok: true, reason: "" });
+  it("⭐方案A 唯一规则：方差 < 100 → 模糊拦截（文案逐字）；恰在阈值/高于阈值 → 放行", () => {
+    expect(evaluatePhotoCheck({ variance: 50 })).toEqual({ ok: false, reason: "照片有点模糊，请重新拍摄清晰的照片" });
+    expect(evaluatePhotoCheck({ variance: 0 })).toEqual({ ok: false, reason: "照片有点模糊，请重新拍摄清晰的照片" });
+    expect(evaluatePhotoCheck({ variance: PHOTO_BLUR_THRESHOLD }).ok).toBe(true); // 边界：恰在阈值上放行（旧端用严格小于）
+    expect(evaluatePhotoCheck({ variance: 500 })).toEqual({ ok: true, reason: "" });
   });
 
-  it("variance=null（未测/无 canvas）与 faceCount=null（VK 不可用）→ 跳过对应检查，放行", () => {
-    expect(evaluatePhotoCheck({ width: 800, height: 800, variance: null })).toEqual({ ok: true, reason: "" });
-    expect(evaluatePhotoCheck({ width: 800, height: 800, variance: 500, faceCount: null })).toEqual({ ok: true, reason: "" });
-    // 边界：恰在阈值上/占比恰为边界值 → 放行（旧端用严格小于/大于）
-    expect(evaluatePhotoCheck({ width: 800, height: 800, variance: PHOTO_BLUR_THRESHOLD }).ok).toBe(true);
-    expect(evaluatePhotoCheck({ width: 800, height: 800, variance: 500, faceCount: 1, faceArea: PHOTO_FACE_AREA_MIN }).ok).toBe(true);
-    // 上限删除后：占比很大（0.9）也**不再端侧拦截**（交后端/生成端兜底；特写/大头自拍不再被误杀）
+  it("variance=null（未测/无 canvas）→ 跳过检查，放行", () => {
+    expect(evaluatePhotoCheck({ variance: null })).toEqual({ ok: true, reason: "" });
+  });
+
+  it("⭐防御（CR R2）：variance 为非有限值（NaN/±Infinity）→ 视为未测，放行（不得走成硬拦）", () => {
+    expect(evaluatePhotoCheck({ variance: Number.NaN })).toEqual({ ok: true, reason: "" });
+    expect(evaluatePhotoCheck({ variance: Number.POSITIVE_INFINITY })).toEqual({ ok: true, reason: "" });
+    expect(evaluatePhotoCheck({ variance: Number.NEGATIVE_INFINITY })).toEqual({ ok: true, reason: "" });
+  });
+
+  it("⭐防回归：域层已无人脸入参 ⇒ 即便运行时误传 faceCount/faceArea 也不得产生人脸拦截", () => {
+    // 方案A 前：faceCount=0 ⇒ 「未检测到人脸」拦截；faceCount=2 ⇒ 「多张人脸」拦截；占比过小 ⇒ 拦截
+    // 方案A 后：这些字段不再参与判定（签名已无该入参，此处以断言锁定「传了也不拦」）
+    const legacy = { variance: 500, faceCount: 0, faceArea: 0.001 };
+    expect(evaluatePhotoCheck(legacy as unknown as { variance: number | null })).toEqual({ ok: true, reason: "" });
   });
 });

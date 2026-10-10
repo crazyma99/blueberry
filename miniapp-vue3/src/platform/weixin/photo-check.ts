@@ -1,19 +1,22 @@
 // T8 S3b-2：上传照片质量拦截（微信管线，旧端 utils/photoCheck.uts:67-145 忠实移植）。
-// 顺序（短路）：分辨率 → 模糊（离屏画布灰度＋拉普拉斯方差）→ 人脸检出/人数/占比（VK）。
-// **fail-open**（旧端 :138-141）：无 wx／画布或 VK 不可用／检测异常 一律放行 `{ok:true}`，不阻断用户上传。
-// 判定逻辑与文案全部来自 domain/photo-check（单一事实源，已单测）。
+// 顺序：降采样 ≤256px → 灰度 → 拉普拉斯方差（模糊度）。
+//
+// 【2026-10-09 主人拍板 · 方案A】端侧**只做模糊一项**；已摘除：
+//   · 分辨率规则（后端 4 条规则里没有 ⇒ 端侧拦下后端会放行的照片，结构性误拦）；
+//   · VK 人脸检测三组规则（未检出／多张／占比过小）——人脸判定**唯一裁决权交后端 `4002`**，
+//     端侧不再调用 `vk-face`（该模块仍为「分享卡片人脸居中」提供能力，见 platform/weixin/face-share-card.ts）。
+//   详见 domain/photo-check.ts 头注（含误拦根因清单与模糊阈值的待标定风险）。
+//
+// **fail-open**（旧端 :138-141）：无 wx／画布不可用／检测异常 一律放行 `{ok:true}`，不阻断用户上传。
 // ⭐P3-08 明文声明（T8 CR 🟡P2）：**前端质量检查仅为体验拦截，不代替后端人脸/安全校验**——后端校验始终是唯一裁决；
 // 且本管线 fail-open（检测不可用/异常一律放行），故任何“未通过”都只是提示用户重选，绝不构成准入判定。
 import {
   downsampleSize,
   evaluatePhotoCheck,
   laplacianVariance,
-  PHOTO_BLUR_THRESHOLD,
-  PHOTO_MIN_SIDE,
   toGrayscale,
   type PhotoCheckResult,
 } from "../../domain/photo-check";
-import { detectFaces, vkAvailable } from "./vk-face";
 
 interface WxCanvasLike {
   getImageInfo?: (o: { src: string; success: (res: { width?: number; height?: number }) => void; fail: () => void }) => void;
@@ -60,6 +63,7 @@ export function createWeixinPhotoCheck(deps?: { timeoutMs?: number }): PhotoChec
 }
 
 function createWeixinPhotoCheckInner(): PhotoCheckPort {
+  /** 取原图宽高：**仅用于**按比例算降采样尺寸（不再做分辨率拦截，见方案A） */
   function getImageInfo(src: string): Promise<{ width: number; height: number }> {
     return new Promise((resolve, reject) => {
       const wx = wxCanvas();
@@ -69,7 +73,13 @@ function createWeixinPhotoCheckInner(): PhotoCheckPort {
       }
       wx.getImageInfo({
         src,
-        success: (res) => resolve({ width: typeof res.width === "number" ? res.width : 0, height: typeof res.height === "number" ? res.height : 0 }),
+        // ⚠️ 必须用 Number.isFinite 取数：`typeof NaN === "number"`，旧写法会把 NaN 当有效尺寸带下去
+        //    ⇒ 画布/getImageData 尺寸为 NaN ⇒ 空缓冲 ⇒ 方差 0 ⇒ 被误判「模糊」硬拦（CR R2 实测）
+        success: (res) =>
+          resolve({
+            width: typeof res.width === "number" ? res.width : Number.NaN,
+            height: typeof res.height === "number" ? res.height : Number.NaN,
+          }),
         fail: () => reject(new Error("getImageInfo failed")),
       });
     });
@@ -91,40 +101,29 @@ function createWeixinPhotoCheckInner(): PhotoCheckPort {
       if (wx?.getImageInfo == null || wx.createOffscreenCanvas == null) {
         return { ok: true, reason: "" };
       }
-      // ① 分辨率
+      // ① 原图宽高（只用于算降采样比例）
       const info = await getImageInfo(filePath);
       const { width: w, height: h } = info;
-      if (w > 0 && h > 0 && (w < PHOTO_MIN_SIDE || h < PHOTO_MIN_SIDE)) {
-        return evaluatePhotoCheck({ width: w, height: h, variance: null });
+      // ⭐尺寸未知/非有限（0、NaN、负数）⇒ 无法按比例降采样 ⇒ **直接放行**（fail-open）。
+      //   不得拿 64×64 兜底去算模糊：阈值 100 是 256px 设计口径，64px 下高频内容方差会塌到 0 ⇒ 误拦（CR R3 实测）。
+      if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+        return { ok: true, reason: "" };
       }
-      // ② 模糊（降采样 ≤256px → 灰度 → 拉普拉斯方差）
+      // ② 模糊（降采样 ≤256px → 灰度 → 拉普拉斯方差）；**端侧唯一规则**
       const { width: dw, height: dh } = downsampleSize(w, h);
       const canvas = wx.createOffscreenCanvas({ type: "2d", width: dw, height: dh });
       const ctx = canvas.getContext("2d");
       const img = await loadCanvasImage(canvas, filePath);
       ctx.drawImage(img, 0, 0, dw, dh);
       const imgData = ctx.getImageData(0, 0, dw, dh);
+      // ⭐像素缓冲不完整（个别机型/异常容器返回空数据）⇒ 视为**检测失败**并放行；
+      //   否则空缓冲会被 toGrayscale 补 0 ⇒ 方差 0 ⇒ 误判「模糊」硬拦（CR R2）。
+      if (imgData.data == null || imgData.data.length < dw * dh * 4) {
+        return { ok: true, reason: "" };
+      }
       const gray = toGrayscale(imgData.data, dw * dh);
       const variance = laplacianVariance(gray, dw, dh);
-      if (variance < PHOTO_BLUR_THRESHOLD) {
-        return evaluatePhotoCheck({ width: w, height: h, variance });
-      }
-      // ③④ 人脸检出 / 人数 / 占比（VK 不可用则跳过该组检查）
-      if (vkAvailable()) {
-        const frameBuffer = (imgData.data.buffer ?? new ArrayBuffer(0)) as ArrayBuffer;
-        const faces = await detectFaces(frameBuffer, dw, dh, 5000);
-        const first = faces[0];
-        const sw = typeof first?.size?.width === "number" ? (first.size.width as number) : 0;
-        const sh = typeof first?.size?.height === "number" ? (first.size.height as number) : 0;
-        return evaluatePhotoCheck({
-          width: w,
-          height: h,
-          variance,
-          faceCount: faces.length,
-          faceArea: sw * sh,
-        });
-      }
-      return evaluatePhotoCheck({ width: w, height: h, variance });
+      return evaluatePhotoCheck({ variance });
     } catch (err) {
       // fail-open：检测代码自身异常一律放行（旧端 :138-141）
       console.error("[photoCheck] 检测异常，放行上传:", err);

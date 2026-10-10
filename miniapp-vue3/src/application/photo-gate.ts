@@ -75,19 +75,25 @@ export function resolvePhotoGateCopy(rawCode: unknown): PhotoGateCopy {
   return PHOTO_GATE_COPY[resolvePhotoGateCode(rawCode)];
 }
 
-/** 端侧（VK/分辨率/模糊）拦截结果的呈现映射：尽量复用后端 4 码的示例图与文案，无对应码时用端侧原话覆盖正文 */
+/**
+ * 端侧拦截结果的呈现映射（2026-10-09 方案A 后：端侧**只剩模糊一种硬拦**）。
+ * `code` 保留后端 4 码的联合类型（弹层按码挑反例图），端侧当前只会产出 `"unknown"`。
+ */
 export interface EndSideRejection {
   code: PhotoGateCheckCode | "unknown";
   title: string;
   text: string;
 }
 
-/** 端侧 reason（`domain/photo-check.ts` 逐字文案）→ 弹层呈现（**编码只用于挑反例图**，文案以端侧原话为准，避免指错方向） */
+/**
+ * 端侧 reason（`domain/photo-check.ts` 逐字文案）→ 弹层呈现（**文案以端侧原话为准**，避免指错方向）。
+ *
+ * 【2026-10-09 主人拍板 · 方案A】端侧已**不再做人脸判定**（唯一规则＝模糊；人脸与分辨率均摘除，
+ * 人脸唯一裁决权交后端 `4002`）⇒ 原先按「未检测到人脸／多张人脸／占比太小」挑反例图的三条分支
+ * **已不可达，随之删除**；端侧当前只会产出 `code = "unknown"`（无对应反例图，弹层只展示正例），
+ * 文案保留端侧原话（如「照片有点模糊，请重新拍摄清晰的照片」），比兜底文案更具体。
+ */
 export function resolveEndSideRejection(reason: string): EndSideRejection {
   const r = typeof reason === "string" ? reason : "";
-  if (r.includes("未检测到人脸")) return { code: "no_face", title: PHOTO_GATE_COPY.no_face.title, text: PHOTO_GATE_COPY.no_face.text };
-  if (r.includes("多张人脸")) return { code: "multi_face", title: PHOTO_GATE_COPY.multi_face.title, text: PHOTO_GATE_COPY.multi_face.text };
-  if (r.includes("占比太小")) return { code: "face_too_small", title: PHOTO_GATE_COPY.face_too_small.title, text: PHOTO_GATE_COPY.face_too_small.text };
-  // 分辨率过低 / 模糊 / 其它：后端 4 码无对应 ⇒ 通用标题 + **保留端侧原话**（比兜底文案更具体）
   return { code: "unknown", title: PHOTO_GATE_COPY.unknown.title, text: r !== "" ? r : PHOTO_GATE_COPY.unknown.text };
 }

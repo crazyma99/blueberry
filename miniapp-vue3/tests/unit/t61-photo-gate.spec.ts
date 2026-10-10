@@ -231,17 +231,21 @@ describe("弹层样式守卫（解 CR m9 假绿：样式零覆盖）", () => {
 });
 });
 
-describe("端侧拦截 → 弹层呈现（2026-09-23 主人拍板：与后端 4002 统一 UX）", () => {
-  it("端侧 4 类 reason 各自映射到对应码与契约文案", () => {
-    expect(resolveEndSideRejection("未检测到人脸，请上传清晰的正面照片").code).toBe("no_face");
-    expect(resolveEndSideRejection("检测到多张人脸，请上传单人照片").code).toBe("multi_face");
-    expect(resolveEndSideRejection("人脸在照片中占比太小，请靠近一些或裁剪后上传").code).toBe("face_too_small");
-    expect(resolveEndSideRejection("人脸在照片中占比太小，请靠近一些或裁剪后上传").text).toBe(
-      PHOTO_GATE_COPY.face_too_small.text,
-    );
+describe("端侧拦截 → 弹层呈现（2026-09-23 主人拍板统一 UX；2026-10-09 方案A 后端侧仅剩模糊）", () => {
+  it("⭐方案A 防回归：端侧不做人脸判定 ⇒ 人脸类 reason 不再映射 4 码（一律 unknown + 保留原话）", () => {
+    // 方案A 前：这三条分别映射到 no_face / multi_face / face_too_small；
+    // 方案A 后：端侧唯一规则＝模糊，人脸裁决交后端 4002 ⇒ 映射分支已删除，此处锁定该口径。
+    for (const r of [
+      "未检测到人脸，请上传清晰的正面照片",
+      "检测到多张人脸，请上传单人照片",
+      "人脸在照片中占比太小，请靠近一些或裁剪后上传",
+    ]) {
+      expect(resolveEndSideRejection(r).code).toBe("unknown");
+      expect(resolveEndSideRejection(r).text).toBe(r);
+    }
   });
 
-  it("无对应 4 码（模糊/分辨率过低）⇒ unknown 码但**保留端侧原话**（避免指错方向），空值走兜底", () => {
+  it("端侧模糊 ⇒ unknown 码但**保留端侧原话**（避免指错方向），空值走兜底", () => {
     const blur = resolveEndSideRejection("照片有点模糊，请重新拍摄清晰的照片");
     expect(blur.code).toBe("unknown");
     expect(blur.text).toBe("照片有点模糊，请重新拍摄清晰的照片");

@@ -476,6 +476,8 @@ async function choosePhoto(): Promise<void> {
     qualityRejectTitle.value = mapped.title;
     qualityRejectText.value = mapped.text;
     showQualityReject.value = true;
+    // 注：端侧结构上已不再做 face check（方案A），故不加恒定字段（信息量为零，独立 CR R4）；
+    //     `source:"end_side"` 已能区分端侧，且 `check_code` 不会再出现人脸三码——这本身就是改造的观测信号。
     analytics.reportEvent("ai_tryon_quality_reject", { check_code: mapped.code, source: "end_side" });
     return;
   }

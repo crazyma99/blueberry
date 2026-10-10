@@ -1,14 +1,16 @@
-// T8 S3b-2：微信照片质量管线测试——fail-open、分辨率、模糊、VK 不可用跳过、人脸 0/多/占比、异常放行。
+// T8 S3b-2：微信照片质量管线测试——fail-open、模糊（端侧唯一规则）、不触碰 VK、异常放行、超时兜底。
+//
+// 【2026-10-09 主人拍板 · 方案A】端侧只做模糊；已摘除分辨率规则与 VK 人脸检测三组规则。
+// 本用例同步调整，并新增**两条防回归守卫**：
+//   ① `createVKSession` **调用次数必须为 0**（端侧不得再触碰 VK；VK 现仅服务「分享卡片人脸居中」）；
+//   ② 即使 VK 可用且「检出 0 张人脸」，也不得产生任何人脸类拦截（方案A 前会拦「未检测到人脸」）。
 import { beforeEach, describe, expect, it } from "vitest";
 import { createWeixinPhotoCheck } from "../../src/platform/weixin/photo-check";
-import { detectFaces, detectLargestFace, vkAvailable } from "../../src/platform/weixin/vk-face";
-
-type Face = { type?: number; size?: { width: number; height: number } };
 
 function rgba(w: number, h: number, pattern: "flat" | "checker"): Uint8ClampedArray {
   const data = new Uint8ClampedArray(w * h * 4);
   for (let i = 0; i < w * h; i++) {
-    const v = pattern === "flat" ? 128 : (i % 2 === 0 ? 0 : 255);
+    const v = pattern === "flat" ? 128 : i % 2 === 0 ? 0 : 255;
     data[i * 4] = v;
     data[i * 4 + 1] = v;
     data[i * 4 + 2] = v;
@@ -17,13 +19,19 @@ function rgba(w: number, h: number, pattern: "flat" | "checker"): Uint8ClampedAr
   return data;
 }
 
+/** 统计 VK 会话创建次数（方案A 守卫：端侧管线不得再调用 VK） */
+const vkStats = { created: 0 };
+
 function installWx(opts: {
   width?: number;
   height?: number;
   pattern?: "flat" | "checker";
+  /** 是否让 `wx` **假装**支持 VK（方案A 守卫用：即便可用也不得被调用） */
   vk?: boolean;
-  faces?: Face[];
+  faces?: { type?: number; size?: { width: number; height: number } }[];
   throwInCanvas?: boolean;
+  /** 模拟「像素缓冲为空」（个别机型/异常容器）——CR R2 的误拦路径守卫 */
+  emptyPixels?: boolean;
 }): void {
   const width = opts.width ?? 1000;
   const height = opts.height ?? 1000;
@@ -49,10 +57,11 @@ function installWx(opts: {
         drawImage: () => {
           if (opts.throwInCanvas === true) throw new Error("canvas boom");
         },
-        getImageData: () => ({ data: rgba(cw, ch, pattern) }),
+        getImageData: () => ({ data: opts.emptyPixels === true ? new Uint8ClampedArray(0) : rgba(cw, ch, pattern) }),
       }),
     }),
     createVKSession: () => {
+      vkStats.created++;
       let anchorsCb: ((a: unknown) => void) | null = null;
       return {
         on: (ev: string, cb: (payload: unknown) => void) => {
@@ -70,45 +79,15 @@ function installWx(opts: {
 
 beforeEach(() => {
   delete (globalThis as { wx?: unknown }).wx;
+  vkStats.created = 0;
 });
 
-describe("platform/weixin/vk-face（VK 可用性与检出）", () => {
-  it("无 wx／canIUse=false → 不可用且检出为空；有 wx 且支持 → 可用", async () => {
-    expect(vkAvailable()).toBe(false);
-    await expect(detectFaces(new ArrayBuffer(4), 2, 2, 50)).resolves.toEqual([]);
-    installWx({ vk: true });
-    expect(vkAvailable()).toBe(true);
-    await expect(detectFaces(new ArrayBuffer(4), 2, 2, 50)).resolves.toEqual([]); // faces 默认空
-  });
-
-  it("anchors 过滤：仅收 type===3；detectLargestFace 取面积最大", async () => {
-    installWx({
-      vk: true,
-      faces: [
-        { type: 3, size: { width: 10, height: 10 } },
-        { type: 99, size: { width: 999, height: 999 } },
-        { type: 3, size: { width: 30, height: 30 } },
-      ],
-    });
-    const faces = await detectFaces(new ArrayBuffer(4), 2, 2, 50);
-    expect(faces.length).toBe(2);
-    const largest = await detectLargestFace(new ArrayBuffer(4), 2, 2, 50);
-    expect(largest?.size?.width).toBe(30);
-  });
-});
-
-describe("platform/weixin/photo-check（T8 S3b 管线）", () => {
+describe("platform/weixin/photo-check（T8 S3b 管线 · 方案A）", () => {
   it("无 wx → fail-open 放行", async () => {
     await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
   });
 
-  it("① 分辨率过低 → 拦截（文案取自域层）", async () => {
-    installWx({ width: 300, height: 800 });
-    const r = await createWeixinPhotoCheck().check("/tmp/a.jpg");
-    expect(r).toEqual({ ok: false, reason: "照片分辨率过低，请上传更清晰的照片（最短边不低于 480 像素）" });
-  });
-
-  it("② 模糊（常量灰度 → 方差 0）→ 拦截；清晰（棋盘）→ 放行", async () => {
+  it("① 模糊（常量灰度 → 方差 0）→ 拦截；清晰（棋盘）→ 放行", async () => {
     installWx({ pattern: "flat" });
     await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({
       ok: false,
@@ -118,31 +97,34 @@ describe("platform/weixin/photo-check（T8 S3b 管线）", () => {
     await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
   });
 
-  it("③④ VK 不可用 → 跳过人脸组检查（清晰图直接放行）", async () => {
-    installWx({ pattern: "checker", vk: false });
+  it("② 小尺寸图不再被拦（分辨率规则已摘除）：300×800 清晰图 → 放行", async () => {
+    installWx({ width: 300, height: 800, pattern: "checker" });
     await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
   });
 
-  it("③④ VK 可用：未检出/多张/占比过小/过大 → 逐条拦截；单人正常占比 → 放行", async () => {
+  it("③ 域层口径：VK 可用且「检出 0 张人脸」→ 不拦截（**仅覆盖域层**；管线级守卫见 ④）", async () => {
     installWx({ pattern: "checker", vk: true, faces: [] });
-    await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({
-      ok: false,
-      reason: "未检测到人脸，请上传清晰的正面照片",
-    });
-    installWx({ pattern: "checker", vk: true, faces: [{ type: 3, size: { width: 0.1, height: 0.1 } }, { type: 3, size: { width: 0.1, height: 0.1 } }] });
-    await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({
-      ok: false,
-      reason: "检测到多张人脸，请上传单人照片",
-    });
-    installWx({ pattern: "checker", vk: true, faces: [{ type: 3, size: { width: 0.01, height: 0.01 } }] });
-    await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({
-      ok: false,
-      reason: "人脸在照片中占比太小，请靠近一些或裁剪后上传",
-    });
-    // 占比上限已按主人拍板删除 ⇒ 大特写不再被端侧拦截（放行，交后端/生成端兜底）
-    installWx({ pattern: "checker", vk: true, faces: [{ type: 3, size: { width: 0.9, height: 0.9 } }] });
     await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
+  });
+
+  it("⭐④ 防回归：端侧管线**不得调用 VK**（createVKSession 调用次数 = 0）", async () => {
     installWx({ pattern: "checker", vk: true, faces: [{ type: 3, size: { width: 0.2, height: 0.2 } }] });
+    await createWeixinPhotoCheck().check("/tmp/a.jpg");
+    expect(vkStats.created).toBe(0);
+  });
+
+  it("⭐⑤ 防御（CR R2/R3）：尺寸非有限（NaN）或为 0 → 不拿 64×64 兜底算模糊，直接放行", async () => {
+    // 构造「flat（本会判模糊）」+ 异常尺寸：若走 64×64 兜底，高频内容方差会塌到 0 ⇒ 误拦
+    installWx({ width: Number.NaN, height: Number.NaN, pattern: "flat" });
+    await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
+    installWx({ width: 0, height: 0, pattern: "flat" });
+    await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
+    installWx({ width: -1, height: -1, pattern: "flat" });
+    await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
+  });
+
+  it("⭐⑥ 防御（CR R2）：像素缓冲为空/不完整 → 视为检测失败并放行（不得因空缓冲方差 0 而误拦）", async () => {
+    installWx({ pattern: "flat", emptyPixels: true });
     await expect(createWeixinPhotoCheck().check("/tmp/a.jpg")).resolves.toEqual({ ok: true, reason: "" });
   });
 
@@ -153,7 +135,7 @@ describe("platform/weixin/photo-check（T8 S3b 管线）", () => {
 });
 
 describe("photo-check 超时兜底（2026-09-17：模拟器 canvas 不回调时不至于永久卡在「照片检测中…」）", () => {
-  it("⭐检测实现永不返回（模拟 canvas/VK 卡住）→ 超时后 **fail-open 放行**，不阻塞上传", async () => {
+  it("⭐检测实现永不返回（模拟 canvas 卡住）→ 超时后 **fail-open 放行**，不阻塞上传", async () => {
     // 构造：getImageInfo 永不回调 ⇒ 内层实现挂起
     (globalThis as { wx?: unknown }).wx = {
       getImageInfo: () => undefined, // 既不 success 也不 fail
