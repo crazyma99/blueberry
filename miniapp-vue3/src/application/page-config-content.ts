@@ -27,6 +27,10 @@ export const SERVICE_LIST_DEFAULT: readonly string[] = [
 export const SLOGAN_DEFAULT = "蓝梅，让世界看见东方美";
 export const COOP_PHONE_DEFAULT = "13269920775";
 
+/** 客服的**抖音号**兜底（2026-10-10 主人指定）：抖音端「IM 客服」开路（`open-type="im"` + `data-im-id`）；
+ *  OPS「contact_info」下发 `imId` 时优先用后台值（可后台改、无需发版）。 */
+export const CONTACT_IM_ID_DEFAULT = "LanmeiCheongsam";
+
 export interface FooterContent {
   /** 主行：props 覆盖 → OPS copyright.text → Profile copyrightText */
   mainLine: string;
@@ -40,6 +44,8 @@ export interface ContactContent {
   qrSrc: string;
   phone: string;
   coopPhone: string;
+  /** 客服抖音号：OPS contact_info.imId 优先 → 兜底 CONTACT_IM_ID_DEFAULT */
+  imId: string;
 }
 
 type RepoLike = {
@@ -127,6 +133,8 @@ export function createPageConfigContent(deps: {
       qrSrc: ccfg != null && str(ccfg.qrSrc) !== "" ? str(ccfg.qrSrc) : deps.profile.contactQrSrc,
       phone: ccfg != null && str(ccfg.phone) !== "" ? str(ccfg.phone) : deps.profile.contactPhoneText,
       coopPhone: ccfg != null && str(ccfg.coopPhone) !== "" ? str(ccfg.coopPhone) : COOP_PHONE_DEFAULT,
+      // 抖音端客服：OPS 下发优先 → 兜底 LanmeiCheongsam（无 Profile 字段，同 coopPhone 口径）
+      imId: ccfg != null && str(ccfg.imId) !== "" ? str(ccfg.imId) : CONTACT_IM_ID_DEFAULT,
     };
   }
 

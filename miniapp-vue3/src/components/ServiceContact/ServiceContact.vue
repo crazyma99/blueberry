@@ -9,6 +9,18 @@
 // 2026-09-30 流量成本 PRD R2/R3：客服二维码缩略（cosThumb 300，250rpx 展示位足够且仍可扫）＋懒加载；
 // 非自家 COS/CDN 域由 cosThumb 安全透传（不拼参数）。
 import { cosThumb } from "../../application/image";
+import LifeImButton from "../../platform/ui-bridge/LifeImButton.vue";
+import { isToutiaoPlatform } from "../../ui/ui-platform";
+
+// 2026-10-10（抖音提审打回修正）：抖音端**不再出现微信二维码**（长按加好友＝站外引流），
+// 改用官方「抖音来客 IM 客服」按钮（`platform/ui-bridge/LifeImButton.vue`，基础库 3.61.0+）；
+// 微信端**保持现状**（长按二维码加客服）。判定为**运行时可判定**（逻辑层零 #ifdef，合 SPEC §C3）。
+const isToutiao = isToutiaoPlatform();
+
+/** 抖音端拉起客服失败（未开通来客／基础库低于 3.61.0／框架错误 179791）⇒ 明确提示，不静默失败 */
+function onContactFailed(): void {
+  uni.showToast({ title: "客服暂不可用，请稍后重试", icon: "none" });
+}
 
 withDefaults(
   defineProps<{
@@ -17,8 +29,13 @@ withDefaults(
     qrSrc?: string;
     phone?: string;
     coopPhone?: string;
+    /**
+     * 客服的**抖音号**（2026-10-10 新增）：有值 ⇒ 抖音端走官方「IM 客服」(`open-type="im"`)；
+     * 为空 ⇒ 回落到「抖音来客 IM 客服」(`open-type="lifeIm"`，需账号开通来客客服能力)。
+     */
+    imId?: string;
   }>(),
-  { list: () => [], slogan: "", qrSrc: "", phone: "", coopPhone: "" },
+  { list: () => [], slogan: "", qrSrc: "", phone: "", coopPhone: "", imId: "" },
 );
 </script>
 
@@ -61,10 +78,29 @@ withDefaults(
       <image src="/static/right-divider.png" class="divider" mode="aspectFill" />
     </view>
     <view class="service-contain">
-      <view class="tit font-noto-serif">长按下面二维码添加客服</view>
-      <view class="contact-main">
-        <image src="/static/contact-bg.png" class="contact-bg" mode="aspectFill" />
-        <image class="code" :src="cosThumb(qrSrc, 300)" mode="aspectFit" :show-menu-by-longpress="true" lazy-load></image>
+      <!-- 端差异集中在此桥：抖音＝官方 IM 客服按钮（**不渲染二维码**）；微信等＝现状二维码提示 -->
+      <LifeImButton :im-id="imId" @failed="onContactFailed">
+        <template #native>点击咨询在线客服</template>
+        <template #fallback>
+          <!-- #ifndef MP-TOUTIAO -->
+          <!-- 端语义＝「**抖音端不出现、其余端保持现状**」（与 LifeImButton「其他端行为完全不变」一致）。
+               独立 CR 🟡1：初版用 `#ifdef MP-WEIXIN` 会让**小红书端**只剩二维码、丢掉该指引文案 ⇒ 已改。
+               抖音包里连此字符串都不存在（防审核静态扫描）；模板/样式允许条件编译、逻辑层仍零 #ifdef
+               （合 SPEC §C3；无 #else 兜底 ⇒ 已在 scan-platform-usage.mjs 的 C4 登记）。 -->
+          <view class="tit font-noto-serif">长按下面二维码添加客服</view>
+          <!-- #endif -->
+        </template>
+      </LifeImButton>
+      <view class="contact-main" :class="{ 'contact-main--im': isToutiao }">
+        <image v-if="!isToutiao" src="/static/contact-bg.png" class="contact-bg" mode="aspectFill" />
+        <image
+          v-if="!isToutiao"
+          class="code"
+          :src="cosThumb(qrSrc, 300)"
+          mode="aspectFit"
+          :show-menu-by-longpress="true"
+          lazy-load
+        ></image>
         <view class="label">联系电话</view>
         <view class="val font-noto-serif">{{ phone }}</view>
         <view class="label">商务合作</view>
@@ -205,6 +241,11 @@ withDefaults(
   margin: 30rpx auto;
   width: 250rpx;
   height: 248rpx;
+}
+/* 抖音端无二维码 ⇒ 卡片不再需要为二维码预留 536rpx 高度（避免大片空白） */
+.service-contain .contact-main--im {
+  height: auto;
+  padding: 30rpx 0;
 }
 .service-contain .contact-main .label {
   font-size: 26rpx; /* 旧 --font-size-body-lg=26rpx */

@@ -41,6 +41,7 @@ import {
   SERVICE_LIST_DEFAULT,
   SLOGAN_DEFAULT,
   COOP_PHONE_DEFAULT,
+  CONTACT_IM_ID_DEFAULT,
 } from "../../application/page-config-content";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseButton from "../../ui/BaseButton.vue";
@@ -122,6 +123,7 @@ const contact = ref<ContactContent>({
   qrSrc: PROFILE.contactQrSrc,
   phone: PROFILE.contactPhoneText,
   coopPhone: COOP_PHONE_DEFAULT,
+  imId: CONTACT_IM_ID_DEFAULT,
 });
 
 async function loadStaticContent(): Promise<void> {
@@ -443,6 +445,7 @@ onMounted(() => {
         :qr-src="contact.qrSrc"
         :phone="contact.phone"
         :coop-phone="contact.coopPhone"
+        :im-id="contact.imId"
       />
       <!-- 页脚：PageFooter 共享组件（原 :249-253 page-footer > beian 块收敛——beian 变体、无分隔线） -->
       <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="beian" :with-divide="false" />

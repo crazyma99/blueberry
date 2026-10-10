@@ -167,6 +167,13 @@ export const COMPAT_DECLARATIONS = [
     reason:
       "样式级 `@font-face` 差异：仅抖音端注入该字体族；其余端不命中该规则即回落全局字体（**样式级天然兜底**），微信端另有其字体注入位点 ⇒ 无功能缺口。",
   },
+  {
+    file: "src/components/ServiceContact/ServiceContact.vue",
+    macro: "MP-TOUTIAO",
+    ends: ["tt"],
+    reason:
+      "端语义＝**抖端不出现、其余端保持现状**：「长按下面二维码添加客服」在抖音端＝**站外引流**（2026-10-10 抖音体验版提审被打回，理由＝微信加好友），故用 `#ifndef MP-TOUTIAO` 让抖音包内**连字符串都不存在**（防审核静态扫描），微信／小红书端**原样保留**；抖音端由 `src/platform/ui-bridge/LifeImButton.vue` 渲染官方「抖音来客 IM 客服」按钮（`open-type=lifeIm`，基础库 3.61.0+）⇒ **用户可见后果＝提示形式不同（按钮 vs 二维码），无功能缺失**。",
+  },
 ];
 
 /** C5 登记：端口 × 端矩阵（`src/ports/*.ts` 每个文件一条，**三端齐全**，见 SPEC §七②） */

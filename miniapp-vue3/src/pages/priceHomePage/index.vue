@@ -45,6 +45,7 @@ import {
   SERVICE_LIST_DEFAULT,
   SLOGAN_DEFAULT,
   COOP_PHONE_DEFAULT,
+  CONTACT_IM_ID_DEFAULT,
 } from "../../application/page-config-content";
 
 // —— 装配（同 index/demoDetail）——
@@ -102,6 +103,7 @@ const contact = ref<ContactContent>({
   qrSrc: PROFILE.contactQrSrc,
   phone: PROFILE.contactPhoneText,
   coopPhone: COOP_PHONE_DEFAULT,
+  imId: CONTACT_IM_ID_DEFAULT,
 });
 
 async function loadStaticContent(): Promise<void> {
@@ -214,6 +216,7 @@ function onDemoClick(idx: number): void {
         :qr-src="contact.qrSrc"
         :phone="contact.phone"
         :coop-phone="contact.coopPhone"
+        :im-id="contact.imId"
       />
       <!-- 页脚：PageFooter 共享组件（原 :205-207 beian 块收敛——beian 变体、无包裹无分隔线） -->
       <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="beian" :with-divide="false" :wrapped="false" />

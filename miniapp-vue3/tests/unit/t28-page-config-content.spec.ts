@@ -7,6 +7,7 @@ import {
   SERVICE_LIST_DEFAULT,
   SLOGAN_DEFAULT,
   COOP_PHONE_DEFAULT,
+  CONTACT_IM_ID_DEFAULT,
 } from "../../src/application/page-config-content";
 import type { PageConfigItem } from "../../src/infrastructure/repositories/page-config";
 import type { RequestContext } from "../../src/ports/context";
@@ -83,18 +84,23 @@ describe("page-config-content（P2-21 内容上提用例）", () => {
     const rows: PageConfigItem[] = [
       {
         type: "contact_info",
-        config: JSON.stringify({ qrSrc: "https://ops.example/qr.png", phone: "13900000000", coopPhone: "13700000000" }),
+        config: JSON.stringify({ qrSrc: "https://ops.example/qr.png", phone: "13900000000", coopPhone: "13700000000", imId: "ops_kf_douyin" }),
       },
     ];
     const a = await makeContent(rows).loadContact(ctx);
     expect(a.qrSrc).toBe("https://ops.example/qr.png");
     expect(a.phone).toBe("13900000000");
     expect(a.coopPhone).toBe("13700000000");
+    // 2026-10-10：抖音端客服抖音号——OPS 下发优先（可后台改、无需发版）
+    expect(a.imId).toBe("ops_kf_douyin");
     // 缺失 → Profile 注入锚点（qrSrc/phone）＋本地 coopPhone 默认
     const b = await makeContent([{ type: "contact_info" }]).loadContact(ctx);
     expect(b.qrSrc).toBe(profile.contactQrSrc);
     expect(b.phone).toBe(profile.contactPhoneText);
     expect(b.coopPhone).toBe(COOP_PHONE_DEFAULT);
+    // 缺失 → 主人指定的兜底抖音号 LanmeiCheongsam
+    expect(b.imId).toBe(CONTACT_IM_ID_DEFAULT);
+    expect(CONTACT_IM_ID_DEFAULT).toBe("LanmeiCheongsam");
   });
 
   it("容错：接口失败／config 非法 JSON／非对象 一律回落本地，不抛（页面不中断）", async () => {
