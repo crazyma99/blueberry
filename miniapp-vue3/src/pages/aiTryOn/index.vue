@@ -121,6 +121,7 @@ const uploader = createAiPhotoUploader({
       token: versioned.loadSession()?.token ?? null,
       brandId: versioned.loadBrandId() ?? "",
       appCode: PROFILE.appCode,
+      platform: PROFILE.platform,
     }),
 });
 const photoCheck = createWeixinPhotoCheck();
@@ -498,6 +499,16 @@ async function uploadSelectedPhoto(): Promise<void> {
     const res = await uploader.upload(photoPath.value, (p) => showLoading(formatUploadProgressText(p, uploadStartTs)));
     if (res.ok) {
       uploadedFilename.value = res.filename;
+    } else if (res.qualityCheckCode !== undefined) {
+      // 2026-10-10：后端质量门前移到 `POST /api/aiface/upload`（提交 `fecf5d4`）⇒ **上传阶段**即可能被拦。
+      // 走**与建单路径同一个弹层**（`data.check_code` 决定文案与反例图），并清掉已选照片——
+      // 与端侧拦截（:472-481）口径一致：避免「以为换了图、实际仍持旧图」被再次提交。
+      clearPhotoSelection();
+      qualityRejectCode.value = res.qualityCheckCode;
+      qualityRejectTitle.value = "";
+      qualityRejectText.value = "";
+      showQualityReject.value = true;
+      analytics.reportEvent("ai_tryon_quality_reject", { check_code: res.qualityCheckCode, source: "upload" });
     } else {
       uploadedFilename.value = "";
       uploadFailed.value = true; // R18：保留 photoPath，模板出「重试」入口（一键重传，不重选照片）

@@ -148,6 +148,7 @@ const uploader = createAiPhotoUploader({
       token: versioned.loadSession()?.token ?? null,
       brandId: versioned.loadBrandId(),
       appCode: PROFILE.appCode,
+      platform: PROFILE.platform,
     }),
 });
 const photoCheck = createWeixinPhotoCheck();
@@ -322,6 +323,12 @@ async function resolveShopIfNeeded(): Promise<void> {
 // fail-closed：压缩不可用/异常 → 阻断并提示重试，**不上传原图**（体积红线另有服务端 R22 二次压缩兜底）
 async function choosePhoto(): Promise<void> {
   if (uploading.value) return;
+  // 2026-10-10 主人口径：与「AI 试衣」完全一致 —— **选图前先查登录态**（上传需要会话），
+  // 未登录先拉起登录弹窗；登录后用户再点一次选图（与试衣同口径，不做选图链路的自动续跑）。
+  if (!isLoggedIn()) {
+    showLoginPopup.value = true;
+    return;
+  }
   // PRD R27：人脸照片属敏感个人信息，首次选图前需单独同意（拒绝则不进入选图）
   if (!hasFaceConsent(uniStorage, PROFILE.profileKey)) {
     const agreed = await confirmFaceConsent();
@@ -374,17 +381,20 @@ async function checkAndAcceptPhoto(filePath: string): Promise<void> {
   photoPath.value = filePath;
   photoPreviewUrl.value = filePath;
   uploadedFilename.value = ""; // 换图后必须重新上传
+  // 2026-10-10 主人口径：选好照片**立刻上传**（＝立刻过服务端质量门 4002），不再等到点按钮；
+  // 与「AI 试衣」一致（试衣也是选完即上传）。上传失败不阻塞选图，点按钮时会补传一次。
+  await uploadSelectedPhoto();
 }
 
 // —— 开始分析（旧端 :227-282）——
 async function handleStartAnalysis(): Promise<void> {
-  if (photoPreviewUrl.value === "") {
-    toast("请先上传照片");
+  if (photoPath.value === "") {
+    toast("请先选择照片");
     return;
   }
   if (uploading.value) return;
 
-  // 上传前检查登录态，未登录先拉起登录弹窗（旧端 :234-238）
+  // 登录态兜底（正常路径已在**选图前**检查；此处防会话过期，旧端 :234-238）
   if (!isLoggedIn()) {
     showLoginPopup.value = true;
     return;
@@ -401,12 +411,24 @@ async function handleStartAnalysis(): Promise<void> {
     return;
   }
 
-  // 如果已经上传过，直接跳转（旧端 :251-255）
+  // 选图时已上传成功 → 直接跳转（旧端 :251-255）
   if (uploadedFilename.value !== "") {
     navigateToLoading();
     return;
   }
 
+  // 选图时上传未成功（弱网／会话过期后补登等）⇒ 此处补传一次，成功即继续
+  await uploadSelectedPhoto();
+  if (uploadedFilename.value !== "") {
+    navigateToLoading();
+  }
+}
+
+// 选图后**立即上传**（2026-10-10 主人口径：与「AI 试衣」一致 —— 质量检测在选图后立刻做，
+// 不再留到点按钮时）。上传阶段的 `4002` 与端侧拦截（`checkAndAcceptPhoto`）**共用同一个**底部弹层；
+// 上传失败只提示、不阻塞选图，点「开始AI分析推荐」时会补传一次。
+async function uploadSelectedPhoto(): Promise<void> {
+  if (photoPath.value === "" || uploading.value) return;
   uploading.value = true;
   uploadPercent.value = -1;
   uploadStartTs = Date.now(); // R18：剩余时间/弱网判定基准
@@ -416,18 +438,25 @@ async function handleStartAnalysis(): Promise<void> {
     });
     if (res.ok) {
       uploadedFilename.value = res.filename;
-      uploading.value = false;
-      navigateToLoading();
+    } else if (res.qualityCheckCode !== undefined) {
+      // 后端质量门（4002）拦下：与端侧拦截（:365-373）**同一个弹层**，
+      // 并清掉已选照片（防「以为换了图、实际仍持旧图」被再次提交）。
+      // 注：本页现有惯例不对质量拦截上报分析事件（端侧拦截亦未上报）⇒ 此处保持一致，不新增事件。
+      clearPhotoSelection();
+      qualityRejectCode.value = res.qualityCheckCode;
+      qualityRejectTitle.value = "";
+      qualityRejectText.value = "";
+      showQualityReject.value = true;
     } else {
-      uploading.value = false;
       toast(res.message || "上传失败，请重试");
       // 401：拉起登录弹窗（旧端由全局 http 层事件处理，见偏差②）
       if (res.authExpired === true) showLoginPopup.value = true;
     }
   } catch (err) {
-    uploading.value = false;
     console.error("[aiRecommend] 上传失败:", err);
     toast("上传失败，请重试");
+  } finally {
+    uploading.value = false;
   }
 }
 

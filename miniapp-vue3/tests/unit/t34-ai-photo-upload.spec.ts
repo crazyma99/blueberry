@@ -65,12 +65,31 @@ describe("application/ai-photo-upload（T8 S3 上传用例）", () => {
     // 非法 JSON / 非对象 → 稳定失败文案
     expect(parseUploadResult("{broken")).toMatchObject({ ok: false, message: "照片上传失败，请重新选择" });
     expect(parseUploadResult(null)).toMatchObject({ ok: false });
+
+    // 2026-10-10：质量门前移到 `POST /api/aiface/upload` ⇒ **上传阶段**也会收到 4002，
+    // 必须把 `data.check_code` 带出（页面据此弹与建单路径**同一个** `QualityRejectSheet`）。
+    expect(
+      parseUploadResult({ code: 4002, message: "未检测到人脸，请上传单人正面照", data: { check_code: "no_face" } }),
+    ).toMatchObject({ ok: false, qualityCheckCode: "no_face" });
+    // 未知/缺失 check_code → `"unknown"`（契约：前端永不抛、走主人指定的兜底文案）
+    expect(parseUploadResult({ code: 4002, data: { check_code: "who_knows" } })).toMatchObject({ ok: false, qualityCheckCode: "unknown" });
+    expect(parseUploadResult({ code: 4002 })).toMatchObject({ ok: false, qualityCheckCode: "unknown" });
+    // 非 4002 的业务失败**不得**带 qualityCheckCode（否则页面会误弹「照片不合格」弹层）
+    expect(parseUploadResult({ code: 500, message: "boom" }).qualityCheckCode).toBeUndefined();
+    expect(parseUploadResult({ code: 4001, message: "次数不足" }).qualityCheckCode).toBeUndefined();
+    expect(parseUploadResult({ code: 401 }).qualityCheckCode).toBeUndefined();
   });
 
-  it("上传头：恒带 X-App-Code；有 token 才带 Bearer；有品牌才带 X-Brand-Id", () => {
-    expect(buildUploadHeaders({ token: null, brandId: null, appCode: "blueBerry" })).toEqual({ "X-App-Code": "blueBerry" });
-    expect(buildUploadHeaders({ token: "t", brandId: "lanmei", appCode: "blueBerry" })).toEqual({
+  it("上传头：恒带 X-App-Code ＋ X-Channel（端标识）；有 token 才带 Bearer；有品牌才带 X-Brand-Id", () => {
+    expect(buildUploadHeaders({ token: null, brandId: null, appCode: "blueBerry", platform: "mp-weixin" })).toEqual({
       "X-App-Code": "blueBerry",
+      "X-Channel": "wx",
+    });
+    expect(
+      buildUploadHeaders({ token: "t", brandId: "lanmei", appCode: "blueBerry", platform: "mp-toutiao" }),
+    ).toEqual({
+      "X-App-Code": "blueBerry",
+      "X-Channel": "tt",
       Authorization: "Bearer t",
       "X-Brand-Id": "lanmei",
     });
@@ -88,7 +107,7 @@ describe("application/ai-photo-upload（T8 S3 上传用例）", () => {
     const uploader = createAiPhotoUploader({
       upload: okPort,
       baseUrl: "https://crazyma99.xyz/",
-      headers: () => buildUploadHeaders({ token: "t", brandId: null, appCode: "blueBerry" }),
+      headers: () => buildUploadHeaders({ token: "t", brandId: null, appCode: "blueBerry", platform: "mp-weixin" }),
     });
     await expect(uploader.upload("/tmp/a.jpg")).resolves.toMatchObject({ ok: true, filename: "up.png" });
     expect(calls[0]).toMatchObject({ url: "https://crazyma99.xyz/api/aiface/upload", name: "photo", filePath: "/tmp/a.jpg" });

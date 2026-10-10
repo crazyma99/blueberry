@@ -1,10 +1,12 @@
 // T5（P2-01/02/05）：HTTP 客户端。职责——发起时捕获 RequestContext 快照、注入
-// Bearer / X-App-Code / X-Brand-Id（旧端 http.uts:122 口径：有品牌上下文即恒带，空则不带）、
+// Bearer / X-App-Code / X-Channel / X-Brand-Id（旧端 http.uts:122 口径：有品牌上下文即恒带，空则不带；
+// X-Channel 为 2026-10-10 新增的端标识）、
 // 业务信封解码（0/200 兼容）、业务码与传输失败统一映射为 AppError、重放策略透传。
 // 合同（phases P2）：createHttpClient({transport, authCoordinator}) -> {request(input)}
 import type { Environment, Platform, RequestContext, Result } from "../../ports/context";
 import type { HttpMethod, HttpPort, HttpResponse } from "../../ports/http";
 import { isBusinessSuccess, mapBusinessFailure, mapTransportFailure, type AppError } from "./errors";
+import { channelOf } from "../../domain/channel";
 
 /** 新端内部会话模型（P2-03 AuthCoordinator 将实现；非后端响应字段的伪造） */
 export interface Session {
@@ -98,6 +100,9 @@ export function createHttpClient(deps: {
     //    2026-09-19 纠偏：初版「brandScoped 标记才带」无任何仓储使用 ⇒ 实际从不携带、品牌馆切牌后数据不切换
     //    （主人拍板对齐旧端，deviations #23）
     headers["X-App-Code"] = ctx.appCode;
+    // 端标识（2026-10-10）：**全请求恒带**，供服务端区分端（后端「按端启门」的依据，旧端不带该头）。
+    // 由 `ctx.platform` 派生（构建平台已在上下文快照里），逻辑层零 #ifdef（SPEC §C3）。
+    headers["X-Channel"] = channelOf(ctx.platform);
     if (ctx.brandId != null && ctx.brandId !== "") {
       headers["X-Brand-Id"] = ctx.brandId;
     }

@@ -40,12 +40,26 @@ describe("createHttpClient 头注入（P2-02）", () => {
     await c.request({ method: "GET", url: "/api/shops", context: ctx });
     let h = t.seen[0].headers!;
     expect(h["X-App-Code"]).toBe("blueBerry");
+    expect(h["X-Channel"]).toBe("wx"); // 2026-10-10：端标识恒带（后端「按端启门」的依据）
     expect(h.Authorization).toBeUndefined();
     expect(h["X-Brand-Id"]).toBe("brand-1"); // 旧端口径：有品牌上下文即恒带，无需逐请求标记
     await c.request({ method: "POST", url: "/api/like", authRequired: true, context: ctx });
     h = t.seen[1].headers!;
     expect(h.Authorization).toBe("Bearer tok-1");
     expect(h["X-Brand-Id"]).toBe("brand-1");
+  });
+  it("X-Channel 随构建平台变化：mp-toutiao→tt、mp-xhs→xhs、未知平台→wx（兜底不放行）", async () => {
+    const t = makeTransport((req) => ({ ok: true, value: { status: 200, businessCode: 0, requestId: "r", data: null } }));
+    const c = createHttpClient({ transport: t.port, authCoordinator: okAuth });
+    for (const [platform, want] of [
+      ["mp-toutiao", "tt"],
+      ["mp-xhs", "xhs"],
+      ["mp-weixin", "wx"],
+      ["something-else", "wx"],
+    ] as const) {
+      await c.request({ method: "GET", url: "/x", context: { ...ctx, platform: platform as RequestContext["platform"] } });
+      expect(t.seen[t.seen.length - 1].headers!["X-Channel"]).toBe(want);
+    }
   });
   it("brandId 为空（null/空串）→ 不带 X-Brand-Id（无品牌上下文，走后端旧逻辑）", async () => {
     const t = makeTransport((req) => ({ ok: true, value: { status: 200, businessCode: 0, requestId: "r", data: null } }));

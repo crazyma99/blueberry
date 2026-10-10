@@ -10,7 +10,7 @@ export interface UploadRequest {
   filePath: string;
   /** 表单字段名（旧端约定 name） */
   name: string;
-  /** 手工注入的头（X-App-Code 恒带、X-Brand-Id 品牌作用域时带） */
+  /** 手工注入的头（X-App-Code 与 X-Channel 恒带、X-Brand-Id 品牌作用域时带） */
   headers?: Readonly<Record<string, string>>;
   /** 额外表单字段 */
   formData?: Readonly<Record<string, string>>;

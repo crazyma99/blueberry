@@ -1,11 +1,17 @@
 // T8 S3 照片上传用例（旧端 aiTryOn:506-530 `uploadSelectedPhoto` ＋ api.uts:499-546 `uploadPhoto`）。
 // 口径：POST {baseUrl}/api/aiface/upload，表单字段名 `photo`；成功＝**code 0 或 200 且 data.filename 非空**；
 // 否则以 message 提示（旧端 `uploadRes.message || '照片上传失败，请重新选择'`）。
-// 头：旧端 buildUploadHeader＝Bearer + 品牌头（有品牌才带 X-Brand-Id）；新端补 `X-App-Code`（新端全站约定，
+// 头：旧端 buildUploadHeader＝Bearer + 品牌头（有品牌才带 X-Brand-Id）；新端补 `X-App-Code` 与 `X-Channel`
+// （端标识，2026-10-10 新增；新端全站约定，
 // 声明为有意偏差——多带一个头不影响服务端，缺它则可能无法按应用路由）。
 // 401：旧端挂起等待登录（auth.uts/http.uts 队列）并 emit 'login-required'；新端由 client 统一返回 AUTH_EXPIRED，
 // 上传端口不持有会话 ⇒ 本用例把 kind==="AUTH_EXPIRED" 如实上抛给页面（页面按登录流程处理），**不静默成功**。
 import type { UploadPort } from "../ports/upload";
+import type { Platform } from "../ports/context";
+import { channelOf } from "../domain/channel";
+import { mapBusinessCode } from "../domain/payment-state";
+import { readCheckCodeFromBusinessData } from "./photo-gate";
+import type { PhotoGateCheckCode } from "./photo-gate";
 
 /** 旧端 aiTryOn:445 常量：单张照片上限 10MB */
 export const PHOTO_SIZE_LIMIT_BYTES = 10 * 1024 * 1024;
@@ -21,6 +27,12 @@ export interface UploadFailure {
   message: string;
   /** AUTH_EXPIRED 时页面应拉起登录流程；网络/业务失败可重试 */
   authExpired?: boolean;
+  /**
+   * 服务端**照片质量拦截**（业务码 4002，`data.check_code`）——与建单路径**同一个弹层**。
+   * 2026-10-10 起后端把质量门前移到 `/upload`（后端提交 `fecf5d4`）⇒ 上传阶段即可能被拦；
+   * 此字段存在时页面应弹 `QualityRejectSheet`（而非只 toast 文案）。未被拦截时为 `undefined`。
+   */
+  qualityCheckCode?: PhotoGateCheckCode | "unknown";
 }
 
 /** 旧端响应归一：res.data 可能是字符串或对象；成功码 0/200 且 filename 非空 */
@@ -44,16 +56,28 @@ export function parseUploadResult(raw: unknown): UploadSuccess | UploadFailure {
     return { ok: true, filename, fileUrl: typeof fileUrl === "string" ? fileUrl : "" };
   }
   const message = typeof envelope.message === "string" && envelope.message !== "" ? envelope.message : "照片上传失败，请重新选择";
+  // 照片质量拦截（4002）：走**与建单路径同一个领域分类器**（`domain/payment-state.ts` 的
+  // `mapBusinessCode` 是业务码的单一事实源，避免此处再硬编码一个 4002），并把 `data.check_code`
+  // 一并带出，供页面弹**同一个** `QualityRejectSheet`（2026-10-10：后端门前移到 /upload）。
+  if (mapBusinessCode(code).kind === "QUALITY_REJECTED") {
+    return { ok: false, message, qualityCheckCode: readCheckCodeFromBusinessData(envelope.data) };
+  }
   return { ok: false, message, authExpired: code === 401 };
 }
 
-/** 旧端 buildUploadHeader ＋ 新端 X-App-Code 约定（token/brand 为空则不带对应头） */
+/** 旧端 buildUploadHeader ＋ 新端 `X-App-Code`／`X-Channel` 约定（token/brand 为空则不带对应头） */
 export function buildUploadHeaders(deps: {
   token: string | null;
   brandId: string | null;
   appCode: string;
+  /** 构建平台（`PROFILE.platform`）：用于派生端标识 `X-Channel`，见 `domain/channel.ts` */
+  platform: Platform;
 }): Record<string, string> {
-  const headers: Record<string, string> = { "X-App-Code": deps.appCode };
+  const headers: Record<string, string> = {
+    "X-App-Code": deps.appCode,
+    // 端标识（2026-10-10）：后端「按端启门」的依据 —— 旧端（main 封版）不带该头 ⇒ 门不生效、零影响。
+    "X-Channel": channelOf(deps.platform),
+  };
   if (deps.token != null && deps.token !== "") headers.Authorization = "Bearer " + deps.token;
   if (deps.brandId != null && deps.brandId !== "") headers["X-Brand-Id"] = deps.brandId;
   return headers;
