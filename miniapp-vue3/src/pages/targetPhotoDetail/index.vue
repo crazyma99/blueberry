@@ -174,8 +174,9 @@ async function init(id: string, type: string): Promise<void> {
   // 旧端无静默换票，匿名请求后端 liked 恒 false；新端 getLikeStatus 微信端 authRequired 静默换票带票，
   // 不门控会把该身份的历史收藏带进未登录 UI（爱心误点亮）。
   const rl = isFullSession(versioned.loadSession()) ? await likeRepo.getLikeStatus(ctxFactory.next(), id) : null;
-  if (rl != null && rl.ok && rl.value.length > 0) {
-    const s = rl.value[0];
+  // CR 🟡-7：按 id 匹配（原取 value[0]，后端若返回非预期首条会把点赞态绑到错的 albumId）
+  const s = rl != null && rl.ok ? rl.value.find((x) => x.albumId === Number(id)) : undefined;
+  if (s != null) {
     likeState.value = { id: s.albumId, liked: s.liked, likeCount: s.likeCount };
   } else {
     likeState.value = { id: Number(id), liked: false, likeCount: rd.value.likeCount ?? 0 };
@@ -256,10 +257,17 @@ async function onGetPhoneNumber(e: unknown): Promise<void> {
   showLoginPopup.value = false;
   loginAgreementChecked.value = false;
   toast("登录成功", "success");
-  // 自动补发挂起的点赞（旧端 flushPendingRequests 语义）；此时会话已 full，门禁放行
+  // 自动补发挂起的点赞（旧端 flushPendingRequests 语义）；此时会话已 full，门禁放行。
+  // 2026-10-11「亮又灭」根修：走 replayPending 先查服务端真实收藏态——已收藏只同步 UI，
+  // 不再盲 toggle（未登录门控隐藏真实状态，盲取反会把服务端既有收藏翻成 false＝亮又灭）
   const again = pendingLike.value;
   pendingLike.value = false;
-  if (again) void onToggleLike();
+  // CR 🟡-2：补发失败（rolled-back）与手动点赞同口径提示，不得无声吞掉
+  if (again && likeState.value != null) {
+    void liker.replayPending(ctxFactory.next(), likeState.value).then((o) => {
+      if (o === "rolled-back") feedbackRef.value?.show("操作失败，请重试");
+    });
+  }
 }
 
 function onRetry(): void {

@@ -2,6 +2,8 @@
 // Bearer / X-App-Code / X-Channel / X-Brand-Id（旧端 http.uts:122 口径：有品牌上下文即恒带，空则不带；
 // X-Channel 为 2026-10-10 新增的端标识）、
 // 业务信封解码（0/200 兼容）、业务码与传输失败统一映射为 AppError、重放策略透传。
+// 2026-10-11（D）：401 ⇒ 经协调器 expireSession 作废本次带票会话（自愈，对齐旧端清认证语义；
+// 不重发、不弹窗，下一次页面门禁自然拉起登录）。
 // 合同（phases P2）：createHttpClient({transport, authCoordinator}) -> {request(input)}
 import type { Environment, Platform, RequestContext, Result } from "../../ports/context";
 import type { HttpMethod, HttpPort, HttpResponse } from "../../ports/http";
@@ -27,6 +29,8 @@ export interface Session {
 /** client 消费的认证端口最小面（waitForLogin 语义见 P2-03：队列唤醒/取消全 reject） */
 export interface AuthCoordinatorLike {
   waitForLogin(context: RequestContext): Promise<Result<Session>>;
+  /** 401 自愈（2026-10-11 可选面）：仅作废「本次实际带票」的会话——实现方负责比对防误杀新会话 */
+  expireSession?(used: Session): void;
 }
 
 export interface ClientRequestInput {
@@ -62,6 +66,7 @@ export function createHttpClient(deps: {
     // 1) 发起时捕获快照：后续切品牌/登出不影响在飞请求的上下文
     const ctx: RequestContext = Object.freeze({ ...input.context });
     const headers: Record<string, string> = {};
+    let usedSession: Session | null = null; // 2026-10-11（D）：记录本次实际带票会话，供 401 自愈精确作废
 
     // 2) 认证：authRequired 时先取会话；失败/取消不发请求
     if (input.authRequired) {
@@ -93,6 +98,7 @@ export function createHttpClient(deps: {
         };
       }
       headers.Authorization = "Bearer " + session.value.token;
+      usedSession = session.value;
     }
 
     // 3) 头注入：X-App-Code 恒带；X-Brand-Id 有品牌上下文（非空）即恒带——
@@ -125,6 +131,10 @@ export function createHttpClient(deps: {
     // 5) 响应映射：HTTP 401 → AUTH_EXPIRED；业务信封 0/200 成功；其余业务码 → AppError
     const http = res.value;
     if (http.status === 401) {
+      // 2026-10-11（D）401 自愈：作废本次实际带票的会话（协调器内 token 比对，防迟到 401 误杀新会话）——
+      // 对齐旧端 http.uts「401 清认证信息」语义的最小等价；不重发当前请求、不弹窗——
+      // 会话清除后下一次页面门禁（isFullSession 读盘）自然拉起登录，替代旧端 login-required 事件总线。
+      if (usedSession != null) authCoordinator.expireSession?.(usedSession);
       return {
         ok: false,
         error: {

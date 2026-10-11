@@ -5,7 +5,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { createLikeToggler, type LikeableItem } from "../../src/composables/use-like";
 import type { RepoResult } from "../../src/infrastructure/repositories/carousels";
-import type { ToggleLikeResult } from "../../src/infrastructure/repositories/likes";
+import type { LikeStatusItem, ToggleLikeResult } from "../../src/infrastructure/repositories/likes";
 import type { RequestContext } from "../../src/ports/context";
 
 // uni 生命周期在非页面容器不可用（vue.injectHook 不存在）——mock 后手动驱动 onLoad
@@ -92,7 +92,9 @@ const flush = () => new Promise((r) => setTimeout(r, 20));
 describe("createLikeToggler（P2-14 乐观更新/乱序/回滚）", () => {
   it("乐观更新立即生效；服务端返回为准采纳", async () => {
     const d = deferred<RepoResult<ToggleLikeResult>>();
-    const toggler = createLikeToggler({ likes: { toggleLike: async () => d.promise } });
+    const toggler = createLikeToggler({
+      likes: { toggleLike: async () => d.promise, getLikeStatus: async () => ({ ok: true, value: [] }) },
+    });
     const item: LikeableItem = { id: 1, liked: false, likeCount: 5 };
     const p = toggler.toggle(ctx, item);
     expect(item.liked).toBe(true);
@@ -103,7 +105,10 @@ describe("createLikeToggler（P2-14 乐观更新/乱序/回滚）", () => {
   });
   it("取消点赞计数不为负；失败回滚到前态", async () => {
     const toggler = createLikeToggler({
-      likes: { toggleLike: async () => ({ ok: false, error: { kind: "BUSINESS", businessCode: 5001, message: "x", requestId: "l2", retryable: false } }) },
+      likes: {
+        toggleLike: async () => ({ ok: false, error: { kind: "BUSINESS", businessCode: 5001, message: "x", requestId: "l2", retryable: false } }),
+        getLikeStatus: async () => ({ ok: true, value: [] }),
+      },
     });
     const zero: LikeableItem = { id: 2, liked: true, likeCount: 0 };
     expect(await toggler.toggle(ctx, zero)).toBe("rolled-back");
@@ -119,7 +124,9 @@ describe("createLikeToggler（P2-14 乐观更新/乱序/回滚）", () => {
     const d2 = deferred<RepoResult<ToggleLikeResult>>();
     const queue = [d1, d2];
     let calls = 0;
-    const toggler = createLikeToggler({ likes: { toggleLike: async () => queue[calls++].promise } });
+    const toggler = createLikeToggler({
+      likes: { toggleLike: async () => queue[calls++].promise, getLikeStatus: async () => ({ ok: true, value: [] }) },
+    });
     const item: LikeableItem = { id: 4, liked: false, likeCount: 1 };
     const p1 = toggler.toggle(ctx, item);
     const p2 = toggler.toggle(ctx, item);
@@ -367,6 +374,198 @@ describe("pages/demoDetail 收藏态登录门（未登录不拉取/不合并点�
     const w = await mountList();
     expect(h.statusCalls).toEqual(["103"]);
     expect(heartSrc(w)).toBe("/static/iconpark/like-filled.svg");
+    w.unmount();
+  });
+});
+
+// ===== 2026-10-11 登录后补发守卫（「亮又灭」根修：replayPending 先查服务端真实点赞态再决定）=====
+// 回归背景：未登录门控刻意隐藏真实收藏态（liked 恒显 false）；登录成功后盲 toggle 会把服务端
+// 本已存在的收藏翻成 false ⇒ 乐观点亮的爱心被服务端响应熄灭。守卫：已收藏只同步 UI 不取反。
+describe("createLikeToggler · replayPending（2026-10-11 登录后补发守卫）", () => {
+  it("服务端本已收藏 ⇒ 不发 toggle、只同步 UI（返回 already-liked，计数一并校准）", async () => {
+    let toggleCalls = 0;
+    const toggler = createLikeToggler({
+      likes: {
+        getLikeStatus: async () => ({ ok: true, value: [{ albumId: 7, liked: true, likeCount: 8 }] }),
+        toggleLike: async () => {
+          toggleCalls += 1;
+          return { ok: true, value: { liked: false, likeCount: 7 } };
+        },
+      },
+    });
+    const item: LikeableItem = { id: 7, liked: false, likeCount: 0 }; // 未登录 UI 口径
+    expect(await toggler.replayPending(ctx, item)).toBe("already-liked");
+    expect(toggleCalls).toBe(0); // 关键：不取反
+    expect(item.liked).toBe(true);
+    expect(item.likeCount).toBe(8);
+  });
+
+  it("服务端未收藏 ⇒ 以服务端计数为基线正常补发 toggle", async () => {
+    const seen: number[] = [];
+    const toggler = createLikeToggler({
+      likes: {
+        getLikeStatus: async () => ({ ok: true, value: [{ albumId: 7, liked: false, likeCount: 4 }] }),
+        toggleLike: async (_ctx: unknown, albumId: number) => {
+          seen.push(albumId);
+          return { ok: true, value: { liked: true, likeCount: 5 } };
+        },
+      },
+    });
+    const item: LikeableItem = { id: 7, liked: false, likeCount: 99 }; // 漂移的 UI 计数先被校准
+    expect(await toggler.replayPending(ctx, item)).toBe("confirmed");
+    expect(seen).toEqual([7]);
+    expect(item.liked).toBe(true);
+    expect(item.likeCount).toBe(5);
+  });
+
+  it("查询失败 ⇒ 回落原盲 toggle（保住挂起动作语义）", async () => {
+    const seen: number[] = [];
+    const toggler = createLikeToggler({
+      likes: {
+        getLikeStatus: async () => ({
+          ok: false,
+          error: { kind: "BUSINESS" as const, businessCode: 5001, message: "x", requestId: "l2", retryable: false },
+        }),
+        toggleLike: async (_ctx: unknown, albumId: number) => {
+          seen.push(albumId);
+          return { ok: true, value: { liked: true, likeCount: 1 } };
+        },
+      },
+    });
+    const item: LikeableItem = { id: 7, liked: false, likeCount: 0 };
+    expect(await toggler.replayPending(ctx, item)).toBe("confirmed");
+    expect(seen).toEqual([7]);
+  });
+
+  it("查询返回仅他 id 记录（find miss）⇒ 回落原盲 toggle，且不被他 id 数据污染", async () => {
+    const seen: number[] = [];
+    const toggler = createLikeToggler({
+      likes: {
+        getLikeStatus: async () => ({ ok: true, value: [{ albumId: 999, liked: true, likeCount: 5 }] }),
+        toggleLike: async (_ctx: unknown, albumId: number) => {
+          seen.push(albumId);
+          return { ok: true, value: { liked: true, likeCount: 1 } };
+        },
+      },
+    });
+    const item: LikeableItem = { id: 7, liked: false, likeCount: 0 };
+    expect(await toggler.replayPending(ctx, item)).toBe("confirmed");
+    expect(seen).toEqual([7]);
+    expect(item.liked).toBe(true);
+    expect(item.likeCount).toBe(1);
+  });
+
+  it("查询抛异常 ⇒ 回落原盲 toggle（不产生 unhandled rejection，CR 🟡-3）", async () => {
+    const seen: number[] = [];
+    const toggler = createLikeToggler({
+      likes: {
+        getLikeStatus: async (): Promise<RepoResult<LikeStatusItem[]>> => {
+          throw new Error("boom");
+        },
+        toggleLike: async (_ctx: unknown, albumId: number) => {
+          seen.push(albumId);
+          return { ok: true, value: { liked: true, likeCount: 1 } };
+        },
+      },
+    });
+    const item: LikeableItem = { id: 7, liked: false, likeCount: 0 };
+    expect(await toggler.replayPending(ctx, item)).toBe("confirmed");
+    expect(seen).toEqual([7]);
+  });
+
+  it("CR 🔴-1 竞态：补发窗口内用户又点同一项 ⇒ 补发整体作废（不同步迟到状态、不二次 toggle）", async () => {
+    const d = deferred<RepoResult<LikeStatusItem[]>>();
+    const seen: number[] = [];
+    const toggler = createLikeToggler({
+      likes: {
+        getLikeStatus: async () => d.promise,
+        toggleLike: async (_ctx: unknown, albumId: number) => {
+          seen.push(albumId);
+          return { ok: true, value: { liked: true, likeCount: 1 } };
+        },
+      },
+    });
+    const item: LikeableItem = { id: 7, liked: false, likeCount: 0 };
+    const pReplay = toggler.replayPending(ctx, item); // 补发在飞（status 未归）
+    const pTap = toggler.toggle(ctx, item); // 用户补点：seq 抬升、乐观点亮、POST 在飞
+    d.resolve({ ok: true, value: [{ albumId: 7, liked: false, likeCount: 0 }] }); // status 迟到
+    expect(await pReplay).toBe("discarded-stale");
+    expect(await pTap).toBe("confirmed");
+    expect(seen).toEqual([7]); // 全程只有用户补点那一枪（无 seq 守卫时此处会变成 [7,7] 双 toggle 相消）
+    expect(item.liked).toBe(true);
+  });
+});
+
+describe("pages/demoDetail 登录后补发守卫（服务端本已收藏 ⇒ 只同步 UI 不取反）", () => {
+  beforeEach(() => {
+    h.store.clear();
+    h.likeCalls.length = 0;
+    h.statusCalls.length = 0;
+    // 服务端口径：103 本已收藏——未登录 UI 被门控隐藏，登录后补发若盲 toggle 会把它翻灭
+    h.likeStatus = [{ albumId: 103, liked: true, likeCount: 8 }];
+    h.albumItems = [{ id: 103, title: "客片C", coverImageUrl: "https://cos.example/c.png", likeCount: 1 }];
+    h.albumMode = "ok";
+    h.onLoadCalls.length = 0;
+    (globalThis as { uni?: unknown }).uni = {
+      getStorageSync: (k: string) => h.store.get(k) ?? "",
+      setStorageSync: (k: string, v: string) => {
+        h.store.set(k, v);
+      },
+      removeStorageSync: (k: string) => {
+        h.store.delete(k);
+      },
+      login: (o: { success?: (r: { code: string }) => void }) => o.success?.({ code: "wx-code-1" }),
+      showLoading: () => undefined,
+      hideLoading: () => undefined,
+    };
+  });
+
+  async function mountList(): Promise<VueWrapper> {
+    const w = mount(DemoDetail);
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ idx: "7" });
+    await flush();
+    await w.vm.$nextTick();
+    return w;
+  }
+
+  async function loginViaPopup(w: VueWrapper): Promise<void> {
+    const popup = w.findComponent({ name: "LoginPopup" });
+    popup.vm.$emit("toggle-agreement");
+    popup.vm.$emit("get-phone", { detail: { errMsg: "getPhoneNumber:ok", code: "phone-code-1" } });
+    await flush();
+    await w.vm.$nextTick();
+  }
+
+  function heartSrc(w: VueWrapper): string | undefined {
+    return w.findAll(".like-icon")[0]?.attributes("src");
+  }
+
+  it("未登录点「服务端本已收藏」的项 ⇒ 登录后查真实态：不发 toggle，爱心点亮且计数校准", async () => {
+    const w = await mountList();
+    expect(heartSrc(w)).toBe("/static/iconpark/like.svg"); // 未登录门控隐藏真实收藏态
+    await w.findAll(".like-row")[0].trigger("click");
+    await w.vm.$nextTick();
+    expect(w.find(".stub-login-popup").exists()).toBe(true);
+    expect(h.likeCalls).toEqual([]); // 门禁在乐观更新之前：无请求
+    await loginViaPopup(w);
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.statusCalls).toEqual(["103"]); // 补发前先查真实态
+    expect(h.likeCalls).toEqual([]); // 已收藏 ⇒ 不取反（旧逻辑此处会盲 toggle 把收藏翻灭）
+    expect(heartSrc(w)).toBe("/static/iconpark/like-filled.svg");
+    expect(w.findAll(".like-count")[0].text()).toBe("8"); // 计数同步服务端口径
+    w.unmount();
+  });
+
+  it("未登录点「服务端未收藏」的项 ⇒ 登录后正常补发 toggle", async () => {
+    h.likeStatus = [{ albumId: 103, liked: false, likeCount: 1 }];
+    const w = await mountList();
+    await w.findAll(".like-row")[0].trigger("click");
+    await w.vm.$nextTick();
+    await loginViaPopup(w);
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.likeCalls).toEqual([103]);
     w.unmount();
   });
 });

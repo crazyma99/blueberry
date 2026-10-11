@@ -23,6 +23,8 @@ export function createLikeRepository(deps: { client: ClientLike }) {
         url: "/api/like/status",
         // ⭐2026-09-20（CR 同根因）：后端为 JWTOptional——无 token 则 liked 恒 false（旧端 http 层「有 token 就带」）。
         // **跨端边界**：微信端要求带登录态（取回真实 liked）；抖音端登录尚未落地（占位）⇒ 保持匿名，避免触发登录流程。
+        // ⚠️ 联动登记（2026-10-11 CR 🟡-5）：抖音匿名 ⇒ liked 恒 false ⇒ use-like.replayPending 在 tt 退化为盲 toggle；
+        // 今日不可达（tt 登录未落地），tt 登录落地时必须同步校验本口径。
         authRequired: context.platform === "mp-weixin",
         query: { albumIds },
         replayPolicy: "idempotent",

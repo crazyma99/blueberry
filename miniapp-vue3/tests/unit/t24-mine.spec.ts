@@ -133,4 +133,52 @@ describe("pages/mine（T7 P2-18 我的页）", () => {
     await w.vm.$nextTick();
     expect(w.find(".stub-login-popup").exists()).toBe(true);
   });
+
+  // 2026-10-11 登录态横跳回归（B+C 根修）：页面创建于登录前（协调器内存 null），他页登录后回到本页
+  // ⇒ onShow 兜底拉取必须**认领盘上 full 会话**（C），不得发起静默换票顶掉 full（B）⇒ 不再「先出现立刻丢失」
+  it("横跳回归：页创建于登录前＋他页已 full 登录 ⇒ onShow 不换票、不覆盖盘、保持已登录态", async () => {
+    // 1) 页面在登录前创建（盘空 ⇒ 本页协调器内存 null，模拟 tab 常驻页滞后）
+    const w = mount(MinePage);
+    h.onLoadCalls[h.onLoadCalls.length - 1]();
+    await flush();
+    await w.vm.$nextTick();
+    expect(w.find(".nickname").text()).toBe("点击立即登陆");
+    // 2) 他页（如客片列表点赞门）完成交互登录：full 落盘；用户信息缺头像 ⇒ onShow 会兜底拉 getUserInfo
+    seedLoggedIn(null, null);
+    let loginCalls = 0;
+    (globalThis as { uni?: unknown }).uni = {
+      getStorageSync: (k: string) => h.store.get(k) ?? "",
+      setStorageSync: (k: string, v: string) => {
+        h.store.set(k, v);
+      },
+      removeStorageSync: (k: string) => {
+        h.store.delete(k);
+      },
+      login: (o: { success?: (r: { code: string }) => void }) => {
+        loginCalls++; // 静默换票一旦发生即计数（修复前会走这里）
+        o.success?.({ code: "c1" });
+      },
+      request: (o: { url: string; success?: (r: { statusCode: number; data: unknown }) => void }) => {
+        const isLogin = o.url.includes("/api/wx/login");
+        o.success?.({
+          statusCode: 200,
+          data: {
+            code: 200,
+            data: isLogin
+              ? { token: "tk-silent-NEW", userInfo: { openid: "o1" } } // 静默换票会轮换 token 并落 silent
+              : { id: 1, openid: "o1", phone: null, nickname: null, avatarUrl: null },
+          },
+        });
+      },
+    };
+    // 3) 回到本页（tab 切换不重建页面 ⇒ 协调器内存仍 null）
+    h.onShowCalls[h.onShowCalls.length - 1]();
+    await flush();
+    await w.vm.$nextTick();
+    // 断言：不发起换票、盘仍 full、页面保持已登录（三态之二，而非翻回「点击立即登陆」）
+    expect(loginCalls).toBe(0);
+    const onDisk = JSON.parse(h.store.get("lm.session.v1")!) as { kind?: string; token?: string };
+    expect(onDisk).toMatchObject({ kind: "full", token: "tk-test" });
+    expect(w.find(".nickname").text()).toBe("点击获取用户信息");
+  });
 });

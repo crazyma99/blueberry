@@ -318,10 +318,17 @@ async function onGetPhoneNumber(e: unknown): Promise<void> {
   showLoginPopup.value = false;
   loginAgreementChecked.value = false;
   toast("登录成功", "success");
-  // 自动补发挂起的点赞（旧端 flushPendingRequests 语义）；此时会话已 full，门禁放行
+  // 自动补发挂起的点赞（旧端 flushPendingRequests 语义）；此时会话已 full，门禁放行。
+  // 2026-10-11「亮又灭」根修：走 replayPending 先查服务端真实收藏态——已收藏只同步 UI，
+  // 不再盲 toggle（未登录门控隐藏真实状态，盲取反会把服务端既有收藏翻成 false＝亮又灭）
   const pending = pendingLikeItem.value;
   pendingLikeItem.value = null;
-  if (pending != null) void onToggleLike(pending);
+  // CR 🟡-2：补发失败（rolled-back）与手动点赞同口径提示，不得无声吞掉
+  if (pending != null) {
+    void liker.replayPending(ctxFactory.next(), pending).then((o) => {
+      if (o === "rolled-back") feedbackRef.value?.show("操作失败，请重试");
+    });
+  }
 }
 
 function goAiRecommend(): void {

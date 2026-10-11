@@ -1,6 +1,6 @@
 // T5（P2-01/02/05）：HTTP client 合同测试——头注入/上下文快照/信封兼容/错误映射/重放透传。
 import { describe, expect, it } from "vitest";
-import { createHttpClient } from "../../src/infrastructure/http/client";
+import { createHttpClient, type Session } from "../../src/infrastructure/http/client";
 import type { RequestContext, Result } from "../../src/ports/context";
 import type { HttpRequest, HttpResponse } from "../../src/ports/http";
 
@@ -117,6 +117,26 @@ describe("createHttpClient 响应与错误映射（P2-01/05）", () => {
       expect(r2.error.kind).toBe("TIMEOUT");
       expect(r2.error.retryable).toBe(true); // 传输失败可重放；非幂等与否由 replayPolicy 判
     }
+  });
+  it("⭐401 自愈（2026-10-11 D）：authRequired 请求 401 ⇒ expireSession 收到本次带票会话；匿名请求 401 不触发", async () => {
+    const expired: Session[] = [];
+    const auth = { ...okAuth, expireSession: (s: Session) => { expired.push(s); } };
+    const t = makeTransport(() => ({ ok: true, value: { status: 401, businessCode: null, requestId: "r", data: null } }));
+    const c = createHttpClient({ transport: t.port, authCoordinator: auth });
+    const r1 = await c.request({ method: "POST", url: "/api/like", authRequired: true, context: ctx });
+    expect(r1.ok).toBe(false);
+    if (!r1.ok) expect(r1.error.kind).toBe("AUTH_EXPIRED"); // 对外语义不变（页面照旧回滚+提示）
+    expect(expired.length).toBe(1);
+    expect(expired[0].token).toBe("tok-1"); // 作废的正是本次带票会话（协调器内再比对防误杀）
+    await c.request({ method: "GET", url: "/api/shops", context: ctx }); // 匿名请求 401（未带票）
+    expect(expired.length).toBe(1); // 不触发
+  });
+  it("协调器未实现 expireSession（可选面）⇒ 401 仍按原样返回 AUTH_EXPIRED（兼容旧桩/旧实现）", async () => {
+    const t = makeTransport(() => ({ ok: true, value: { status: 401, businessCode: null, requestId: "r", data: null } }));
+    const c = createHttpClient({ transport: t.port, authCoordinator: okAuth }); // okAuth 无 expireSession
+    const r = await c.request({ method: "GET", url: "/a", authRequired: true, context: ctx });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.kind).toBe("AUTH_EXPIRED");
   });
   it("authRequired 登录失败/取消 → 不发请求即返回；会话代次不符 → AUTH_EXPIRED", async () => {
     const t = makeTransport(() => ({ ok: true, value: { status: 200, businessCode: 0, requestId: "r", data: 1 } }));

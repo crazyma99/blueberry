@@ -318,3 +318,81 @@ describe("pages/targetPhotoDetail 收藏态登录门（未登录不拉取点赞�
     w.unmount();
   });
 });
+
+// ===== 2026-10-11 登录后补发守卫（「亮又灭」根修：同 demoDetail 一族）=====
+// 回归背景：未登录门控刻意隐藏真实收藏态；登录成功后盲 toggle 会把服务端本已存在的收藏
+// 翻成 false ⇒ 乐观点亮的爱心立刻熄灭。守卫：replayPending 先查真实态，已收藏只同步 UI。
+describe("pages/targetPhotoDetail 登录后补发守卫（服务端本已收藏 ⇒ 只同步 UI 不取反）", () => {
+  beforeEach(() => {
+    h.store.clear();
+    h.likeCalls.length = 0;
+    h.statusCalls.length = 0;
+    // 服务端口径：42 本已收藏——未登录 UI 被门控隐藏，登录后补发若盲 toggle 会把它翻灭
+    h.likeStatus = [{ albumId: 42, liked: true, likeCount: 9 }];
+    h.detailMode = "ok";
+    h.detailCalls = 0;
+    h.onLoadCalls.length = 0;
+    (globalThis as { uni?: unknown }).uni = {
+      getStorageSync: (k: string) => h.store.get(k) ?? "",
+      setStorageSync: (k: string, v: string) => {
+        h.store.set(k, v);
+      },
+      removeStorageSync: (k: string) => {
+        h.store.delete(k);
+      },
+      login: (o: { success?: (r: { code: string }) => void }) => o.success?.({ code: "wx-code-1" }),
+      showLoading: () => undefined,
+      hideLoading: () => undefined,
+    };
+  });
+
+  async function mountDetail(): Promise<VueWrapper> {
+    const w = mount(DetailPage);
+    h.onLoadCalls[h.onLoadCalls.length - 1]({ idx: "42", type: "1" });
+    await flush();
+    await w.vm.$nextTick();
+    return w;
+  }
+
+  async function loginViaPopup(w: VueWrapper): Promise<void> {
+    const popup = w.findComponent({ name: "LoginPopup" });
+    popup.vm.$emit("toggle-agreement");
+    popup.vm.$emit("get-phone", { detail: { errMsg: "getPhoneNumber:ok", code: "phone-code-1" } });
+    await flush();
+    await w.vm.$nextTick();
+  }
+
+  function heartSrc(w: VueWrapper): string | undefined {
+    return w.find(".heart").attributes("src");
+  }
+
+  it("未登录点「服务端本已收藏」的项 ⇒ 登录后查真实态：不发 toggle，爱心点亮且计数校准", async () => {
+    const w = await mountDetail();
+    expect(heartSrc(w)).toBe("/static/iconpark/like.svg"); // 未登录门控隐藏真实收藏态
+    expect(w.find(".like-num").text()).toBe("3"); // 详情接口 likeCount=3
+    await w.find(".collect").trigger("click");
+    await w.vm.$nextTick();
+    expect(w.find(".stub-login-popup").exists()).toBe(true);
+    expect(h.likeCalls).toEqual([]); // 门禁在乐观更新之前：无请求
+    await loginViaPopup(w);
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.statusCalls).toEqual(["42"]); // 补发前先查真实态
+    expect(h.likeCalls).toEqual([]); // 已收藏 ⇒ 不取反（旧逻辑此处会盲 toggle 把收藏翻灭）
+    expect(heartSrc(w)).toBe("/static/iconpark/like-filled.svg");
+    expect(w.find(".like-num").text()).toBe("9"); // 计数同步服务端口径
+    w.unmount();
+  });
+
+  it("未登录点「服务端未收藏」的项 ⇒ 登录后正常补发 toggle", async () => {
+    h.likeStatus = [{ albumId: 42, liked: false, likeCount: 3 }];
+    const w = await mountDetail();
+    await w.find(".collect").trigger("click");
+    await w.vm.$nextTick();
+    await loginViaPopup(w);
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.likeCalls).toEqual([42]);
+    w.unmount();
+  });
+});
