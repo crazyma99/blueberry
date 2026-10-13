@@ -46,7 +46,12 @@ vi.mock("../../src/infrastructure/repositories/ai", () => ({
 
 import AiTryOnResultPage from "../../src/pages/aiTryOnResult/index.vue";
 
-const TEXTS = { auth: "登录状态异常，请点击重试", unavailable: "该作品暂时无法查看，请稍后再试", generic: "生成失败，请重试" };
+const TEXTS = {
+  auth: "登录状态异常，请点击重试",
+  unavailable: "该作品暂时无法查看，请稍后再试",
+  generic: "生成失败，请重试",
+  busy: "当前服务繁忙，请稍后再试", // CR ②：鉴权失败连点 3 次后自洽降级到本条（无祈使句、无按钮）
+};
 const INTERNAL_MESSAGE = "店铺不存在、已停用或不属于当前品牌"; // 后端品牌门真实文案，端侧绝不能上屏
 const globalWith = { components: { "wd-popup": StubPopup, "wd-loading": StubLoading } };
 
@@ -90,6 +95,34 @@ describe("t62 · 页面接线：AUTH_EXPIRED 必须落到「登录状态异常�
     await w.vm.$nextTick();
     expect(w.find(".fail-text").text()).toBe(TEXTS.auth);
     expect(w.find(".retry-btn").exists()).toBe(true); // canRetry：非只读且 failCount<3
+    w.unmount();
+  });
+
+  it("⭐【CR ① 真盲区】首查（queryInitialTask）即 401 ⇒ 同样显示「登录状态异常，请点击重试」＋重试按钮", async () => {
+    // 打开结果页首查就 401 是**最常见**的触发路径；此接线在 index.vue 的 queryInitialTask 分支里（非轮询）
+    h.sequence = [authFailure]; // 首查即失败（无需推进定时器）
+    const w = await boot({ taskId: "42", shopId: "7" });
+    await w.vm.$nextTick();
+    expect(w.find(".fail-text").text()).toBe(TEXTS.auth);
+    expect(w.find(".retry-btn").exists()).toBe(true); // failCount=0 ⇒ 有按钮，与「请点击重试」自洽
+    w.unmount();
+  });
+
+  it("⭐【CR ②】鉴权失败连点重试 3 次 ⇒ 文案自洽降级为「当前服务繁忙」，且**不留**无按钮的「点击重试」", async () => {
+    h.sequence = [authFailure]; // 首查 401 → authExpired=true, failCount=0
+    const w = await boot({ taskId: "42" });
+    await w.vm.$nextTick();
+    expect(w.find(".fail-text").text()).toBe(TEXTS.auth);
+    for (let i = 0; i < 3; i++) {
+      await w.find(".retry-btn").trigger("click");
+      await vi.advanceTimersByTimeAsync(20);
+      await w.vm.$nextTick();
+    }
+    // 第 3 次点击后 failCount>=3（不再重试）⇒ 文案必须不含祈使句，且不能出现「有祈使句却没按钮」
+    const text = w.find(".fail-text").text();
+    expect(text).toBe(TEXTS.busy);
+    expect(w.find(".retry-btn").exists()).toBe(false);
+    expect(text.includes("点击重试") && !w.find(".retry-btn").exists()).toBe(false);
     w.unmount();
   });
 

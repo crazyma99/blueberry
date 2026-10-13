@@ -1,9 +1,12 @@
-// T71（2026-10-13 主人报障 · 表1 #25「首页底部，长按客服二维码，无反应」）：
-// 修复形态＝**确定性地弹出可扫码大图**（点击或长按都触发），不再只依赖 show-menu-by-longpress 的原生菜单。
-// 本 spec 守卫三件事：
+// T71（2026-10-13 主人报障 · 表1 #25「首页底部，长按客服二维码，无反应」；2026-10-13 二次返修 + CR ③ 订正）：
+// 修复形态＝**点击** ⇒ 确定性地弹原图大图（uni.previewImage）；**长按** ⇒ 让回原生 show-menu-by-longpress 菜单。
+// （此前版本曾写「点击或长按都弹大图」，与二次返修的实测结论相反，已于 2026-10-13 订正为本行口径。）
+// 本 spec 守卫四件事：
 //   ① 预览地址取**原图**（不是 cosThumb 的 300px WebP 缩略）——纯函数 qrPreviewUrl；
-//   ② 组件接线：微信端 click / longpress 都调 uni.previewImage 且传原图；抖音端不渲染二维码⇒不可达；
-//   ③ 防回退：源码里预览链路必须走 qrPreviewUrl、且保留 show-menu-by-longpress（加分项）+ 新文案。
+//   ② 组件接线：微信端 click 调 uni.previewImage 且传原图、**longpress 不得绑预览**（否则全屏预览盖住原生菜单）；
+//      抖音端不渲染二维码 ⇒ 预览链路不可达；
+//   ③ 展示图＝原图口径（qrPreviewUrl），且 `.code` 必须 position:relative + z-index（置顶、可接收触摸）；
+//   ④ 防回退：预览链路必须走 qrPreviewUrl、必须保留 show-menu-by-longpress、逻辑层不得出现引流词。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

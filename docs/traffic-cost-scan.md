@@ -28,7 +28,7 @@ PRD 更新要点：**R16 改为「只做压缩，不裁剪、不做任何人脸�
 | 11 | `aiTryOn`/`aiRecommend` 选图链路 | 压缩失败 fail-open 回退原图上传＝R19 禁止的「绕过压缩路径」 | 改 fail-closed：压缩不可用/异常 → toast「照片处理失败，请重试」并阻断，无任何原图上传旁路（服务端 R22 二次压缩仍兜底体积红线） |
 | 12 | 上传进度反馈（R18） | 只有百分比，缺剩余时间/弱网提示；`aiTryOn` 失败须重选照片 | 新增 `application/upload-progress.ts`（百分比＋按已耗时外推剩余秒数＋耗时>8s 且进度<60% 追加「网络较慢」提示）；`aiTryOn` 上传失败后出「点击重试」条，一键重传当前照片不重选（t70/t38 覆盖） |
 | 13 | `AiTemplatePicker` 主图 swiper | 挂载即渲染全部 swiper-item，N 张 750px 图首屏并发（R3 最大缺口；swiper 内 lazy-load 对交替项不可靠——红线 4 调研结论） | 改确定性窗口化：仅当前 ±1（环形）项喂 src，首屏主图请求 ≤3（t33 用例覆盖） |
-| 14 | `ServiceContact` 客服二维码 | 裸绑远程 URL，无缩略无懒加载（index/priceHomePage 两页引用） | `cosThumb(qrSrc, 300)`＋lazy-load（250rpx 展示位 300px 仍可扫） |
+| 14 | `ServiceContact` 客服二维码 | 裸绑远程 URL，无缩略无懒加载（index/priceHomePage 两页引用） | **⚠️ 已撤销缩略（2026-10-13，表1 #25）：展示改回原图**——`:src="qrPreviewUrl(qrSrc)"`（CDN 域归一 ＋ 剔 `imageMogr2`），`lazy-load` 保留。撤销理由＝对齐线上旧端（旧端用原图且长按正常），新端 300px WebP 缩略引发可扫/观感问题（主人 DevTools 实测）。**流量代价（本机 curl 实测）**：原图 **57,750 B** vs 300×WebP **11,918 B** ⇒ 单次 **+45,832 B（≈+45.8 KB）**；影响面仅 `index`／`priceHomePage` 两页各 1 张 ⇒ 量级可忽略。偏差登记见 `miniapp-vue3/docs/migration/deviations.md` 第 39 条 |
 | 15 | `priceList` 套餐图 | 缩略宽度 600，展示位仅 160rpx（≈240px@3x） | 600→300（R2） |
 | 16 | `mine` 头像 | 裸绑原图（自家 CDN 头像会拉全尺寸） | `cosThumb(avatar, 200)`（微信 qlogo 等非自家域安全透传） |
 | 17 | `targetPhotoDetail` 注释 :2/:181 | 「首图原图」已陈旧（实际 1080 WebP） | 注释订正（无行为变更） |

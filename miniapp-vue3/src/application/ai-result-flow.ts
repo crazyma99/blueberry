@@ -76,19 +76,26 @@ export function resolveFailureView(input: {
   authExpired: boolean;
 }): ResultFailureView {
   const canRetry = !input.shareReadOnly && input.failCount < 3;
+  let view: ResultFailureView;
   if (input.shareReadOnly) {
     // 2026-10-13 CR 收口③：只读态 canRetry 恒 false、无重试入口 ⇒ 必须保留「暂时性」语义（一次性抖动≠永久失效），
     // 同时**保持防枚举**（不区分「不存在／无权限／令牌问题」，不新增可枚举信息）
-    return { kind: "unavailable", text: "该作品暂时无法查看，请稍后再试", canRetry };
-  }
-  if (input.authExpired) {
+    view = { kind: "unavailable", text: "该作品暂时无法查看，请稍后再试", canRetry };
+  } else if (input.authExpired) {
     // 文案取自单一事实源（与内核 console 文案同串）
-    return { kind: "auth", text: RESULT_AUTH_FAILURE_TEXT, canRetry };
+    view = { kind: "auth", text: RESULT_AUTH_FAILURE_TEXT, canRetry };
+  } else if (input.failCount >= 3) {
+    view = { kind: "busy", text: "当前服务繁忙，请稍后再试", canRetry };
+  } else {
+    view = { kind: "generic", text: "生成失败，请重试", canRetry };
   }
-  if (input.failCount >= 3) {
-    return { kind: "busy", text: "当前服务繁忙，请稍后再试", canRetry };
+  // 自洽兜底（2026-10-13 CR 收口②）：文案带祈使句「点击重试」时必须真的有可点的按钮；
+  // 若该分支给不出按钮（如「鉴权异常」且 failCount≥3）⇒ 降级为不含祈使句的「服务繁忙」文案。
+  // 这样**任何调用方**拿到的 view 都自洽，无需调用方记得重置状态。
+  if (view.canRetry === false && view.text.includes("点击重试")) {
+    return { kind: "busy", text: "当前服务繁忙，请稍后再试", canRetry: false };
   }
-  return { kind: "generic", text: "生成失败，请重试", canRetry };
+  return view;
 }
 
 export function createResultPoller(deps: {

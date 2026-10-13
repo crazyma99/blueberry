@@ -82,15 +82,23 @@ describe("t56 · 失败态文案映射（resolveFailureView）", () => {
     expect(resolveFailureView({ shareReadOnly: true, failCount: 9, authExpired: true }).kind).toBe("unavailable");
   });
 
-  it("⭐鉴权异常 → 「登录状态异常，请点击重试」，且**优先于**「服务繁忙」（可行动类别排在服务维度之前）", () => {
+  it("⭐鉴权异常 → 「登录状态异常，请点击重试」（可重试区间优先于「服务繁忙」）", () => {
+    // 可重试区间（failCount<3）：可行动类别排在服务维度之前
     expect(resolveFailureView({ shareReadOnly: false, failCount: 0, authExpired: true })).toEqual({
       kind: "auth",
       text: TEXTS.auth,
       canRetry: true,
     });
-    expect(resolveFailureView({ shareReadOnly: false, failCount: 3, authExpired: true })).toEqual({
+    expect(resolveFailureView({ shareReadOnly: false, failCount: 2, authExpired: true })).toEqual({
       kind: "auth",
       text: TEXTS.auth,
+      canRetry: true,
+    });
+    // ⚠️ 2026-10-13 CR ② 更正：留档——**曾经**此处断言 failCount=3 时仍返回 auth 文案，但那时 canRetry=false、
+  // 页面没有按钮（「请点击重试」文不对钮）。现由 resolveFailureView 的自洽兜底改为「服务繁忙」文案（无祈使句）。
+    expect(resolveFailureView({ shareReadOnly: false, failCount: 3, authExpired: true })).toEqual({
+      kind: "busy",
+      text: TEXTS.busy,
       canRetry: false,
     });
   });
@@ -118,6 +126,25 @@ describe("t56 · 失败态文案映射（resolveFailureView）", () => {
         }
       }
     }
+  });
+
+  it("⭐（CR ②）文案自洽不变式：凡出现祈使句「点击重试」的分支，必须同时给出可点的重试按钮（全组合）", () => {
+    for (const shareReadOnly of [true, false]) {
+      for (let failCount = 0; failCount <= 5; failCount++) {
+        for (const authExpired of [true, false]) {
+          const v = resolveFailureView({ shareReadOnly, failCount, authExpired });
+          if (v.text.includes("点击重试")) {
+            expect(v.canRetry, "文案要求点击重试却无按钮：" + JSON.stringify({ shareReadOnly, failCount, authExpired })).toBe(true);
+          }
+        }
+      }
+    }
+    // 反例回归：鉴权异常 ∧ 已重试 3 次 ⇒ 必须降级为不含祈使句的「服务繁忙」文案（而不是「请点击重试」却没按钮）
+    expect(resolveFailureView({ shareReadOnly: false, failCount: 3, authExpired: true })).toEqual({
+      kind: "busy",
+      text: TEXTS.busy,
+      canRetry: false,
+    });
   });
 
   it("⭐不泄露后端 message：入参只有布尔/计数，四类文案均在白名单内", () => {
