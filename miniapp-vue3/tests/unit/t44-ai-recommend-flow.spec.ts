@@ -34,7 +34,8 @@ describe("ai-recommend-flow · finalScore（P3-18）", () => {
     // 显示条件等价于「>0 且为有限数」
     expect(shouldShowScore({ finalScore: 1 })).toBe(true);
     expect(shouldShowScore({ finalScore: 0 })).toBe(false);
-    expect(shouldShowScore({ score: 90 })).toBe(false); // 原始 score 不参与
+    // 原始 score 不参与（类型只认 finalScore ⇒ 用 cast 保住用例语义，2026-10-13 CR ②）
+    expect(shouldShowScore({ score: 90 } as unknown as { finalScore?: unknown })).toBe(false);
   });
 
   it("同步扣费合同常量＝180s（旧端 :816）", () => {
@@ -112,7 +113,7 @@ describe("ai-recommend-flow · 请求纪律（P3-16/P3-17）", () => {
   });
 
   it("失败后**不自动重发**：仅调用方显式再次 run 才发起第二次", async () => {
-    const f = makeRunner({ ok: false, error: { kind: "NETWORK" } });
+    const f = makeRunner({ ok: false, error: { kind: "NETWORK", businessCode: null, message: "NETWORK", requestId: "r", retryable: false } });
     await expect(f.runner.run({ userPhotoFilename: "u.png", shopId: 7, operationId: "op-2" })).resolves.toMatchObject({ ok: false, kind: "NETWORK" });
     expect(f.calls()).toBe(1);
     await f.runner.run({ userPhotoFilename: "u.png", shopId: 7, operationId: "op-2" }); // 显式重试
@@ -127,10 +128,10 @@ describe("ai-recommend-flow · 请求纪律（P3-16/P3-17）", () => {
 
   it("失败分类与文案：4001→INSUFFICIENT_CREDITS（页面据此走共享支付）、AUTH_EXPIRED、NETWORK、业务 message 优先", async () => {
     const cases: Array<[RepoResult<Record<string, unknown>>, string]> = [
-      [{ ok: false, error: { kind: "INSUFFICIENT_CREDITS" } }, "INSUFFICIENT_CREDITS"],
-      [{ ok: false, error: { kind: "AUTH_EXPIRED" } }, "AUTH_EXPIRED"],
-      [{ ok: false, error: { kind: "NETWORK" } }, "NETWORK"],
-      [{ ok: false, error: { kind: "BUSINESS", message: "功能未启用" } }, "BUSINESS"],
+      [{ ok: false, error: { kind: "INSUFFICIENT_CREDITS", businessCode: null, message: "INSUFFICIENT_CREDITS", requestId: "r", retryable: false } }, "INSUFFICIENT_CREDITS"],
+      [{ ok: false, error: { kind: "AUTH_EXPIRED", businessCode: null, message: "AUTH_EXPIRED", requestId: "r", retryable: false } }, "AUTH_EXPIRED"],
+      [{ ok: false, error: { kind: "NETWORK", businessCode: null, message: "NETWORK", requestId: "r", retryable: false } }, "NETWORK"],
+      [{ ok: false, error: { kind: "BUSINESS", message: "功能未启用", businessCode: null, requestId: "r", retryable: false } }, "BUSINESS"],
     ];
     for (const [res, kind] of cases) {
       const f = makeRunner(res);

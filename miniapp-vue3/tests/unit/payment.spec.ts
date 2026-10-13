@@ -57,7 +57,8 @@ function makeCredits(opts: {
       return { ok: true, value: { outTradeNo: "T100", status: paid ? 1 : 0, paid, credits: 1, balance: opts.balance ?? 5 } };
     },
     getBalance: async (): Promise<
-      { ok: true; value: CreditBalance } | { ok: false; error: { kind: string } }
+      | { ok: true; value: { balance: number; inited: boolean; priceFenPerCredit: number; taskBought?: boolean } }
+      | { ok: false; error: { kind: string } }
     > => {
       entPolls += 1;
       const entitled = entPolls >= entitledAfter;
@@ -224,7 +225,7 @@ describe("payment-coordinator（T9a 共享支付）", () => {
     const first = co.recharge(ctx, { shopId: 1, credits: 1 });
     const second = await co.recharge(ctx, { shopId: 1, credits: 1 });
     expect(second).toMatchObject({ ok: false, phase: "idle", reason: "busy" });
-    releaseCreate?.();
+    (releaseCreate as (() => void) | null)?.();
     const firstOut = await first;
     expect(firstOut.ok).toBe(true);
     expect(createCalls).toBe(1); // ✅ 不产生第二笔订单
@@ -255,7 +256,7 @@ describe("payment-coordinator（T9a 共享支付）", () => {
     const p1 = co.recharge(ctx, { shopId: 1, credits: 1, operationId: "op-1" });
     const p2 = co.recharge(ctx, { shopId: 1, credits: 1, operationId: "op-1" });
     expect(p1).toBe(p2); // 同一 Promise（复用而非拒绝）
-    releaseCreate?.();
+    (releaseCreate as (() => void) | null)?.();
     const [r1, r2] = await Promise.all([p1, p2]);
     expect(r1.ok).toBe(true);
     expect(r2.ok).toBe(true);

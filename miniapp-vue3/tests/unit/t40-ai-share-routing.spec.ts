@@ -146,12 +146,12 @@ describe("ai-share-routing · 匿名只读落地（旧 :612-660）", () => {
   });
 
   it("业务失败：优先服务端 message；缺省「作品不存在或已被删除」", async () => {
-    const withMsg = shared({ ok: false, error: { kind: "BUSINESS", message: "无权查看" } });
+    const withMsg = shared({ ok: false, error: { kind: "BUSINESS", message: "无权查看", businessCode: null, requestId: "r", retryable: false } });
     await expect(loadSharedTaskOnce({ ai: withMsg.repo, context: ctx }, "tk")).resolves.toEqual({
       kind: "failed",
       errorMessage: "无权查看",
     });
-    const noMsg = shared({ ok: false, error: { kind: "NETWORK" } });
+    const noMsg = shared({ ok: false, error: { kind: "NETWORK", businessCode: null, message: "", requestId: "r", retryable: false } });
     await expect(loadSharedTaskOnce({ ai: noMsg.repo, context: ctx }, "tk")).resolves.toEqual({
       kind: "failed",
       errorMessage: "作品不存在或已被删除",

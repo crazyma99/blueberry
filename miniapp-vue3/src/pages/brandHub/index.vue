@@ -48,7 +48,7 @@ const uniStorage = createUniStorage();
 const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });
 const authCoordinator = createAuthCoordinator({
   exchangeIdentity: createSilentIdentityExchange({
-    // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
+    // P2-03 provider 装配（2026-10-13 契约变更后订正）：authCoordinator 的 exchangeIdentity 走 silent-login，现**恒 fail-closed**（登录须 loginCode＋phoneCode 一次性提交，只能由 LoginPopup 交互完成）；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
     getWxAuth: () => wxAuth,
     loginCode: createUniLoginCode({ platform }),
     platform,
@@ -102,6 +102,9 @@ async function loadBrands(): Promise<void> {
     if (res.ok && res.value != null) {
       // 过滤平台管理品牌（PLATFORM 是超管配置用的占位品牌，旧 :100-102）
       brands.value = res.value.filter((b) => b != null && b.brandId !== "PLATFORM");
+      // ⭐2026-10-13 事故修复：把实时品牌编码并入「已知商家编码」缓存（持久化 + 运行期注册表）——
+      // 既是离线/首启的兜底，也保证**新商家**无需改代码即可通过品牌头校验（口径见 domain/brand-code.ts）
+      versioned.rememberBrandCodes(brands.value.map((b) => b.brandId));
     } else {
       // 旧 :103-106：加载失败 toast（新端仓储/client 只返回 Result 从不抛——CR 🔴2 修正：
       // 失败必须走此分支提示，不能只落在 catch 死代码里）

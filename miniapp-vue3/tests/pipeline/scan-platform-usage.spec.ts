@@ -5,7 +5,7 @@ import { extname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { REGISTERED_EXCEPTIONS, collectSources, scanConfigPlatformUsage, scanPlatformUsage, scanSource } from "../../scripts/scan-platform-usage.mjs";
 
-function walk(dir, out = []) {
+function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) walk(p, out);

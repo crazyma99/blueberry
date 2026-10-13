@@ -56,11 +56,17 @@ vi.mock("../../src/infrastructure/repositories/likes", () => ({
   }),
 }));
 
-// 登录流打桩（runPhoneLogin step2/step3）：换票与绑手机号均成功 ⇒ 登录成功（full 会话）
+// 登录流打桩（2026-10-13 契约：**单次登录** loginCode＋phoneCode ⇒ full 会话；bindPhone 步骤已废弃）
+// userInfo 带 nickname＋avatarUrl ⇒ phoneHasFullProfile=true（不再触发「完善资料」弹窗）
 vi.mock("../../src/infrastructure/repositories/wx-auth", () => ({
   createWxAuthRepository: () => ({
-    login: async () => ({ ok: true, value: { token: "tk-full", userInfo: { id: 1, openid: "o1" } } }),
-    bindPhone: async () => ({ ok: true, value: { nickname: "测试", avatarUrl: "https://cos.example/av.png" } }),
+    login: async () => ({
+      ok: true,
+      value: {
+        token: "tk-full",
+        userInfo: { id: 1, openid: "o1", nickname: "测试", avatarUrl: "https://cos.example/av.png" },
+      },
+    }),
   }),
 }));
 

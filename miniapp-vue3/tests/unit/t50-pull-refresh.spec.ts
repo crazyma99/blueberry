@@ -79,7 +79,7 @@ describe("共享下拉刷新内核（P… 2026-09-21 四页接入）", () => {
     expect(h.refreshes).toBe(1);
     expect(refreshing.value).toBe(true);
     expect(h.stops).toBe(0); // 未收口不提前收指示器
-    release?.();
+    (release as (() => void) | null)?.();
     await flush();
     expect(refreshing.value).toBe(false);
     expect(h.stops).toBe(1);

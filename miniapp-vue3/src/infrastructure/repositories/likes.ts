@@ -22,10 +22,14 @@ export function createLikeRepository(deps: { client: ClientLike }) {
         method: "GET",
         url: "/api/like/status",
         // ⭐2026-09-20（CR 同根因）：后端为 JWTOptional——无 token 则 liked 恒 false（旧端 http 层「有 token 就带」）。
-        // **跨端边界**：微信端要求带登录态（取回真实 liked）；抖音端登录尚未落地（占位）⇒ 保持匿名，避免触发登录流程。
-        // ⚠️ 联动登记（2026-10-11 CR 🟡-5）：抖音匿名 ⇒ liked 恒 false ⇒ use-like.replayPending 在 tt 退化为盲 toggle；
-        // 今日不可达（tt 登录未落地），tt 登录落地时必须同步校验本口径。
-        authRequired: context.platform === "mp-weixin",
+        // ⭐2026-10-13（CR ④ 收口 · **真 bug 修复**）：原写法 `authRequired: context.platform === "mp-weixin"` 是为
+        // 「抖音登录未落地」做的临时边界——现抖音登录已落地（契约见 wx-auth.ts），若继续匿名则：
+        //   ⒜ 即便有 full 会话也不带 Bearer ⇒ 后端 JWTOptional 让 `liked` 恒 false ⇒ **已赞爱心不亮**；
+        //   ⒝ `use-like.replayPending` 依赖本查询判断「服务端是否已收藏」，查询恒 false ⇒ 回落盲 `toggle()`
+        //      ⇒ **可能把服务端已有收藏翻成未收藏**（误取消）。
+        // ⇒ 改为**带登录态**（与微信端同口径；无会话时 client 侧 fail-closed 返回 AUTH_EXPIRED，不发请求）。
+        // 未登记平台（mp-xhs）无登录契约 ⇒ 同样 fail-closed（不会因此产生额外请求）。
+        authRequired: true,
         query: { albumIds },
         replayPolicy: "idempotent",
         context,

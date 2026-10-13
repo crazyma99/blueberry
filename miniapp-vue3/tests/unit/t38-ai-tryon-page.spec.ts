@@ -226,7 +226,7 @@ describe("pages/aiTryOn（T8 装配）", () => {
     it("landing 页（带 share_from/templateId/shopId/brandId）转发时，path 原样带出全部上下文", async () => {
       const w = mount(AiTryOnPage, { global: GLOBAL });
       // A 的卡片参数（结果页 buildSharePath 产出的那套）
-      h.onLoadCalls[h.onLoadCalls.length - 1]({ share_from: "tryon_result", templateId: "99", shopId: "1010", brandId: "brand9" });
+      h.onLoadCalls[h.onLoadCalls.length - 1]({ share_from: "tryon_result", templateId: "99", shopId: "1010", brandId: "chayu" });
       await flush();
       await w.vm.$nextTick();
       expect(h.shareCalls.length).toBe(1); // 本页必须显式声明（否则走默认转发＝丢参）
@@ -236,14 +236,14 @@ describe("pages/aiTryOn（T8 装配）", () => {
       expect(share.path).toContain("templateId=11"); // 取**当前选中**（落参 99 不在列表内 ⇒ 回落第一项 11）
       expect(share.path).not.toContain("templateId=99");
       expect(share.path).toContain("shopId=1010");
-      expect(share.path).toContain("brandId=brand9");
+      expect(share.path).toContain("brandId=chayu");
       expect(share.imageUrl).toBe("https://lanmei66.cloud/t.png?imageMogr2/thumbnail/500x/format/jpg"); // 当前模板图走 CDN JPG 缩略作封面（2026-09-28 PRD R1/R20）
       expect(share.title).toContain("AI 换装");
     });
 
     it("朋友圈（onShareTimeline）query 同样带参（单页模式打开的是本页）", async () => {
       const w = mount(AiTryOnPage, { global: GLOBAL });
-      h.onLoadCalls[h.onLoadCalls.length - 1]({ share_from: "tryon_result", templateId: "11", shopId: "1010", brandId: "brand9" });
+      h.onLoadCalls[h.onLoadCalls.length - 1]({ share_from: "tryon_result", templateId: "11", shopId: "1010", brandId: "chayu" });
       await flush();
       await w.vm.$nextTick();
       expect(h.timelineCalls.length).toBe(1);
@@ -251,7 +251,7 @@ describe("pages/aiTryOn（T8 装配）", () => {
       expect(tl.query).toContain("share_from=tryon_result");
       expect(tl.query).toContain("templateId=11");
       expect(tl.query).toContain("shopId=1010");
-      expect(tl.query).toContain("brandId=brand9");
+      expect(tl.query).toContain("brandId=chayu");
     });
 
     it("自己从首页进入（无 share_from）转发：不带 share_from，但仍带自有上下文", async () => {

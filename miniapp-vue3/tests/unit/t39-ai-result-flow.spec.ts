@@ -113,7 +113,7 @@ describe("ai-result-flow · 轮询内核（T8 S5）", () => {
 
   it("⭐业务确定失败（非 ok）→ 立即停止并取 message，不空等 180s", async () => {
     const states: ResultPollState[] = [];
-    const { poller } = makePoller([{ ok: false, error: { kind: "BUSINESS", message: "任务不存在" } }], states);
+    const { poller } = makePoller([{ ok: false, error: { kind: "BUSINESS", message: "任务不存在", businessCode: null, requestId: "r", retryable: false } as never }], states);
     poller.start("42");
     await Promise.resolve();
     await Promise.resolve();

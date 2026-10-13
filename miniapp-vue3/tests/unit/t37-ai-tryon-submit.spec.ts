@@ -34,10 +34,11 @@ function makeSubmitter(result: { ok: true; value: { task_id: number } } | { ok: 
   const calls: Array<Record<string, unknown>> = [];
   const submitter = createTryOnSubmitter({
     ai: {
-      submitTryOnTask: async (_c, params) => {
-        calls.push(params as unknown as Record<string, unknown>);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 松散打桩：签名细节与用例无关（2026-10-13 CR ②）
+      submitTryOnTask: (async (_c: unknown, params: Record<string, unknown>) => {
+        calls.push(params);
         return result;
-      },
+      }) as never,
     },
     nextContext: () => ctx,
   });
@@ -117,7 +118,7 @@ describe("application/ai-tryon-submit · loadCreditInfo（旧端 :629-643）", (
 
   it("shopId>0 时带参数；成功返回 balance/priceFenPerCredit", async () => {
     const f = credits({ ok: true, value: { balance: 2, inited: true, priceFenPerCredit: 990 } });
-    await expect(loadCreditInfo({ credits: f.repo, context: ctx }, { shopId: "7" })).resolves.toEqual({
+    await expect(loadCreditInfo({ credits: f.repo as never, context: ctx }, { shopId: "7" })).resolves.toEqual({
       balance: 2,
       priceFenPerCredit: 990,
     });
@@ -126,9 +127,9 @@ describe("application/ai-tryon-submit · loadCreditInfo（旧端 :629-643）", (
 
   it("shopId 非法/为 0 → 不带参数；失败 → null（页面静默保持原按钮）", async () => {
     const f = credits({ ok: true, value: { balance: 1, inited: true, priceFenPerCredit: 0 } });
-    await loadCreditInfo({ credits: f.repo, context: ctx }, { shopId: "abc" });
+    await loadCreditInfo({ credits: f.repo as never, context: ctx }, { shopId: "abc" });
     expect(f.seen[0]).toBeUndefined();
     const bad = credits({ ok: false, error: { kind: "NETWORK" } });
-    await expect(loadCreditInfo({ credits: bad.repo, context: ctx }, { shopId: "7" })).resolves.toBeNull();
+    await expect(loadCreditInfo({ credits: bad.repo as never, context: ctx }, { shopId: "7" })).resolves.toBeNull();
   });
 });

@@ -14,5 +14,7 @@
     // 记录：migration-preflight §8.9（2026-09-17）。
     "importsNotUsedAsValues": "remove"
   },
+  // 2026-10-13（CR ② 收口）：测试的 type-check 走**独立配置** `tsconfig.tests.json`（见 `npm run type-check`），
+  // 避免把测试的宽松打桩口径强加到业务源码的严格档上；本文件保持「只管 src」。
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"]
 }

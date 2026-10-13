@@ -97,7 +97,7 @@ describe("application/silent-login（P2-03 静默换票 · fail-closed）", () =
     const calls: Array<Record<string, unknown>> = [];
     const exchange = createSilentIdentityExchange({
       getWxAuth: () => ({
-        login: async (_c: RequestContext, params: { code: string }) => {
+        login: async (_c: RequestContext, params: { loginCode: string; phoneCode: string }) => {
           calls.push(params as unknown as Record<string, unknown>);
           if (loginResult === "throw") throw new Error("boom");
           return loginResult;
@@ -110,19 +110,17 @@ describe("application/silent-login（P2-03 静默换票 · fail-closed）", () =
     return { exchange, calls };
   }
 
-  it("成功：code → POST 换票 → Session（token/platform/profileKey/userId=openid；authRevision 由协调器覆盖）", async () => {
+  it("⭐2026-10-13 契约变更后：静默换票恒 fail-closed，且**零请求**（不再 POST code-only；省下每 IP 5 次/分限流）", async () => {
     const f = make({ ok: true, value: { token: "TK", userInfo: { openid: "o1" } } });
-    await expect(f.exchange(ctx)).resolves.toEqual({
-      ok: true,
-      value: { userId: "o1", token: "TK", platform: "mp-weixin", profileKey: "blueberry", authRevision: 0, kind: "silent" },
-    });
-    expect(f.calls[0]).toEqual({ code: "CODE-1" });
+    await expect(f.exchange(ctx)).resolves.toEqual({ ok: false, reason: "auth" });
+    expect(f.calls.length, "静默路径不得再发起登录请求").toBe(0);
   });
 
-  it("userInfo 无 openid → userId 为空串（不伪造）", async () => {
+  it("⭐零请求 ⇒ 即便仓储返回成功也不会得到静默会话（不伪造）", async () => {
     const f = make({ ok: true, value: { token: "TK", userInfo: {} } });
     const r = await f.exchange(ctx);
-    expect(r.ok && r.value.userId).toBe("");
+    expect(r).toEqual({ ok: false, reason: "auth" });
+    expect(f.calls.length).toBe(0);
   });
 
   it("⭐fail-closed：取不到 code／换票失败／token 为空／仓储抛错 → 一律 {ok:false, reason:'auth'}", async () => {
@@ -139,7 +137,7 @@ describe("application/silent-login（P2-03 静默换票 · fail-closed）", () =
       { ok: false as const, error: { kind: "NETWORK" } },
       { ok: true as const, value: { token: "", userInfo: {} } },
       "throw" as const,
-    ]) {
+    ] as unknown as Array<RepoResult<WxLoginResult> | "throw">) {
       const f = make(res);
       await expect(f.exchange(ctx)).resolves.toEqual({ ok: false, reason: "auth" });
     }

@@ -112,7 +112,7 @@ const versioned = createVersionedStorage({ backend: uniStorage, platform, profil
 const userStore = createUserInfoStore({ backend: uniStorage });
 const authCoordinator = createAuthCoordinator({
   exchangeIdentity: createSilentIdentityExchange({
-    // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
+    // P2-03 provider 装配（2026-10-13 契约变更后订正）：authCoordinator 的 exchangeIdentity 走 silent-login，现**恒 fail-closed**（登录须 loginCode＋phoneCode 一次性提交，只能由 LoginPopup 交互完成）；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
     getWxAuth: () => wxAuth,
     loginCode: createUniLoginCode({ platform }),
     platform,
@@ -133,6 +133,14 @@ const phoneLoginFlow = createPhoneLoginFlow({
   platform,
   profileKey: PROFILE.profileKey,
 });
+
+/** 2026-10-13（抖音 invalid session 根因）：**进入登录弹窗时先预取 loginCode**——
+ * 官方《获取手机号》要求「用户点击 button 前需先调用 tt.login；在回调中调用会刷新登录态 ⇒ 解密失败」，
+ * 故预取必须在点按钮之前；**回调路径内不得再 uni.login**（见 application/login-flow.ts）。 */
+function openLoginPopup(): void {
+  showLoginPopup.value = true;
+  void phoneLoginFlow.prefetchLoginCode();
+}
 const ctxFactory = createContextFactory({
   platform,
   environment: env,
@@ -327,7 +335,7 @@ async function choosePhoto(): Promise<void> {
   // 2026-10-10 主人口径：与「AI 试衣」完全一致 —— **选图前先查登录态**（上传需要会话），
   // 未登录先拉起登录弹窗；登录后用户再点一次选图（与试衣同口径，不做选图链路的自动续跑）。
   if (!isLoggedIn()) {
-    showLoginPopup.value = true;
+    openLoginPopup();
     return;
   }
   // PRD R27：人脸照片属敏感个人信息，首次选图前需单独同意（拒绝则不进入选图）
@@ -397,7 +405,7 @@ async function handleStartAnalysis(): Promise<void> {
 
   // 登录态兜底（正常路径已在**选图前**检查；此处防会话过期，旧端 :234-238）
   if (!isLoggedIn()) {
-    showLoginPopup.value = true;
+    openLoginPopup();
     return;
   }
 
@@ -451,7 +459,7 @@ async function uploadSelectedPhoto(): Promise<void> {
     } else {
       toast(res.message || "上传失败，请重试");
       // 401：拉起登录弹窗（旧端由全局 http 层事件处理，见偏差②）
-      if (res.authExpired === true) showLoginPopup.value = true;
+      if (res.authExpired === true) openLoginPopup();
     }
   } catch (err) {
     console.error("[aiRecommend] 上传失败:", err);
@@ -480,7 +488,7 @@ async function loadCreditInfo(): Promise<void> {
     });
     if (!res.ok) {
       // 登录态失效：显式拉起登录弹窗（旧端走全局事件，见偏差②）
-      if (res.error.kind === "AUTH_EXPIRED") showLoginPopup.value = true;
+      if (res.error.kind === "AUTH_EXPIRED") openLoginPopup();
       return;
     }
     creditBalance.value = res.value.balance;

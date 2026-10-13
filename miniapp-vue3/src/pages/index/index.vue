@@ -62,7 +62,7 @@ const versioned = createVersionedStorage({ backend: uniStorage, platform, profil
 const authCoordinator = createAuthCoordinator({
   // 微信登录换票链路随 T7 登录页接入（P2-08 授权桥已就位）；占位不假装成功
   exchangeIdentity: createSilentIdentityExchange({
-    // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
+    // P2-03 provider 装配（2026-10-13 契约变更后订正）：authCoordinator 的 exchangeIdentity 走 silent-login，现**恒 fail-closed**（登录须 loginCode＋phoneCode 一次性提交，只能由 LoginPopup 交互完成）；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
     getWxAuth: () => wxAuth,
     loginCode: createUniLoginCode({ platform }),
     platform,
@@ -273,8 +273,11 @@ onLoad((options) => {
   const scene = decodeURIComponent(String((options as { scene?: unknown } | undefined)?.scene ?? ""));
   const brandId = scene !== "" ? scene : String((options as { brandId?: unknown } | undefined)?.brandId ?? "");
   if (brandId === "") return;
+  // ⭐2026-10-13 事故修复：scene/options 来的值**必须先过「已知商家编码」校验**才写上下文——
+  // 真机曾因这类脏值（数字）带出 X-Brand-Id ⇒ 后端对已存在品牌头不回落、直接 500「品牌不存在或已停用」⇒ 整站空白。
+  // 校验在 `versioned.saveBrandId` 内完成（非法值不写入）；此处回读**生效值**，避免把脏值写进品牌基线。
   versioned.saveBrandId(brandId);
-  lastBrandId = brandId; // 防 onShow 基线检测再重载一次（数据由 init 带品牌上下文取）
+  lastBrandId = versioned.loadBrandId(); // 防 onShow 基线检测再重载一次（数据由 init 带品牌上下文取）
 });
 
 // 右上角胶囊菜单「转发」：卡片动态化（品牌落地 + 品牌配置封面）；旧端 index.uvue:265-272 逐字

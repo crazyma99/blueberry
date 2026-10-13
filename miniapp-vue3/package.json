@@ -35,8 +35,10 @@
     "build:quickapp-webview": "uni build -p quickapp-webview",
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
-    "type-check": "vue-tsc --noEmit",
-    "typecheck": "vue-tsc --noEmit",
+    "type-check": "vue-tsc --noEmit && vue-tsc --noEmit -p tsconfig.tests.json",
+    "type-check:src": "vue-tsc --noEmit",
+    "type-check:tests": "vue-tsc --noEmit -p tsconfig.tests.json",
+    "typecheck": "vue-tsc --noEmit && vue-tsc --noEmit -p tsconfig.tests.json",
     "test": "vitest run"
   },
   "dependencies": {

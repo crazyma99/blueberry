@@ -52,11 +52,17 @@ vi.mock("../../src/infrastructure/repositories/likes", () => ({
   }),
 }));
 
-// 登录流打桩（runPhoneLogin step2/step3）：换票与绑手机号均成功 ⇒ 登录成功（full 会话）
+// 登录流打桩（2026-10-13 契约：**单次登录** loginCode＋phoneCode ⇒ full 会话；bindPhone 步骤已废弃）
+// userInfo 带 nickname＋avatarUrl ⇒ phoneHasFullProfile=true（不再触发「完善资料」弹窗）
 vi.mock("../../src/infrastructure/repositories/wx-auth", () => ({
   createWxAuthRepository: () => ({
-    login: async () => ({ ok: true, value: { token: "tk-full", userInfo: { id: 1, openid: "o1" } } }),
-    bindPhone: async () => ({ ok: true, value: { nickname: "测试", avatarUrl: "https://cos.example/av.png" } }),
+    login: async () => ({
+      ok: true,
+      value: {
+        token: "tk-full",
+        userInfo: { id: 1, openid: "o1", nickname: "测试", avatarUrl: "https://cos.example/av.png" },
+      },
+    }),
   }),
 }));
 
@@ -249,7 +255,7 @@ describe("pages/demoDetail 点赞登录门（只认 full 会话；静默会话�
     await w.vm.$nextTick();
     expect(w.find(".stub-login-popup").exists()).toBe(true);
     expect(h.likeCalls).toEqual([]); // 门禁在乐观更新之前：无请求、无本地翻转
-    expect(albumA.liked).toBeUndefined();
+    expect((albumA as unknown as { liked?: unknown }).liked).toBeUndefined();
     await loginViaPopup(w);
     expect(w.find(".stub-login-popup").exists()).toBe(false);
     expect(h.likeCalls).toEqual([101]); // 自动补发挂起的那次点赞（旧端 flushPendingRequests 语义）

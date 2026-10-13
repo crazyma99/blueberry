@@ -1,0 +1,15 @@
+{
+  // 2026-10-13（CR ②）：把 tests/** 纳入 type-check 的专用配置。
+  // 目的＝让「测试里的旧契约残留」可见（例：旧 login 参数在 vt 里既编译不出错也测不出错）。
+  // 取舍：测试大量使用**故意松散的打桩对象**（部分字段/隐式 any），按 src 的严格档跑会有 ~63 条与契约无关的噪声
+  // ⇒ 本配置只放开**与打桩相关的一档**（noImplicitAny），其余（含 strictNullChecks）与 src 同源——
+  // **保留**参数与返回值签名检查，这才是能抓住「旧契约残留」的那一层。（本批已把 39 条历史噪声全部修净 ⇒ 门禁 0 错。）
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "noImplicitAny": false,
+    "types": ["@dcloudio/types"]
+  },
+  // 与主配置同源（含 src 的 .d.ts：图片/资源模块声明等），另加 tests/**
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "tests/**/*.ts", "tests/**/*.d.ts"]
+}

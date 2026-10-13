@@ -75,9 +75,9 @@ describe("application/ai-photo-upload（T8 S3 上传用例）", () => {
     expect(parseUploadResult({ code: 4002, data: { check_code: "who_knows" } })).toMatchObject({ ok: false, qualityCheckCode: "unknown" });
     expect(parseUploadResult({ code: 4002 })).toMatchObject({ ok: false, qualityCheckCode: "unknown" });
     // 非 4002 的业务失败**不得**带 qualityCheckCode（否则页面会误弹「照片不合格」弹层）
-    expect(parseUploadResult({ code: 500, message: "boom" }).qualityCheckCode).toBeUndefined();
-    expect(parseUploadResult({ code: 4001, message: "次数不足" }).qualityCheckCode).toBeUndefined();
-    expect(parseUploadResult({ code: 401 }).qualityCheckCode).toBeUndefined();
+    expect((parseUploadResult({ code: 500, message: "boom" }) as { qualityCheckCode?: string }).qualityCheckCode).toBeUndefined();
+    expect((parseUploadResult({ code: 4001, message: "次数不足" }) as { qualityCheckCode?: string }).qualityCheckCode).toBeUndefined();
+    expect((parseUploadResult({ code: 401 }) as { qualityCheckCode?: string }).qualityCheckCode).toBeUndefined();
   });
 
   it("上传头：恒带 X-App-Code ＋ X-Channel（端标识）；有 token 才带 Bearer；有品牌才带 X-Brand-Id", () => {

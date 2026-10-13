@@ -13,8 +13,13 @@ import { hapticTap } from "../../application/haptics";
 // 事件：@close 关闭；@toggle-agreement 协议勾选；@show-toast 未勾选提示；
 //       @open-user @open-privacy 协议链接；@get-phone 一键登录(getPhoneNumber 回调，透传原始事件对象)。
 //
-// 平台差异（已知，保留原样不降级）：getPhoneNumber/chooseAvatar 为 MP-WEIXIN 专属 button
-// open-type；抖音端 button open-type 不可用属已知平台差异，本组件照旧端原样保留（不自行降级改行为）。
+// 平台差异（2026-10-13 契约变更后订正——旧注释曾声称抖音端不具备该手机号授权能力，**该结论已过期**）：
+//   微信端 button open-type=getPhoneNumber（回调 @getphonenumber，e.detail.code ＝ phoneCode）；
+//   **抖音端同样支持** open-type=getPhoneNumber（基础库 ≥3.51.0，手机号新方式动态令牌，回调同为 e.detail.code）
+//   ⇒ 本组件**两端共用同一按钮与同一回调**，不做平台分叉（逻辑层零 #ifdef）。
+//   契约事实源：后端仓 .project-wiki/docs/modules/login-frontend-integration.md（§2 流程／§3 平台注意事项）。
+// 审核红线（同文档 §2）：登录弹窗必须由**关键动作**触发（点赞/收藏/我的等），不得进小程序即弹手机号；
+//   抖音端按钮文案不得写成「抖音账号登录」（本组件用「手机号一键登录」）。
 //
 // token 映射（旧端 App.uvue 全局变量 → 新端 tokens.ts / 硬编码）：
 //   --color-primary #F1CD91   → v-bind("tokens.semantic.colorAction")（同值）
@@ -78,7 +83,7 @@ function onSkip(): void {
     <view class="login-card font-harmony">
       <!-- 顶部氛围光 -->
       <view class="card-aura"></view>
-      <view class="card-title font-noto-serif">手机号快捷登陆</view>
+      <view class="card-title font-noto-serif">手机号快捷登录</view>
       <view class="card-desc">登录后可使用收藏与 AI 试衣</view>
 
       <!-- 协议勾选（自绘） -->
@@ -102,15 +107,15 @@ function onSkip(): void {
         open-type="getPhoneNumber"
         @click="onPhoneTap"
         @getphonenumber="emit('get-phone', $event)"
-      >一键登录</button>
+      >手机号一键登录</button>
       <button
         v-else
         class="login-btn btn-primary"
         hover-class="press-dim"
         @click="onOneKeyLogin"
-      >一键登录</button>
+      >手机号一键登录</button>
 
-      <view class="login-skip" hover-class="press-dim" @click="onSkip">暂不登陆</view>
+      <view class="login-skip" hover-class="press-dim" @click="onSkip">暂不登录</view>
     </view>
     </BasePopup>
 </template>
@@ -211,7 +216,7 @@ function onSkip(): void {
   border: none;
 }
 
-/* 暂不登陆 */
+/* 暂不登录 */
 .login-skip {
   margin-top: 32rpx;
   padding: 12rpx 40rpx;

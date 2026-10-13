@@ -9,6 +9,7 @@ import type { Environment, Platform, RequestContext, Result } from "../../ports/
 import type { HttpMethod, HttpPort, HttpResponse } from "../../ports/http";
 import { isBusinessSuccess, mapBusinessFailure, mapTransportFailure, type AppError } from "./errors";
 import { channelOf } from "../../domain/channel";
+import { isKnownBrandCode, warnBrandCodeRejected } from "../../domain/brand-code";
 
 /** 新端内部会话模型（P2-03 AuthCoordinator 将实现；非后端响应字段的伪造） */
 export interface Session {
@@ -109,8 +110,16 @@ export function createHttpClient(deps: {
     // 端标识（2026-10-10）：**全请求恒带**，供服务端区分端（后端「按端启门」的依据，旧端不带该头）。
     // 由 `ctx.platform` 派生（构建平台已在上下文快照里），逻辑层零 #ifdef（SPEC §C3）。
     headers["X-Channel"] = channelOf(ctx.platform);
+    // ⭐2026-10-13 事故防护（**最后一道闸**）：品牌头必须是**已知商家编码**——真机曾带 `X-Brand-Id: <数字>`
+    // （历史脏值），而后端对已存在的品牌头**不回落**、直接 500「品牌不存在或已停用」⇒ 所有接口只剩 64 字节
+    // ⇒ 整站空白。校验口径见 `domain/brand-code.ts`（形态＋命中 离线种子 ∪ 运行期 ∪ 持久化列表）；
+    // 非法值一律**不发该头**（等价「无品牌上下文」）。值本身在上游 `versioned.loadBrandId` 已过滤，此处兜底。
     if (ctx.brandId != null && ctx.brandId !== "") {
-      headers["X-Brand-Id"] = ctx.brandId;
+      if (isKnownBrandCode(ctx.brandId)) {
+        headers["X-Brand-Id"] = ctx.brandId;
+      } else {
+        warnBrandCodeRejected(ctx.brandId, "http 头注入前校验未通过（client）");
+      }
     }
 
     // 4) 传输：透传 replayPolicy 与快照

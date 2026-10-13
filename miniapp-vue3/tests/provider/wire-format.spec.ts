@@ -28,9 +28,9 @@ const transport: HttpPort = {
       ok: true,
       value: {
         status: res.status,
-        businessCode: typeof body?.code === "number" ? body.code : null,
+        businessCode: typeof (body as { code?: number } | null)?.code === "number" ? (body as unknown as { code: number }).code : null,
         requestId: null,
-        data: (body?.data ?? body) as T,
+        data: ((body as { data?: unknown } | null)?.data ?? body) as T,
       },
     } as unknown as Result<HttpResponse<T>>;
   },
@@ -72,7 +72,7 @@ describe.runIf(process.env.RUN_PROVIDER === "1")("P2-09 只读 provider 报文�
     expect(rl.ok).toBe(true);
     if (rl.ok) {
       console.log("[p2-09] /wechat/albums →", shape(rl.value));
-      const list = (rl.value as Record<string, unknown>).albums ?? [];
+      const list = (rl.value as unknown as Record<string, unknown>).albums ?? [];
       const first = Array.isArray(list) ? (list[0] as Record<string, unknown>) : null;
       if (first) {
         console.log("[p2-09] album0 keys=", Object.keys(first).sort().join(","));

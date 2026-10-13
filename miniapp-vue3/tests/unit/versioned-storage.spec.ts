@@ -57,13 +57,14 @@ describe("createVersionedStorage（P2-06）", () => {
     expect(s!.userId).toBe(""); // 降级：userInfo 损坏不阻断 token 迁移
   });
   it("brand_id 兼容迁移＋新键优先＋旧键保留；clearSession 只清新键", () => {
-    const backend = memStorage({ brand_id: "7", token: "t" });
+    // 2026-10-13 事故修复后：品牌上下文必须是**已知商家编码**（旧用例用 "7"/"9" 这类数字脏值已不合法）
+    const backend = memStorage({ brand_id: "lanmei", token: "t" });
     const vs = createVersionedStorage(deps(backend));
-    expect(vs.loadBrandId()).toBe("7");
-    expect(backend.data.get("lm.brand.v1")).toBe("7");
-    expect(backend.data.get("brand_id")).toBe("7");
-    backend.data.set("lm.brand.v1", "9"); // 新键优先
-    expect(vs.loadBrandId()).toBe("9");
+    expect(vs.loadBrandId()).toBe("lanmei");
+    expect(backend.data.get("lm.brand.v1")).toBe("lanmei");
+    expect(backend.data.get("brand_id")).toBe("lanmei");
+    backend.data.set("lm.brand.v1", "chayu"); // 新键优先
+    expect(vs.loadBrandId()).toBe("chayu");
     vs.saveSession({ userId: "u", token: "t2", platform: "mp-weixin", profileKey: "blueberry", authRevision: 3 });
     vs.clearSession();
     expect(backend.data.has("lm.session.v1")).toBe(false);

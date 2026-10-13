@@ -55,7 +55,7 @@ const versioned = createVersionedStorage({ backend: uniStorage, platform, profil
 const userStore = createUserInfoStore({ backend: uniStorage });
 const authCoordinator = createAuthCoordinator({
   exchangeIdentity: createSilentIdentityExchange({
-    // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
+    // P2-03 provider 装配（2026-10-13 契约变更后订正）：authCoordinator 的 exchangeIdentity 走 silent-login，现**恒 fail-closed**（登录须 loginCode＋phoneCode 一次性提交，只能由 LoginPopup 交互完成）；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
     getWxAuth: () => wxAuth,
     loginCode: createUniLoginCode({ platform }),
     platform,
@@ -81,6 +81,14 @@ const phoneLoginFlow = createPhoneLoginFlow({
   platform,
   profileKey: PROFILE.profileKey,
 });
+
+/** 2026-10-13（抖音 invalid session 根因）：**进入登录弹窗时先预取 loginCode**——
+ * 官方《获取手机号》要求「用户点击 button 前需先调用 tt.login；在回调中调用会刷新登录态 ⇒ 解密失败」，
+ * 故预取必须在点按钮之前；**回调路径内不得再 uni.login**（见 application/login-flow.ts）。 */
+function openLoginPopup(): void {
+  showLoginPopup.value = true;
+  void phoneLoginFlow.prefetchLoginCode();
+}
 
 // 协议名（旧端 legal.uts:2-3：《${MINI_APP_NAME} 用户协议/隐私政策》，miniAppName 随 Profile）
 const userAgreementName = `《${PROFILE.miniAppName} 用户协议》`;
@@ -178,7 +186,7 @@ onShow(() => {
 
 function handleUserClick(): void {
   if (!isLoggedIn.value) {
-    showLoginPopup.value = true; // 未登录 → 手机号登录弹窗
+    openLoginPopup(); // 未登录 → 手机号登录弹窗
     return;
   }
   openProfilePopup(); // 已登录 → 头像昵称弹窗
@@ -372,7 +380,7 @@ function handleMenuClick(item: MenuItem): void {
   hapticTap();
   if (item.linkUrl) {
     if (item.needLogin && !isLoggedIn.value) {
-      showLoginPopup.value = true;
+      openLoginPopup();
       return;
     }
     navigateToUrl(item.linkUrl);

@@ -7,7 +7,7 @@ import type { HttpRequest, HttpResponse } from "../../src/ports/http";
 const ctx: RequestContext = {
   platform: "mp-weixin",
   environment: "trial",
-  brandId: "brand-1",
+  brandId: "lanmei", // 2026-10-13：品牌头只接受**已知商家编码**（脏值会被剔除，见 t73）
   requestId: "req-1",
   profileKey: "blueberry",
   appCode: "blueBerry",
@@ -42,11 +42,11 @@ describe("createHttpClient 头注入（P2-02）", () => {
     expect(h["X-App-Code"]).toBe("blueBerry");
     expect(h["X-Channel"]).toBe("wx"); // 2026-10-10：端标识恒带（后端「按端启门」的依据）
     expect(h.Authorization).toBeUndefined();
-    expect(h["X-Brand-Id"]).toBe("brand-1"); // 旧端口径：有品牌上下文即恒带，无需逐请求标记
+    expect(h["X-Brand-Id"]).toBe("lanmei"); // 有**合法**品牌上下文即恒带（非法值会被剔除，见 t73）
     await c.request({ method: "POST", url: "/api/like", authRequired: true, context: ctx });
     h = t.seen[1].headers!;
     expect(h.Authorization).toBe("Bearer tok-1");
-    expect(h["X-Brand-Id"]).toBe("brand-1");
+    expect(h["X-Brand-Id"]).toBe("lanmei");
   });
   it("X-Channel 随构建平台变化：mp-toutiao→tt、mp-xhs→xhs、未知平台→wx（兜底不放行）", async () => {
     const t = makeTransport((req) => ({ ok: true, value: { status: 200, businessCode: 0, requestId: "r", data: null } }));
@@ -168,7 +168,8 @@ describe("4002 照片质量拦截信封（2026-09-23 对接后端 staging）", (
   });
 
   it("既有业务失败不回归：无 data ⇒ businessData 为 undefined，kind 仍 BUSINESS", async () => {
-    const t = makeTransport(() => ({ ok: true, value: { status: 200, businessCode: 500, message: "boom", requestId: "r" } }));
+    // 该用例专门验证「信封里没有 data 字段」的路径 ⇒ 不得补 data（类型层用 cast 满足 HttpResponse，2026-10-13 CR ②）
+    const t = makeTransport(() => ({ ok: true, value: { status: 200, businessCode: 500, message: "boom", requestId: "r" } as never }));
     const c = createHttpClient({ transport: t.port, authCoordinator: okAuth });
     const res = await c.request({ method: "GET", url: "/api/x", context: ctx });
     expect(res.ok).toBe(false);

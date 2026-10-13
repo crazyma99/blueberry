@@ -245,9 +245,8 @@ describe("页面分享卡片接线（三页逐字段核对）", () => {
 // ===== 2026-09-22 主人拍板 A：相册列表/客片详情补「朋友圈（onShareTimeline）」＋客片详情缺参兜底 =====
 // 判定依据：分享卡片的**落地页自己有没有分享处理器**——有则 B 打开后能用自身状态重建路径（不丢参）；
 // 这两页此前仅好友分享 ⇒ 朋友圈单页模式打开**无 idx** ⇒ 停留空态/加载态（同 bug #8 一族）。
-import DemoDetailPage from "../../src/pages/demoDetail/index.vue";
-import TargetPhotoDetailPage from "../../src/pages/targetPhotoDetail/index.vue";
-
+// 2026-10-13（CR ②）：此处原重复 import 了上方已有的 DemoDetailPage／TargetPhotoDetailPage（TS2300 重复标识符）⇒ 已删，
+// 依赖顶部 import（ESM 提升，行为不变）。
 describe("相册列表/客片详情：朋友圈分享与缺参兜底（主人拍板 A）", () => {
   const uniStub = () => (globalThis as { uni?: Record<string, unknown> }).uni as Record<string, unknown>;
 

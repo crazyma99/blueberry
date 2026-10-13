@@ -26,9 +26,18 @@ const LOGIN_PROVIDERS: Record<Platform, string | null> = {
   "mp-xhs": null,
 };
 
+/**
+ * 平台 → `uni.login` 额外参数（2026-10-13 登录契约 §3）：抖音 **`force: true`**——
+ * 强制走真实身份登录，避免拿到游客（anonymous）身份；微信无需该参数。
+ */
+const LOGIN_EXTRA_OPTIONS: Partial<Record<Platform, Record<string, unknown>>> = {
+  "mp-toutiao": { force: true },
+};
+
 export function createUniLoginCode(deps?: { timeoutMs?: number; platform?: Platform }): LoginCodePort {
   const timeoutMs = deps?.timeoutMs ?? LOGIN_CODE_TIMEOUT_MS;
   const provider = LOGIN_PROVIDERS[deps?.platform ?? "mp-weixin"];
+  const extra = LOGIN_EXTRA_OPTIONS[deps?.platform ?? "mp-weixin"];
   return {
     request(): Promise<string | null> {
       return new Promise((resolve) => {
@@ -59,6 +68,8 @@ export function createUniLoginCode(deps?: { timeoutMs?: number; platform?: Platf
             fail: () => finish(null),
           };
           if (provider != null) options.provider = provider;
+          // 平台额外参数（抖音 force:true）——集中在本表，逻辑层零 #ifdef（SPEC §C3）
+          if (extra != null) Object.assign(options, extra);
           api.login(options);
         } catch {
           finish(null);

@@ -2,6 +2,35 @@
 
 > 记录小程序 C 端每次实质性改动，最新在上。多人合作提交前先补本文件（与代码同一提交）。
 
+## 2026-10-13 · 修复：抖音手机号授权 `invalid session`（登录码必须「点按钮之前」预取并缓存）
+
+- **现象／根因（官方硬要求）**：真机点「手机号一键登录」⇒ `getPhoneNumber:fail invalid session`（主人 2026-10-13 20:28 真机日志）。抖音《获取手机号》原文：「**使用（用户点击 button）前需先调用 `tt.login` 接口**。**如果在回调中调用 `tt.login` 会刷新登录态**，导致登录后换取的 session_key 与手机号码加密时使用的 session_key 不同，从而导致解密失败。」原实现恰是**在回调之后**（`runPhoneLogin` 内）才 `uni.login` ⇒ 点按钮时无有效登录态。
+- **改法（先取码、后授权）**：`application/login-flow.ts` 新增 `prefetchLoginCode()`——进登录弹窗/关键动作时**先取码**，缓存 **TTL 4 分钟**（平台 code 5 分钟有效），有效期内**幂等复用**＋在飞去重（合抖音「冷启动生命周期内最多调一次」）；`runPhoneLogin(phoneCode)` **只消费缓存码**，与 phoneCode **一次**提交；**回调路径内绝不调用 `uni.login`**；缓存缺失/过期 ⇒ 「登录环境已刷新，请再点一次」＋**零请求**；提交后作废缓存（两个 code 一次性、不可复用）。
+- **页面接线**：5 个登录入口页（`mine`／`demoDetail`／`targetPhotoDetail`／`aiTryOn`／`aiRecommend`）统一改为 `openLoginPopup()`＝显示弹窗 ＋ `void prefetchLoginCode()`（**11 个弹窗打开点全部收口**，避免某条路径漏预取）。
+- **微信端同序**：微信 `getPhoneNumber` 同样要求「两个 code 一次性提交」；微信无「回调内 login 刷新登录态」之坑，但统一为同一顺序可让两端一致、并省掉回调内的一次网络往返（未分叉、未新增平台分支）。
+- **验证**：新增 `t74`（6 例：调用顺序／**回调内零平台调用**／缓存缺失·有效·过期三态／幂等）；`t72` 随新顺序更新；**变异自证**：把预取挪回回调内 ⇒ `t74` **4 failed**（正是本次事故的复现），还原即绿；全量 `vitest` **719 passed / 3 skipped**；`type-check`（src＋tests 两段）exit 0；三端构建 exit 0；产物 `.work/deliver/lanmei-miniapp-20261013-5d9534b-dylogin4/`（mp-weixin／mp-toutiao ＋ zip）。
+
+## 2026-10-13 · 事故修复：品牌头 X-Brand-Id 必须是「商家编码」（真机全站空白根因）
+
+- **事故**：真机预览整站空白（只剩兜底首页），IDE 正常。定位＝真机带了 **`X-Brand-Id: <数字>`**（历史脏值／商户数字 id），而后端 `resolveRequestMerchant` 对**已存在**的品牌头**不回落**、解析不到启用商家即 500「品牌不存在或已停用」⇒ 所有接口只剩 64 字节。
+- **新口径（单一事实源 `src/domain/brand-code.ts`）**：`X-Brand-Id` 必须是**商家编码**（MerchantCode，如 `lanmei`／`chayu`／`123323`）；校验＝**形态 ＋ 命中已知列表**（离线种子〔对照 `GET /api/brands` 实测 9 条〕∪ 品牌馆运行时列表 ∪ 持久化 `lm.brands.v1`）。**非法值一律不写入、不发送**（按「无品牌上下文」处理）。
+- **三道闸**：①`versioned.loadBrandId()` 读到非法/未知值 ⇒ 视为无品牌**并清理存量脏值**（含旧端键 `brand_id`）；②`versioned.saveBrandId()` 拒写非法值（保留既有合法值）；③`http client` 注入头前再校验一次（不合法则**不发该头**＋一次性日志）。
+- **刻意不按「拒纯数字」实现（重要）**：线上 `GET /api/brands` 实测存在 `123323`／`123456789` 两个**合法**数字形态编码 ⇒ 单看形态会误杀；故以「命中已知列表」为准（`foo` 这类「形态合法但未知」的值同样会被后端 500，必须一并拦下）。
+- **配套**：品牌馆拉到列表后 `rememberBrandCodes()` 并入缓存（新商家无需改代码即可通过校验）；`pages/index/index.vue` 的 `scene`/`options` 落地路径回读**生效值**再写品牌基线。
+- **验证**：新增 `t73`（7 例，含**生产链路**「脏值 ⇒ 请求头不得出现 X-Brand-Id」）；变异自证 3 项（撤 `loadBrandId` 闸／命中校验恒真／撤 `saveBrandId` 闸 ⇒ 各 exit 1，还原即绿）；全量 `vitest` **713 passed / 3 skipped**；`type-check`（src＋tests 两段）exit 0；三端构建 exit 0；抖音产物敏感词 0、AppID `ttd6aba01648cc1bf701`。
+- **影响面（有取舍的收紧）**：分享链／小程序码带来的**非已知**商家编码（既不在种子、也不在本机缓存）将按「无品牌上下文」处理 ⇒ 退回平台范围数据。
+
+## 2026-10-13 · 抖音登录对接：单次登录（loginCode＋phoneCode）＋ 旧三步链路废弃（主人指示）
+
+- **契约变更**（唯一事实源＝后端仓 `.project-wiki/docs/modules/login-frontend-integration.md`）：登录由旧「三步链路」（取 code → `/api/wx/login` 换票 → `/api/wx/phone` 绑手机号）改为**一次提交** `POST /api/{wx,tt}/login { loginCode, phoneCode, nickname?, avatarUrl? }` ⇒ `{token, userInfo}`；`code===200` 才算成功；两个 code 一次性、5 分钟有效、不可复用；限流每 IP 每分钟 5 次。
+- **旧链路废弃依据（2026-10-13 服务端实测）**：`/api/wx/login` 已**强制 phoneCode**（只带 `code` ⇒ 500「phoneCode 不能为空…」）⇒ 旧链路对微信端同样失效；`POST /api/tt/phone` **404 不存在**，`/api/wx/phone` 属遗留。
+- **端侧改造**：`application/login-flow.ts` 合并为「`phoneCode` ＋ 平台 `loginCode` ⇒ **一次** `login`」并**移除 bindPhone 步骤**；`infrastructure/repositories/wx-auth.ts` 端点表定案（`/api/wx/login`／`/api/tt/login`，删除「占位契约」注释）＋新增 `WxLoginParams`；`platform/uni/login.ts` 抖音端 `uni.login` 传 **`force:true`**（避免游客身份）；`components/LoginPopup` 按钮文案改「**手机号一键登录**」（原「一键登录」；标题/跳过位「登陆」错别字一并订正）＋订正「抖音端 open-type 不可用」过期注释（抖音基础库 ≥3.51.0 同样支持 `getPhoneNumber`，回调 `e.detail.code`）。
+- **静默换票关闭（有意行为变化）**：`application/silent-login.ts` 在现行契约下**不可能换到会话**（phoneCode 只能来自用户交互）⇒ 改为**零请求** fail-closed，避免白白消耗「每 IP 5 次/分」的登录限流（极端情况会挤掉用户真实登录）；实现保留待后端提供静默契约。
+- **错误兜底**：契约 §5 关键字表收敛到单一事实源 `mapLoginFailureMessage`（`phoneCode 不能为空`／`手机号授权失败`／`no phone number`／`not login|invalid session`／`抖音登录未开通`／抖音 code 码 `28005187`·`28005185`·`28005186`·`28005191`／其它 ⇒ 逐条用户可读提示，**任何失败都不把用户卡死**）；后端原始 message 只进 `errorRaw`（日志），不上屏。
+- **审核红线保持**：登录仍由关键动作触发（点赞/收藏/我的等），不改成启动即弹；抖音按钮文案不含「抖音账号登录」。
+- **验证**：全量 `vitest run` **706 passed / 3 skipped（85 文件）**（新增 `t72` 12 例；`t43`／`repositories.spec` 随契约更新）；`vue-tsc --noEmit` **exit 0**；`build:mp-weixin`／`build:mp-toutiao`／`build:mp-xhs` **各 exit 0**；抖音产物敏感词 0 且含「手机号一键登录」；产物 `.work/deliver/lanmei-miniapp-20261013-5d9534b-dylogin-wip/`（**mp-weixin／mp-toutiao 双端**，**未提交**，待主人真机回执）。
+- **未做（后端下一批）**：换绑手机号/账号注销入口、手机号脱敏下发。
+
 ## 2026-09-11 · 我的页 banner 位废弃（主人指示）
 
 - **我的页移除轮播 banner**：`pages/mine/index.uvue` 删除「AI试衣」下方 banner 位（swiper 区块、骨架屏 sk-banner、`banners` 数据、`handleBannerClick`、banner 系列 CSS 与 `cosThumb` 导入）；金刚区 icon_grid 配置照常保留。

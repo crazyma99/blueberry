@@ -85,7 +85,7 @@ const versioned = createVersionedStorage({ backend: uniStorage, platform, profil
 const userStore = createUserInfoStore({ backend: uniStorage });
 const authCoordinator = createAuthCoordinator({
   exchangeIdentity: createSilentIdentityExchange({
-    // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
+    // P2-03 provider 装配（2026-10-13 契约变更后订正）：authCoordinator 的 exchangeIdentity 走 silent-login，现**恒 fail-closed**（登录须 loginCode＋phoneCode 一次性提交，只能由 LoginPopup 交互完成）；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
     getWxAuth: () => wxAuth,
     loginCode: createUniLoginCode({ platform }),
     platform,
@@ -106,6 +106,14 @@ const phoneLoginFlow = createPhoneLoginFlow({
   platform,
   profileKey: PROFILE.profileKey,
 });
+
+/** 2026-10-13（抖音 invalid session 根因）：**进入登录弹窗时先预取 loginCode**——
+ * 官方《获取手机号》要求「用户点击 button 前需先调用 tt.login；在回调中调用会刷新登录态 ⇒ 解密失败」，
+ * 故预取必须在点按钮之前；**回调路径内不得再 uni.login**（见 application/login-flow.ts）。 */
+function openLoginPopup(): void {
+  showLoginPopup.value = true;
+  void phoneLoginFlow.prefetchLoginCode();
+}
 const ctxFactory = createContextFactory({
   platform,
   environment: env,
@@ -429,7 +437,7 @@ function selectAge(value: number | string): void {
 async function choosePhoto(): Promise<void> {
   if (isUploading.value) return;
   if (!isLoggedIn.value) {
-    showLoginPopup.value = true; // 上传前先查登录态
+    openLoginPopup(); // 上传前先查登录态
     return;
   }
   // PRD R27：人脸照片属敏感个人信息，首次选图前需单独同意（拒绝则不进入选图）
@@ -514,7 +522,7 @@ async function uploadSelectedPhoto(): Promise<void> {
       uploadedFilename.value = "";
       uploadFailed.value = true; // R18：保留 photoPath，模板出「重试」入口（一键重传，不重选照片）
       toast(res.message);
-      if (res.authExpired === true) showLoginPopup.value = true; // 401 → 拉登录（不静默成功）
+      if (res.authExpired === true) openLoginPopup(); // 401 → 拉登录（不静默成功）
     }
   } catch (err) {
     console.error("照片上传失败:", err);
@@ -562,7 +570,7 @@ async function runSubmitFlow(): Promise<void> {
     case "ignored":
       return;
     case "need-login":
-      showLoginPopup.value = true;
+      openLoginPopup();
       return;
     case "toast":
       toast(out.message);

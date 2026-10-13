@@ -59,7 +59,7 @@ describe("⭐2026-09-20 修复：任务详情必须带登录态（authRequired�
         },
       } as never,
     });
-    await repo.getResult(ctx, 141);
+    await repo.getResult(ctx, "141");
     expect(seen[0].authRequired).toBe(true);
     expect(String(seen[0].url)).toContain("/api/aiface/tasks/141");
   });

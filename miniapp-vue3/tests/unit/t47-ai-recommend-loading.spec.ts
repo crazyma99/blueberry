@@ -10,7 +10,8 @@ const h = vi.hoisted(() => ({
   onShowCalls: [] as Array<() => void>,
   onUnloadCalls: [] as Array<() => void>,
   recommendCalls: 0,
-  mode: "ok" as "ok" | "insufficient" | "network" | "business" | "auth",
+  // 2026-10-13（CR ②）：补 "hang"（用例用它在等待态挂起；此前联合类型漏了该值 ⇒ TS2367/TS2322）
+  mode: "ok" as "ok" | "insufficient" | "network" | "business" | "auth" | "hang",
   toasts: [] as string[],
 }));
 

@@ -58,7 +58,7 @@ const uniStorage = createUniStorage();
 const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });
 const authCoordinator = createAuthCoordinator({
   exchangeIdentity: createSilentIdentityExchange({
-    // P2-03 provider：uni.login 取 code → POST /api/wx/login 换票 → Session；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
+    // P2-03 provider 装配（2026-10-13 契约变更后订正）：authCoordinator 的 exchangeIdentity 走 silent-login，现**恒 fail-closed**（登录须 loginCode＋phoneCode 一次性提交，只能由 LoginPopup 交互完成）；wxAuth 惰性取用（装配顺序 client→wxAuth→coordinator）
     getWxAuth: () => wxAuth,
     loginCode: createUniLoginCode({ platform }),
     platform,
@@ -88,6 +88,14 @@ const phoneLoginFlow = createPhoneLoginFlow({
   platform,
   profileKey: PROFILE.profileKey,
 });
+
+/** 2026-10-13（抖音 invalid session 根因）：**进入登录弹窗时先预取 loginCode**——
+ * 官方《获取手机号》要求「用户点击 button 前需先调用 tt.login；在回调中调用会刷新登录态 ⇒ 解密失败」，
+ * 故预取必须在点按钮之前；**回调路径内不得再 uni.login**（见 application/login-flow.ts）。 */
+function openLoginPopup(): void {
+  showLoginPopup.value = true;
+  void phoneLoginFlow.prefetchLoginCode();
+}
 
 // 协议名（旧端 legal.uts:2-3；miniAppName 随 Profile）
 const userAgreementName = `《${PROFILE.miniAppName} 用户协议》`;
@@ -206,7 +214,7 @@ async function onToggleLike(): Promise<void> {
   // 未登录（含仅静默）点赞/取消点赞 ⇒ 挂起本次动作并弹登录窗，登录成功后自动补发（旧端 401 挂起队列语义）
   if (!isFullSession(versioned.loadSession())) {
     pendingLike.value = true;
-    showLoginPopup.value = true;
+    openLoginPopup();
     return;
   }
   const outcome = await liker.toggle(ctxFactory.next(), likeState.value);

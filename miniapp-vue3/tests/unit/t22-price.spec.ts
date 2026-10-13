@@ -125,7 +125,7 @@ describe("pages/priceHomePage（T7 P2-17 tab 页）", () => {
     await w.vm.$nextTick();
     expect(w.find(".sk-wrap").exists()).toBe(false);
     // 模拟切品牌（versioned storage 新键 lm.brand.v1）
-    h.store.set("lm.brand.v1", "brand-b");
+    h.store.set("lm.brand.v1", "chayu"); // 2026-10-13：改用真实商家编码（脏值会被剔除，见 t73）
     h.onShowCalls[h.onShowCalls.length - 1]();
     await w.vm.$nextTick();
     // 同步即应重现骨架——不得让上一品牌网格滞留可见

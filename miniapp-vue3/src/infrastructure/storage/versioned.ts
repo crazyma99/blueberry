@@ -4,9 +4,12 @@
 import type { Platform } from "../../ports/context";
 import type { StoragePort } from "../../ports/storage";
 import type { Session } from "../http/client";
+import { isKnownBrandCode, rememberKnownBrandCodes, warnBrandCodeRejected } from "../../domain/brand-code";
 
 const K_SESSION = "lm.session.v1";
 const K_BRAND = "lm.brand.v1";
+/** 已知商家编码缓存（品牌馆拉取 `GET /api/brands` 后并入；2026-10-13 事故修复新增） */
+const K_BRANDS = "lm.brands.v1";
 const LEGACY_TOKEN = "token";
 const LEGACY_USER = "userInfo";
 const LEGACY_BRAND = "brand_id";
@@ -16,8 +19,13 @@ export interface VersionedStorage {
   saveSession(session: Session): void;
   /** 只清新键；旧键验证期间一律保留 */
   clearSession(): void;
+  /** 品牌上下文（**商家编码**）；非法/未知值返回 null 并清理存量脏值（2026-10-13 事故修复） */
   loadBrandId(): string | null;
+  /** 仅接受**已知商家编码**；非法值**不写入**（保留既有合法值） */
   saveBrandId(id: string): void;
+  /** 已知商家编码缓存（品牌馆拉到 /api/brands 后并入，供离线/首启兜底） */
+  loadKnownBrandCodes(): string[];
+  rememberBrandCodes(codes: readonly string[]): void;
 }
 
 /**
@@ -86,20 +94,58 @@ export function createVersionedStorage(deps: {
     deps.backend.remove(K_SESSION);
   }
 
-  function loadBrandId(): string | null {
-    const fresh = deps.backend.get(K_BRAND);
-    if (fresh != null && fresh.length > 0) return fresh; // 新键优先
-    const legacy = deps.backend.get(LEGACY_BRAND);
-    if (legacy != null && legacy.length > 0) {
-      deps.backend.set(K_BRAND, legacy); // 读旧写新；旧键保留
-      return legacy;
+  /** 读取已知编码缓存（损坏安全失败＝空列表） */
+  function loadKnownBrandCodes(): string[] {
+    const raw = deps.backend.get(K_BRANDS);
+    if (raw == null || raw === "") return [];
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      const list = parsed.filter((x): x is string => typeof x === "string" && x !== "");
+      // 并入运行期注册表：无 storage 的一侧（http client）据此同步校验
+      rememberKnownBrandCodes(list);
+      return list;
+    } catch {
+      return [];
     }
-    return null;
   }
 
+  /** 并入已知编码（幂等去重后持久化） */
+  function rememberBrandCodes(codes: readonly string[]): void {
+    const merged = Array.from(new Set([...loadKnownBrandCodes(), ...codes.filter((c) => typeof c === "string" && c !== "")]));
+    deps.backend.set(K_BRANDS, JSON.stringify(merged));
+    rememberKnownBrandCodes(merged);
+  }
+
+  /**
+   * 品牌上下文＝**商家编码**（2026-10-13 事故修复）：读到非法/未知值一律**视为无品牌**并**清理存量脏值**，
+   * 否则老用户会被历史脏值长期锁死（后端对已存在的品牌头不回落，直接 500「品牌不存在或已停用」⇒ 整站空白）。
+   */
+  function loadBrandId(): string | null {
+    const known = loadKnownBrandCodes();
+    const fresh = deps.backend.get(K_BRAND);
+    const hasFresh = fresh != null && fresh.length > 0;
+    const raw = hasFresh ? (fresh as string) : deps.backend.get(LEGACY_BRAND);
+    if (raw == null || raw === "") return null;
+    if (!isKnownBrandCode(raw, known)) {
+      warnBrandCodeRejected(raw, "非已知商家编码（loadBrandId）");
+      // 存量脏值清理：新键必清；旧键仅在值相同时清（避免误删他处写入）
+      deps.backend.remove(K_BRAND);
+      if (deps.backend.get(LEGACY_BRAND) === raw) deps.backend.remove(LEGACY_BRAND);
+      return null;
+    }
+    if (!hasFresh) deps.backend.set(K_BRAND, raw); // 读旧写新（仅合法值才迁移）
+    return raw;
+  }
+
+  /** 仅接受已知商家编码：非法值不写入（保留既有合法值），并打一次性日志 */
   function saveBrandId(id: string): void {
+    if (!isKnownBrandCode(id, loadKnownBrandCodes())) {
+      warnBrandCodeRejected(id, "saveBrandId 拒写非已知商家编码");
+      return;
+    }
     deps.backend.set(K_BRAND, id);
   }
 
-  return { loadSession, saveSession, clearSession, loadBrandId, saveBrandId };
+  return { loadSession, saveSession, clearSession, loadBrandId, saveBrandId, loadKnownBrandCodes, rememberBrandCodes };
 }
