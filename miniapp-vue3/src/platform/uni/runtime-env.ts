@@ -35,13 +35,27 @@ function uniApi(): (UniAccountLike & { tt?: unknown }) | undefined {
 /** 抖音全局对象（tt 小程序里以**裸标识符**使用，如 `tt.xxx()`；微信端不存在 ⇒ `typeof` 判定安全） */
 declare const tt: TtEnvLike | undefined;
 
+/**
+ * ⭐**抖音全局对象统一入口（2026-10-13 task-65 红线）**：`tt` 小程序里以**裸标识符**使用；
+ * **抖音运行时不提供 `globalThis`**（IDE sm 实测 undefined）⇒ `globalThis.tt` 直取会抛
+ * `TypeError: Cannot read properties of undefined (reading tt)`（真机 popup 点头像／保存各崩一次）。
+ * ⇒ **一律经本函数**（裸 `tt` 优先，`globalThis.tt` 仅作测试桩兜底；`typeof` 守卫、绝不抛）。
+ */
+export function ttApiOf<T>(): T | undefined {
+  try {
+    if (typeof tt !== "undefined" && tt != null) return tt as unknown as T;
+    if (typeof globalThis === "undefined") return undefined;
+    return (globalThis as { tt?: T }).tt;
+  } catch {
+    return undefined; // 容器畸形：安全失败，绝不抛
+  }
+}
+
 /** 取容器注入的抖音 `tt`（仅抖音运行时提供；微信/其他端没有 ⇒ 自然回落） */
 function ttApi(): TtEnvLike | undefined {
   // ⚠️ 2026-10-10 实测纠偏：**抖音运行时不提供 `globalThis`**（IDE sm 模式实测 `globalThis` 为 undefined）
   // ⇒ 必须先试**裸 `tt`**（与 `platform/uni/storage.ts` 用裸 `uni` 同口径）；`globalThis.tt` 仅作测试桩兜底。
-  if (typeof tt !== "undefined" && tt != null) return tt;
-  const g = typeof globalThis === "undefined" ? undefined : (globalThis as { tt?: TtEnvLike });
-  return g?.tt;
+  return ttApiOf<TtEnvLike>();
 }
 
 /**

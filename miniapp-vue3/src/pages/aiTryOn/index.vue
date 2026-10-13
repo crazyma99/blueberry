@@ -25,6 +25,9 @@ import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
+import { createAvatarUploader, resolveAvatarUrl } from "../../application/avatar";
+import { isForeignRemoteUrl, isLocalFilePath, sanitizeAvatarUrl } from "../../domain/avatar-url";
+import { createUniAvatarDownloader } from "../../platform/uni/download";
 import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, showModal } from "../../platform/uni/feedback";
 import BaseLoadingPopup from "../../ui/BaseLoadingPopup.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
@@ -120,6 +123,20 @@ const ctxFactory = createContextFactory({
   profileKey: PROFILE.profileKey,
   appCode: PROFILE.appCode,
   getBrandId: () => versioned.loadBrandId(),
+});
+// ⭐①-1：**头像专用上传口**（单一入口 `application/avatar.ts`；与照片通道分离，task-58 落地后只改那一行 URL）
+// ⭐task-63⒞：第三方远程头像 URL（如抖音头像）需**先下载落地再上传** ⇒ 注入平台层下载器（抖音优先原生 downloadFile）
+const avatarDownloader = createUniAvatarDownloader();
+const avatarUploader = createAvatarUploader({
+  upload: createUniUpload(),
+  baseUrl: PROFILE.apiBases[env],
+  headers: () =>
+    buildUploadHeaders({
+      token: versioned.loadSession()?.token ?? null,
+      brandId: versioned.loadBrandId() ?? "",
+      appCode: PROFILE.appCode,
+      platform: PROFILE.platform,
+    }),
 });
 const chooser = createUniPhotoChooser();
 const uploader = createAiPhotoUploader({
@@ -242,6 +259,8 @@ const showLoginPopup = ref(false);
 const loginAgreementChecked = ref(false);
 const showProfilePopup = ref(false);
 const profileAvatarUrl = ref("");
+/** ⭐task-61：弹窗预览（本地路径原样渲染；成功/失败/关闭即清） */
+const profilePreviewAvatar = ref("");
 const profileNickname = ref("");
 const creditBalance = ref(-1); // -1 = 未查询到
 const priceFenPerCredit = ref(0);
@@ -708,17 +727,38 @@ function onChooseAvatar(event: unknown): void {
     typeof event === "string"
       ? event
       : (event as { detail?: { avatarUrl?: string } } | undefined)?.detail?.avatarUrl;
-  if (url != null && url !== "") profileAvatarUrl.value = url;
+  if (url != null && url !== "") {
+    profileAvatarUrl.value = url;
+    profilePreviewAvatar.value = url; // 预览
+  }
 }
-function submitProfile(): void {
+async function submitProfile(): Promise<void> {
   const info = userStore.load();
+  const avatarRaw = profileAvatarUrl.value || "";
+  // ⭐①-1（2026-10-13 事故修复）：本页原先**直存本地路径**（wxfile://…）⇒ 跨端/换设备必坏。
+  // 现在：本地路径必须先上传成 http(s)；上传失败 ⇒ fail-closed（不写 store、给可重试提示）。
+  // 远程 URL 也要走「下载 → 上传」两步 ⇒ 同样进入「上传中」UI
+  const uploadingAvatar = isLocalFilePath(avatarRaw) || isForeignRemoteUrl(avatarRaw);
+  if (uploadingAvatar) showLoading("头像上传中...");
+  const resolvedAvatar = await resolveAvatarUrl(avatarRaw, { uploader: avatarUploader, downloader: avatarDownloader });
+  if (!resolvedAvatar.ok) {
+    if (uploadingAvatar) hideLoading();
+    profilePreviewAvatar.value = ""; // ⭐失败回退「上一张有效头像」
+    toast(resolvedAvatar.message);
+    return;
+  }
+  if (uploadingAvatar) hideLoading();
+  // ⭐task-60：上传成功后回写展示值（本页只存本地 store，不提交服务端；回写的是可落库 CDN URL）
+  profileAvatarUrl.value = sanitizeAvatarUrl(resolvedAvatar.url);
+  profilePreviewAvatar.value = ""; // 预览使命完成 ⇒ 清
   userStore.save({
     openid: info?.openid ?? null,
-    avatarUrl: profileAvatarUrl.value,
+    avatarUrl: sanitizeAvatarUrl(resolvedAvatar.url), // 只允许 http(s) 落库
     nickname: profileNickname.value,
     phone: info?.phone ?? null,
   } as Parameters<typeof userStore.save>[0]);
   showProfilePopup.value = false;
+  profilePreviewAvatar.value = ""; // task-61：关闭即清预览
   toast("保存成功", "success");
 }
 function skipProfile(): void {
@@ -814,6 +854,7 @@ function safeDecode(v: string): string {
     <ProfilePopup
       v-if="showProfilePopup"
       :avatar-url="profileAvatarUrl"
+      :preview-avatar="profilePreviewAvatar"
       :nickname="profileNickname"
       @choose-avatar="onChooseAvatar"
       @update-nickname="onProfileNicknameInput"

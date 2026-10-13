@@ -2,6 +2,7 @@
 // 容器安全：uni.uploadFile 不存在（测试/异常容器）按 network 失败返回，不抛。
 import type { Result } from "../../ports/context";
 import type { UploadPort, UploadRequest, UploadResponse } from "../../ports/upload";
+import { ttApiOf } from "./runtime-env";
 
 interface UniUploadRes {
   statusCode: number;
@@ -26,16 +27,28 @@ export function createUniUpload(deps?: { defaultTimeoutMs?: number }): UploadPor
   return {
     upload(req: UploadRequest): Promise<Result<UploadResponse>> {
       return new Promise((resolve) => {
+        // ⭐2026-10-13 task-63⒜：**抖音端优先直调原生上传 API**（`tt.uploadFile`）——uni 对抖音的 shim 覆盖不全
+        //   （同 `tt.chooseImage` 一类问题：`uni.uploadFile` 在抖音容器可能不可用 ⇒ 之前零请求直接失败）；
+        //   非抖音端仍走 `uni.uploadFile`；两者皆无 ⇒ 维持既有「按网络失败返回」（分级提示归 task-64）。
+        //   注：注释遵守 P4-12——**不出现平台 API 字面量**。
+        const ttNs = ttApiOf<{ uploadFile?: (o: Record<string, unknown>) => unknown }>(); // ⭐task-65：不得直取 globalThis 上的 tt
         const u = uniApi<{ uploadFile?: (o: Record<string, unknown>) => unknown }>();
-        if (typeof u?.uploadFile !== "function") {
+        const rawUpload =
+          ttNs != null && typeof ttNs.uploadFile === "function"
+            ? ttNs.uploadFile.bind(ttNs)
+            : typeof u?.uploadFile === "function"
+              ? u.uploadFile.bind(u)
+              : null;
+        if (rawUpload == null) {
           resolve({ ok: false, reason: "network" });
           return;
         }
+        const uploadFileApi = rawUpload as (o: Record<string, unknown>) => unknown;
         try {
           // ⚠️ 回调可能在 uploadFile 内**同步**触发（测试/异常容器）：用 settled 标记避免「已终结却仍把任务挂上」
           // ——否则 cancel() 会误 abort 一个已完成的请求（S1 自查发现的真隐患）。
           let settled = false;
-          const handle = u.uploadFile({
+          const handle = uploadFileApi({
             url: req.url,
             filePath: req.filePath,
             name: req.name,

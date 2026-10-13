@@ -41,6 +41,11 @@ import { syncTabBarSelected } from "../../application/tabbar";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import ProfilePopup from "../../components/ProfilePopup/ProfilePopup.vue";
+import { createUniUpload } from "../../platform/uni/upload";
+import { buildUploadHeaders } from "../../application/ai-photo-upload";
+import { createAvatarUploader, resolveAvatarUrl } from "../../application/avatar";
+import { isForeignRemoteUrl, isLocalFilePath, sanitizeAvatarUrl } from "../../domain/avatar-url";
+import { createUniAvatarDownloader } from "../../platform/uni/download";
 import BottomActionBarSecondary from "../../components/BottomActionBarSecondary/BottomActionBarSecondary.vue";
 
 // —— 装配（同 index/demoDetail/priceList）——
@@ -50,6 +55,20 @@ const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
 const isMpWeixin = platform === "mp-weixin";
 const env = resolveRuntimeEnvironment(PROFILE.environment);
 const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
+// ⭐①-1（2026-10-13）：头像必须先上传成 http(s) 再落库 ⇒ 本页需要上传端口（与 aiTryOn/aiRecommend 同口径）
+// ⭐task-63⒞：第三方远程头像 URL（如抖音头像）需**先下载落地再上传** ⇒ 注入平台层下载器（抖音优先原生 downloadFile）
+const avatarDownloader = createUniAvatarDownloader();
+const avatarUploader = createAvatarUploader({
+  upload: createUniUpload(),
+  baseUrl: PROFILE.apiBases[env],
+  headers: () =>
+    buildUploadHeaders({
+      token: versioned.loadSession()?.token ?? null,
+      brandId: versioned.loadBrandId() ?? "",
+      appCode: PROFILE.appCode,
+      platform: PROFILE.platform,
+    }),
+});
 const uniStorage = createUniStorage();
 const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });
 const userStore = createUserInfoStore({ backend: uniStorage });
@@ -110,6 +129,8 @@ const showLoginPopup = ref(false);
 const loginAgreementChecked = ref(false);
 const showProfilePopup = ref(false);
 const profileAvatarUrl = ref("");
+/** ⭐task-61：弹窗**预览**（用户刚选到的本地路径，原样渲染；保存成功/失败/关闭即清） */
+const profilePreviewAvatar = ref("");
 const profileNickname = ref("");
 const profileFromLogin = ref(false);
 
@@ -274,7 +295,10 @@ function openProfilePopup(): void {
 
 function onChooseAvatar(e: unknown): void {
   const url = (e as { detail?: { avatarUrl?: string } })?.detail?.avatarUrl;
-  if (url) profileAvatarUrl.value = String(url);
+  if (url) {
+    profileAvatarUrl.value = String(url);
+    profilePreviewAvatar.value = String(url); // 预览：立即展示（本地路径原样渲染）
+  }
 }
 
 // 昵称输入（模板内禁 TS 标注，提为具名方法；同 aiRecommend/aiTryOn 页 onProfileNicknameInput 写法）
@@ -285,12 +309,33 @@ function onProfileNicknameInput(value: string): void {
 // 提交头像昵称：非空合并＋PUT（旧端 :354-390 乐观写入语义）
 async function submitProfile(): Promise<void> {
   const nickname = (profileNickname.value || "").trim();
-  const avatarUrl = profileAvatarUrl.value || "";
-  if (nickname === "" && avatarUrl === "") {
+  const avatarRaw = profileAvatarUrl.value || "";
+  if (nickname === "" && avatarRaw === "") {
     skipProfile();
     return;
   }
-  // 乐观写入：保证后端响应不带 avatarUrl 时本地仍立即展示（旧端 :362-371）
+  // ⭐①-1（2026-10-13 事故修复）：**本地临时路径（wxfile://…）必须先上传成 http(s) 再落库**；
+  // 上传失败/返回非 http ⇒ fail-closed：不写 store、不提交服务端，给可重试提示。
+  // 远程 URL 也要走「下载 → 上传」两步 ⇒ 同样进入「上传中」UI
+  const uploadingAvatar = isLocalFilePath(avatarRaw) || isForeignRemoteUrl(avatarRaw);
+  try {
+    if (uploadingAvatar) showLoading("头像上传中...");
+    const resolved = await resolveAvatarUrl(avatarRaw, { uploader: avatarUploader, downloader: avatarDownloader });
+    if (!resolved.ok) {
+      if (uploadingAvatar) hideLoading();
+      profilePreviewAvatar.value = ""; // ⭐失败回退「上一张有效头像」（清掉失败预览）
+      toast(resolved.message);
+      return; // 零落库、零更新请求
+    }
+    // ⭐task-60（2026-10-13 主人真机实证）：**上传成功后必须回写展示值**——否则弹窗 :avatar-url 仍持本地路径，
+    // 被 sanitizeAvatarUrl 判脏 ⇒ 显示占位（本次 bug：库里有真 CDN 地址、界面却空白）。
+    // 分界：上传中页面显示的是**本地预览**（不写 store/服务端）；此处回写的是**可落库的 CDN URL**。
+    const avatarUrl = resolved.url;
+    profileAvatarUrl.value = avatarUrl; // 弹窗展示立即刷新（落库值通道）
+    profilePreviewAvatar.value = ""; // 预览使命完成 ⇒ 清（此后展示＝落库 CDN URL）
+    userAvatarUrl.value = avatarUrl; // 页面头部同步刷新
+  // 乐观写入：保证后端响应不带 avatarUrl 时本地仍立即展示（旧端 :362-371）；注意用**上传后的 URL**
+  
   userStore.merge({
     id: 0,
     openid: "",
@@ -317,6 +362,12 @@ async function submitProfile(): Promise<void> {
     toast("更新失败，请重试");
   } finally {
     finishProfile();
+  }
+  } catch (err) {
+    // 外层＝①-1 的上传/解析段（fail-closed：异常不落库、不提交，给可重试提示）
+    console.error("[avatar] 头像上传/更新异常（fail-closed）:", err);
+    hideLoading();
+    toast("保存失败，请重试");
   }
 }
 
@@ -358,6 +409,7 @@ function doLogout(): void {
 function finishProfile(): void {
   showProfilePopup.value = false;
   profileAvatarUrl.value = "";
+  profilePreviewAvatar.value = ""; // task-61：关闭即清预览
   profileNickname.value = "";
   updateLoginState();
   if (profileFromLogin.value) {
@@ -447,6 +499,7 @@ function handleMenuClick(item: MenuItem): void {
     <ProfilePopup
       v-if="showProfilePopup"
       :avatar-url="profileAvatarUrl"
+      :preview-avatar="profilePreviewAvatar"
       :nickname="profileNickname"
       @choose-avatar="onChooseAvatar"
       @update-nickname="onProfileNicknameInput"

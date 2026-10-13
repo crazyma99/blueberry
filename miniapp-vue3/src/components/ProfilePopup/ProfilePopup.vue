@@ -22,19 +22,34 @@
 //
 // token 映射与 LoginPopup 同口径（详见其页头）：金色 → tokens.semantic.colorAction；
 // 墨色 → tokens.semantic.colorActionText；深色卡片/渐变/字号档位 → 硬编码并注释。
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { resolveAvatarDisplay } from "../../domain/avatar-url";
+import { isToutiaoPlatform } from "../../ui/ui-platform";
+import { pickAvatarImage, toastAvatarPickFailure } from "../../platform/uni/chooser";
 import { hapticTap } from "../../application/haptics";
 import BasePopup from "../../ui/BasePopup.vue";
+import AvatarPickerButton from "../../platform/ui-bridge/AvatarPickerButton.vue";
 
 /** 🟡CR3：`placeholder-class` 在 scoped 下**永不命中**（基座自造 class，不带 data-v）⇒ 改内联 style（含字体，见 🔴1） */
 const PLACEHOLDER_STYLE = "font-family:'HarmonyOS-Sans-SC';color:rgba(255,255,255,0.35)";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     avatarUrl?: string;
+    /** ⭐task-61：**预览值**（用户刚选到的本地临时路径，**原样渲染、不套白名单**；不落库） */
+    previewAvatar?: string;
     nickname?: string;
   }>(),
-  { avatarUrl: "", nickname: "" },
+  { avatarUrl: "", previewAvatar: "", nickname: "" },
+);
+
+/**
+ * 展示值优先级（2026-10-13 task-61）：**预览 > 落库值（白名单） > 占位图**——单一事实源＝domain/avatar-url.ts。
+ * · 预览＝用户刚选到的本地临时路径 ⇒ **原样渲染**（否则弹窗当场占位：真机现象①）；
+ * · 落库值仍走白名单 ⇒ 历史脏值（wxfile://…／http://tmp/…）**必须占位**（不得回退）。
+ */
+const displayAvatarUrl = computed<string>(() =>
+  resolveAvatarDisplay({ preview: props.previewAvatar, persisted: props.avatarUrl }),
 );
 
 const emit = defineEmits<{
@@ -45,8 +60,26 @@ const emit = defineEmits<{
 }>();
 /** 弹层内交互统一「**触感反馈 ＋ 按压反馈**」（主人 2026-09-23：「Popup 内的按钮缺少震动反馈和按压效果」）——
  *  与全站自绘按钮（`hover-class="press-dim"` ＋ `hapticTap()`）保持同一口径；`hapticTap` 失败静默、不影响业务。 */
+const isToutiao = isToutiaoPlatform();
+
 function onAvatarTap(): void {
   hapticTap();
+}
+
+/**
+ * 抖音端头像区点击 ⇒ **直接拉起选择器**（官方抖音原生取图 API，基础库 1.0.0；平台 API 收口在 platform/uni/chooser.ts）。
+ * 三态：成功 ⇒ 交页面上传；**取消 ⇒ 静默**（官方：「手动取消也会触发失败回调，参数 `chooseImage:fail cancel`」，据此区分）；
+ * **API 缺失/打开失败 ⇒ 可读提示**（禁止静默——这正是真机「点了没反应」的根因）。
+ */
+async function onPickToutiaoAvatar(): Promise<void> {
+  hapticTap();
+  const picked = await pickAvatarImage();
+  if (picked.ok) {
+    emit("choose-avatar", { detail: { avatarUrl: picked.path } });
+    return;
+  }
+  if (picked.reason === "cancel") return; // 取消：静默
+  toastAvatarPickFailure(picked.reason); // unsupported／failed：必须提示
 }
 function onSubmit(): void {
   hapticTap();
@@ -79,12 +112,30 @@ function onNicknameInput(e: unknown): void {
       <view class="card-title font-noto-serif">完善个人资料</view>
       <view class="card-desc">设置头像和昵称以获得完整体验</view>
 
-      <!-- 头像选择 -->
-      <button class="avatar-btn" hover-class="press-dim" open-type="chooseAvatar" @click="onAvatarTap" @chooseavatar="emit('choose-avatar', $event)">
-        <image class="avatar-img" :src="avatarUrl || '/static/iconpark/mine.svg'" mode="aspectFill"></image>
+      <!-- 头像选择（2026-10-13 task-62 真机反馈后定型）：
+           · 微信：**原生 `open-type="chooseAvatar"`**（自带相册/拍照）——**已按主人要求撤掉我们自建的「从相册选择」按钮**（不重复入口），此按钮行为不变；
+           · 抖音：`chooseAvatar` **抖音不支持**（点了没反应）⇒ 大头像按钮改为**普通按钮、点击直接拉起选择器**（抖音原生取图 API 收口在 `platform/uni/chooser.ts`），
+             另配「用抖音头像」按钮走官方 `open-type="getUserInfo"`（见下 AvatarPickerButton）。取舍：抖音端头像区＝**一次点击即选图**（少一层菜单），
+             授权取头像仍是显式第二入口。 -->
+      <button
+        v-if="!isToutiao"
+        class="avatar-btn"
+        hover-class="press-dim"
+        open-type="chooseAvatar"
+        @click="onAvatarTap"
+        @chooseavatar="emit('choose-avatar', $event)"
+      >
+        <image class="avatar-img" :src="displayAvatarUrl" mode="aspectFill"></image>
         <view class="avatar-badge">+</view>
         <text class="avatar-tip">点击选择头像</text>
       </button>
+      <button v-else class="avatar-btn" hover-class="press-dim" @click="onPickToutiaoAvatar">
+        <image class="avatar-img" :src="displayAvatarUrl" mode="aspectFill"></image>
+        <view class="avatar-badge">+</view>
+        <text class="avatar-tip">点击选择头像</text>
+      </button>
+      <!-- ⭐task-57：抖音端「用抖音头像」＝官方 `button open-type="getUserInfo"`（本桥在微信端**不渲染任何东西**） -->
+      <AvatarPickerButton v-if="isToutiao" @picked="emit('choose-avatar', $event)" />
 
       <!-- 昵称输入（内联 AppInput，见页头有意偏差声明；外层控制与下方按钮间距） -->
       <view class="input-wrap">

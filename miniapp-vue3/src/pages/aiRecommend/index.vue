@@ -60,6 +60,9 @@ import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
+import { createAvatarUploader, resolveAvatarUrl } from "../../application/avatar";
+import { isForeignRemoteUrl, isLocalFilePath, sanitizeAvatarUrl } from "../../domain/avatar-url";
+import { createUniAvatarDownloader } from "../../platform/uni/download";
 import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, navigateTo } from "../../platform/uni/feedback";
 import { createCaptureGuard } from "../../platform/weixin/capabilities";
 import { createWeixinPhotoCheck } from "../../platform/weixin/photo-check";
@@ -149,6 +152,20 @@ const ctxFactory = createContextFactory({
   getBrandId: () => versioned.loadBrandId(),
 });
 const chooser = createUniPhotoChooser();
+// ⭐①-1：头像专用上传口（单一入口；与照片通道分离）
+// ⭐task-63⒞：第三方远程头像 URL（如抖音头像）需**先下载落地再上传** ⇒ 注入平台层下载器（抖音优先原生 downloadFile）
+const avatarDownloader = createUniAvatarDownloader();
+const avatarUploader = createAvatarUploader({
+  upload: createUniUpload(),
+  baseUrl: PROFILE.apiBases[env],
+  headers: () =>
+    buildUploadHeaders({
+      token: versioned.loadSession()?.token ?? null,
+      brandId: versioned.loadBrandId() ?? "",
+      appCode: PROFILE.appCode,
+      platform: PROFILE.platform,
+    }),
+});
 const uploader = createAiPhotoUploader({
   upload: createUniUpload(),
   baseUrl: PROFILE.apiBases[env],
@@ -247,6 +264,8 @@ const loginAgreementChecked = ref(false);
 // 头像昵称弹窗
 const showProfilePopup = ref(false);
 const profileAvatarUrl = ref("");
+/** ⭐task-61：弹窗预览（本地路径原样渲染；成功/失败/关闭即清） */
+const profilePreviewAvatar = ref("");
 const profileNickname = ref("");
 // 推荐次数 / 支付
 const creditBalance = ref(-1); // 剩余推荐次数，-1 = 未查询到
@@ -643,17 +662,38 @@ function onProfileNicknameInput(value: string): void {
 function onChooseAvatar(e: unknown): void {
   // 组件 emit 载荷为 unknown（旧端为 chooseAvatar 事件对象）⇒ 兼容取值
   const url = (e as { detail?: { avatarUrl?: string } } | undefined)?.detail?.avatarUrl;
-  if (url) profileAvatarUrl.value = String(url);
+  if (url) {
+    profileAvatarUrl.value = String(url);
+    profilePreviewAvatar.value = String(url); // 预览
+  }
 }
 // 提交头像昵称：非空合并 + PUT /api/wx/userinfo（旧端 :507-539 乐观写入语义）
 async function submitProfile(): Promise<void> {
   const nickname = (profileNickname.value || "").trim();
-  const avatarUrl = profileAvatarUrl.value || "";
-  if (nickname === "" && avatarUrl === "") {
+  const avatarRaw = profileAvatarUrl.value || "";
+  if (nickname === "" && avatarRaw === "") {
     skipProfile();
     return;
   }
-  // 乐观写入：保证后端响应不带 avatarUrl 时本地仍立即展示
+  // ⭐①-1（2026-10-13 事故修复）：本地临时路径（wxfile://…）**先上传**成 http(s) 再落库；
+  // 失败/返回非 http ⇒ fail-closed（不写 store、不提交服务端、给可重试提示）
+  // 远程 URL 也要走「下载 → 上传」两步 ⇒ 同样进入「上传中」UI
+  const uploadingAvatar = isLocalFilePath(avatarRaw) || isForeignRemoteUrl(avatarRaw);
+  if (uploadingAvatar) showLoading("头像上传中...");
+  const resolvedAvatar = await resolveAvatarUrl(avatarRaw, { uploader: avatarUploader, downloader: avatarDownloader });
+  if (!resolvedAvatar.ok) {
+    if (uploadingAvatar) hideLoading();
+    profilePreviewAvatar.value = ""; // ⭐失败回退「上一张有效头像」
+    toast(resolvedAvatar.message);
+    return;
+  }
+  // ⭐task-60（2026-10-13 主人真机实证）：**上传成功后必须回写展示值**——否则弹窗 :avatar-url 仍持本地路径，
+    // 被 sanitizeAvatarUrl 判脏 ⇒ 显示占位（本次 bug：库里有真 CDN 地址、界面却空白）。
+    // 分界：上传中页面显示的是**本地预览**（不写 store/服务端）；此处回写的是**可落库的 CDN URL**。
+  const avatarUrl = resolvedAvatar.url;
+  profileAvatarUrl.value = avatarUrl; // 落库值通道
+  profilePreviewAvatar.value = ""; // 预览使命完成 ⇒ 清
+  // 乐观写入：保证后端响应不带 avatarUrl 时本地仍立即展示（**用上传后的 URL**）
   userStore.merge({
     id: 0,
     openid: "",
@@ -687,6 +727,7 @@ function skipProfile(): void {
 function finishProfile(): void {
   showProfilePopup.value = false;
   profileAvatarUrl.value = "";
+  profilePreviewAvatar.value = ""; // task-61：关闭即清预览
   profileNickname.value = "";
   toast("登录成功", "success");
 }
@@ -769,6 +810,7 @@ function isLoggedIn(): boolean {
     <ProfilePopup
       v-if="showProfilePopup"
       :avatar-url="profileAvatarUrl"
+      :preview-avatar="profilePreviewAvatar"
       :nickname="profileNickname"
       @choose-avatar="onChooseAvatar"
       @update-nickname="onProfileNicknameInput"

@@ -17,6 +17,7 @@
 // 旧端纪律（loginFlow.uts:34-67）：不调 showLoading/toast/关弹窗——调用方按页面策略处理 UX。
 import type { RequestContext, Result } from "../ports/context";
 import { createUniLoginCode, type LoginCodePort } from "../platform/uni/login";
+import { sanitizeAvatarUrl } from "../domain/avatar-url";
 import type { Platform } from "../ports/context";
 import type { AuthCoordinator } from "./auth-coordinator";
 import type { WxUserInfoLocal, UserInfoStore } from "./user-info-store";
@@ -191,6 +192,7 @@ export function toLocalUser(raw: Record<string, unknown>): WxUserInfoLocal {
     openid: typeof raw.openid === "string" ? raw.openid : "",
     phone: typeof raw.phone === "string" && raw.phone !== "" ? raw.phone : null,
     nickname: typeof raw.nickname === "string" && raw.nickname !== "" ? raw.nickname : null,
-    avatarUrl: typeof raw.avatarUrl === "string" && raw.avatarUrl !== "" ? raw.avatarUrl : null,
+    // ⭐2026-10-13（①-1 读侧兜底）：历史脏值（wxfile://tmp_… 等非 http(s)）一律**视为空**（不落本地、不渲染坏图）
+    avatarUrl: typeof raw.avatarUrl === "string" && sanitizeAvatarUrl(raw.avatarUrl) !== "" ? sanitizeAvatarUrl(raw.avatarUrl) : null,
   };
 }

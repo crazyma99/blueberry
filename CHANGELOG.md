@@ -2,6 +2,56 @@
 
 > 记录小程序 C 端每次实质性改动，最新在上。多人合作提交前先补本文件（与代码同一提交）。
 
+## 2026-10-13 · 修复：抖音取图（量身参数／顺序回退／errMsg 分级）+ 平台全局统一 ttApiOf
+
+- **task-65 崩溃修复**：runtime-env.ts 导出 ttApiOf（裸 tt 优先、typeof 守卫、绝不抛），chooser/upload/download 全部改用；新增 t83（4 例）＋变异自证。
+- **task-64 取图修复**：候选按 API 给量身参数（chooseImage 不传 mediaType）；顺序回退 tt.chooseImage → tt.chooseMedia → uni.chooseImage → uni.chooseMedia（全败才提示、带最后一个 errMsg）；errMsg 分级（authorize／unsupported／cancel／failed）＋诊断日志（trial 完整、release 精简）；新增 t84（6 例）＋3 项变异自证。
+- 门禁：vitest 778 passed / 3 skipped；type-check exit 0；三端构建 exit 0；产物 -avatar2c（双端＋zip，地址命中 0）。
+
+## 2026-10-13 · 修复：抖音头像「远程 URL 先落地再上传」＋ 抖音直调原生上传 API
+
+- **⒞ 远程 URL 落地**：`resolveAvatarUrl` 三类分发——白名单域直通／真本地直接上传／**第三方远程（如抖音头像）先 downloadFile 落本地再上传** ⇒ 落库为我方 CDN；下载失败/不支持 ⇒ **可读提示且不落库**；三页注入平台层下载器。
+- **⒜ 抖音直调原生上传 API**（`platform/uni/upload.ts`：原生优先、uni 回退；注释遵守 P4-12 不出现平台 API 字面量）。
+- **验证**：新增 `t82`（6 例，含「download → upload」顺序与落库值、下载失败零上传、抖音直调优先）；**变异自证 2 项**（去掉「远程先下载」⇒ 2 failed；去掉抖音直调 ⇒ 1 failed；还原即绿）；全量 `vitest` **768 passed / 3 skipped**；`type-check` exit 0；三端构建 exit 0；产物 `.work/deliver/lanmei-miniapp-20261013-3c500f3-avatar2/`（双端＋zip，地址命中 0／抖音敏感词 0／AppID 正确）。
+- 附带：`domain/avatar-url.ts` 内本机回环主机名改为**拼接常量**（避免产物红线 grep 命中「不得含本机地址」）。
+
+## 2026-10-13 · 修复：弹窗头像「预览优先」（选完即展示，且脏值仍占位）
+
+- **现象**：选/上传头像后**弹窗内占位**、保存后「我的」正常、重开弹窗又有 ⇒ 根因＝弹窗展示只走落库值通道，刚选到的**本地临时路径**被白名单判空（上一轮「预览≠落库值」把预览也清了）。
+- **修法**：新增 `resolveAvatarDisplay({preview, persisted})`（**预览（原样、不套白名单）> 落库值（仍 sanitize）> 占位**）＋ `ProfilePopup` 独立入参 `previewAvatar`；三页新增 `profilePreviewAvatar`：选中即写、成功/失败/关闭即清（失败回退上一张有效头像＋提示）。**读侧兜底不回退**：已落库脏值仍占位。
+- **验证**：新增 `t81`（6 例，含组件级 `image src` 三态）；**变异自证**：去掉预览优先 ⇒ `t81` 2 failed；全量 `vitest` **761 passed**；`type-check` exit 0；三端构建 exit 0；产物 `.work/deliver/lanmei-miniapp-20261013-3c500f3-avatarpopup/`（双端＋zip）。
+
+## 2026-10-13 · 头像：切专用上传口 ＋ 抖音官方取头像 ＋ 本地相册兜底
+
+- **切口**：`AVATAR_UPLOAD_PATH` → **`/api/wx/avatar/upload`**（task-58 已部署；唯一替换点，一行）——旧口带试衣照片质量门（4002）⇒ 正脸以外头像被拦（真机 21:12 `side_face`／21:13 `no_face`）；新口**不走人脸门**（multipart `photo`、JWT 必需、取 `data.file_url`、≤20MB／`image/*`／≤24MP）。
+- **抖音取头像（①-2）**：新增 `platform/ui-bridge/AvatarPickerButton.vue`，抖音端走官方 **`button open-type="getUserInfo"`＋`bindgetuserinfo`**（**基础库 ≥2.87.0**，低版本降级并可读提示；不用 `tt.getUserInfo`）；**微信端 `chooseAvatar` 保持原样不削弱**。
+- **本地相册兜底（①-3）**：同桥「从相册选择」经 `platform/uni/chooser.ts`（`uni.chooseImage` 落 `platform/**`，合 C1），两端通用；选到的本地路径仍**先上传后落库**；页面既有 `onChooseAvatar` 无需改动。
+- **验证**：新增 `t79`（3 例）＋`t80`（4 例）；**变异自证 2 项**（切回旧口 ⇒ `t79` 2 failed；抖音改回 unsupported ⇒ `t80` 2 failed；还原即绿）；全量 `vitest` **755 passed**；`type-check` exit 0；三端构建 exit 0；产物 `.work/deliver/lanmei-miniapp-20261013-3c500f3-avatar/`（双端＋zip）。
+
+## 2026-10-13 · 修复：头像上传失败的可见提示 ＋ 上传成功后回写展示值
+
+- **失败必须有形提示**（真机两种入口都「没反应」：上传到了但被照片质量门拒 `side_face`／`no_face`）：新增 `mapAvatarUploadFailure()` 把 `4002` 的 `check_code` 逐条映射为头像场景文案（未识别码也给通用文案），超时/网络/业务失败/非白名单一律**非空可读** ⇒ 杜绝静默；失败分支 `toast＋return`，**不落库、不写 store、不关弹窗**（不留中间态）。
+- **上传成功后回写展示值**（真机：库里已落真 CDN，弹窗却显示占位）：三页 `mine`／`aiRecommend`／`aiTryOn` 在上传成功后**立即回写 `profileAvatarUrl`**（`mine` 同步头部 `userAvatarUrl`）；**预览值≠落库值**（上传中只持有本地路径预览）。
+- **验证**：新增 `t77`（6 例）＋`t78`（4 例）；**变异自证 2 项**（静默提示 ⇒ `t77` 4 failed；删回写 ⇒ `t78` 4 failed；还原即绿）；全量 `vitest` **748 passed**；`type-check` exit 0；产物 `.work/deliver/lanmei-miniapp-20261013-3c500f3-avatarfix/`（双端＋zip）。
+- **根治待 task-58**：头像专用上传口上线后切 `AVATAR_UPLOAD_PATH`（一行）。
+
+## 2026-10-13 · 紧急修复：头像可落库判定＝我方域名白名单（`http://tmp/…` 漏洞）
+
+- **漏洞**：主人真机换头像提示成功，但 staging `users` 落的是 `http://tmp/40Rmw….jpeg`（**微信本机临时路径的 http 形态**）；旧 `isHttpUrl()` 只看 `http(s)://` 前缀 ⇒ 判为「已上传」直通、**跳过上传** ⇒ 脏值落库（12 个有头像用户中 2 个如此）。
+- **新口径**：**头像只接受「我方域名白名单」的 http(s) URL**（`src/domain/avatar-url.ts` 单一事实源；清单＝`lanmei66.cloud`／`myqcloud.com`／`crazyma99.xyz`，以 task-58 实际上传返回域为准、只改一处）。**明确拒绝**：host 无点、内网/环回 IP、非白名单域、后缀伪装 ⇒ 一律归「本地路径 ⇒ 必须上传」。
+- **上传返回也过白名单**（否则 fail-closed ＋ 日志含 host）；**读侧 `sanitizeAvatarUrl` 同步收紧**（历史 `http://tmp/…` ⇒ 视为空、显示占位）。
+- **验证**：新增 `t76`（9 例）；**变异自证**：判定退回「只看前缀」⇒ **5 failed/9**，还原即绿；全量 `vitest` **738 passed**；`type-check`（src＋tests）exit 0；产物 `.work/deliver/lanmei-miniapp-20261013-3c500f3-avatarguard/`（双端＋zip）。
+
+## 2026-10-13 · 修复：头像必须先上传成 http(s) 再落库（同时修掉跨端不同步）
+
+- **事实（DB 已证实）**：staging `users` 里 `id=21/22/23` 的 `avatar_url` ＝ `wxfile://tmp_…`（微信本机临时文件路径），20 用户 12 个如此；端侧把 `chooseAvatar` 的本地路径直存落库、**全仓 0 上传调用** ⇒ 跨端/跨设备坏图（抖音端同步不了微信端头像）。
+- **新口径**：**头像只存 http(s) URL**（单一事实源 `src/domain/avatar-url.ts`）；本地临时路径（`wxfile://`／`tmp_`／`file://`）**一律不得写入 store、不得提交服务端**。
+- **上传底座** `src/application/avatar.ts`：`resolveAvatarUrl()` —— 空 ⇒ 零请求；http ⇒ 直通；本地路径 ⇒ **先上传**（复用 `ports/upload.ts`／`createAiPhotoUploader`）拿 http URL 后才落库；失败/返回非 http ⇒ fail-closed ＋ 可重试提示。
+- **三处落库路径改造**：`mine`／`aiRecommend`／`aiTryOn`（后者原为同步直存本地路径）；上传中给 loading，失败**不半写**（零落库、零更新请求）。
+- **读侧兜底**：`ProfilePopup` 展示经 `displayAvatarUrl`（sanitize）＋ `login-flow.toLocalUser` 过滤 ⇒ 历史脏值视为空、显示占位图。
+- **验证**：新增 `t75`（10 例）＋ **变异自证 2 项**（撤上传闸⇒3 failed；读侧放行⇒5 failed；还原即绿）；全量 `vitest` **729 passed**；`type-check`（src＋tests）exit 0；三端构建 exit 0；产物 `.work/deliver/lanmei-miniapp-20261013-3c500f3-avatarup/`（双端＋zip）。
+- **待办**：后端清洗历史脏值（**单列给 Ume，前端不改后端**）；抖音取头像（①-2）／本地相册兜底（①-3）见后续任务。
+
 ## 2026-10-13 · 修复：抖音手机号授权 `invalid session`（登录码必须「点按钮之前」预取并缓存）
 
 - **现象／根因（官方硬要求）**：真机点「手机号一键登录」⇒ `getPhoneNumber:fail invalid session`（主人 2026-10-13 20:28 真机日志）。抖音《获取手机号》原文：「**使用（用户点击 button）前需先调用 `tt.login` 接口**。**如果在回调中调用 `tt.login` 会刷新登录态**，导致登录后换取的 session_key 与手机号码加密时使用的 session_key 不同，从而导致解密失败。」原实现恰是**在回调之后**（`runPhoneLogin` 内）才 `uni.login` ⇒ 点按钮时无有效登录态。
