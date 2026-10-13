@@ -29,6 +29,13 @@ export interface ResultPollState {
   status: ResultStatus;
   elapsedSeconds: number;
   errorMessage: string;
+  /**
+   * 失败归类（2026-10-13 表2 #13/#14/#15 端侧修复）：**原样透传 AppError.kind**
+   * （`AUTH_EXPIRED`／`BUSINESS`／`NETWORK`／`TIMEOUT`／`CANCELLED`；无错误时空串）。
+   * 页面据此把**鉴权异常**等可行动类别渲染成固定文案（文案取自 `RESULT_AUTH_FAILURE_TEXT`）；`errorMessage` 仍只进 console，
+   * **绝不直接上屏**（后端内部文案不外泄的安全口径不变）。
+   */
+  errorKind: string;
   /** completed 时先置 true（进度走满）再由调用方切结果页 */
   progressDone: boolean;
   stopped: boolean;
@@ -37,6 +44,51 @@ export interface ResultPollState {
 export interface ResultSnapshot {
   status?: string;
   error_message?: string;
+}
+
+/**
+ * 鉴权异常文案（2026-10-13 CR 收口②）：**单一事实源**——界面映射与内核（console 用）同用此串，避免两处漂移。
+ * 措辞与页面动作对齐：AUTH_EXPIRED 的触发面含「静默换票阶段的网络失败／会话代次落后」（client.ts:75-79），
+ * 此时页面给的是「重试」按钮 ⇒ **不声称已失效**，只说状态异常、请点击重试。
+ */
+export const RESULT_AUTH_FAILURE_TEXT = "登录状态异常，请点击重试";
+
+/** 失败态可行动类别（保守版：只分端侧能给出不同下一步动作的四类，不做后端 message 解析） */
+export type ResultFailureKind = "unavailable" | "auth" | "busy" | "generic";
+
+export interface ResultFailureView {
+  kind: ResultFailureKind;
+  /** 用户可见文案：**固定白名单**，绝不拼接后端 message（维持既有安全口径） */
+  text: string;
+  /** 重试按钮可用性：与原模板内联条件 `!shareReadOnly && failCount < 3` 逐字等价（交互口径未变） */
+  canRetry: boolean;
+}
+
+/**
+ * 失败态文案映射（2026-10-13，表2 #13/#14/#15 端侧修复）：修「鉴权异常／作品维度失败／真·生成失败在界面上
+ * 完全不可区分」。优先级＝分享只读（作品维度）＞ 鉴权异常（账号维度）＞ 连续重试（服务维度）＞ 通用生成失败——
+ * 前两类是**用户自己能动手解决**的，必须排在「服务繁忙」之前。
+ * 逻辑层零 `#ifdef`、无平台分支（微信／抖音／小红书同一份文案与优先级）。
+ */
+export function resolveFailureView(input: {
+  shareReadOnly: boolean;
+  failCount: number;
+  authExpired: boolean;
+}): ResultFailureView {
+  const canRetry = !input.shareReadOnly && input.failCount < 3;
+  if (input.shareReadOnly) {
+    // 2026-10-13 CR 收口③：只读态 canRetry 恒 false、无重试入口 ⇒ 必须保留「暂时性」语义（一次性抖动≠永久失效），
+    // 同时**保持防枚举**（不区分「不存在／无权限／令牌问题」，不新增可枚举信息）
+    return { kind: "unavailable", text: "该作品暂时无法查看，请稍后再试", canRetry };
+  }
+  if (input.authExpired) {
+    // 文案取自单一事实源（与内核 console 文案同串）
+    return { kind: "auth", text: RESULT_AUTH_FAILURE_TEXT, canRetry };
+  }
+  if (input.failCount >= 3) {
+    return { kind: "busy", text: "当前服务繁忙，请稍后再试", canRetry };
+  }
+  return { kind: "generic", text: "生成失败，请重试", canRetry };
 }
 
 export function createResultPoller(deps: {
@@ -58,7 +110,7 @@ export function createResultPoller(deps: {
     clearInterval: (h) => clearInterval(h as ReturnType<typeof setInterval>),
   };
 
-  let state: ResultPollState = { status: "pending", elapsedSeconds: 0, errorMessage: "", progressDone: false, stopped: true };
+  let state: ResultPollState = { status: "pending", elapsedSeconds: 0, errorMessage: "", errorKind: "", progressDone: false, stopped: true };
   let taskId = "";
   let pollTimer: unknown = null;
   let tickTimer: unknown = null;
@@ -69,7 +121,7 @@ export function createResultPoller(deps: {
     deps.onState(state);
   }
 
-  function stopPolling(failed: boolean, errorMessage = ""): void {
+  function stopPolling(failed: boolean, errorMessage = "", errorKind = ""): void {
     if (pollTimer != null) {
       timers.clearTimeout(pollTimer);
       pollTimer = null;
@@ -78,7 +130,13 @@ export function createResultPoller(deps: {
       timers.clearInterval(tickTimer);
       tickTimer = null;
     }
-    emit({ stopped: true, status: failed ? "failed" : state.status, errorMessage: errorMessage !== "" ? errorMessage : state.errorMessage });
+    emit({
+      stopped: true,
+      status: failed ? "failed" : state.status,
+      errorMessage: errorMessage !== "" ? errorMessage : state.errorMessage,
+      // 2026-10-13：失败时把 AppError.kind 透出（页面据此分**鉴权异常**等可行动类别）；正常停止保持原值
+      errorKind: failed ? errorKind : state.errorKind,
+    });
   }
 
   async function pollResult(): Promise<void> {
@@ -103,7 +161,11 @@ export function createResultPoller(deps: {
       //（体验版「付完钱却显示生成失败」的观感即来自此处 + 详情请求漏带 Bearer）
       const kind = !res.ok ? (res.error as { kind?: string } | undefined)?.kind : undefined;
       const message = !res.ok && typeof res.error.message === "string" ? res.error.message : "";
-      stopPolling(true, kind === "AUTH_EXPIRED" ? "登录已失效，请重新进入" : message !== "" ? message : "任务查询失败");
+      stopPolling(
+        true,
+        kind === "AUTH_EXPIRED" ? RESULT_AUTH_FAILURE_TEXT : message !== "" ? message : "任务查询失败",
+        typeof kind === "string" ? kind : "", // 2026-10-13：kind 透出给页面（鉴权异常／其它），文案由 :54 常量给出
+      );
       return;
     }
     errorStreak = 0;
@@ -134,7 +196,7 @@ export function createResultPoller(deps: {
     start(id: string, options?: { skipFirstPoll?: boolean }): void {
       taskId = id;
       errorStreak = 0;
-      state = { status: "pending", elapsedSeconds: 0, errorMessage: "", progressDone: false, stopped: false };
+      state = { status: "pending", elapsedSeconds: 0, errorMessage: "", errorKind: "", progressDone: false, stopped: false };
       deps.onState(state);
       tickTimer = timers.setInterval(() => {
         emit({ elapsedSeconds: state.elapsedSeconds + 1 });

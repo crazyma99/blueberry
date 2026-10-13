@@ -64,6 +64,7 @@ import {
   canSaveOriginal,
   createResultPoller,
   loadTaskEntitlement,
+  resolveFailureView, // 2026-10-13（表2 #13/#14/#15）：失败态可行动文案映射（固定白名单，不用后端 message）
   RESULT_COMPLETED_DELAY_MS,
   saveBadgeText,
   type ResultPollState,
@@ -179,6 +180,12 @@ const shareReadOnly = ref(false); // 分享落地只读模式（B 用户匿名�
 const shareToken = ref("");
 const isTimelinePage = ref(false); // 朋友圈单页模式（scene 1154，禁跳页）
 const taskErrorMessage = ref(""); // 失败文案（后端 error_message，仅记 console，不向用户泄露）
+/**
+ * 鉴权异常标记（2026-10-13 表2 #13/#14/#15）：内核把 AppError.kind 透出后，仅由它决定失败态是否走
+ * `RESULT_AUTH_FAILURE_TEXT`（`application/ai-result-flow.ts` 内常量，界面文案的**单一事实源**）。
+ * **此处不复制文案副本**（避免漂移）、不引入平台分支。
+ */
+const authExpired = ref(false);
 const navTitle = ref("正在生成");
 const status = ref<"pending" | "processing" | "completed" | "failed">("processing");
 const initializing = ref(false); // 首查中（列表→结果页不闪伪进度，主人指示）
@@ -263,6 +270,17 @@ const priceText = computed<string>(() => {
 });
 // 保存按钮角标（旧 :85 逐字，内核 saveBadgeText）
 const saveBadge = computed<string>(() => saveBadgeText({ taskBought: taskBought.value, balance: creditBalance.value }));
+/**
+ * 失败态视图（2026-10-13，表2 #13/#14/#15）：把「**鉴权异常**／**作品暂时不可查看**／**生成失败**（可重试）／
+ * **服务繁忙**」四类在界面上区分开——修复「401／品牌门／真·生成失败在界面上完全不可区分」。
+ * （各文案正文只在 application 层给出，此处**不复制副本**，避免与常量漂移。）
+ * `canRetry` 与原模板内联条件 `!shareReadOnly && failCount < 3` 逐字等价 ⇒ 交互口径未变。
+ */
+const failureView = computed(() => resolveFailureView({
+  shareReadOnly: shareReadOnly.value,
+  failCount: failCount.value,
+  authExpired: authExpired.value,
+}));
 
 // —— 生命周期（旧端 :256-331）——
 onLoad((options?: Record<string, unknown>) => {
@@ -352,6 +370,7 @@ let resumePollingOnShow = false;
 function startPolling(skipFirstPoll = false): void {
   status.value = "processing";
   taskErrorMessage.value = "";
+  authExpired.value = false; // 新一轮查询起手清标记（与 taskErrorMessage 同步）
   progressDone.value = false;
   completionScheduled = false;
   lastSnapshot = null;
@@ -387,6 +406,8 @@ function applyPollState(s: ResultPollState): void {
   progressDone.value = s.progressDone;
   if (s.status === "failed") {
     taskErrorMessage.value = s.errorMessage;
+    // 2026-10-13：只有鉴权失效才是「用户可自行恢复」的类别（与「生成失败」区分展示）
+    authExpired.value = s.errorKind === "AUTH_EXPIRED";
     console.error("[aiTryOnResult] 任务查询/生成失败:", s.errorMessage);
   }
   if (s.progressDone && !completionScheduled) {
@@ -419,18 +440,23 @@ async function queryInitialTask(): Promise<void> {
         applyCompleted(data);
       } else if (data.status === "failed") {
         status.value = "failed";
+        authExpired.value = false; // 任务本体失败 ≠ 登录失效
         taskErrorMessage.value = data.error_message ?? "";
       } else {
         startPolling(true); // pending / processing → 等待页（首查刚查过，跳过一次即时轮询）
       }
     } else {
       status.value = "failed";
+      // 2026-10-13：鉴权失效单列（客户端已经在 401 时自愈作废会话，此处只负责让用户看懂下一步）
+      // 判别式收窄与下行 taskErrorMessage 同口径（!res.ok && res.error.…）
+      authExpired.value = !res.ok && res.error.kind === "AUTH_EXPIRED";
       taskErrorMessage.value =
         !res.ok && typeof res.error.message === "string" && res.error.message !== "" ? res.error.message : "任务查询失败";
     }
   } catch (err) {
     console.error("[aiTryOnResult] 首查失败:", err);
     status.value = "failed";
+    authExpired.value = false; // 异常收敛为通用失败
   } finally {
     initializing.value = false;
   }
@@ -967,15 +993,12 @@ async function loadFooterPair(): Promise<void> {
       </view>
     </view>
 
-    <!-- 失败态 -->
+    <!-- 失败态（2026-10-13 表2 #13/#14/#15）：文案改由 application 层 resolveFailureView 映射，
+         界面可自诊断（鉴权异常／作品暂时不可查看／生成失败等**类别**）；后端 error_message 仍只进 console -->
     <view v-if="status === 'failed'" class="center-content">
       <view class="fail-wrapper">
-        <!-- 分享落地只读：不显示重试，仅友好提示 + 「我也要试」 -->
-        <text v-if="shareReadOnly" class="fail-text">该作品暂不可查看</text>
-        <!-- 失败文案保持通用：后端 error_message 仅记 console 日志，避免向用户泄露内部错误（CR 🟡） -->
-        <text v-else-if="failCount >= 3" class="fail-text">当前服务繁忙，请稍后再试</text>
-        <text v-else class="fail-text">生成失败，请重试</text>
-        <view v-if="!shareReadOnly && failCount < 3" class="retry-btn" hover-class="press-dim" @click="handleRetry">
+        <text class="fail-text">{{ failureView.text }}</text>
+        <view v-if="failureView.canRetry" class="retry-btn" hover-class="press-dim" @click="handleRetry">
           <text class="retry-btn-text">重试</text>
         </view>
         <view v-if="shareReadOnly" class="btn-primary" hover-class="press-dim" @click="tryThisOut">
