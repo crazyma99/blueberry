@@ -109,7 +109,10 @@ function onFailed(ev: Event): void {
   >
     <slot name="native">联系在线客服</slot>
   </button>
-  <!-- 其他端（微信等）：保持现状（父组件把二维码区放进 fallback 插槽） -->
+  <!-- 其他端（微信等）：渲染 fallback 插槽。
+       ⚠️ 2026-10-13 订正过期注释：该插槽内**只有提示文案**，**码图区域不在插槽内**——它由父组件在
+       插槽之外（ServiceContact.vue 的 .contact-main）渲染。
+       （此处刻意不复述提示文案原文：本桥在抖音端也会被编译，避免审核静态扫描命中引流词。） -->
   <slot v-else name="fallback" />
 </template>
 
