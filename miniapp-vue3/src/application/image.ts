@@ -38,6 +38,25 @@ export function cosThumb(url: string | null | undefined, width: number): string 
   return u + sep + "imageMogr2/format/webp/thumbnail/" + width + "x";
 }
 
+/**
+ * 客服二维码「弹大图」用地址（2026-10-13 主人报障 · 表1 #25）。
+ * **必须返回原图**：`cosThumb` 会拼 `imageMogr2/format/webp/thumbnail/300x` ⇒ 弹大图放大后更糊、
+ * 影响识别（实测源图仅 327×326 PNG，缩略后 300px WebP）。此处只做 CDN 域改写并**剔除既有缩略参数**：
+ * `imageMogr2/…` 是 COS 数据处理的尾部指令（不参与签名），剔除后即得原图；其余 query 原样保留。
+ */
+export function qrPreviewUrl(url: string | null | undefined): string {
+  const u = normalizeImageUrl(url);
+  if (u === "") return u;
+  const qi = u.indexOf("?");
+  if (qi < 0) return u;
+  const path = u.slice(0, qi);
+  const params = u
+    .slice(qi + 1)
+    .split("&")
+    .filter((p) => p !== "" && !p.startsWith("imageMogr2"));
+  return params.length > 0 ? path + "?" + params.join("&") : path;
+}
+
 /** 详情图渐进加载：首图 1080 预览、其余 750 WebP 缩略。
  *  2026-09-28 变更（流量成本 PRD R2/R14）：首图不再原图直出——原图仅「付费保存/下载」链路使用；
  *  1080 WebP 已覆盖主流屏幕宽度，观感无损、单图流量降一个数量级。 */

@@ -77,12 +77,15 @@ describe("ServiceContact 端差异（2026-10-10 抖音审核打回修正）", ()
     expect(w.text()).not.toContain("长按");
   });
 
-  it("微信端：保持现状（二维码在、文案在）且**不含** lifeIm 按钮", () => {
+  it("微信端：保持现状（二维码在、文案＝「长按二维码扫码添加客服」）且**不含** lifeIm 按钮", () => {
     setUiPlatformOverride("mp-weixin");
     const w = mountContact();
 
     expect(w.find(".code").exists(), "微信端应保留二维码").toBe(true);
-    expect(w.text()).toContain("长按下面二维码添加客服");
+    // 2026-10-13（表1 #25）：主人定稿文案＝「长按二维码扫码添加客服」（长按＝原生菜单扫码；点击＝弹大图保底）
+    expect(w.text()).toContain("长按二维码扫码添加客服");
+    expect(w.text()).not.toContain("点击二维码查看大图"); // 旧措辞已下线
+    expect(w.text()).not.toContain("长按下面二维码添加客服"); // 更早的措辞亦不得回流
     expect(w.find('button[open-type="lifeIm"]').exists(), "微信端不应有 lifeIm 按钮").toBe(false);
   });
 

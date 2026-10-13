@@ -6,9 +6,11 @@
 // 有意偏差（已声明）：①主题：本区块沿用旧端深色卡片/金色描边——2026-09-19 colorPage 已恢复深色 #160F04，与旧端口径一致；
 // ②字号：旧端若干 CSS 变量（--font-size-slogan/--font-size-display 等）未盘点，按近似档硬编码并注释；
 // ③font-noto-serif 全局类新端未定义（沿用既有口径仅引用）。
-// 2026-09-30 流量成本 PRD R2/R3：客服二维码缩略（cosThumb 300，250rpx 展示位足够且仍可扫）＋懒加载；
-// 非自家 COS/CDN 域由 cosThumb 安全透传（不拼参数）。
-import { cosThumb } from "../../application/image";
+// 2026-10-13（主人 DevTools 实测 · 表1 #25 二次返修）：二维码展示**改回原图**（对齐线上旧端 `:src="qrSrc"`）。
+// **撤销 2026-09-30 流量成本 PRD R2/R3 的 cosThumb(300) 缩略**：源图仅 327×326 / 57KB（流量可忽略），
+// 缩略链路既非「更暗」的成因、又降低扫码清晰度；线上旧端原图口径已被主人验证正常。
+// 展示仍走 `qrPreviewUrl` 做 CDN 域归一 + 剔除任何 imageMogr2 缩略参数 ⇒ 与「弹大图」**同源同值**，杜绝漂移。
+import { qrPreviewUrl } from "../../application/image";
 import LifeImButton from "../../platform/ui-bridge/LifeImButton.vue";
 import { isToutiaoPlatform } from "../../ui/ui-platform";
 
@@ -20,6 +22,38 @@ const isToutiao = isToutiaoPlatform();
 /** 抖音端拉起客服失败（未开通来客／基础库低于 3.61.0／框架错误 179791）⇒ 明确提示，不静默失败 */
 function onContactFailed(): void {
   uni.showToast({ title: "客服暂不可用，请稍后重试", icon: "none" });
+}
+
+/**
+ * 弹出二维码大图（2026-10-13 表1 #25；**二次返修后**的确定性入口）。
+ *
+ * 主人实测反馈「长按只震动不出菜单、点击不弹大图、二维码更暗像有透明度」，本机复核出的**真正根因**是
+ * **绘制/命中级联**（不是图片格式）：
+ *   · `.contact-main` 内 `contact-bg`（`position:absolute` + 100%×100%）在 `.code`（**静态定位**）**之前**；
+ *     按 CSS 2.1 附录 E 的绘制顺序，定位元素（step 6）画在静态块级内容（step 3）**之上** ⇒ 背景层盖住二维码；
+ *   · 小程序命中测试取**最上层元素** ⇒ 点/长按落在 `contact-bg` 上、再冒泡给祖先，**兄弟节点 `.code`
+ *     永远收不到事件**（同族先例：`docs/migration/deviations.md` 第 146 条「命中测试取最上层元素」）；
+ *   · 佐证「更暗/像有透明度」：`static/contact-bg.png` 是 **4-bit 调色板 + tRNS（12 项）** 的半透明装饰层。
+ * ⇒ 修复＝`.code` 显式 `position: relative; z-index: 1`（置顶且可接收触摸），并把展示图换回**原图**。
+ *
+ * 分工（两个手势各司其职，避免互相抢占）：
+ *   · **点击** ⇒ 本函数弹原图大图（确定性链路，任何端一致）；
+ *   · **长按** ⇒ 交回原生 `show-menu-by-longpress` 菜单（保存/识别/转发）——**故此处不绑 `@longpress`**：
+ *     若同时绑，`uni.previewImage` 的全屏预览会盖住原生菜单，反而让「长按出菜单」再次失效（主人验收点①）。
+ * 容器安全：空 src／无 uni／无 previewImage 一律静默返回（fail-soft，不抛不阻断）。
+ * 抖音端不渲染该二维码（`v-if="!isToutiao"`）⇒ 本函数在抖音端不可达，端行为完全不变。
+ */
+function previewQr(src: string): void {
+  const url = qrPreviewUrl(src);
+  if (url === "") return;
+  if (typeof uni === "undefined" || typeof uni.previewImage !== "function") return;
+  uni.previewImage({
+    urls: [url],
+    current: url,
+    // 文案保持中性：抖音包里**不得**出现「二维码／长按」等引流词（2026-10-10 提审打回纪律），
+    // 逻辑层字符串会同时打进抖音包 ⇒ 这里只说「图片」（该函数在抖音端本就不可达）
+    fail: () => uni.showToast({ title: "图片加载失败，请稍后重试", icon: "none" }),
+  });
 }
 
 withDefaults(
@@ -87,7 +121,7 @@ withDefaults(
                独立 CR 🟡1：初版用 `#ifdef MP-WEIXIN` 会让**小红书端**只剩二维码、丢掉该指引文案 ⇒ 已改。
                抖音包里连此字符串都不存在（防审核静态扫描）；模板/样式允许条件编译、逻辑层仍零 #ifdef
                （合 SPEC §C3；无 #else 兜底 ⇒ 已在 scan-platform-usage.mjs 的 C4 登记）。 -->
-          <view class="tit font-noto-serif">长按下面二维码添加客服</view>
+          <view class="tit font-noto-serif">长按二维码扫码添加客服</view>
           <!-- #endif -->
         </template>
       </LifeImButton>
@@ -96,10 +130,11 @@ withDefaults(
         <image
           v-if="!isToutiao"
           class="code"
-          :src="cosThumb(qrSrc, 300)"
+          :src="qrPreviewUrl(qrSrc)"
           mode="aspectFit"
           :show-menu-by-longpress="true"
           lazy-load
+          @click="previewQr(qrSrc)"
         ></image>
         <view class="label">联系电话</view>
         <view class="val font-noto-serif">{{ phone }}</view>
@@ -238,6 +273,11 @@ withDefaults(
   height: 100%;
 }
 .service-contain .contact-main .code {
+  /* 2026-10-13（表1 #25 二次返修）：**必须**定位 + z-index 才在 contact-bg 之上且可接收触摸。
+     contact-bg 是 absolute+100%×100%，.code 若为静态定位会被它盖住（CSS 绘制顺序第 6 步 vs 第 3 步），
+     而小程序命中测试取最上层元素 ⇒ 点/长按全被背景层吃掉（实测症状：点击不弹图、长按只震动不出菜单）。 */
+  position: relative;
+  z-index: 1;
   margin: 30rpx auto;
   width: 250rpx;
   height: 248rpx;
