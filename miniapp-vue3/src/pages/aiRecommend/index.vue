@@ -60,7 +60,7 @@ import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
-import { createAvatarUploader, resolveAvatarUrl } from "../../application/avatar";
+import { createAvatarUploader, createServerAvatarProxy, resolveAvatarUrl } from "../../application/avatar";
 import { isForeignRemoteUrl, isLocalFilePath, sanitizeAvatarUrl } from "../../domain/avatar-url";
 import { createUniAvatarDownloader } from "../../platform/uni/download";
 import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, navigateTo } from "../../platform/uni/feedback";
@@ -680,7 +680,15 @@ async function submitProfile(): Promise<void> {
   // 远程 URL 也要走「下载 → 上传」两步 ⇒ 同样进入「上传中」UI
   const uploadingAvatar = isLocalFilePath(avatarRaw) || isForeignRemoteUrl(avatarRaw);
   if (uploadingAvatar) showLoading("头像上传中...");
-  const resolvedAvatar = await resolveAvatarUrl(avatarRaw, { uploader: avatarUploader, downloader: avatarDownloader });
+  const resolvedAvatar = await resolveAvatarUrl(avatarRaw, {
+      uploader: avatarUploader,
+      downloader: avatarDownloader,
+      // ⭐task-67：第三方远程头像 ⇒ **服务端代下载**优先（真机 downloadFile 受合法域名限制），失败自动降级本地下载
+      serverProxy: createServerAvatarProxy({
+        proxyAvatarUpload: (context, sourceUrl) => userInfoRepo.proxyAvatarUpload(context as never, sourceUrl),
+        context: () => ctxFactory.next(),
+      }),
+    });
   if (!resolvedAvatar.ok) {
     if (uploadingAvatar) hideLoading();
     profilePreviewAvatar.value = ""; // ⭐失败回退「上一张有效头像」

@@ -340,3 +340,12 @@
     诊断日志 `{candidate:"uni.chooseMedia", reason:"authorize"}` ⇒ **四个候选同因被拒，代码侧回退救不了**）。
     ⇒ 该类报错的处置是「**去抖音后台声明 scope**」而**不是改代码**；端侧已按此分级给出「未获得相册权限，请在端内设置/后台声明相册（scope.album）后重试」文案。
     同类先例：手机号一键登录所需的 scope 亦须在后台声明（见本文件登录相关条目）。
+
+50. **第三方远程头像走「服务端代下载」（2026-10-13 task-67）：真机 downloadFile 受合法域名限制**
+    **①真机现象**：主人抖音真机（提交审核后）报 [avatar] 远程头像下载失败: failed，**开发者工具正常** ⇒ 根因＝**真机 downloadFile 受「downloadFile 合法域名」限制**，而抖音头像 URL 是**第三方域名**（不该加白名单）⇒ 客户端下载被拦。
+    **②后端已交付（staging 43161d3）**：POST /api/wx/avatar/upload 按 Content-Type 分流——application/json ＋ {sourceUrl} ⇒ **服务端代下载**（仅 https／拒内网·回环·元数据／DNS rebinding 复检／不跟重定向／超时 10s／≤20MB／魔数校验）⇒ 返回 {file_url}（http(s)）；未登录真 401；参数/SSRF/抓取类失败＝HTTP 200 ＋ code 500 ＋ 可读 message；multipart 老路径不变。
+    **③端侧改法**：新增仓储口 user-info.ts::proxyAvatarUpload(context, sourceUrl)（POST JSON、authRequired）＋ application/avatar.ts::createServerAvatarProxy（仓储 → ServerProxyResult 装配，带 status/message 供诊断）；resolveAvatarUrl 的 isForeignRemoteUrl 分支改为 **服务端代下载优先** → 失败（4xx/5xx/网络）⇒ **降级本地 downloadFile ＋ 上传**（可读提示、console.warn 不静默）→ 两端都失败 ⇒ 可读提示且**不落库**（零上传）；服务端返回非白名单地址 ⇒ fail-closed（不落该地址）并继续降级。
+    **④诊断（task-67③）**：远程路径失败打 **host（仅 host，不含 query 等敏感信息）＋ reason ＋ HTTP 状态 ＋ 响应体片段（截断 120 字符）**；release/trial 口径沿用既有探测（release 精简）。
+    **⑤白名单与本地路径不受影响**：白名单 URL ⇒ 直通（不调服务端、不下载、不上传）；真本地路径 ⇒ 只上传（不调服务端、不下载）。
+    **⑥验证**：新增 tests/unit/t85-avatar-server-proxy.spec.ts（**8 例**）：服务端代下载优先（断言仅 proxy 一次、不调本地下载）／HTTP 500 ⇒ 降级本地下载+上传（断言三步顺序）／两端都失败 ⇒ 提示且零上传／服务端返回非白名单 ⇒ 不落该地址继续降级／未注入代下载（旧装配）⇒ 退回本地下载／本地亦不可用 ⇒ 不支持提示／白名单直通／本地只上传／装配器 ok 与失败带 status+message。**变异自证**：去掉「服务端代下载优先」分支（改回本地下载）⇒ t85 **2 failed/8**，还原 ⇒ 8 passed。
+    **⑦门禁**：全量 vitest **786 passed / 3 skipped**；type-check（src＋tests）exit 0；三端构建各 exit 0；产物 .work/deliver/lanmei-miniapp-20261013-3c500f3-avatar2d/（双端＋zip，地址命中 0／抖音敏感词 0／AppID 正确／两端含服务端代下载接线）。

@@ -43,7 +43,7 @@ import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import ProfilePopup from "../../components/ProfilePopup/ProfilePopup.vue";
 import { createUniUpload } from "../../platform/uni/upload";
 import { buildUploadHeaders } from "../../application/ai-photo-upload";
-import { createAvatarUploader, resolveAvatarUrl } from "../../application/avatar";
+import { createAvatarUploader, createServerAvatarProxy, resolveAvatarUrl } from "../../application/avatar";
 import { isForeignRemoteUrl, isLocalFilePath, sanitizeAvatarUrl } from "../../domain/avatar-url";
 import { createUniAvatarDownloader } from "../../platform/uni/download";
 import BottomActionBarSecondary from "../../components/BottomActionBarSecondary/BottomActionBarSecondary.vue";
@@ -320,7 +320,15 @@ async function submitProfile(): Promise<void> {
   const uploadingAvatar = isLocalFilePath(avatarRaw) || isForeignRemoteUrl(avatarRaw);
   try {
     if (uploadingAvatar) showLoading("头像上传中...");
-    const resolved = await resolveAvatarUrl(avatarRaw, { uploader: avatarUploader, downloader: avatarDownloader });
+    const resolved = await resolveAvatarUrl(avatarRaw, {
+      uploader: avatarUploader,
+      downloader: avatarDownloader,
+      // ⭐task-67：第三方远程头像 ⇒ **服务端代下载**优先（真机 downloadFile 受合法域名限制），失败自动降级本地下载
+      serverProxy: createServerAvatarProxy({
+        proxyAvatarUpload: (context, sourceUrl) => userInfoRepo.proxyAvatarUpload(context as never, sourceUrl),
+        context: () => ctxFactory.next(),
+      }),
+    });
     if (!resolved.ok) {
       if (uploadingAvatar) hideLoading();
       profilePreviewAvatar.value = ""; // ⭐失败回退「上一张有效头像」（清掉失败预览）

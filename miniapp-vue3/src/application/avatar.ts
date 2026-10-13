@@ -17,7 +17,48 @@ export interface AvatarUploaderLike {
 
 export type ResolveAvatarResult = { ok: true; url: string } | { ok: false; message: string };
 
+/**
+ * 由仓储 + 上下文工厂装配「服务端代下载」（各页面一行接入，口径唯一）：
+ * 仓储返回 `{file_url}` ⇒ 转 `ServerProxyResult`；HTTP 失败 ⇒ 带 status 与 message（供诊断日志截断记录）。
+ */
+export function createServerAvatarProxy(deps: {
+  proxyAvatarUpload: (
+    context: unknown,
+    sourceUrl: string,
+  ) => Promise<
+    | { ok: true; value?: { file_url?: string } }
+    | { ok: false; error: { kind?: string; message?: string; statusCode?: number } }
+  >;
+  context: () => unknown;
+  /** 仅测试用：强制按网络失败处理 */
+  networkOnly?: boolean;
+}): ServerProxyLike {
+  return async (sourceUrl: string): Promise<ServerProxyResult> => {
+    try {
+      const res = await deps.proxyAvatarUpload(deps.context(), sourceUrl);
+      if (res.ok) {
+        const url = res.value?.file_url;
+        return typeof url === "string" && url !== "" ? { ok: true, url } : { ok: false, reason: "status" };
+      }
+      return {
+        ok: false,
+        reason: deps.networkOnly === true ? "network" : res.error.kind === "NETWORK" ? "network" : "status",
+        status: res.error.statusCode,
+        message: res.error.message,
+      };
+    } catch (err) {
+      return { ok: false, reason: "network", message: String(err) };
+    }
+  };
+}
+
 /** 远程 URL 落地器（**平台层**实现：抖音优先 `tt.downloadFile`，否则 `uni.downloadFile`） */
+/** 服务端代下载结果（task-67：第三方远程 URL 的**首选**路径） */
+export type ServerProxyResult =
+  | { ok: true; url: string }
+  | { ok: false; reason: "unsupported" | "status" | "network"; status?: number; message?: string };
+export type ServerProxyLike = (sourceUrl: string) => Promise<ServerProxyResult>;
+
 export interface AvatarDownloaderLike {
   download(url: string): Promise<{ ok: true; path: string } | { ok: false; reason: "unsupported" | "failed" }>;
 }
@@ -131,7 +172,9 @@ export async function resolveAvatarUrl(
   input: string,
   deps: {
     uploader: AvatarUploaderLike;
-    /** ⭐task-63⒞：第三方远程 URL 的落地器（平台层注入；抖音端优先原生 downloadFile） */
+    /** ⭐task-67：第三方远程 URL 的**服务端代下载**（首选；后端按 JSON+sourceUrl 分流） */
+    serverProxy?: ServerProxyLike;
+    /** ⭐task-63⒞：本地下载落地器（**降级**路径；平台层注入） */
     downloader?: AvatarDownloaderLike;
     onProgress?: (percent: number) => void;
   },
@@ -160,6 +203,25 @@ export async function resolveAvatarUrl(
   // **必须先 downloadFile 落地为本地临时文件，再上传**——直接当本地文件传 ⇒ 输入不是文件路径 ⇒ **零请求失败**
   //（2026-10-13 主人真机「抖音头像授权正常但随后上传失败」的根因）。
   if (isForeignRemoteUrl(v)) {
+    // ⭐task-67：**优先服务端代下载** —— 真机 `downloadFile` 受「downloadFile 合法域名」限制，而第三方头像域不该加白名单。
+    // 失败（4xx/5xx/网络）⇒ **降级本地 downloadFile**（可读提示 + 日志，绝不静默）。
+    if (deps.serverProxy != null) {
+      const proxied = await deps.serverProxy(v);
+      if (proxied.ok) {
+        if (isStorableAvatarUrl(proxied.url)) return { ok: true, url: proxied.url };
+        console.error(
+          "[avatar] 服务端代下载返回非白名单地址（fail-closed），host=" + avatarUrlHost(proxied.url),
+        );
+      } else {
+        // 诊断（task-67③）：只记 **host**（不记 query 等敏感信息）＋ HTTP 状态 ＋ 响应片段（截断）
+        console.warn("[avatar] 服务端代下载失败 ⇒ 降级本地下载:", {
+          host: avatarUrlHost(v),
+          reason: proxied.reason,
+          status: proxied.status,
+          snippet: (proxied.message ?? "").slice(0, 120),
+        });
+      }
+    }
     if (deps.downloader == null) {
       console.warn("[avatar] 远程头像需要下载器但未注入（fail-closed）");
       return { ok: false, message: AVATAR_DOWNLOAD_UNSUPPORTED_HINT };

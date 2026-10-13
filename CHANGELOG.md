@@ -2,6 +2,12 @@
 
 > 记录小程序 C 端每次实质性改动，最新在上。多人合作提交前先补本文件（与代码同一提交）。
 
+## 2026-10-13 · 修复：第三方远程头像改走「服务端代下载」（真机 downloadFile 域名限制）
+
+- **根因**：真机 downloadFile 受「downloadFile 合法域名」限制，第三方头像域不该加白名单 ⇒ 客户端下载被拦（工具正常）。
+- **改法**：`user-info.ts` 新增 `proxyAvatarUpload`（POST /api/wx/avatar/upload，JSON+{sourceUrl}，Bearer）；`application/avatar.ts` 远程分支改为**服务端代下载优先**，失败降级本地 downloadFile+上传，两端皆失败 ⇒ 可读提示且不落库；白名单直通/本地只上传不变；诊断只记 host＋状态＋截断片段。
+- **验证**：新增 t85（8 例）＋**变异自证**（去掉服务端优先 ⇒ 2 failed/8，还原即绿）；全量 vitest 786 passed；type-check exit 0；三端构建 exit 0；产物 `-avatar2d`（双端＋zip）。
+
 ## 2026-10-13 · 修复：抖音取图（量身参数／顺序回退／errMsg 分级）+ 平台全局统一 ttApiOf
 
 - **task-65 崩溃修复**：runtime-env.ts 导出 ttApiOf（裸 tt 优先、typeof 守卫、绝不抛），chooser/upload/download 全部改用；新增 t83（4 例）＋变异自证。

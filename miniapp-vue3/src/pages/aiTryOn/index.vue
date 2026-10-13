@@ -25,7 +25,7 @@ import { createUniStorage } from "../../platform/uni/storage";
 import { createUniLoginCode } from "../../platform/uni/login";
 import { createUniPhotoChooser } from "../../platform/uni/chooser";
 import { createUniUpload } from "../../platform/uni/upload";
-import { createAvatarUploader, resolveAvatarUrl } from "../../application/avatar";
+import { createAvatarUploader, createServerAvatarProxy, resolveAvatarUrl } from "../../application/avatar";
 import { isForeignRemoteUrl, isLocalFilePath, sanitizeAvatarUrl } from "../../domain/avatar-url";
 import { createUniAvatarDownloader } from "../../platform/uni/download";
 import { toast as nativeToast, showLoading as nativeShowLoading, hideLoading as nativeHideLoading, showModal } from "../../platform/uni/feedback";
@@ -53,6 +53,7 @@ import { createSilentIdentityExchange } from "../../application/silent-login";
 import { createContextFactory } from "../../application/request-context";
 import { createVersionedStorage, isFullSession } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
+import { createUserInfoRepository } from "../../infrastructure/repositories/user-info";
 import { createAiRepository } from "../../infrastructure/repositories/ai";
 import { createCreditRepository } from "../../infrastructure/repositories/credits";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
@@ -97,6 +98,8 @@ const authCoordinator = createAuthCoordinator({
   storage: uniStorage,
 });
 const client = createHttpClient({ transport, authCoordinator });
+// ⭐task-67：本页原只本地存 profile，无 userinfo 仓储；服务端代下载需要仓储口 ⇒ 就地装配（口径同 mine/aiRecommend）
+const userInfoRepo = createUserInfoRepository({ client });
 const wxAuth = createWxAuthRepository({ client, platform });
 const aiRepo = createAiRepository({ client });
 const creditRepo = createCreditRepository({ client });
@@ -740,7 +743,15 @@ async function submitProfile(): Promise<void> {
   // 远程 URL 也要走「下载 → 上传」两步 ⇒ 同样进入「上传中」UI
   const uploadingAvatar = isLocalFilePath(avatarRaw) || isForeignRemoteUrl(avatarRaw);
   if (uploadingAvatar) showLoading("头像上传中...");
-  const resolvedAvatar = await resolveAvatarUrl(avatarRaw, { uploader: avatarUploader, downloader: avatarDownloader });
+  const resolvedAvatar = await resolveAvatarUrl(avatarRaw, {
+      uploader: avatarUploader,
+      downloader: avatarDownloader,
+      // ⭐task-67：第三方远程头像 ⇒ **服务端代下载**优先（真机 downloadFile 受合法域名限制），失败自动降级本地下载
+      serverProxy: createServerAvatarProxy({
+        proxyAvatarUpload: (context, sourceUrl) => userInfoRepo.proxyAvatarUpload(context as never, sourceUrl),
+        context: () => ctxFactory.next(),
+      }),
+    });
   if (!resolvedAvatar.ok) {
     if (uploadingAvatar) hideLoading();
     profilePreviewAvatar.value = ""; // ⭐失败回退「上一张有效头像」

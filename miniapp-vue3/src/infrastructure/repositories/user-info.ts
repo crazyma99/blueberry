@@ -42,5 +42,25 @@ export function createUserInfoRepository(deps: { client: ClientLike }) {
         context,
       });
     },
+    /**
+     * ⭐task-67（2026-10-13，后端 staging 43161d3 已上线）：**服务端代下载**——`POST /api/wx/avatar/upload`
+     * 按 Content-Type 分流：`application/json` ＋ `{sourceUrl}` ⇒ 服务端抓取第三方头像（仅 https／拒内网·回环·元数据／
+     * DNS rebinding 复检／不跟重定向／10s 超时／≤20MB／魔数校验）⇒ 返回 `{file_url}`（http(s)）。
+     * 为什么需要：真机 `downloadFile` 受「**downloadFile 合法域名**」限制，而**第三方头像域不该加白名单**（客户端下载被拦）。
+     * 未登录真 401；参数/SSRF/抓取类失败＝HTTP 200 ＋ code 500 ＋ 可读 message（client 会映射为 BUSINESS 失败）。
+     */
+    proxyAvatarUpload(
+      context: RequestContext,
+      sourceUrl: string,
+    ): Promise<RepoResult<{ file_url?: string; filename?: string }>> {
+      return deps.client.request<{ file_url?: string; filename?: string }>({
+        method: "POST",
+        url: "/api/wx/avatar/upload",
+        body: { sourceUrl },
+        authRequired: true, // JWT 必需
+        replayPolicy: "never",
+        context,
+      });
+    },
   };
 }
