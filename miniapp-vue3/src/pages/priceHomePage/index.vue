@@ -71,7 +71,7 @@ const authCoordinator = createAuthCoordinator({
 const client = createHttpClient({ transport, authCoordinator });
 const wxAuth = createWxAuthRepository({ client, platform });
 const shopRepo = createShopRepository({ client });
-// P2-21：服务保障/联系我们＋页脚内容经用例取数（组件纯 props，不再 mounted 自请求）
+// P2-21：承诺块/联系我们＋页脚内容经用例取数（组件纯 props，不再 mounted 自请求）
 const pageContent = createPageConfigContent({
   pageConfig: createPageConfigRepository({ client }),
   profile: {
@@ -95,7 +95,7 @@ const ready = ref(false);
 const shops = ref<ShopBrief[]>([]);
 const error = ref<string | null>(null);
 const lastBrandId = ref<string | null>(null);
-// P2-21：服务保障/联系我们（旧 :19 ServiceContact）＋页脚（旧 :20 beian AppFooter）
+// P2-21：承诺块/联系我们（旧 :19 ServiceContact）＋页脚（旧 :20 beian AppFooter）
 const footer = ref<FooterContent>({ mainLine: "", supportLine: "" });
 // 初值＝本地兜底（旧端组件即时用 data 默认值渲染再异步更新，CR 🟡5：避免请求返回前整块空白）
 const contact = ref<ContactContent>({
@@ -210,8 +210,10 @@ function onDemoClick(idx: number): void {
       <view class="divideTit">PRICE LIST</view>
       <view class="demoPhotoTit font-noto-serif">价目表</view>
       <PhotoGrid :shop-list="gridShops" @shop-click="onShopClick" @demo-click="onDemoClick" />
-      <!-- P2-21：服务保障/联系我们（旧 :19）＋页脚（旧 :20）——内容经用例注入 -->
+      <!-- P2-21：承诺块/联系我们（旧 :19）＋页脚（旧 :20）——内容经用例注入 -->
       <ServiceContact
+        :show-promise="PROFILE.features.servicePromise"
+        :promise-title="PROFILE.features.servicePromiseTitle"
         :list="contact.list"
         :slogan="contact.slogan"
         :qr-src="contact.qrSrc"

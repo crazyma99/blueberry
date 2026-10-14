@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// P2-21：纯 props 展示组件（请求已上提 application/page-config-content 用例，组件内**不发请求**）。
+// P2-21：纯 props 展示组件（请求已上提 application/page-config-content 用例，组件内**不发请求**）+ 2026-10-14 task-68：承诺块条件渲染。
 // 旧端 ServiceContact.uvue（262 行）原本 mounted → loadContactConfig() 自取 /api/page-config；
 // 本批按 phases「上提请求到用例/组合函数，再 props 注入」改造：OPS 优先 → Profile 注入 → 本地兜底
 // 的优先级链保留在用例内（profile 注入锚点 contactQrSrc/contactPhoneText 由 PROFILE 承载，字段名不变量）。
@@ -74,22 +74,30 @@ withDefaults(
      * 为空 ⇒ 回落到「抖音来客 IM 客服」(`open-type="lifeIm"`，需账号开通来客客服能力)。
      */
     imId?: string;
+    /**
+     * ⭐2026-10-14（task-68 · 抖音审核类目合规）：是否渲染**承诺块**（分隔标题＋slogan＋编号列表）。
+     * 抖音端 profile 该位＝false（首页不得出现服务承诺类模块）⇒ 只隐藏本块，**「联系我们」与页脚不受影响**。
+     * 恢复＝profile 一行改回 true ＋ 重新构建（组件代码/样式/资源全部保留）。
+     */
+    showPromise?: boolean;
+    /** 承诺块分隔标题文案（经 profile 下发：抖音端为空串 ⇒ 产物内不出现该中文标题字面量） */
+    promiseTitle?: string;
   }>(),
-  { list: () => [], slogan: "", qrSrc: "", phone: "", coopPhone: "", imId: "" },
+  { list: () => [], slogan: "", qrSrc: "", phone: "", coopPhone: "", imId: "", showPromise: true, promiseTitle: "" },
 );
 </script>
 
 <template>
   <view>
-    <view class="divideTit">
+    <view v-if="showPromise" class="divideTit">
       <image src="/static/left-divider.png" class="divider" mode="aspectFill" />
       <view class="demoPhotoTit">
-        <view class="font-noto-serif">服务保障</view>
+        <view class="font-noto-serif">{{ promiseTitle }}</view>
         <image src="/static/service-icon.png" class="icon" mode="aspectFill" />
       </view>
       <image src="/static/right-divider.png" class="divider" mode="aspectFill" />
     </view>
-    <view class="service-contain">
+    <view v-if="showPromise" class="service-contain">
       <image src="/static/service-flower.png" class="flower" mode="aspectFill" />
       <view class="tit font-noto-serif">{{ slogan }}</view>
       <view class="main-wrap">

@@ -92,7 +92,7 @@ const vm = createHomeViewModel({
   shops: createShopRepository({ client }),
   brandHub,
 });
-// P2-21：服务保障/联系我们＋页脚（旧 index :109-113）内容经用例取数，组件纯 props
+// P2-21：承诺块/联系我们＋页脚（旧 index :109-113）内容经用例取数，组件纯 props
 const pageContent = createPageConfigContent({
   pageConfig: pageConfigRepo,
   profile: {
@@ -442,8 +442,11 @@ onMounted(() => {
         </view>
       </view>
 
-      <!-- P2-21：服务保障/联系我们＋页脚（旧 index :109-113 ServiceContact＋page-footer/beian） -->
+      <!-- P2-21：承诺块/联系我们＋页脚（旧 index :109-113 ServiceContact＋page-footer/beian）
+           ⭐2026-10-14 task-68：抖音端承诺块按 profile 特征位隐藏（只隐藏承诺块，联系我们/IM 客服保持现状）。 -->
       <ServiceContact
+        :show-promise="PROFILE.features.servicePromise"
+        :promise-title="PROFILE.features.servicePromiseTitle"
         :list="contact.list"
         :slogan="contact.slogan"
         :qr-src="contact.qrSrc"

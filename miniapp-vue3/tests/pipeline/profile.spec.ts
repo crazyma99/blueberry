@@ -51,7 +51,8 @@ describe("validateProfile（P1-14 旧字段对齐＋平台 appid；P1-15 env 语
     const r = validateProfile(rawA, { platform: "mp-toutiao", environment: "trial" });
     expect(r.ok).toBe(true);
     expect(r.profile.appid).toBe("tt000000000000000a");
-    expect(r.profile.pageRegistry.length).toBe(11);
+    expect(r.profile.pageRegistry.length).toBe(9); // 2026-10-14 task-70：抖音剔除 priceHomePage/priceList（11→9）
+    expect(r.profile.features.priceTab).toBe(false);
     expect(r.profile.features.mineMenu).toEqual(["favorites"]);
     expect(r.profile.features.navStyle).toBe("default");
   });

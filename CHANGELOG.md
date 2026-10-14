@@ -2,6 +2,29 @@
 
 > 记录小程序 C 端每次实质性改动，最新在上。多人合作提交前先补本文件（与代码同一提交）。
 
+## 2026-10-14 · 抖音合规：价目表 tab 与两页整条链裁剪
+
+- **主人要求**：抖音底栏「价目表」tab 及其内容一并隐藏（价目表涉「生活服务-摄影」类目）。
+- **技术判断**：抖音用**原生 tabBar**（custom 仅微信）⇒ 运行期无法按位过滤 ⇒ 走编译期裁剪：`pages.json` 三处 `#ifndef MP-TOUTIAO` ＋ C4/COMPAT_DECLARATIONS 登记 ＋ 生成期页清单 11→9 ＋ `features.priceTab` ＋ 抖音 `priceFallbackTitle` 置空；微信端未动。
+- **恢复**：去掉三处 `#ifndef` ／ 页清单改回 11 页 ／ `priceTab` 改回 true ／ `priceFallbackTitle` 改回原值 ＋ 重构建。
+- **验证**：新增 `t88`（6 例）＋ 2 项变异自证；全量 vitest **801 passed**；type-check exit 0；三端构建 exit 0；**抖音包 priceHomePage/priceList/价目表 0 命中**、微信包 7 命中、**抖音底栏仅首页/我的**；产物 `lanmei-miniapp-20261014-3c500f3-promise3`（双端＋zip）。
+- **待主人裁决**：抖音包内 `pages/targetPhotoDetail` 仍含「价格」「套餐」文案（疑似涉类）。
+
+## 2026-10-14 · 抖音审核合规（全端一致）：价格页同样隐藏承诺块
+
+- **裁定**：主人对 task-68 遗留裁定「一并隐藏」⇒ 抖音端**所有渲染 `<ServiceContact>` 的页面**都隐藏承诺块。
+- **调用点清单（全仓 2 处）**：`src/pages/index/index.vue:447`（首页）／`src/pages/priceHomePage/index.vue:214`（价格页，本单补齐）。两处均传 `:show-promise` 与 `:promise-title`。
+- **验证**：新增 `t87`（3 例：调用点数==传参点数／全仓无漏传／组件默认值与两个受控根节点）；**变异自证**：去掉价格页参数 ⇒ 2 failed/3；全量 vitest **795 passed**；type-check exit 0；三端构建 exit 0；**抖音包「服务保障」0 命中／微信包 1 命中**；产物 `lanmei-miniapp-20261014-3c500f3-promise2`（双端＋zip）。
+- **恢复步骤（更新）**：`servicePromise: !isDouyin,` → `servicePromise: true,`（标题位同步）＋重建两端；两处调用点无需改动。
+
+## 2026-10-14 · 抖音审核合规：首页承诺块按 profile 特征位隐藏（A 方案）
+
+- **背景**：抖音审核提示涉及「生活服务-摄影」类目（定向邀约未过审）⇒ 首页不得出现服务承诺类模块。
+- **实现**：`profile-schema.mjs` 新增 `features.servicePromise = !isDouyin` 与 `servicePromiseTitle`；`ServiceContact.vue` 新增 `showPromise`（默认 true）/`promiseTitle` 并条件渲染承诺块（标题改由 props 下发，抖音产物内无该中文标题字面量）；`index.vue` 传 profile 位。只隐藏承诺块，**「联系我们」/IM 客服保持现状**。
+- **恢复步骤**：`servicePromise: !isDouyin,` → `servicePromise: true,`（标题位同步）＋ 重新构建；不删代码/样式/资源。**B 方案升级**：给首页 `<ServiceContact>` 加 `v-if="PROFILE.features.servicePromise"`。
+- **验证**：t86（6 例）＋ 2 项变异自证；全量 vitest 792 passed；type-check exit 0；三端构建 exit 0；**抖音包内「服务保障」0 命中 / 微信包内 1 命中**；产物 `lanmei-miniapp-20261014-3c500f3-promise`（双端＋zip）。
+- **遗留**：同一承诺块在价格页（`priceHomePage`）仍显示，待裁定是否一并隐藏。
+
 ## 2026-10-13 · 修复：第三方远程头像改走「服务端代下载」（真机 downloadFile 域名限制）
 
 - **根因**：真机 downloadFile 受「downloadFile 合法域名」限制，第三方头像域不该加白名单 ⇒ 客户端下载被拦（工具正常）。

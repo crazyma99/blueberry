@@ -349,3 +349,35 @@
     **⑤白名单与本地路径不受影响**：白名单 URL ⇒ 直通（不调服务端、不下载、不上传）；真本地路径 ⇒ 只上传（不调服务端、不下载）。
     **⑥验证**：新增 tests/unit/t85-avatar-server-proxy.spec.ts（**8 例**）：服务端代下载优先（断言仅 proxy 一次、不调本地下载）／HTTP 500 ⇒ 降级本地下载+上传（断言三步顺序）／两端都失败 ⇒ 提示且零上传／服务端返回非白名单 ⇒ 不落该地址继续降级／未注入代下载（旧装配）⇒ 退回本地下载／本地亦不可用 ⇒ 不支持提示／白名单直通／本地只上传／装配器 ok 与失败带 status+message。**变异自证**：去掉「服务端代下载优先」分支（改回本地下载）⇒ t85 **2 failed/8**，还原 ⇒ 8 passed。
     **⑦门禁**：全量 vitest **786 passed / 3 skipped**；type-check（src＋tests）exit 0；三端构建各 exit 0；产物 .work/deliver/lanmei-miniapp-20261013-3c500f3-avatar2d/（双端＋zip，地址命中 0／抖音敏感词 0／AppID 正确／两端含服务端代下载接线）。
+
+51. **抖音审核类目合规：首页「承诺块」按 profile 特征位隐藏（2026-10-14 task-68 · A 方案）**
+    **①背景**：抖音小程序审核提示涉及「生活服务-摄影」类目（**定向邀约类目、当前未过审**）⇒ **首页不得出现服务承诺类模块**。
+    **②定位**：渲染入口 `pages/index/index.vue:445-453`（`<ServiceContact :list :slogan :qr-src :phone :coop-phone :im-id>`）；组件 `components/ServiceContact/ServiceContact.vue`——**承诺块**＝分隔标题（原为静态字面量）＋`{{ slogan }}`＋`v-for list` 的编号列表；**8 项承诺文案由服务端 page-config 下发**（端侧源码无此文案 ⇒ 只能「不渲染」）。
+    **③边界（主人裁定 A 方案）**：只隐藏承诺块；**「联系我们」/官方 IM 客服/电话保持现状**（抖音端客服入口关系成交，不误伤）。
+    **④实现（禁 #ifdef）**：`scripts/profile-schema.mjs` 新增特征位——`features.servicePromise = !isDouyin`、`features.servicePromiseTitle = isDouyin ? "" : <标题文案>`（沿 `mineMenu` 的 `isDouyin` 生成期范式）；`ServiceContact.vue` 新增 `props.showPromise`（默认 true）与 `promiseTitle`，承诺块两个根节点加 `v-if="showPromise"`，**标题改由 props 渲染**（⇒ 抖音产物内不出现该中文标题字面量，供产物级静态扫描）；`pages/index/index.vue` 传 `:show-promise="PROFILE.features.servicePromise"`、`:promise-title="..."`。端侧相关注释里的中文标题字面量已一并改写（**产物级扫描对注释也算命中**）。
+    **⑤恢复步骤（一行＋重构建，原样可抄）**：把 `scripts/profile-schema.mjs` 的 `servicePromise: !isDouyin,` 改为 `servicePromise: true,`（标题位 `servicePromiseTitle: isDouyin ? "" : <标题文案>` 改为对抖音也返回文案），然后重新构建抖音产物即可；**不删任何代码/样式/资源**。
+    **⑥升级到 B 方案（若审核仍卡）**：`pages/index/index.vue` 的 `<ServiceContact …>` 加 `v-if="PROFILE.features.servicePromise"`（即整块含「联系我们」一起隐藏），并把 `profile-schema.mjs` 的该位在抖音端保持 false ⇒ 同样一行可回退。
+    **⑦验证**：新增 `tests/unit/t86-service-promise-flag.spec.ts`（**6 例**）：profile 断言（抖音 `servicePromise=false` 且标题空串／微信 true 且标题为原文案）；组件级（`showPromise=false` ⇒ 不渲染 slogan／列表，**但仍渲染「联系我们」**；true ⇒ 全部渲染）；静态守卫（`ServiceContact.vue`／`index.vue` 不含静态标题字面量；首页传 profile 位且无 `#ifdef`）。**变异自证 2 项**：①抖音 profile 位改回 true ⇒ **1 failed/6** ②去掉 `v-if` ⇒ **1 failed/6**，均还原即绿。
+    **⑧产物级 grep（关键验收）**：抖音包内「服务保障」**0 命中** ✓；微信包内 **1 命中**（保持现状）✓。门禁：全量 vitest **792 passed / 3 skipped**；type-check（src＋tests）exit 0；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261014-3c500f3-promise/`（双端＋zip，地址命中 0／抖音敏感词 0／AppID 正确）。
+    **⑨遗留（待主人/Lead 裁定）**：同一承诺块在 `pages/priceHomePage/index.vue`（P2-21 也渲染 `<ServiceContact>`）**仍会显示** —— 本次按「只改首页」执行；若审核要求全端一致，请裁定是否在价格页同样传 `:show-promise`。
+
+    **⑩追加（2026-10-14 task-69 · 主人裁定「一并隐藏」）全端一致（含价格页）**：全仓 `<ServiceContact` 调用点共 **2 处**——
+    `pages/index/index.vue:447`（首页，task-68 已改）与 `pages/priceHomePage/index.vue:214`（价格页，**本单补齐**）；
+    两处均已传 `:show-promise="PROFILE.features.servicePromise"` ＋ `:promise-title="PROFILE.features.servicePromiseTitle"`，口径与首页完全一致。
+    A 方案边界不变（只隐藏承诺块；「联系我们」/IM 客服/电话/页脚保持现状；微信端保持现状）。
+    **验证（三层）**：⒜ **源码级** `t87`——每个调用点都必须显式传 profile 位（调用点数==传参点数；全仓 2 处）；
+    ⒝ **组件级** 见 `t86`（showPromise=false ⇒ 不渲染承诺块、仍渲染「联系我们」）；⒞ **产物级** 抖音包「服务保障」**0 命中**／微信包 **1 命中**。
+    **变异自证**：把价格页调用点的两个参数去掉 ⇒ `t87` **2 failed/3**（这正是抓遗漏的关键），还原即绿。
+    说明：PROFILE 特征位是**构建期**产物（按 profile/平台生成），vitest 内无法切到抖音 profile ⇒ 逐页「渲染级」无法真实复原抖音取值，故以源码级＋组件级＋产物级三层替代（已在 t87 注释写明）。
+    **恢复步骤（更新版，一行＋重构建，原样可抄）**：把 `scripts/profile-schema.mjs` 的 `servicePromise: !isDouyin,` 改为 `servicePromise: true,`（并把 `servicePromiseTitle` 改为对抖音也返回文案），重新构建**两端**产物即可——两处调用点无需改动（它们都读同一个 profile 位）；**不删任何代码/样式/资源**。
+    **B 方案升级（现成一步）**：给两处 `<ServiceContact …>` 各加 `v-if="PROFILE.features.servicePromise"`（整块含「联系我们」一起隐藏），profile 位在抖音端保持 false ⇒ 同样一行可回退。
+
+52. **抖音端价目表「整条链」裁剪（2026-10-14 task-70 · 主人要求）**
+    **①背景**：抖音「生活服务-摄影」类目未过审 ⇒ 主人要求**底栏第二个「价目表」tab 及其内容一并隐藏**（价目表同样涉该类目）。
+    **②技术事实（我复核后否掉了 CR 的首选方案）**：抖音端用**原生 tabBar**（`pages.json` 的 `"custom": true` 被包在 `#ifdef MP-WEIXIN` 内）⇒ **运行期无法按 profile 位过滤**；「custom-tab-bar 按位过滤」只作用于微信（而微信要保留）⇒ 必须走**编译期裁剪**。
+    **③实现（4 处，逻辑层零 #ifdef）**：⒜ `src/pages.json` 三处 `// #ifndef MP-TOUTIAO`——价目表 tab 项 1 ＋ 两个页面注册块（`pages/priceHomePage/index`／`pages/priceList/index`）2；⒝ `scripts/scan-platform-usage.mjs` 的 `COMPAT_DECLARATIONS` 登记 `src/pages.json | MP-TOUTIAO`（写明**影响端＝抖音不注册两页且底栏无该 tab**、用户可见后果、非漏兜底）；⒞ `scripts/profile-schema.mjs` 抖音页清单 **11→9**（剔除两页）＋新增特征位 `features.priceTab = !isDouyin`（单一事实源）；⒟ 抖音端 `priceFallbackTitle` 置空（否则「价目表」字面量会经 profile 进抖音包）。**微信端一行未动**。
+    **④入口清单（文件:行，全仓复核）**：抖音＝`src/pages.json:202` tab 项（本单已条件编译裁剪）；微信＝`src/custom-tab-bar/index.js:33`（保持现状）；页面注册＝`src/pages.json:51`／`:64`（本单已裁剪）＋生成期页清单；**其它代码入口 0 处**（按 switchTab/navigateTo/redirectTo/reLaunch/url/pagePath 全仓 grep，除 tab 配置与注释外无跳转）。**非代码入口复核**：无任何 `onShareAppMessage/onShareTimeline` 指向价目表的 path；`app.json`/`pages.json` 内字面量仅上述三处（已裁剪）；客户端**无 `linkUrl/jumpUrl` 类字段**消费服务端跳转配置 ⇒ 服务端即使下发也不会被跳转（若将来新增该类字段需另派单）。
+    **⑤恢复步骤（一行级，原样可抄）**：① 去掉 `src/pages.json` 三处 `// #ifndef MP-TOUTIAO`（含配对 `// #endif`）② 把 `scripts/profile-schema.mjs` 的 `PAGES_ALL.slice(0, 11).filter((p) => p !== "pages/priceList/index" && p !== "pages/priceHomePage/index")` 改回 `PAGES_ALL.slice(0, 11)`、`priceTab: !isDouyin` 改回 `true`、`priceFallbackTitle` 改回 `raw.PRICE_FALLBACK_TITLE` ③ 移除 `COMPAT_DECLARATIONS` 中该条 ④ 重新构建两端。**不删任何代码/样式/资源**。
+    **⑥验证**：新增 `tests/unit/t88-price-tab-trim.spec.ts`（**6 例**）：profile（抖音 9 页且不含两页／`priceTab=false`；微信 17 页且含两页／`priceTab=true`）；源码级**受控点数==调用点数**（pages.json 恰 3 处 `#ifndef MP-TOUTIAO`；三处价目表配置均位于块内；C4 登记存在且含理由）；**其它代码入口 0 处**（递归扫描 src 排除 pages.json／custom-tab-bar／generated）。**变异自证 2 项**：①抖音页清单改回 11 页 ⇒ **1 failed/6** ②去掉一处 `#ifndef` ⇒ **3 failed/6**；均还原即绿。既有 pipeline 期望同步更新（profile 11→9、build-target 抖音路由 12→10）。
+    **⑦产物级（关键验收）**：抖音包内 `priceHomePage`／`priceList`／「价目表」**全部 0 命中**；微信包「价目表」**7 命中**（保持现状）；**抖音底栏文案＝首页/我的（2 项）**。门禁：全量 vitest **801 passed / 3 skipped**；type-check（src＋tests）exit 0；C1–C6（含 C4 登记）全绿；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261014-3c500f3-promise3/`（双端＋zip，667 文件；地址命中 0／抖音敏感词 0／AppID 正确）。
+    **⑧逐页关键字清单（抖音包内，供主人一次裁决）**：**「价格」「套餐」命中 `pages/targetPhotoDetail/index.ttml`**（目标照详情页）⇒ **⚠️ 疑似涉类，建议主人裁定是否隐藏/改写**；「承诺」命中 `pages/policies/privacy.ttml`（协议文本，可保留）；「报价／预约／资质」**0 命中**；已隐藏＝首页承诺块（task-68/69）＋价目表 tab 与两页（本单）＋AI 六页（抖音不注册）。

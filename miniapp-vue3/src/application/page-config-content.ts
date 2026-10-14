@@ -106,7 +106,7 @@ export function createPageConfigContent(deps: {
     };
   }
 
-  /** 服务保障＋联系方式（旧 ServiceContact.loadContactConfig 语义） */
+  /** 承诺块＋联系方式（旧 ServiceContact.loadContactConfig 语义） */
   async function loadContact(ctx: RequestContext): Promise<ContactContent> {
     const list = await rows(ctx);
 

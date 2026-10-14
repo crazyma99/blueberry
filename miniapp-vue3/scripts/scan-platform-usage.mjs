@@ -155,6 +155,15 @@ const DIRECTIVE_RE = /^\s*(?:\/\/|\/\*|<!--)\s*#(ifdef|ifndef|else|elif|endif)\b
 export const COMPAT_DECLARATIONS = [
   {
     file: "src/pages.json",
+    macro: "MP-TOUTIAO",
+    ends: ["wx", "xhs"],
+    reason:
+      "**抖音端合规裁剪（2026-10-14 task-70，主人要求）**：抖音「生活服务-摄影」类目未过审 ⇒ 底栏不得出现价目表、两页不得可达。" +
+      "影响端＝抖音（不注册 pages/priceHomePage/index 与 pages/priceList/index、底栏无该 tab）；用户可见后果＝**抖音端看不到价目表入口与内容**（微信/小红书完全不变）。" +
+      "属有意平台裁剪，非漏兜底；恢复＝去掉这三处 #ifndef MP-TOUTIAO ＋ 重新构建。",
+  },
+  {
+    file: "src/pages.json",
     macro: "MP-WEIXIN",
     ends: ["tt", "xhs"],
     reason:

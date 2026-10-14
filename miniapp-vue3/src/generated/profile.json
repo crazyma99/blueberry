@@ -43,6 +43,9 @@
       "favorites",
       "aiTryOnHistory"
     ],
+    "priceTab": true,
+    "servicePromise": true,
+    "servicePromiseTitle": "服务保障",
     "mineHintText": "登录后可收藏与体验AI试衣",
     "navStyle": "custom",
     "tabBarCustom": true

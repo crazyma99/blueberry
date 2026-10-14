@@ -130,10 +130,18 @@ export function validateProfile(raw, target) {
   };
 
   const isDouyin = platform === "mp-toutiao";
-  const pageRegistry = isDouyin ? PAGES_ALL.slice(0, 11) : PAGES_ALL.slice();
+  const pageRegistry = isDouyin ? PAGES_ALL.slice(0, 11).filter((p) => p !== "pages/priceList/index" && p !== "pages/priceHomePage/index") : PAGES_ALL.slice();
   const features = {
     // 抖音侧「我的」页菜单只留「我的喜欢」（2026-09-17 主人拍板）
     mineMenu: isDouyin ? ["favorites"] : ["favorites", "aiTryOnHistory"],
+    // 2026-10-14 task-70 抖音合规：抖音端底栏无价目表（原生 tabBar 编译期裁剪）——本特征位为单一事实源；恢复＝改回 true ＋ 重构建。
+    priceTab: !isDouyin,
+    // ⭐2026-10-14（task-68 · 抖音审核类目合规）：抖音「生活服务-摄影」类目未过审（定向邀约）⇒ 首页**不得出现服务承诺类模块**。
+    // 口径：`servicePromise`＝是否渲染首页「服务保障」承诺块（标题＋slogan＋编号列表；文案由服务端 page-config 下发）。
+    // 端侧**只能不渲染**（无法删服务端文案）；**恢复＝本行改回 true ＋ 重新构建**（不删任何代码/样式/资源）。
+    // 标题文案同样经 profile 下发：抖音端给空串 ⇒ 产物内**不出现该中文标题字面量**（供产物级静态扫描，见 deviations#51）。
+    servicePromise: !isDouyin,
+    servicePromiseTitle: isDouyin ? "" : "服务保障",
     mineHintText: isDouyin ? "登录后可收藏" : "登录后可收藏与体验AI试衣",
     navStyle: isDouyin ? "default" : "custom",
     tabBarCustom: !isDouyin,
@@ -156,7 +164,7 @@ export function validateProfile(raw, target) {
       copyrightText: raw.COPYRIGHT_TEXT,
       contactPhoneText: raw.CONTACT_PHONE_TEXT,
       contactQrSrc: raw.CONTACT_QR_SRC,
-      priceFallbackTitle: raw.PRICE_FALLBACK_TITLE,
+      priceFallbackTitle: isDouyin ? "" : raw.PRICE_FALLBACK_TITLE, // 2026-10-14 task-70：抖音端不注册价目表页 ⇒ 该回退标题置空（否则「价目表」字面量会进抖音包）
       apiBases,
       pageRegistry,
       features,

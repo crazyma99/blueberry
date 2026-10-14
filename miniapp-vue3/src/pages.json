@@ -47,6 +47,7 @@
 				"backgroundTextStyle": "light"
 			}
 		},
+		// #ifndef MP-TOUTIAO
 		{
 			"path": "pages/priceHomePage/index",
 			"style": {
@@ -60,6 +61,8 @@
 				"backgroundTextStyle": "light"
 			}
 		},
+		// #endif
+		// #ifndef MP-TOUTIAO
 		{
 			"path": "pages/priceList/index",
 			"style": {
@@ -69,6 +72,7 @@
 				"navigationBarTitleText": "价目表"
 			}
 		},
+		// #endif
 		{
 			"path": "pages/mine/index",
 			"style": {
@@ -198,12 +202,14 @@
 				"selectedIconPath": "static/home-bar.png",
 				"text": "首页"
 			},
+			// #ifndef MP-TOUTIAO
 			{
 				"pagePath": "pages/priceHomePage/index",
 				"iconPath": "static/price-bar-dim.png",
 				"selectedIconPath": "static/price-bar.png",
 				"text": "价目表"
 			},
+			// #endif
 			{
 				"pagePath": "pages/mine/index",
 				"iconPath": "static/my-bar-dim.png",
