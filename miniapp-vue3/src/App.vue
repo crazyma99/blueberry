@@ -1,5 +1,17 @@
 <script setup lang="ts">
 import { onLaunch, onShow, onHide } from "@dcloudio/uni-app";
+import { syncBrandFromEnterOptions } from "./application/enter-brand-sync";
+import { readEnterOptions } from "./platform/uni/enter-options";
+import { createVersionedStorage } from "./infrastructure/storage/versioned";
+import { createUniStorage } from "./platform/uni/storage";
+import { PROFILE } from "./generated/profile.config";
+
+// 品牌上下文存储（与各页面同口径：平台 + profile 归属）
+const versioned = createVersionedStorage({
+  backend: createUniStorage(),
+  platform: PROFILE.platform,
+  profileKey: PROFILE.profileKey,
+});
 onLaunch(() => {
   console.log("App Launch");
   // 全局加载自定义字体（旧端 App.uvue :9-32 移植；微信小程序需在 mp 后台配置 downloadFile 合法域名：
@@ -23,8 +35,28 @@ onLaunch(() => {
     });
   }
 });
+/**
+ * ⭐2026-10-19（task-71 线上 P0）：**App 级 onShow 统一消费「本次进入参数」**——任何落地页（含将来可配置的 brand_page）
+ * 热启动/再次扫码都能生效；页面级 onShow 只按品牌上下文刷新（index.vue / priceHomePage 的既有基线检测会据此重载）。
+ * 口径：只在**与当前不同**时才写上下文（相同/无参数零动作，防抖）；白名单校验在 saveBrandId 内（脏值不写入）。
+ * 注：`bumpScope` 属**页面级**（每页 ctxFactory），此处不传 ⇒ 由页面基线分支 bumpScope 后重载（index.vue 已具备）。
+ */
+function syncBrandOnAppShow(): void {
+  try {
+    const result = syncBrandFromEnterOptions({
+      readEnterOptions,
+      loadBrandId: () => versioned.loadBrandId(),
+      saveBrandId: (id) => versioned.saveBrandId(id),
+    });
+    if (result.changed) console.log("[enter-brand] 进入参数切换品牌:", result.brandId, "←", result.source);
+  } catch (err) {
+    console.warn("[enter-brand] App onShow 同步品牌失败（fail-soft）:", err);
+  }
+}
+
 onShow(() => {
   console.log("App Show");
+  syncBrandOnAppShow();
 });
 onHide(() => {
   console.log("App Hide");

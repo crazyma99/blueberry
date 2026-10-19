@@ -2,6 +2,35 @@
 
 > 记录小程序 C 端每次实质性改动，最新在上。多人合作提交前先补本文件（与代码同一提交）。
 
+## 2026-10-19 · 独立 CR 收口（P0 扫码切换）：3 项假绿修复 ＋ 清理
+
+- **S1** `t73` 补「纯数字 74 形态合法 ⇒ 接受并带出」断言并改正标题（旧标题与断言不符＝假绿）；**S2** `t90` mock 改用生产 `isBrandCodeShape`（原正则比生产严）；**S3** `index.vue` 裸 `decodeURIComponent` 改用 `normalizeScene`（畸形 `%` 不抛）。
+- 清理：删零调用死代码 `isAcceptableBrandCode`／`isListedOrShapedBrandCode`；删 `App.vue` 空转 `void resolveRuntimeEnvironment`；删 `versioned.ts::loadBrandId` 未使用变量并修正 log 文案。
+- 追加：`PLATFORM`（平台占位品牌）扫码视为「无品牌上下文」，不切换商户（新增 `PLATFORM_BRAND_CODE` ＋ 单测）。
+- 门禁：vitest **825 passed**；type-check exit 0；三端构建 exit 0；产物 `lanmei-miniapp-20261019-737f630-scanfix3`（双端＋zip）。
+
+## 2026-10-19 · 修复（线上 P0 根治）：准入闸门改为「形态校验」，名单降级为离线兜底
+
+- **主人实测**：只有 `huahua/chayu/lanmei`（种子内 ∧ 线上存在）能跳；线上另 6 个（`Here_Stadio/PLATFORM/huajianjiu/qiyue/shiyue/xiaochen`）全部不能 ⇒ 名单硬拦（层2）为主因。
+- **根因**：旧种子按 **staging** 取样（2026-10-13），与 **prod** 商户完全不同 ⇒ 静态名单当闸门必然静默拒写新商户。
+- **修法**：①唯一准入＝**形态校验**＋后端容错回落（`d13654f`）②名单降级为离线兜底/提示，不再阻断 ③保留异步 `GET /api/brands` 补齐（一次/会话、超时、失败静默）④种子按 prod **只增不删**补齐 ⑤脏形态仍拒写、发送前二次校验。
+- **验证**：`t91` 7 例（名单外合法编码接受／补齐抛错仍接受／脏形态拒写／接线守卫）；**变异自证 2 项**（退回名单硬拦 ⇒ 1 failed；去掉离线补齐 ⇒ 1 failed）；全量 vitest **824 passed**；type-check exit 0；三端构建 exit 0；产物 `lanmei-miniapp-20261019-737f630-scanfix2`（双端＋zip）。
+- **验收**：干净环境扫 `xiaochen`/`qiyue` 冷热启动都必须落；`lanmei` 回归；编一个不存在的合法编码不崩。
+
+## 2026-10-19 · 修复（线上 P0 层2）：干净环境扫「种子外商户」切不过去
+
+- **根因**：线上 9 个商户中 6 个不在离线种子（`Here_Stadio/PLATFORM/huajianjiu/qiyue/shiyue/xiaochen`），而 `saveBrandId` 只接受「命中已知列表」⇒ 新用户（`lm.brands.v1` 空、未进过品牌馆）扫码被**静默拒写** ⇒ 冷热启动都切不过去。
+- **修法**：①判定放宽为「命中已知列表 ∪ 形态合法」（后端 `d13654f` 对无效品牌头回落，不再 500；非形态仍拒收）②种子按线上**只增不删**补齐 6 条 ③新增 `application/brand-allowlist.ts` 后台补拉 `GET /api/brands`（一次/会话、5s 超时、失败静默不重试、不阻塞首屏），由 `syncBrandFromEnterOptionsAsync` 承载、首页注入。
+- **验证**：新增 `t91`（6 例）＋**变异自证 2 项**（去补齐注入／判定退回严格，各 1 failed，还原即绿）；全量 vitest **823 passed**；type-check exit 0；三端构建 exit 0；产物 `lanmei-miniapp-20261019-737f630-scanfix2`（双端＋zip）。
+- **验收**：干净环境（清缓存）扫 `xiaochen`/`qiyue` **冷启动与热启动都必须落该商户**；`lanmei` 回归。工具冷启动不能替代热启动验证。
+
+## 2026-10-19 · 修复（线上 P0）：扫码切换商户不生效（热启动）
+
+- **根因**：微信对已驻留 tab 页再次扫码**不执行 onLoad**（官方社区 2024-02-02），而 `index.vue` 的 onLoad 是唯一消费 `scene`/`?brandId=` 的地方，onShow 只比对基线 ⇒ 热启动新商户被丢弃；扫码路径也缺 `bumpScope()`。
+- **修复**：新增 `platform/uni/enter-options.ts::readEnterOptions()`（取 `query.scene`/`query.brandId`，fail-soft）＋ `domain/enter-brand.ts`（优先级 scene > query > stored，含 kv/编码容错与 shopId 扩展位）＋ `application/enter-brand-sync.ts`（相同/无参数零动作、脏值不写入、生效才 `bumpScope`+回调）；**App 级 onShow 统一消费**，`index.vue` onLoad/onShow 共用同一编排器，`priceHomePage` 靠既有基线检测自动重载。
+- **验证**：`t89`(9)+`t90`(7)＋**变异自证 3 项**（去 App onShow 消费／去 bumpScope／去防抖，分别 1/4/3 failed，还原即绿）；全量 vitest 817 passed；type-check exit 0；三端构建 exit 0；产物 `lanmei-miniapp-20261019-737f630-scanfix`（双端＋zip）。
+- **验收**：真机热启动（扫 A→切后台不杀→扫 B 必落 B；分享卡片同验）；**开发者工具冷启动不能替代**。
+
 ## 2026-10-14 · 抖音合规：价目表 tab 与两页整条链裁剪
 
 - **主人要求**：抖音底栏「价目表」tab 及其内容一并隐藏（价目表涉「生活服务-摄影」类目）。

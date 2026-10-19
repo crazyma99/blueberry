@@ -9,7 +9,7 @@ import type { Environment, Platform, RequestContext, Result } from "../../ports/
 import type { HttpMethod, HttpPort, HttpResponse } from "../../ports/http";
 import { isBusinessSuccess, mapBusinessFailure, mapTransportFailure, type AppError } from "./errors";
 import { channelOf } from "../../domain/channel";
-import { isKnownBrandCode, warnBrandCodeRejected } from "../../domain/brand-code";
+import { isAdmissibleBrandCode, warnBrandCodeRejected } from "../../domain/brand-code";
 
 /** 新端内部会话模型（P2-03 AuthCoordinator 将实现；非后端响应字段的伪造） */
 export interface Session {
@@ -115,7 +115,7 @@ export function createHttpClient(deps: {
     // ⇒ 整站空白。校验口径见 `domain/brand-code.ts`（形态＋命中 离线种子 ∪ 运行期 ∪ 持久化列表）；
     // 非法值一律**不发该头**（等价「无品牌上下文」）。值本身在上游 `versioned.loadBrandId` 已过滤，此处兜底。
     if (ctx.brandId != null && ctx.brandId !== "") {
-      if (isKnownBrandCode(ctx.brandId)) {
+      if (isAdmissibleBrandCode(ctx.brandId)) { // ⭐task-72：发送前二次**形态**校验（不再按名单拦）
         headers["X-Brand-Id"] = ctx.brandId;
       } else {
         warnBrandCodeRejected(ctx.brandId, "http 头注入前校验未通过（client）");

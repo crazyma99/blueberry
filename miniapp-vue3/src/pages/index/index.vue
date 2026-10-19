@@ -9,6 +9,9 @@
 import { computed, onMounted, ref } from "vue";
 import { onLoad, onShareAppMessage, onShareTimeline, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
+import { readEnterOptions } from "../../platform/uni/enter-options";
+import { syncBrandFromEnterOptionsAsync } from "../../application/enter-brand-sync";
+import { normalizeScene } from "../../domain/enter-brand";
 import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
@@ -103,9 +106,10 @@ const pageContent = createPageConfigContent({
 });
 
 // 分享卡片（2026-09-21 主人：「首页分享卡片迁移遗漏」⇒ 补迁；旧端 index.uvue:265-278/:317-320）
+const brandRepo = createBrandRepository({ client });
 const shareCards = createShareCardResolver({
   pageConfig: pageConfigRepo,
-  brands: createBrandRepository({ client }),
+  brands: brandRepo,
   getBrandId: () => versioned.loadBrandId() ?? "",
 });
 const shareCard = ref<ShareCard>({ ...DEFAULT_SHARE_CARDS.index });
@@ -269,15 +273,47 @@ let lastBrandId: string | null = versioned.loadBrandId();
 // 首访用户拿到的是全局卡片/全局数据（`onShareAppMessage` 生成 `?brandId=` 形同空转）。
 // 顺序：mp 侧 setup → onLoad → onMounted(init) → onShow；此处只写上下文＋同步品牌基线，
 // 数据由 onMounted 的 init() 与 onShow 基线检测接管（不重复 init、不触发骨架闪烁）。
+/**
+ * ⭐2026-10-19（task-71 扫码切换商户 P0）：把「本次进入参数 → 品牌上下文」收成**一处**，onLoad 与 onShow 共用。
+ * · 只在**与当前不同**时才切换（防抖：每次回前台不重载）；
+ * · 「已知商家编码」校验仍由 `versioned.saveBrandId` 把关（2026-10-13 脏值 500 事故，不得绕过）；
+ * · 切换成功才 `bumpScope()`（作废旧品牌在飞响应 P2-07）＋隐藏旧入口开关；
+ * · `reload=false`（onLoad）时只写上下文，后续 onMounted 的 init() 会带新上下文取数，避免重复 init。
+ */
+async function applyEnterBrand(incoming: { scene: string; queryBrandId: string }, reload: boolean): Promise<boolean> {
+  // 逻辑单一事实源＝application/enter-brand-sync.ts（与 App 级 onShow 共用；此处只注入本页的
+  // 存储、scope 代次与「骨架重现 + 重载」动作）
+  // ⭐层2（task-71）：若解析出的编码**不在已知列表**（新用户 lm.brands.v1 为空 & 未进过品牌馆），
+  // 先补拉一次 `GET /api/brands`（一次/会话、超时、失败静默）——不补齐则新商户会被拒写、冷热启动都切不过去。
+  const result = await syncBrandFromEnterOptionsAsync({
+    readEnterOptions: () => incoming,
+    loadBrandId: () => versioned.loadBrandId(),
+    saveBrandId: (id) => versioned.saveBrandId(id),
+    bumpScope: () => ctxFactory.bumpScope(),
+    refreshBrandCodes: {
+      fetchBrandCodes: async () => {
+        const res = await brandRepo.getBrands(ctxFactory.next());
+        return res.ok && res.value != null ? res.value.map((b) => b.brandId) : null;
+      },
+      rememberBrandCodes: (codes) => versioned.rememberBrandCodes(codes),
+    },
+    onChanged: (brandId) => {
+      lastBrandId = brandId;
+      brandHubOn.value = false;
+      if (reload) {
+        ready.value = false;
+        void init();
+      }
+    },
+  });
+  return result.changed;
+}
+
 onLoad((options) => {
-  const scene = decodeURIComponent(String((options as { scene?: unknown } | undefined)?.scene ?? ""));
-  const brandId = scene !== "" ? scene : String((options as { brandId?: unknown } | undefined)?.brandId ?? "");
-  if (brandId === "") return;
-  // ⭐2026-10-13 事故修复：scene/options 来的值**必须先过「已知商家编码」校验**才写上下文——
-  // 真机曾因这类脏值（数字）带出 X-Brand-Id ⇒ 后端对已存在品牌头不回落、直接 500「品牌不存在或已停用」⇒ 整站空白。
-  // 校验在 `versioned.saveBrandId` 内完成（非法值不写入）；此处回读**生效值**，避免把脏值写进品牌基线。
-  versioned.saveBrandId(brandId);
-  lastBrandId = versioned.loadBrandId(); // 防 onShow 基线检测再重载一次（数据由 init 带品牌上下文取）
+  // 冷启动：onLoad 带 options；**热启动不会走到这里** ⇒ 同一套解析在 onShow 里再做一次（task-71）
+  const scene = normalizeScene(String((options as { scene?: unknown } | undefined)?.scene ?? "")); // 容错（畸形 % 不抛）
+  const queryBrandId = String((options as { brandId?: unknown } | undefined)?.brandId ?? "");
+  void applyEnterBrand({ scene, queryBrandId }, false);
 });
 
 // 右上角胶囊菜单「转发」：卡片动态化（品牌落地 + 品牌配置封面）；旧端 index.uvue:265-272 逐字
@@ -299,6 +335,11 @@ onShareTimeline(() => ({
 onShow(() => {
   // P2-12：自定义 tabBar 选中态由页面 onShow 同步（唯一必然触发的入口）
   syncTabBarSelected(0);
+  // ⭐task-71（线上 P0）：**热启动/再次扫码时 onLoad 不再执行**（微信官方社区 2024-02-02）⇒ 必须在 onShow 消费本次进入参数，
+  // 否则新商户被丢弃、仍停在旧商户。优先级：扫码 scene > 分享卡片 ?brandId= > 记忆值（见 domain/enter-brand.ts）。
+  const enter = readEnterOptions();
+  void applyEnterBrand({ scene: enter.scene, queryBrandId: enter.queryBrandId }, true);
+  // 既有基线检测（覆盖页内切品牌等其它来源）；applyEnterBrand 已同步 lastBrandId ⇒ 不会与上面重复重载
   const brandId = versioned.loadBrandId();
   if (brandId !== lastBrandId) {
     lastBrandId = brandId;

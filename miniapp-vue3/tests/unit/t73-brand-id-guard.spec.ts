@@ -1,4 +1,4 @@
-// T73（2026-10-13 真机全站空白事故的根因修复）：**X-Brand-Id 必须是「商家编码」**，非法值不写不发。
+// T73（2026-10-13 真机全站空白事故的根因修复；**2026-10-19 task-71 层2 放宽**：命中已知列表 ∪ 形态合法 ⇒ 接受（后端 d13654f 对无效品牌头回落，不再 500））：**X-Brand-Id 必须是「商家编码」**，非法值不写不发。
 // 事故链：真机带 X-Brand-Id:<数字>（历史脏值）⇒ 后端 resolveRequestMerchant 对已存在的品牌头**不回落**、
 // 直接 500「品牌不存在或已停用」⇒ 所有接口只剩 64 字节 ⇒ 真机整站空白（IDE 无该头故正常）。
 // 本 spec 守卫：①形态＋命中列表校验（domain）②versioned 写入/读取双闸＋存量脏值清理
@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   KNOWN_BRAND_CODES_SEED,
   __resetBrandCodeWarnings,
+  isAdmissibleBrandCode,
   isBrandCodeShape,
   isKnownBrandCode,
   rememberKnownBrandCodes,
@@ -94,16 +95,18 @@ describe("t73 · 商家编码校验（形态＋命中列表，domain/brand-code�
 });
 
 describe("t73 · versioned 品牌上下文双闸 + 存量脏值清理", () => {
-  it("⭐存量脏值：读到数字/未知值 ⇒ 视为无品牌**并清理键**（含旧键 brand_id）", () => {
-    const a = buildVersioned({ "lm.brand.v1": "1" });
+  it("⭐存量脏值：**形态非法**才清理（含旧键 brand_id）；形态合法（含数字/未知编码）＝接受（task-71 放宽）", () => {
+    const a = buildVersioned({ "lm.brand.v1": "lan mei" }); // 含空格 ⇒ 形态非法
     expect(a.versioned.loadBrandId()).toBeNull();
-    expect(a.map.has("lm.brand.v1"), "脏值必须被清掉，否则老用户被长期锁死").toBe(false);
-    const b = buildVersioned({ "lm.brand.v1": "foo" });
+    expect(a.map.has("lm.brand.v1"), "非法形态必须被清掉").toBe(false);
+    const b = buildVersioned({ "lm.brand.v1": "wxfile://tmp_a.jpg" });
     expect(b.versioned.loadBrandId()).toBeNull();
-    expect(b.map.has("lm.brand.v1")).toBe(false);
-    const c = buildVersioned({ brand_id: "74" });
+    const c = buildVersioned({ brand_id: "a".repeat(70) }); // 超长 ⇒ 形态非法
     expect(c.versioned.loadBrandId()).toBeNull();
     expect(c.map.has("brand_id")).toBe(false);
+    // 形态合法即接受（后端对无效品牌头回落，不再 500；见 deviations#53 取舍）
+    expect(buildVersioned({ "lm.brand.v1": "xiaochen" }).versioned.loadBrandId()).toBe("xiaochen");
+    expect(buildVersioned({ "lm.brand.v1": "foo" }).versioned.loadBrandId()).toBe("foo");
   });
 
   it("⭐合法值：真实商家编码可读（含数字形态编码），旧键迁移只在合法时发生", () => {
@@ -114,23 +117,26 @@ describe("t73 · versioned 品牌上下文双闸 + 存量脏值清理", () => {
     expect(b.map.get("lm.brand.v1")).toBe("lanmei");
   });
 
-  it("⭐写入闸：saveBrandId 拒绝非法值（不写入、保留既有合法值）", () => {
+  it("⭐写入闸：形态非法拒写；形态合法（含线上新商户）接受（task-71 层2 放宽）", () => {
     const a = buildVersioned({ "lm.brand.v1": "lanmei" });
-    a.versioned.saveBrandId("1");
-    a.versioned.saveBrandId("foo");
-    expect(a.versioned.loadBrandId()).toBe("lanmei");
+    a.versioned.saveBrandId("lan mei"); // 形态非法 ⇒ 拒写
+    expect(a.versioned.loadBrandId()).toBe("lanmei"); // 既有值未被破坏
     const b = buildVersioned();
-    b.versioned.saveBrandId("1");
+    b.versioned.saveBrandId("lan mei");
     expect(b.map.has("lm.brand.v1")).toBe(false);
-    b.versioned.saveBrandId("chayu");
-    expect(b.map.get("lm.brand.v1")).toBe("chayu");
+    b.versioned.saveBrandId("xiaochen"); // 线上新商户（已补种子）
+    expect(b.map.get("lm.brand.v1")).toBe("xiaochen");
+    b.versioned.saveBrandId("foo"); // 种子外但形态合法 ⇒ 接受（后端容错回落）
+    expect(b.map.get("lm.brand.v1")).toBe("foo");
   });
 });
 
-describe("t73 · 生产链路：脏值 ⇒ 请求头不得出现 X-Brand-Id", () => {
-  it("⭐数字脏值 / 未知编码 ⇒ **不带** X-Brand-Id；合法 lanmei ⇒ 正常带", async () => {
-    expect(await sendAndGetBrandHeader(buildClientWithBrand("1"))).toBeUndefined();
-    expect(await sendAndGetBrandHeader(buildClientWithBrand("foo"))).toBeUndefined();
+describe("t73 · 生产链路：形态非法 ⇒ 不带 X-Brand-Id；形态合法（含纯数字/未知编码）⇒ 带出（后端回落兜底）", () => {
+  it("⭐纯数字/未知编码**形态合法 ⇒ 接受并带出**（后端回落），非形态仍拒；lanmei 正常带", async () => {
+    expect(isAdmissibleBrandCode("74")).toBe(true); // 纯数字形态合法 ⇒ 新口径接受
+    expect(await sendAndGetBrandHeader(buildClientWithBrand("74"))).toBe("74"); // 不再被前端拦掉（靠后端回落）
+    expect(await sendAndGetBrandHeader(buildClientWithBrand("lan mei"))).toBeUndefined(); // 形态非法 ⇒ 不发头
+    expect(await sendAndGetBrandHeader(buildClientWithBrand("xiaochen"))).toBe("xiaochen"); // 线上新商户可发送（task-71 层2）
     expect(await sendAndGetBrandHeader(buildClientWithBrand("lanmei"))).toBe("lanmei");
     expect(await sendAndGetBrandHeader(buildClientWithBrand(null))).toBeUndefined();
   });

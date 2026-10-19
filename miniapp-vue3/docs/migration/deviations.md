@@ -381,3 +381,58 @@
     **⑥验证**：新增 `tests/unit/t88-price-tab-trim.spec.ts`（**6 例**）：profile（抖音 9 页且不含两页／`priceTab=false`；微信 17 页且含两页／`priceTab=true`）；源码级**受控点数==调用点数**（pages.json 恰 3 处 `#ifndef MP-TOUTIAO`；三处价目表配置均位于块内；C4 登记存在且含理由）；**其它代码入口 0 处**（递归扫描 src 排除 pages.json／custom-tab-bar／generated）。**变异自证 2 项**：①抖音页清单改回 11 页 ⇒ **1 failed/6** ②去掉一处 `#ifndef` ⇒ **3 failed/6**；均还原即绿。既有 pipeline 期望同步更新（profile 11→9、build-target 抖音路由 12→10）。
     **⑦产物级（关键验收）**：抖音包内 `priceHomePage`／`priceList`／「价目表」**全部 0 命中**；微信包「价目表」**7 命中**（保持现状）；**抖音底栏文案＝首页/我的（2 项）**。门禁：全量 vitest **801 passed / 3 skipped**；type-check（src＋tests）exit 0；C1–C6（含 C4 登记）全绿；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261014-3c500f3-promise3/`（双端＋zip，667 文件；地址命中 0／抖音敏感词 0／AppID 正确）。
     **⑧逐页关键字清单（抖音包内，供主人一次裁决）**：**「价格」「套餐」命中 `pages/targetPhotoDetail/index.ttml`**（目标照详情页）⇒ **⚠️ 疑似涉类，建议主人裁定是否隐藏/改写**；「承诺」命中 `pages/policies/privacy.ttml`（协议文本，可保留）；「报价／预约／资质」**0 命中**；已隐藏＝首页承诺块（task-68/69）＋价目表 tab 与两页（本单）＋AI 六页（抖音不注册）。
+
+53. **扫码切换商户不生效（线上 P0，2026-10-19 task-71）：热启动必须消费进入参数**
+    **①现象**：扫 A 商户码进小程序后，**再扫 B 商户码切换不过去**（仍停在 A）；开发者工具每次冷启动 ⇒ 复现不了。
+    **②根因（双向取证）**：微信官方社区（2024-02-02）明确「**微信扫码，onLoad 不是每次都执行的**」（已驻留 tab 页只走 onShow）＋ 代码事实：`pages/index/index.vue` 的 **onLoad 是唯一消费 `scene`/`?brandId=` 的地方**，onShow 只做 `loadBrandId()` 与 `lastBrandId` 基线比对 ⇒ 热启动新 scene 被丢弃；此外扫码路径**没有 `bumpScope()`**（仅 brandHub:127 与 index 基线分支有）⇒ 旧品牌在飞响应/入口开关可能残留。
+    **③服务端事实核对（Lead 查实）**：`internal/wxapi/wxapi.go:191-209` GetUnlimitedQRCode **原样透传 scene**（仅 TrimSpace + 1-32 校验），唯一调用点传的是 **merchant.MerchantCode（纯商家编码**，如 lanmei／brand_one）；`configs/*.yaml` 无 `brand_page` ⇒ 兜底落地页＝`pages/index/index`（`pkg/config/config.go:254-255`）⇒ 主用「整串即编码」，kv 容错仅作将来「一店一码」扩展位。
+    **④修复（三层，逻辑层零 #ifdef）**：
+      ⒜ **平台层** `src/platform/uni/enter-options.ts::readEnterOptions()`：`uni.getEnterOptionsSync()` 取 **`query.scene`（★不是场景值数字）+ `query.brandId`**，decode 容错、`typeof` 守卫 + try/catch（fail-soft）。
+      ⒝ **纯函数** `src/domain/enter-brand.ts`：`normalizeScene()`（整串／kv／百分号编码／非法编码不抛）＋ `resolveEnterBrand()`（**优先级 scene > query.brandId > stored > none**，返回 `source`）＋ `looksLikeNumericShopId()`（**纯数字 shopId 的扩展位，本期只认 brandId**）。
+      ⒞ **统一编排** `src/application/enter-brand-sync.ts::syncBrandFromEnterOptions()`：**相同/无参数 ⇒ 零动作**（防抖）→ 不同才 `saveBrandId`（内部保留「已知商家编码」白名单校验，脏值不写入）→ **回读生效值**，确实变了才 `bumpScope()` + `onChanged()`。
+      ⒟ **接线**：**App 级 onShow 统一消费**（`App.vue` 的 `syncBrandOnAppShow()`，任何落地页热启动都生效；`bumpScope` 属页面级故不传）＋ **页面级** `index.vue` 的 onLoad/onShow 均走同一编排器（onShow `reload=true`：`brandHubOn=false` + `ready=false` + `init()`）；`priceHomePage` 既有基线检测（:156-166）会据新上下文自动重载 ⇒ 无需改动（已核）。分享卡片 `?brandId=` 走 query 分支同覆盖。
+    **⑤14 处 onLoad 排查**：仅 `index.vue`（品牌上下文）与 `priceHomePage`（基线）受同一病灶影响（后者由 App 级写入 + 自身基线检测覆盖）；其余页参数属页面实例身份（navigateTo 热启动会新建实例 ⇒ onLoad 必跑）⇒ 不受影响。
+    **⑥验证**：新增 `t89`（9 例：纯函数优先级／两种 scene 形态／非法编码不抛／readEnterOptions 真实形态与 fail-soft／页面接线）+`t90`（7 例：变化才写+bump+回调、相同零动作、无参数零动作、脏值被拒则零 bump、**App 级接线守卫**）；**变异自证 3 项**：①去掉 App onShow 参数消费 ⇒ 1 failed②去掉 `bumpScope` ⇒ 4 failed③去掉「相同不动作」防抖 ⇒ 3 failed；均还原即绿。
+    **⑦门禁与产物**：全量 vitest **817 passed / 3 skipped**；type-check（src＋tests）exit 0；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261019-737f630-scanfix/`（双端＋zip，673 文件；地址命中 0／抖音敏感词 0／AppID 正确／两端含 `application/enter-brand-sync.js` 与 `platform/uni/enter-options.js`）。
+    **⑧验收口径（唯一可信）**：**真机热启动**——扫 A → 切后台（**不杀进程**）→ 扫 B ⇒ **必落 B**（门店/价目/客片/AI 全按 B）→ 再扫回 A；分享卡片热启动同验。**开发者工具冷启动不算**（工具每次冷启动，永远走 onLoad ⇒ 复现不了本 bug）。
+    **⑨未提交**：等主人真机回执后提交（提交须带 `Compat:` trailer）。
+
+    **⑩⭐层2 补修（2026-10-19 追加；主人实测「彻底杀小程序冷启动也扫不进 B」）**
+    　**铁证（Lead 双向对照）**：线上 prod `/api/brands` 9 条＝`Here_Stadio／PLATFORM／chayu／huahua／huajianjiu／lanmei／qiyue／shiyue／xiaochen`；
+    　旧离线种子 9 条里只有 3 条与线上重合 ⇒ **6 个线上商户不在种子**。机制：`saveBrandId` 只接受 `isKnownBrandCode`（命中 种子∪runtime∪lm.brands.v1），
+    　新用户 `lm.brands.v1` 为空且未进过品牌馆 ⇒ 扫那 6 个商户 **静默拒写** ⇒ 冷热启动都切不过去（扫 lanmei/huahua/chayu 能进正因在种子）。
+    　**修法三层**：
+    　⒜ **判定放宽**（`domain/brand-code.ts::isAcceptableBrandCode`）＝**命中已知列表 ∪ 形态合法**；`versioned.saveBrandId/loadBrandId` 与 `http/client.ts` 品牌头闸统一改用它。
+    　　**取舍（已在代码注释与本条写清）**：后端 `d13654f` 起对**无效 `X-Brand-Id` 会回落**（shopId／App-Code），不再 500 ⇒ 「硬拦未知编码」收益消失、代价致命（新商户静默不可达）；非形态（`wxfile://`、含空格、超长等）仍拒收、仍清存量脏值。
+    　⒝ **种子按线上补齐（只增不删）**：`KNOWN_BRAND_CODES_SEED` 追加 `Here_Stadio／PLATFORM／huajianjiu／qiyue／shiyue／xiaochen`（旧 6 条历史值保留，避免老用户缓存失效）。
+    　⒞ **后台补齐已知列表**（`application/brand-allowlist.ts::refreshKnownBrandCodesOnce`）：解析出的编码不在已知列表时，后台拉一次 `GET /api/brands` ⇒ `rememberBrandCodes()`；**一次/会话、5s 超时、失败静默且不重试（防风暴）、不阻塞首屏**（先按形态兜底立即切换，补齐只惠及后续会话）；`application/enter-brand-sync.ts::syncBrandFromEnterOptionsAsync` 承载该顺序，首页注入 `brandRepo.getBrands`。
+    　**验证**：新增 `tests/unit/t91-brand-list-fill.spec.ts`（6 例：线上 9 码全在种子且旧值不删／**干净环境 `lm.brands.v1` 为空时种子外商户可写入**／补齐一次成功即封盘、失败不重试／fetch 永不返回时切换仍即时完成／接线守卫）；**变异自证 2 项**：⒜去掉首页 `refreshBrandCodes` 注入 ⇒ 1 failed ⒝`isAcceptableBrandCode` 退回「严格列表命中」⇒ 1 failed（**正是层2 事故复现**）；均还原即绿。既有 `t73`（原品牌闸 spec）按新口径更新（形态非法仍拒／形态合法接受）。
+    　**门禁与产物**：全量 vitest **823 passed / 3 skipped**；type-check exit 0；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261019-737f630-scanfix2/`（双端＋zip，675 文件；地址命中 0／抖音敏感词 0／AppID 正确／两端含 `application/brand-allowlist.js` 与种子新码）。
+    　**★验收口径（更新，最关键）**：**干净环境**（首次安装或清缓存 ⇒ `lm.brands.v1` 为空）扫码进**不在旧种子的商户**（如 `xiaochen`／`qiyue`）⇒ **必须落该商户**；**冷启动与热启动都要验**（冷启动直接复现主人现象）；再用种子内 `lanmei` 做回归。**开发者工具冷启动不算**（工具每次冷启动必走 onLoad，热启动层1 复现不了）。
+
+    **⑪⭐架构纠偏（2026-10-19 task-72 · 主人 100% 确认层2）：准入闸门从「名单」改为「形态」**
+    　**主人实测（决定性对照）**：只有 `huahua`／`chayu`／`lanmei`（＝**种子内 ∧ 线上仍存在**）能跳转；线上另外 6 个
+    　（`Here_Stadio／PLATFORM／huajianjiu／qiyue／shiyue／xiaochen`）**全部不能跳** ⇒ 层2（名单硬拦）彻底坐实。
+    　**根因（两层叠加，主因是层2）**：⒜ 层2：`saveBrandId` 以「命中 种子∪runtime∪lm.brands.v1」为**准入闸门**，而**静态名单按环境取样注定滞后** ——
+    　**旧种子是 2026-10-13 对照 staging(crazyma99.xyz)** 取的（`123323/123456789/jiandan/nj-qiyue-qipao/dd985/dd985-2`），
+    　而 **prod(lanmei66.cloud)** 商户完全不同 ⇒ 线上新商户扫码被**静默拒写**，冷热启动都切不过去（**主因**）；⒝ 层1：热启动 onLoad 不执行导致参数丢弃（真实存在但**非本次主因**——主人对照里种子内商户热启动也能跳）。
+    　**根治口径（本次落地）**：
+    　· **唯一准入闸门＝形态校验**（`domain/brand-code.ts::isAdmissibleBrandCode`，即 `SHAPE_RE`，允许大写/下划线/数字）＋ **后端容错兜底**（`d13654f` 对无效 `X-Brand-Id` 回落 shopId／App-Code，不再 500）⇒ **形态合法即写入上下文**；
+    　· **名单降级为「离线兜底与提示」**（离线种子 ∪ runtime ∪ `lm.brands.v1`）：不再阻断切换，未命中只在 console 记一句；品牌馆展示仍用名单；
+    　· **保留异步拉 `GET /api/brands` 补齐**（`application/brand-allowlist.ts`，一次/会话、5s 超时、失败静默不重试、不阻塞首屏）——用途＝离线可用与品牌馆展示；
+    　· 脏值防线：**形态非法**（含空格／中文／超长／以 `-` 开头等）仍拒写并在发送前二次校验记录；**不再用名单拦用户**。
+    　· 种子按 **prod 实际**补齐（只增不删；旧 staging 值保留供老缓存兜底）。
+    　**验证**：`t91` 扩到 **7 例**——⒜任何名单都没有的 `brand_new_x`／`some-brand-2026` ⇒ **接受并写入**（旧行为＝静默拒写）⒝补齐 fetch **抛错**时仍按形态接受并切换 ⒞脏形态（空格/中文/超长/`-abc`）仍拒写 ＋ 线上一致性与接线守卫；**变异自证 2 项**：⒜`isAdmissibleBrandCode` 退回「名单硬拦」⇒ **1 failed**（层2 事故复现）⒝去掉首页离线补齐注入 ⇒ **1 failed**；均还原即绿。
+    　**门禁与产物**：全量 vitest **824 passed / 3 skipped**；type-check exit 0；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261019-737f630-scanfix2/`（双端＋zip，675 文件；地址命中 0／抖音敏感词 0／AppID 正确／两端含 prod 种子码与 `application/brand-allowlist.js`）。
+    　**★验收（干净环境，最终口径）**：清缓存（`lm.brands.v1` 空）→ 扫 **`xiaochen`／`qiyue`** ⇒ **必落**；扫 `lanmei` 回归；**冷启动与热启动都验**；另验「**编一个不存在的合法编码**」场景不崩（后端回落、页面不空白）。
+    　**层1 去留结论**：**保留**（App 级 onShow 消费是正确结构、覆盖真实热启动场景），但**不作为根因主因**写入本条；验收重点在层2。
+
+    **⑫独立 CR 结论与收口（2026-10-19 task-73）**
+    　**CR：总体 PASS、无阻塞**；前提＝先修 3 项高优先（假绿风险）＋ 主人真机回执 ＋ `Compat: tested=wx`。三项已全部修完：
+    　· **S1（t73 假绿）**：该用例标题仍写「数字脏值⇒不带头」而断言已改 `lan mei` ⇒ **实际没测纯数字路径**。已补 `isAdmissibleBrandCode("74") === true` ＋ `sendAndGetBrandHeader("74") === "74"`（纯数字形态合法 ⇒ **不再被前端拦掉，靠后端回落兜底**），并把标题改为真实口径「**形态非法 ⇒ 不带；形态合法（含纯数字/未知编码）⇒ 带出（后端回落兜底）**」。
+    　· **S2（t90 mock 比生产严）**：mock 正则比生产 `SHAPE_RE` 更严＋注释语义失真。已改 mock 直接用生产 `isBrandCodeShape(id)`，注释改为「纯数字形态合法（历史数字脏值改由后端回落兜底）」，并把该用例场景改为**形态非法**（`lan mei`）另加**纯数字 74 应切换**的正向断言。
+    　· **S3（index.vue 裸 decode）**：`decodeURIComponent` 未包 try ⇒ 畸形 `%` 会抛穿。已改用 `domain/enter-brand.ts::normalizeScene`（内建容错）。
+    　· **顺手清理**：⒈删除零调用死代码 `isAcceptableBrandCode`／`isListedOrShapedBrandCode`（准入统一为 `isAdmissibleBrandCode`，deviations 旧名表述亦已统一）⒉`App.vue` 的 `void resolveRuntimeEnvironment`＋其 import 删除（确认空转）⒊`versioned.ts::loadBrandId` 未使用的 `const known` 删除，log 文案同步改为「形态非法（loadBrandId 清理存量脏值）」。
+    　· **追加（CR 疑问 ⒜ 的处置）**：`PLATFORM`（平台占位品牌）扫码落地 ⇒ **视为「无品牌上下文」不切换商户**（`enter-brand.ts` 新增 `PLATFORM_BRAND_CODE`，整串与 kv 两种形态都过滤），理由：brandHub 本就把它当超管占位过滤；若写入上下文会让全站请求都带 `X-Brand-Id: PLATFORM`（后端虽回落 200，但语义应为平台范围＝无品牌头）。已加单测（`t91` ④b）。
+    　**CR 已实测确认（不必再验）**：prod 上 `X-Brand-Id: 74` 与 `nonexistent_brand_zzz` 打 `/api/shops` 均 **200 且字节与「无头」完全一致**、page-config 非 64B ⇒ **放宽不会复现 10-13 整站空白** ✓
+    　**门禁与产物**：全量 vitest **825 passed / 3 skipped**；type-check exit 0；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261019-737f630-scanfix3/`（双端＋zip，675 文件；地址命中 0／抖音敏感词 0／AppID 正确）。**仍未提交**（等 CR 复核后统一提交）。

@@ -17,8 +17,9 @@
 const SHAPE_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 
 /**
- * 平台已知商家编码**离线种子**（2026-10-13 对照 https://crazyma99.xyz/api/brands 实测 9 条；仅作兜底，
- * 运行时以品牌馆拉到的实时列表为准）。新增商家后无需改这里——`rememberBrandCodes` 会并入实时列表。
+ * 平台已知商家编码**离线种子**（**仅为离线兜底/提示，不再作为准入闸门**）。
+ * ⚠️ 取样教训：最初 9 条是 **2026-10-13 对照 staging(crazyma99.xyz)** 取的，而 **prod(lanmei66.cloud)** 商户与之完全不同
+ * ⇒ 静态名单按错误环境取样注定失效（线上 P0 层2）。2026-10-19 已按 **prod 实际**补齐（只增不删，旧值保留供老缓存兜底）。
  */
 export const KNOWN_BRAND_CODES_SEED: readonly string[] = [
   "lanmei",
@@ -30,6 +31,14 @@ export const KNOWN_BRAND_CODES_SEED: readonly string[] = [
   "nj-qiyue-qipao",
   "dd985",
   "dd985-2",
+  // ⭐2026-10-19（task-71 层2）：**按线上 prod `/api/brands` 实测补齐（只增不删**——删旧值可能影响老用户缓存）。
+  // 线上实测 9 条：Here_Stadio / PLATFORM / chayu / huahua / huajianjiu / lanmei / qiyue / shiyue / xiaochen。
+  "Here_Stadio",
+  "PLATFORM",
+  "huajianjiu",
+  "qiyue",
+  "shiyue",
+  "xiaochen",
 ];
 
 /** 运行期已知编码（品牌馆拉取后写入；模块级，供无 storage 的一侧——如 http client——同步校验复用） */
@@ -62,6 +71,21 @@ export function isKnownBrandCode(value: unknown, extra?: readonly string[] | nul
   if (runtimeKnown.has(v)) return true;
   return Array.isArray(extra) ? extra.includes(v) : false;
 }
+
+/**
+ * ⭐2026-10-19（task-72 架构纠偏）**唯一准入闸门＝形态校验**（`SHAPE_RE`）；**名单不再阻断切换**。
+ *
+ * 为什么取消「命中名单」硬拦：**按环境取样的静态名单注定滞后**——旧种子是 2026-10-13 对照 **staging**(crazyma99.xyz)
+ * 取样（`123323/123456789/jiandan/nj-qiyue-qipao/dd985/dd985-2`），而 **prod**(lanmei66.cloud) 的商户与之完全不同
+ * （`Here_Stadio/PLATFORM/huajianjiu/qiyue/shiyue/xiaochen`）⇒ 名单当闸门时，线上新商户扫码被**静默拒写**、冷热启动都切不过去（线上 P0）。
+ * 现在：形态合法即写入上下文 → **后端容错兜底**（`d13654f` 对无效 `X-Brand-Id` 回落 shopId／App-Code，不再 500）；
+ * 名单（离线种子 ∪ runtime ∪ `lm.brands.v1`）**降级为离线兜底与提示**（品牌馆展示、失败可读提示），不再作为准入。
+ * 脏值防线仍在：**形态非法**（含空格/中文/超长/以 `-` 开头等）一律拒写；发送前同样二次形态校验并记录。
+ */
+export function isAdmissibleBrandCode(value: unknown): value is string {
+  return isBrandCodeShape(value);
+}
+
 
 /** 一次性日志去重表（同一 原值+理由 只打一次，避免每请求刷屏） */
 const warned = new Set<string>();

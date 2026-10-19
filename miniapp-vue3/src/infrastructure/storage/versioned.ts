@@ -4,7 +4,12 @@
 import type { Platform } from "../../ports/context";
 import type { StoragePort } from "../../ports/storage";
 import type { Session } from "../http/client";
-import { isKnownBrandCode, rememberKnownBrandCodes, warnBrandCodeRejected } from "../../domain/brand-code";
+import {
+  isAdmissibleBrandCode,
+  isKnownBrandCode,
+  rememberKnownBrandCodes,
+  warnBrandCodeRejected,
+} from "../../domain/brand-code";
 
 const K_SESSION = "lm.session.v1";
 const K_BRAND = "lm.brand.v1";
@@ -122,13 +127,12 @@ export function createVersionedStorage(deps: {
    * 否则老用户会被历史脏值长期锁死（后端对已存在的品牌头不回落，直接 500「品牌不存在或已停用」⇒ 整站空白）。
    */
   function loadBrandId(): string | null {
-    const known = loadKnownBrandCodes();
     const fresh = deps.backend.get(K_BRAND);
     const hasFresh = fresh != null && fresh.length > 0;
     const raw = hasFresh ? (fresh as string) : deps.backend.get(LEGACY_BRAND);
     if (raw == null || raw === "") return null;
-    if (!isKnownBrandCode(raw, known)) {
-      warnBrandCodeRejected(raw, "非已知商家编码（loadBrandId）");
+    if (!isAdmissibleBrandCode(raw)) { // ⭐task-72：形态即准入；名单仅离线兜底
+      warnBrandCodeRejected(raw, "形态非法（loadBrandId 清理存量脏值）");
       // 存量脏值清理：新键必清；旧键仅在值相同时清（避免误删他处写入）
       deps.backend.remove(K_BRAND);
       if (deps.backend.get(LEGACY_BRAND) === raw) deps.backend.remove(LEGACY_BRAND);
@@ -140,9 +144,13 @@ export function createVersionedStorage(deps: {
 
   /** 仅接受已知商家编码：非法值不写入（保留既有合法值），并打一次性日志 */
   function saveBrandId(id: string): void {
-    if (!isKnownBrandCode(id, loadKnownBrandCodes())) {
-      warnBrandCodeRejected(id, "saveBrandId 拒写非已知商家编码");
+    if (!isAdmissibleBrandCode(id)) { // ⭐task-72：形态即准入
+      warnBrandCodeRejected(id, "saveBrandId 拒写：形态非法");
       return;
+    }
+    if (!isKnownBrandCode(id, loadKnownBrandCodes())) {
+      // 名单未命中：**只提示、不拦**（离线兜底用途；后端对无效品牌头会回落，见 d13654f）
+      console.warn("[brand] 已按形态写入（未命中离线名单，后端容错兜底）:", id);
     }
     deps.backend.set(K_BRAND, id);
   }
