@@ -24,9 +24,9 @@ export interface VersionedStorage {
   saveSession(session: Session): void;
   /** 只清新键；旧键验证期间一律保留 */
   clearSession(): void;
-  /** 品牌上下文（**商家编码**）；非法/未知值返回 null 并清理存量脏值（2026-10-13 事故修复） */
+  /** 品牌上下文（**商家编码**）；**形态即准入**（名单仅离线兜底）；形态非法返回 null 并清理存量脏值 */
   loadBrandId(): string | null;
-  /** 仅接受**已知商家编码**；非法值**不写入**（保留既有合法值） */
+  /** **形态即准入**（不再按名单拦；名单仅离线兜底与提示）；**形态非法不写入**（保留既有值） */
   saveBrandId(id: string): void;
   /** 已知商家编码缓存（品牌馆拉到 /api/brands 后并入，供离线/首启兜底） */
   loadKnownBrandCodes(): string[];
@@ -123,8 +123,8 @@ export function createVersionedStorage(deps: {
   }
 
   /**
-   * 品牌上下文＝**商家编码**（2026-10-13 事故修复）：读到非法/未知值一律**视为无品牌**并**清理存量脏值**，
-   * 否则老用户会被历史脏值长期锁死（后端对已存在的品牌头不回落，直接 500「品牌不存在或已停用」⇒ 整站空白）。
+   * 品牌上下文＝**商家编码**：**形态即准入**（2026-10-19 起；名单降级为离线兜底）；
+   * 形态非法（含 `wxfile://`、空格、超长等）一律**视为无品牌**并**清理存量脏值**（历史脏值不再锁死用户）。
    */
   function loadBrandId(): string | null {
     const fresh = deps.backend.get(K_BRAND);
@@ -142,7 +142,7 @@ export function createVersionedStorage(deps: {
     return raw;
   }
 
-  /** 仅接受已知商家编码：非法值不写入（保留既有合法值），并打一次性日志 */
+  /** **形态即准入**；未命中离线名单只记日志、不拦截（后端对无效品牌头回落，见 d13654f） */
   function saveBrandId(id: string): void {
     if (!isAdmissibleBrandCode(id)) { // ⭐task-72：形态即准入
       warnBrandCodeRejected(id, "saveBrandId 拒写：形态非法");

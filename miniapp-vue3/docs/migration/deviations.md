@@ -402,11 +402,11 @@
     　旧离线种子 9 条里只有 3 条与线上重合 ⇒ **6 个线上商户不在种子**。机制：`saveBrandId` 只接受 `isKnownBrandCode`（命中 种子∪runtime∪lm.brands.v1），
     　新用户 `lm.brands.v1` 为空且未进过品牌馆 ⇒ 扫那 6 个商户 **静默拒写** ⇒ 冷热启动都切不过去（扫 lanmei/huahua/chayu 能进正因在种子）。
     　**修法三层**：
-    　⒜ **判定放宽**（`domain/brand-code.ts::isAcceptableBrandCode`）＝**命中已知列表 ∪ 形态合法**；`versioned.saveBrandId/loadBrandId` 与 `http/client.ts` 品牌头闸统一改用它。
+    　⒜ **判定放宽**（`domain/brand-code.ts::isAdmissibleBrandCode`）＝**命中已知列表 ∪ 形态合法**；`versioned.saveBrandId/loadBrandId` 与 `http/client.ts` 品牌头闸统一改用它。
     　　**取舍（已在代码注释与本条写清）**：后端 `d13654f` 起对**无效 `X-Brand-Id` 会回落**（shopId／App-Code），不再 500 ⇒ 「硬拦未知编码」收益消失、代价致命（新商户静默不可达）；非形态（`wxfile://`、含空格、超长等）仍拒收、仍清存量脏值。
     　⒝ **种子按线上补齐（只增不删）**：`KNOWN_BRAND_CODES_SEED` 追加 `Here_Stadio／PLATFORM／huajianjiu／qiyue／shiyue／xiaochen`（旧 6 条历史值保留，避免老用户缓存失效）。
     　⒞ **后台补齐已知列表**（`application/brand-allowlist.ts::refreshKnownBrandCodesOnce`）：解析出的编码不在已知列表时，后台拉一次 `GET /api/brands` ⇒ `rememberBrandCodes()`；**一次/会话、5s 超时、失败静默且不重试（防风暴）、不阻塞首屏**（先按形态兜底立即切换，补齐只惠及后续会话）；`application/enter-brand-sync.ts::syncBrandFromEnterOptionsAsync` 承载该顺序，首页注入 `brandRepo.getBrands`。
-    　**验证**：新增 `tests/unit/t91-brand-list-fill.spec.ts`（6 例：线上 9 码全在种子且旧值不删／**干净环境 `lm.brands.v1` 为空时种子外商户可写入**／补齐一次成功即封盘、失败不重试／fetch 永不返回时切换仍即时完成／接线守卫）；**变异自证 2 项**：⒜去掉首页 `refreshBrandCodes` 注入 ⇒ 1 failed ⒝`isAcceptableBrandCode` 退回「严格列表命中」⇒ 1 failed（**正是层2 事故复现**）；均还原即绿。既有 `t73`（原品牌闸 spec）按新口径更新（形态非法仍拒／形态合法接受）。
+    　**验证**：新增 `tests/unit/t91-brand-list-fill.spec.ts`（6 例：线上 9 码全在种子且旧值不删／**干净环境 `lm.brands.v1` 为空时种子外商户可写入**／补齐一次成功即封盘、失败不重试／fetch 永不返回时切换仍即时完成／接线守卫）；**变异自证 2 项**：⒜去掉首页 `refreshBrandCodes` 注入 ⇒ 1 failed ⒝`isAdmissibleBrandCode` 退回「严格列表命中」⇒ 1 failed（**正是层2 事故复现**）；均还原即绿。既有 `t73`（原品牌闸 spec）按新口径更新（形态非法仍拒／形态合法接受）。
     　**门禁与产物**：全量 vitest **823 passed / 3 skipped**；type-check exit 0；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261019-737f630-scanfix2/`（双端＋zip，675 文件；地址命中 0／抖音敏感词 0／AppID 正确／两端含 `application/brand-allowlist.js` 与种子新码）。
     　**★验收口径（更新，最关键）**：**干净环境**（首次安装或清缓存 ⇒ `lm.brands.v1` 为空）扫码进**不在旧种子的商户**（如 `xiaochen`／`qiyue`）⇒ **必须落该商户**；**冷启动与热启动都要验**（冷启动直接复现主人现象）；再用种子内 `lanmei` 做回归。**开发者工具冷启动不算**（工具每次冷启动必走 onLoad，热启动层1 复现不了）。
 
@@ -432,7 +432,17 @@
     　· **S1（t73 假绿）**：该用例标题仍写「数字脏值⇒不带头」而断言已改 `lan mei` ⇒ **实际没测纯数字路径**。已补 `isAdmissibleBrandCode("74") === true` ＋ `sendAndGetBrandHeader("74") === "74"`（纯数字形态合法 ⇒ **不再被前端拦掉，靠后端回落兜底**），并把标题改为真实口径「**形态非法 ⇒ 不带；形态合法（含纯数字/未知编码）⇒ 带出（后端回落兜底）**」。
     　· **S2（t90 mock 比生产严）**：mock 正则比生产 `SHAPE_RE` 更严＋注释语义失真。已改 mock 直接用生产 `isBrandCodeShape(id)`，注释改为「纯数字形态合法（历史数字脏值改由后端回落兜底）」，并把该用例场景改为**形态非法**（`lan mei`）另加**纯数字 74 应切换**的正向断言。
     　· **S3（index.vue 裸 decode）**：`decodeURIComponent` 未包 try ⇒ 畸形 `%` 会抛穿。已改用 `domain/enter-brand.ts::normalizeScene`（内建容错）。
-    　· **顺手清理**：⒈删除零调用死代码 `isAcceptableBrandCode`／`isListedOrShapedBrandCode`（准入统一为 `isAdmissibleBrandCode`，deviations 旧名表述亦已统一）⒉`App.vue` 的 `void resolveRuntimeEnvironment`＋其 import 删除（确认空转）⒊`versioned.ts::loadBrandId` 未使用的 `const known` 删除，log 文案同步改为「形态非法（loadBrandId 清理存量脏值）」。
+    　· **顺手清理**：⒈删除零调用死代码 `isAdmissibleBrandCode`／`isAdmissibleBrandCode`（准入统一为 `isAdmissibleBrandCode`，deviations 旧名表述亦已统一）⒉`App.vue` 的 `void resolveRuntimeEnvironment`＋其 import 删除（确认空转）⒊`versioned.ts::loadBrandId` 未使用的 `const known` 删除，log 文案同步改为「形态非法（loadBrandId 清理存量脏值）」。
     　· **追加（CR 疑问 ⒜ 的处置）**：`PLATFORM`（平台占位品牌）扫码落地 ⇒ **视为「无品牌上下文」不切换商户**（`enter-brand.ts` 新增 `PLATFORM_BRAND_CODE`，整串与 kv 两种形态都过滤），理由：brandHub 本就把它当超管占位过滤；若写入上下文会让全站请求都带 `X-Brand-Id: PLATFORM`（后端虽回落 200，但语义应为平台范围＝无品牌头）。已加单测（`t91` ④b）。
     　**CR 已实测确认（不必再验）**：prod 上 `X-Brand-Id: 74` 与 `nonexistent_brand_zzz` 打 `/api/shops` 均 **200 且字节与「无头」完全一致**、page-config 非 64B ⇒ **放宽不会复现 10-13 整站空白** ✓
     　**门禁与产物**：全量 vitest **825 passed / 3 skipped**；type-check exit 0；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261019-737f630-scanfix3/`（双端＋zip，675 文件；地址命中 0／抖音敏感词 0／AppID 正确）。**仍未提交**（等 CR 复核后统一提交）。
+
+    **⑬round-2 CR 收口（2026-10-19 task-74）：进参消费幂等（必修）＋ 六项零行为清理**
+    　**CR 结论**：PASS、无阻塞；`50562e4` 的 S1/S2/S3/S5/S6 与疑问⒜ 均 PASS。
+    　**⭐必修1（功能性回归，阻塞发版）：粘滞 enter options 会把「用户手选品牌」打回** —— 证据：`index.vue`／`App.vue` 每次 onShow 都消费，而编排器只比 `current`、不判断「是否新进入事件」⇒ 场景「扫 A → 品牌馆手选 B → 回前台（容器仍返回 scene=A）」会把 B **写回 A 并重载**。
+    　**修法（合成两法）**：`enter-brand-sync.ts` 新增**进参摘要**（`scene|queryBrandId`）与**已消费摘要**记录 ⇒ **同一摘要不再消费**（幂等）；冷启动（模块状态重置）或摘要变化才消费；保留既有「与 current 不同才切换」。⇒ 手选品牌后回前台**不再被打回**。
+    　**单测（新增 3 例，`t90` ⑤）**：①扫 A 消费一次 → `stored=B`（模拟品牌馆手选）→ 再触发 onShow（同 scene=A）⇒ **保持 B、不 bumpScope、不重载**②scene 真变化（A→C）⇒ 正常切换且新摘要只消费一次③无进参（普通回前台）不受影响。**变异自证**：去掉幂等判断 ⇒ `t90` **1 failed/10**，还原即绿。
+    　**零行为清理（CR 建议 3/4/5/6/7）**：⒈`t73` 头注释与用例标题改为现状口径（后端 `d13654f` 回落不 500；名单函数 false 但**准入按形态**）⒉`versioned.ts` 三处 JSDoc 改为「形态即准入；名单仅离线兜底」⒊本文档内旧的准入函数名（见 git 历史）**全部统一为 `isAdmissibleBrandCode`**（3 处）⒋删除零调用死代码 `looksLikeNumericShopId`（与 S4 口径冲突且无单测）⒌`PLATFORM` 过滤改为**大小写不敏感**（`platform`/`Platform` 亦过滤，含 kv 形态；已补单测）⒍`priceHomePage` 的 onShow 也消费一次编排器（幂等安全，避免 App.onShow 晚于页面 onShow 漏刷一帧）＋`t90` harness 删去无用的 `acceptSave`。
+    　**⭐Compat trailer 口径更正（重要）**：上一笔 `50562e4` 写 `platform-api=no` 有误——本次新增了 `platform/uni/enter-options.ts`（容器 API 调用）⇒ **本笔应写 `platform-api=yes(platform/** 内)`**（与先例 `9f18878` 一致）；**以本笔为准**。
+    　**⚠️ 待真机**：**抖音端 `getEnterOptionsSync` 的可用性未验证**（仅单测+静态层：`typeof` 守卫＋try/catch，缺失/异常一律 fail-soft 返回空）⇒ 若抖音宿主不提供该 API，则**层1 修复在抖音端为惰性、层2（形态即准入）仍解决本次 P0**；提交 trailer 按 `tested=wx` 写，抖音端另行真机确认。
+    　**门禁与产物**：全量 vitest **828 passed / 3 skipped**；type-check exit 0；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261019-737f630-scanfix4/`（双端＋zip，675 文件；地址命中 0／抖音敏感词 0／AppID 正确／两端含 `application/enter-brand-sync.js`（幂等）与 `domain/enter-brand.js`（PLATFORM 过滤））。

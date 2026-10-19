@@ -2,6 +2,13 @@
 
 > 记录小程序 C 端每次实质性改动，最新在上。多人合作提交前先补本文件（与代码同一提交）。
 
+## 2026-10-19 · round-2 CR 收口：进参消费幂等（防手选品牌被打回）＋ 零行为清理
+
+- **必修**：`enter-brand-sync.ts` 新增「进参摘要 + 已消费摘要」幂等 —— 同一份 enter options 只消费一次；**修掉「扫 A → 品牌馆手选 B → 回前台被打回 A」的功能回归**（新增 `t90` 3 例 + 变异自证 1 failed）。
+- 清理：`t73` 头注释/标题改现状口径；`versioned` JSDoc 三处改「形态即准入」；deviations 旧名 `isAcceptableBrandCode` 全改 `isAdmissibleBrandCode`；删死代码 `looksLikeNumericShopId`；`PLATFORM` 过滤改大小写不敏感（补单测）；`priceHomePage` onShow 也消费一次（幂等）；`t90` harness 去无用项。
+- **Compat trailer 更正**：`50562e4` 的 `platform-api=no` 有误（新增了 `platform/uni/enter-options.ts`）⇒ 本笔写 `platform-api=yes(platform/** 内)`，以本笔为准。
+- 门禁：vitest **828 passed**；type-check exit 0；三端构建 exit 0；产物 `lanmei-miniapp-20261019-737f630-scanfix4`（双端＋zip）。
+
 ## 2026-10-19 · 独立 CR 收口（P0 扫码切换）：3 项假绿修复 ＋ 清理
 
 - **S1** `t73` 补「纯数字 74 形态合法 ⇒ 接受并带出」断言并改正标题（旧标题与断言不符＝假绿）；**S2** `t90` mock 改用生产 `isBrandCodeShape`（原正则比生产严）；**S3** `index.vue` 裸 `decodeURIComponent` 改用 `normalizeScene`（畸形 `%` 不抛）。

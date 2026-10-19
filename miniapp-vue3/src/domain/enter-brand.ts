@@ -6,14 +6,6 @@
 
 export type EnterBrandSource = "scene" | "query" | "stored" | "none";
 
-/**
- * 扩展位（**本期不启用**）：将来「一店一码」可能让 scene 携带**纯数字 shopId**。
- * 现在 scene 只承载**商家编码**（后端 `GetUnlimitedQRCode` 原样透传 merchant.MerchantCode，纯编码如 lanmei／brand_one）；
- * 若届时出现纯数字，用它识别并走「先按 shopId 反查品牌」的另一条链路，**不得**当成商家编码写入（数字会被白名单拒）。
- */
-export function looksLikeNumericShopId(value: string): boolean {
-  return /^[0-9]+$/.test(value.trim());
-}
 
 export interface EnterBrandInput {
   /** 扫码参数（小程序码 query.scene，可含百分号编码） */
@@ -41,6 +33,11 @@ const KV_KEY_RE = /^(brand|brandId|bid|b)$/i;
 /** 平台管理占位品牌：扫码落地到它时应视为「无品牌上下文」（平台范围），不切换商户上下文 */
 export const PLATFORM_BRAND_CODE = "PLATFORM";
 
+/** 平台占位品牌判定（**大小写不敏感**：platform／Platform／PLATFORM 一律视为平台范围） */
+export function isPlatformBrandCode(value: string): boolean {
+  return value.trim().toUpperCase() === PLATFORM_BRAND_CODE;
+}
+
 export function normalizeScene(raw: string | null | undefined): string {
   let s = typeof raw === "string" ? raw.trim() : "";
   if (s === "") return "";
@@ -51,15 +48,15 @@ export function normalizeScene(raw: string | null | undefined): string {
   }
   if (s.includes("=")) {
     for (const seg of s.split("&")) {
-    const i = seg.indexOf("=");
+      const i = seg.indexOf("=");
       if (i <= 0) continue;
       const k = seg.slice(0, i).trim();
       const v = seg.slice(i + 1).trim();
-      if (KV_KEY_RE.test(k) && v !== "") return v === PLATFORM_BRAND_CODE ? "" : v; // kv 形态同样过滤平台占位品牌
+      if (KV_KEY_RE.test(k) && v !== "") return isPlatformBrandCode(v) ? "" : v; // kv 形态同样过滤（大小写不敏感）
     }
     return ""; // 是 kv 但无品牌键 ⇒ 视为无品牌参数
   }
-  return s === PLATFORM_BRAND_CODE ? "" : s;
+  return isPlatformBrandCode(s) ? "" : s;
 }
 
 /** 按优先级解析本次进入应使用的品牌；全部为空 ⇒ `{brandId:"", source:"none"}` */

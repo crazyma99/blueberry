@@ -58,9 +58,33 @@ export async function syncBrandFromEnterOptionsAsync(deps: EnterBrandSyncDeps): 
   return result;
 }
 
+/**
+ * ⭐2026-10-19（task-74 必修1）：**进参消费幂等**——同一份 enter options 只消费一次。
+ * 背景（round-2 CR 抓到的真回归）：容器在「切 tab／回前台」时可能**继续返回上一份 enter options**（粘滞），
+ * 若每次都消费 ⇒ 用户在品牌馆手选 B 后回前台会被写回扫码的 A（且 init 重载）⇒ **打回用户手选品牌**。
+ * 口径：摘要＝scene|queryBrandId；**同一摘要不再消费**；冷启动（模块状态重置）或摘要变化才消费。
+ */
+let consumedEnterDigest: string | null = null;
+
+/** 仅供测试复位「已消费摘要」 */
+export function __resetEnterBrandConsumption(): void {
+  consumedEnterDigest = null;
+}
+
+function digestOfEnter(enter: { scene: string; queryBrandId: string }): string {
+  const scene = typeof enter.scene === "string" ? enter.scene : "";
+  const query = typeof enter.queryBrandId === "string" ? enter.queryBrandId : "";
+  return scene === "" && query === "" ? "" : scene + "|" + query;
+}
+
 export function syncBrandFromEnterOptions(deps: EnterBrandSyncDeps): EnterBrandSyncResult {
   const enter = deps.readEnterOptions();
   const current = deps.loadBrandId() ?? "";
+  const digest = digestOfEnter(enter);
+  // ⭐幂等：**同一份进参只消费一次**（防「粘滞 enter options」把手选品牌打回）
+  if (digest !== "" && digest === consumedEnterDigest) {
+    return { changed: false, brandId: current, source: "none" };
+  }
   const resolved = resolveEnterBrand({
     scene: enter.scene,
     queryBrandId: enter.queryBrandId,
@@ -70,6 +94,8 @@ export function syncBrandFromEnterOptions(deps: EnterBrandSyncDeps): EnterBrandS
   if (resolved.source === "stored" || resolved.source === "none") {
     return { changed: false, brandId: current, source: resolved.source };
   }
+  // 标记「已消费该摘要」：无论是否发生切换，此后同一份进参都不再处理
+  consumedEnterDigest = digest;
   // 与当前相同 ⇒ **零动作**（防抖：每次回前台不重载）
   if (resolved.brandId === current) {
     return { changed: false, brandId: current, source: resolved.source };

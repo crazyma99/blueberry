@@ -12,6 +12,8 @@
 import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
+import { syncBrandFromEnterOptionsAsync } from "../../application/enter-brand-sync";
+import { readEnterOptions } from "../../platform/uni/enter-options";
 import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import { isPlatform } from "../../ports/context";
@@ -155,6 +157,13 @@ onLoad(() => {
 
 onShow(() => {
   // ①tab 选中同步（本页下标 1）②品牌切换后重载：否则仍显示上一品牌门店（旧端 :49-52）
+  // ③⭐task-74：本页也消费一次进参（幂等、与 App 级共用同一编排器）——避免 App.onShow 晚于页面 onShow 时漏刷一帧
+  void syncBrandFromEnterOptionsAsync({
+    readEnterOptions,
+    loadBrandId: () => versioned.loadBrandId(),
+    saveBrandId: (id) => versioned.saveBrandId(id),
+    bumpScope: () => ctxFactory.bumpScope(),
+  });
   syncTabBarSelected(1);
   const brandId = versioned.loadBrandId();
   if (brandId !== lastBrandId.value) {

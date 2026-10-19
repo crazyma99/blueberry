@@ -7,10 +7,11 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { syncBrandFromEnterOptions } from "../../src/application/enter-brand-sync";
 import { isBrandCodeShape } from "../../src/domain/brand-code";
+import { __resetEnterBrandConsumption } from "../../src/application/enter-brand-sync";
 
 const root = resolve(__dirname, "../..");
 
-function harness(opts: { stored: string; enter?: { scene: string; queryBrandId: string }; acceptSave?: boolean }) {
+function harness(opts: { stored: string; enter?: { scene: string; queryBrandId: string } }) {
   let stored = opts.stored;
   const calls: string[] = [];
   const deps = {
@@ -19,14 +20,49 @@ function harness(opts: { stored: string; enter?: { scene: string; queryBrandId: 
     saveBrandId: (id: string) => {
       calls.push("save:" + id);
       // 与生产同口径：**形态即准入**（isBrandCodeShape，允许大写/数字/下划线），不按名单拦
-      const accept = opts.acceptSave !== false;
-      if (accept && isBrandCodeShape(id)) stored = id;
+      if (isBrandCodeShape(id)) stored = id;
     },
     bumpScope: () => calls.push("bump"),
     onChanged: (b: string) => calls.push("changed:" + b),
   };
-  return { deps, calls, current: () => stored };
+  return { deps, calls, current: () => stored, setStored: (v: string) => void (stored = v) };
 }
+
+describe("t90 · ⑤⭐粘滞进参不得覆盖「用户手选品牌」（2026-10-19 task-74 必修1）", () => {
+  it("⭐扫 A 消费一次 → 品牌馆手选 B → 回前台（容器仍返回 scene=A）⇒ 保持 B、不 bumpScope、不重载", () => {
+    __resetEnterBrandConsumption();
+    const h = harness({ stored: "lanmei", enter: { scene: "brand-a", queryBrandId: "" } });
+    expect(syncBrandFromEnterOptions(h.deps).changed).toBe(true); // 扫 A 生效
+    h.setStored("brand-b"); // 模拟品牌馆手选 B（brandHub:126）
+    h.calls.length = 0;
+    const r = syncBrandFromEnterOptions(h.deps); // 回前台：**同一份粘滞进参**
+    expect(r.changed).toBe(false); // 幂等：不再消费同一摘要
+    expect(r.brandId).toBe("brand-b");
+    expect(h.current(), "手选 B 不得被打回 A").toBe("brand-b");
+    expect(h.calls, "不得 bumpScope/不得触发重载回调").toEqual([]);
+  });
+
+  it("⭐进参真变化（A→C）⇒ 正常切换；且变化后新摘要只消费一次", () => {
+    __resetEnterBrandConsumption();
+    const h = harness({ stored: "lanmei", enter: { scene: "brand-a", queryBrandId: "" } });
+    void syncBrandFromEnterOptions(h.deps);
+    h.calls.length = 0;
+    h.deps.readEnterOptions = () => ({ scene: "brand-c", queryBrandId: "" });
+    const r = syncBrandFromEnterOptions(h.deps);
+    expect(r).toEqual({ changed: true, brandId: "brand-c", source: "scene" });
+    expect(h.current()).toBe("brand-c");
+    h.calls.length = 0;
+    expect(syncBrandFromEnterOptions(h.deps).changed).toBe(false); // 同摘要第二次 ⇒ 零动作
+    expect(h.calls).toEqual([]);
+  });
+
+  it("⭐无进参（普通回前台）不受幂等影响：仍零动作、无需摘要", () => {
+    __resetEnterBrandConsumption();
+    const h = harness({ stored: "lanmei" });
+    expect(syncBrandFromEnterOptions(h.deps)).toEqual({ changed: false, brandId: "lanmei", source: "stored" });
+    expect(h.calls).toEqual([]);
+  });
+});
 
 describe("t90 · ①扫码/卡片参数变化 ⇒ 写上下文 + bumpScope + onChanged（热启动修复核心）", () => {
   it("⭐扫 A 后再扫 B（记忆=A、本次=B）⇒ 切到 B 并 bumpScope；来源＝scene", () => {

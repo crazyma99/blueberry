@@ -146,6 +146,10 @@ describe("t91 · ④b PLATFORM（平台占位品牌）⇒ 视为「无品牌上�
   it("⭐normalizeScene(PLATFORM)=\"\"；resolveEnterBrand 回落到下一优先级", () => {
     expect(normalizeScene("PLATFORM")).toBe("");
     expect(normalizeScene("brand%3DPLATFORM")).toBe(""); // kv 形态同样过滤
+    // 大小写不敏感（task-74 清理 5）
+    expect(normalizeScene("platform")).toBe("");
+    expect(normalizeScene("Platform")).toBe("");
+    expect(normalizeScene("brand%3Dplatform")).toBe("");
     expect(resolveEnterBrand({ scene: "PLATFORM", queryBrandId: "", storedBrandId: "lanmei" })).toEqual({
       brandId: "lanmei",
       source: "stored",
