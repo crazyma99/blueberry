@@ -46,7 +46,7 @@ function onTap(): void {
 }
 .booking-entry-text {
   font-size: 20rpx;
-  color: #F1CD91;
+  color: $color-action;
   letter-spacing: 1rpx;
 }
 </style>

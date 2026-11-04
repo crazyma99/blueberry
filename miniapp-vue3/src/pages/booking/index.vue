@@ -26,6 +26,7 @@ import { createLoadSlotsUseCase, createSubmitBookingUseCase } from "../../applic
 import { createUserInfoStore } from "../../application/user-info-store";
 import { createPhoneLoginFlow } from "../../application/login-flow";
 import { toast as nativeToast, showLoading, hideLoading } from "../../platform/uni/feedback";
+import { hapticTap } from "../../application/haptics";
 import {
   GUEST_COUNT_MAX,
   GUEST_COUNT_MIN,
@@ -36,7 +37,6 @@ import {
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
-import BaseButton from "../../ui/BaseButton.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 
 // —— 装配（同 demoDetail/mine：容器安全回落；登录占位不假装成功）——
@@ -147,6 +147,11 @@ async function loadSlotsForSelectedDate(): Promise<void> {
   slots.value = r.value.slots ?? [];
 }
 
+function onRetrySlots(): void {
+  hapticTap();
+  void loadSlotsForSelectedDate();
+}
+
 function onPickDate(index: number): void {
   if (index === selectedDateIndex.value) return;
   selectedDateIndex.value = index;
@@ -207,6 +212,13 @@ function goBack(): void {
 }
 
 // —— 提交 ——
+/** 提交按钮点击：触感反馈（原 BaseButton 门面自带，换原生 view 后在页面补）→ 提交；提交中忙态直接忽略 */
+function onSubmitTap(): void {
+  if (submitting.value) return;
+  hapticTap();
+  void doSubmit();
+}
+
 async function doSubmit(): Promise<void> {
   if (submitting.value) return;
   if (selectedSlotId.value == null) {
@@ -311,6 +323,7 @@ async function onGetPhoneNumber(e: unknown): Promise<void> {
 }
 
 function goMyBookings(): void {
+  hapticTap();
   if (typeof uni !== "undefined" && typeof uni.redirectTo === "function") {
     uni.redirectTo({ url: "/pages/myBookings/index" });
   }
@@ -336,7 +349,9 @@ function goMyBookings(): void {
       <view class="success-wrap">
         <view class="success-title font-noto-serif">预约已提交</view>
         <view class="success-desc">预约已提交，等待门店确认。可在「我的预约」查看进度</view>
-        <BaseButton label="查看我的预约" block @click="goMyBookings" />
+        <view class="btn-primary success-btn my-bookings-btn" hover-class="press-dim" @click="goMyBookings">
+          <text>查看我的预约</text>
+        </view>
         <view class="success-back" hover-class="press-dim" @click="goBack">返回</view>
       </view>
     </template>
@@ -365,7 +380,9 @@ function goMyBookings(): void {
         </view>
         <view v-else-if="slotsError !== null" class="slot-error">
           <text class="slot-error-text">{{ slotsError }}</text>
-          <BaseButton label="重试" size="small" @click="loadSlotsForSelectedDate" />
+          <view class="btn-secondary retry-btn" hover-class="press-dim" @click="onRetrySlots">
+            <text>重试</text>
+          </view>
         </view>
         <view v-else-if="slots.length === 0" class="slot-empty">当日暂无可约时段</view>
         <view v-else class="slot-grid">
@@ -416,7 +433,13 @@ function goMyBookings(): void {
       </view>
 
       <view class="submit-bar">
-        <BaseButton label="提交预约" block :busy="submitting" @click="doSubmit" />
+        <view
+          :class="submitting ? 'btn-primary submit-btn is-busy' : 'btn-primary submit-btn'"
+          hover-class="press-dim"
+          @click="onSubmitTap"
+        >
+          <text>{{ submitting ? "提交中..." : "提交预约" }}</text>
+        </view>
       </view>
     </template>
 
@@ -603,6 +626,19 @@ function goMyBookings(): void {
 }
 .submit-bar {
   margin: 40rpx 24rpx 0;
+}
+/* 主/次按钮外观来自 App.vue 全局 .btn-primary / .btn-secondary；本页只管宽度与忙态（不新造颜色） */
+.submit-btn,
+.success-btn {
+  width: 100%;
+  box-sizing: border-box;
+}
+.btn-primary.is-busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.retry-btn {
+  box-sizing: border-box;
 }
 .empty-state {
   flex: 1;

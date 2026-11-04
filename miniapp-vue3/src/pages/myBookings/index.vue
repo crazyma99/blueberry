@@ -24,9 +24,9 @@ import { describeBookingStatus, isCancellableStatus, type BookingStatus } from "
 import { createUserInfoStore } from "../../application/user-info-store";
 import { createPhoneLoginFlow } from "../../application/login-flow";
 import { toast as nativeToast, showLoading, hideLoading } from "../../platform/uni/feedback";
+import { hapticTap } from "../../application/haptics";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
-import BaseButton from "../../ui/BaseButton.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import BaseDialog from "../../ui/BaseDialog.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
@@ -123,6 +123,14 @@ async function reload(): Promise<void> {
 // —— 登录（空态「去登录」入口；与预约页同一套弹窗＋手机号登录流程）——
 const showLoginPopup = ref(false);
 const loginAgreementChecked = ref(false);
+function onLoginTap(): void {
+  hapticTap();
+  openLoginPopup();
+}
+function onRetryTap(): void {
+  hapticTap();
+  void reload();
+}
 function openLoginPopup(): void {
   showLoginPopup.value = true;
   void phoneLoginFlow.prefetchLoginCode();
@@ -279,13 +287,13 @@ async function onCancelTap(booking: BookingView): Promise<void> {
     <view v-else-if="needLogin" class="empty-state">
       <view class="empty-title">请先登录</view>
       <view class="empty-desc">登录后可查看您的预约记录</view>
-      <view class="empty-action"><BaseButton label="去登录" @click="openLoginPopup" /></view>
+      <view class="empty-action"><view class="btn-primary login-btn" hover-class="press-dim" @click="onLoginTap"><text>去登录</text></view></view>
     </view>
 
     <view v-else-if="vm.error.value !== null && vm.items.value.length === 0" class="empty-state">
       <view class="empty-title">加载失败</view>
       <view class="empty-desc">{{ vm.error.value }}</view>
-      <view class="empty-action"><BaseButton label="重试" @click="reload" /></view>
+      <view class="empty-action"><view class="btn-secondary retry-btn" hover-class="press-dim" @click="onRetryTap"><text>重试</text></view></view>
     </view>
 
     <view v-else-if="vm.items.value.length === 0" class="empty-state">
