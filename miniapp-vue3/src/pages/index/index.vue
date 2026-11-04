@@ -48,6 +48,8 @@ import {
   CONTACT_IM_ID_DEFAULT,
 } from "../../application/page-config-content";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
+// 到店预约入口（仅微信端渲染，平台门控收在组件内部——本页自身保持零条件编译，见 t86 守卫）
+import BookingEntry from "../../components/BookingEntry/BookingEntry.vue";
 import BaseButton from "../../ui/BaseButton.vue";
 // 2026-09-21 下拉刷新：指示器＝共享组件（内含门面 BaseLoading），5 页同源（业务视图零 wd-*，plan §26/§229）
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
@@ -463,6 +465,7 @@ onMounted(() => {
                   <text class="photo-card-name font-noto-serif">{{ shop.displayName }}</text>
                   <text class="photo-card-sub">{{ shop.displayNameEn }}</text>
                 </view>
+                <BookingEntry :shop-id="shop.id" :shop-name="shop.displayName" />
               </view>
               <!-- 占位卡：店铺数为奇数(≥3)时补全网格，不可点击（旧端 :90-95） -->
               <view v-if="showPlaceholder" class="photo-card photo-card-placeholder">

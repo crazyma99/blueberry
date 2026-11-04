@@ -128,6 +128,24 @@
 			}
 		},
 		// AI 闭环 6 页（T8/T9b）仅微信侧注册——2026-09-17 主人拍板「抖音不注册 AI 六页」
+		// 到店预约 MVP 两页（booking / myBookings）同口径仅微信注册（抖音/小红书不注册，入口亦不下发）
+		{
+			"path": "pages/booking/index",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "到店预约"
+			}
+		},
+		{
+			"path": "pages/myBookings/index",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "我的预约",
+				"enablePullDownRefresh": true,
+				"backgroundTextStyle": "light",
+				"onReachBottomDistance": 80
+			}
+		},
 		{
 			"path": "pages/aiRecommend/index",
 			"style": {

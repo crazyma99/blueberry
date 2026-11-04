@@ -435,6 +435,20 @@ function navigateToUrl(url: string): void {
   }
 }
 
+// 「我的预约」入口（到店预约 MVP；仅微信端）——模板行与跳转函数（含路径字面量）**都**在 `#ifdef MP-WEIXIN` 内，
+// 抖音/小红书不注册预约页，产物里不得残留 /pages/myBookings 字面量。
+// 与菜单项同口径：hapticTap＋未登录先弹登录窗（needLogin 守卫）
+// #ifdef MP-WEIXIN
+function goMyBookings(): void {
+  hapticTap();
+  if (!isLoggedIn.value) {
+    openLoginPopup();
+    return;
+  }
+  navigateToUrl("/pages/myBookings/index");
+}
+// #endif
+
 // 菜单点击（旧端 :449-465：hapticTap＋needLogin 守卫）
 function handleMenuClick(item: MenuItem): void {
   hapticTap();
@@ -486,6 +500,12 @@ function handleMenuClick(item: MenuItem): void {
           </view>
           <image class="menu-arrow" src="/static/iconpark/right.svg" mode="aspectFit"></image>
         </view>
+        <!-- #ifdef MP-WEIXIN -->
+        <view class="menu-row" hover-class="press-row" @click="goMyBookings">
+          <view class="menu-title font-noto-serif">我的预约</view>
+          <image class="menu-arrow" src="/static/iconpark/right.svg" mode="aspectFit"></image>
+        </view>
+        <!-- #endif -->
       </view>
       <view v-if="isLoggedIn" class="logout-spacer"></view>
       <view class="footer-space"></view>

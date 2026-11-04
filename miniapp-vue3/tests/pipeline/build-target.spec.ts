@@ -193,9 +193,10 @@ describe("P1-37 CR 回归（🔴1 条件编译保留／🔴2 期望集合按平�
   });
 
   // 2026-10-14 task-70：抖音端合规裁剪（底栏无价目表、两页不注册）⇒ 抖音业务页 11→9，期望路由 12→10
-  it("⭐expectedRoutes 按平台求值（不再恒等）：微信 18 ／ 抖音 10（9 业务＋探针）", () => {
+  // 2026-11 到店预约 MVP：微信端 +2 页（pages/booking、pages/myBookings，仅微信宏内注册）⇒ 微信 18→20；抖音不变
+  it("⭐expectedRoutes 按平台求值（不再恒等）：微信 20 ／ 抖音 10（9 业务＋探针）", () => {
     const t = realPagesText();
-    expect(expectedRoutesForPlatform(t, "mp-weixin").length).toBe(18);
+    expect(expectedRoutesForPlatform(t, "mp-weixin").length).toBe(20);
     const tt = expectedRoutesForPlatform(t, "mp-toutiao");
     expect(tt.length).toBe(10);
     expect(tt.some((r) => r.startsWith("pages/aiTryOn"))).toBe(false); // AI 六页仅在微信宏内

@@ -20,3 +20,11 @@ export {
   type AiTaskListItem,
   type AiTemplateBrief,
 } from "./ai";
+export {
+  createBookingRepository,
+  type BookingView,
+  type BookingListResult,
+  type CreateBookingParams,
+  type SlotView,
+  type SlotsResult,
+} from "./bookings";
