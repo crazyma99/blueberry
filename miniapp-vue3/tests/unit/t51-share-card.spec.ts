@@ -72,6 +72,7 @@ vi.mock("../../src/infrastructure/repositories/likes", () => ({
 import IndexPage from "../../src/pages/index/index.vue";
 import DemoDetailPage from "../../src/pages/demoDetail/index.vue";
 import TargetPhotoDetailPage from "../../src/pages/targetPhotoDetail/index.vue";
+import StubWdToast from "../stubs/wot/wd-toast/wd-toast.vue";
 
 const flush = () => new Promise((r) => setTimeout(r, 20));
 const ctx = { kind: "test" } as unknown as Parameters<ReturnType<typeof createShareCardResolver>["resolve"]>[1];
@@ -283,14 +284,13 @@ describe("相册列表/客片详情：朋友圈分享与缺参兜底（主人拍
 
   it("客片详情：缺 idx 时兜底（提示 + 回首页 tab），不再停在加载态", async () => {
     const reLaunch = vi.fn();
-    const showToast = vi.fn();
     // 本用例只需这两个平台调用（t51 其余用例的 uni 桩在各自体内建立）
-    (globalThis as { uni?: Record<string, unknown> }).uni = { ...(uniStub() ?? {}), reLaunch, showToast };
-    const w = mount(TargetPhotoDetailPage);
+    (globalThis as { uni?: Record<string, unknown> }).uni = { ...(uniStub() ?? {}), reLaunch };
+    const w = mount(TargetPhotoDetailPage, { global: { components: { "wd-toast": StubWdToast } } });
     h.onLoadCalls[h.onLoadCalls.length - 1]({});
     await new Promise((r) => setTimeout(r, 30));
     await w.vm.$nextTick();
-    expect(showToast).toHaveBeenCalled();
+    expect(w.find(".stub-wd-toast").text()).toContain("分享链接已失效"); // 统一 wot 轻提示
     expect(reLaunch).toHaveBeenCalledWith({ url: "/pages/index/index" });
   });
 });

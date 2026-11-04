@@ -3,6 +3,7 @@
 //        ②PLATFORM 占位品牌必须过滤 ③品牌持久化（写入 storage）＋切品牌作用域代次递增（缓存隔离）。
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import StubWdToast from "../stubs/wot/wd-toast/wd-toast.vue";
 
 const h = vi.hoisted(() => ({
   onLoadCalls: [] as Array<(o?: Record<string, unknown>) => void>,
@@ -18,7 +19,6 @@ const h = vi.hoisted(() => ({
   store: new Map<string, string>(),
   switchTabCalls: [] as Array<{ url: string }>,
   navigateBackCalls: 0,
-  toasts: [] as string[],
   // ⭐ 红线③：切品牌代次递增（缓存隔离）——经 request-context mock 观测
   bumpScopeCalls: 0,
   brandsFail: false,
@@ -83,7 +83,6 @@ beforeEach(() => {
   h.store.clear();
   h.switchTabCalls.length = 0;
   h.navigateBackCalls = 0;
-  h.toasts.length = 0;
   h.bumpScopeCalls = 0;
   h.brandsFail = false;
   (globalThis as { uni?: unknown }).uni = {
@@ -93,9 +92,6 @@ beforeEach(() => {
     },
     removeStorageSync: (k: string) => {
       h.store.delete(k);
-    },
-    showToast: (o: { title: string }) => {
-      h.toasts.push(o.title);
     },
     switchTab: (o: { url: string }) => {
       h.switchTabCalls.push(o);
@@ -108,7 +104,7 @@ beforeEach(() => {
 
 describe("pages/brandHub（T7 P2-20 品牌馆）", () => {
   it("开关开：经共享 page-config 仓储守卫 → 加载品牌；⭐PLATFORM 占位品牌被过滤", async () => {
-    const w = mount(BrandHubPage);
+    const w = mount(BrandHubPage, { global: { components: { "wd-toast": StubWdToast } } });
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
     await w.vm.$nextTick();
@@ -122,13 +118,13 @@ describe("pages/brandHub（T7 P2-20 品牌馆）", () => {
 
   it("⭐自守卫：开关关 → toast「该功能未开放」＋不加载品牌＋800ms 后 navigateBack", async () => {
     h.enabledMode = "off";
-    const w = mount(BrandHubPage);
+    const w = mount(BrandHubPage, { global: { components: { "wd-toast": StubWdToast } } });
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
     await w.vm.$nextTick();
     expect(h.pageConfigCalls).toBe(1);
     expect(h.brandCalls).toBe(0); // 不加载品牌列表（旧 :78-83）
-    expect(h.toasts).toContain("该功能未开放");
+    expect(w.find(".stub-wd-toast").text()).toContain("该功能未开放"); // 统一 wot 轻提示
     expect(h.navigateBackCalls).toBe(0);
     await new Promise((r) => setTimeout(r, 900));
     expect(h.navigateBackCalls).toBe(1);
@@ -136,17 +132,17 @@ describe("pages/brandHub（T7 P2-20 品牌馆）", () => {
 
   it("安全默认：开关查询失败也视为关闭（与首页入口同口径）", async () => {
     h.enabledMode = "fail";
-    const w = mount(BrandHubPage);
+    const w = mount(BrandHubPage, { global: { components: { "wd-toast": StubWdToast } } });
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
     expect(h.brandCalls).toBe(0);
-    expect(h.toasts).toContain("该功能未开放");
+    expect(w.find(".stub-wd-toast").text()).toContain("该功能未开放"); // 统一 wot 轻提示
     await new Promise((r) => setTimeout(r, 900));
     expect(h.navigateBackCalls).toBe(1);
   });
 
   it("⭐进入品牌：持久化 brandId ＋ bumpScope（切品牌代次递增＝缓存隔离）＋ switchTab 回首页", async () => {
-    const w = mount(BrandHubPage);
+    const w = mount(BrandHubPage, { global: { components: { "wd-toast": StubWdToast } } });
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
     await w.vm.$nextTick();
@@ -159,19 +155,19 @@ describe("pages/brandHub（T7 P2-20 品牌馆）", () => {
 
   it("品牌列表加载失败：toast「品牌加载失败，请重试」＋空态（CR 🔴2 回归：失败走 else 分支而非死 catch）", async () => {
     h.brandsFail = true;
-    const w = mount(BrandHubPage);
+    const w = mount(BrandHubPage, { global: { components: { "wd-toast": StubWdToast } } });
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
     await w.vm.$nextTick();
     expect(h.brandCalls).toBe(1);
-    expect(h.toasts).toContain("品牌加载失败，请重试");
+    expect(w.find(".stub-wd-toast").text()).toContain("品牌加载失败，请重试"); // 统一 wot 轻提示
     expect(w.find(".hub-empty").exists()).toBe(true);
   });
 
   it("空列表（开关开但无品牌）：渲染空态「暂无入驻品牌」", async () => {
     const saved = h.brands;
     h.brands = [];
-    const w = mount(BrandHubPage);
+    const w = mount(BrandHubPage, { global: { components: { "wd-toast": StubWdToast } } });
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await flush();
     await w.vm.$nextTick();

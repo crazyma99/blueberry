@@ -5,9 +5,12 @@ import { inject } from "vue";
 interface ToastState {
   show?: boolean;
   msg?: string;
+  zIndex?: number;
 }
+const props = defineProps<{ zIndex?: number }>();
+const zIndex = props.zIndex;
 const option = inject<import("vue").Ref<ToastState>>("__TOAST_OPTION__", { value: { show: false } } as unknown as import("vue").Ref<ToastState>);
 </script>
 <template>
-  <div v-if="option.show" class="stub-wd-toast">{{ option.msg }}</div>
+  <div v-if="option.show" class="stub-wd-toast" :data-z-index="option.zIndex ?? zIndex">{{ option.msg }}</div>
 </template>
