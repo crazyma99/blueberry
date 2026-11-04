@@ -1,6 +1,8 @@
 // T9 到店预约 MVP：pages/myBookings 页面级冒烟（状态展示/可取消按钮可见性/取消流程二次确认/下拉刷新/触底加载/未登录）。
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 type B = Record<string, unknown>;
 
@@ -20,6 +22,13 @@ const h = vi.hoisted(() => ({
   prefetchCalls: 0,
   phoneLoginCodes: [] as string[],
   loginGate: null as Promise<void> | null,
+  hapticCalls: 0,
+}));
+
+vi.mock("../../src/application/haptics", () => ({
+  hapticTap: () => {
+    h.hapticCalls += 1;
+  },
 }));
 
 vi.mock("@dcloudio/uni-app", () => ({
@@ -121,6 +130,7 @@ beforeEach(() => {
   h.prefetchCalls = 0;
   h.phoneLoginCodes.length = 0;
   h.loginGate = null;
+  h.hapticCalls = 0;
   seedSession("full");
   (globalThis as { uni?: unknown }).uni = {
     getStorageSync: (k: string) => h.store.get(k) ?? "",
@@ -313,7 +323,7 @@ describe("pages/myBookings（我的预约页）", () => {
     expect(w.text()).toContain("网络不太稳定，请稍后重试");
     expect(w.findAll(".card").length).toBe(0);
     delete h.listFail["all:1"];
-    const retryBtn = w.findAll(".stub-wd-button").find((b) => b.text().includes("重试"))!;
+    const retryBtn = w.find(".retry-btn");
     await retryBtn.trigger("click");
     await flush();
     await w.vm.$nextTick();
@@ -372,7 +382,7 @@ describe("pages/myBookings（我的预约页）", () => {
     const w = await mountPage();
     expect(h.listCalls.length).toBe(0);
     expect(w.text()).toContain("请先登录");
-    const goLogin = w.findAll(".stub-wd-button").find((b) => b.text().includes("去登录"))!;
+    const goLogin = w.find(".login-btn");
     expect(goLogin).toBeTruthy();
     await goLogin.trigger("click");
     await w.vm.$nextTick();
@@ -396,7 +406,7 @@ describe("pages/myBookings（我的预约页）", () => {
     h.store.clear();
     h.pages["all:1"] = { list: [booking(62, "pending")], total: 1 };
     const w = await mountPage();
-    await w.findAll(".stub-wd-button").find((b) => b.text().includes("去登录"))!.trigger("click");
+    await w.find(".login-btn").trigger("click");
     await w.vm.$nextTick();
     await w.find(".agreement-row").trigger("click");
     await w.vm.$nextTick();
@@ -424,5 +434,44 @@ describe("pages/myBookings（我的预约页）", () => {
     await w.vm.$nextTick();
     expect(w.text()).toContain("请先登录");
     expect(w.text()).not.toMatch(/unauthorized/);
+  });
+});
+
+describe("pages/myBookings 按钮样式：复用全局 .btn-primary / .btn-secondary（不再用蓝色 BaseButton）", () => {
+  it("①「去登录」＝原生 view 带 btn-primary＋press-dim，点击触发触感并拉起登录弹窗", async () => {
+    h.store.clear();
+    const w = await mountPage();
+    const btn = w.find(".login-btn");
+    expect(btn.exists()).toBe(true);
+    expect(btn.classes()).toContain("btn-primary");
+    expect(btn.attributes("hover-class")).toBe("press-dim");
+    expect(w.find(".stub-wd-button").exists()).toBe(false);
+    const before = h.hapticCalls;
+    await btn.trigger("click");
+    await w.vm.$nextTick();
+    expect(h.hapticCalls).toBe(before + 1);
+    expect(w.find(".login-card").exists()).toBe(true);
+  });
+
+  it("①「重试」带 btn-secondary，点击触发触感并重新加载", async () => {
+    h.listFail["all:1"] = { kind: "NETWORK", businessCode: null, message: "网络不太稳定，请稍后重试", requestId: "r", retryable: true };
+    const w = await mountPage();
+    const btn = w.find(".retry-btn");
+    expect(btn.exists()).toBe(true);
+    expect(btn.classes()).toContain("btn-secondary");
+    expect(btn.attributes("hover-class")).toBe("press-dim");
+    expect(w.find(".stub-wd-button").exists()).toBe(false);
+    const before = h.hapticCalls;
+    const calls = h.listCalls.length;
+    await btn.trigger("click");
+    await flush();
+    expect(h.hapticCalls).toBe(before + 1);
+    expect(h.listCalls.length).toBe(calls + 1);
+  });
+
+  it("②模板不再出现 <BaseButton（防回流到蓝色）", () => {
+    const src = readFileSync(resolve(__dirname, "../../src/pages/myBookings/index.vue"), "utf-8");
+    expect(src).not.toContain("<BaseButton");
+    expect(src).not.toContain("BaseButton.vue");
   });
 });

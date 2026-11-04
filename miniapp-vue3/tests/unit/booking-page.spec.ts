@@ -18,6 +18,18 @@ const h = vi.hoisted(() => ({
   slotsByDate: {} as Record<string, unknown[]>,
   /** 挂起 runPhoneLogin（模拟登录进行中） */
   loginGate: null as Promise<void> | null,
+  /** 触感反馈调用计数（按钮复用全局 .btn-* 后，触感由页面自己调用） */
+  hapticCalls: 0,
+  /** 非空时 getSlots 返回失败（驱动"重试"按钮） */
+  slotsFail: null as unknown,
+  /** 挂起 createBooking（模拟提交中） */
+  submitGate: null as Promise<void> | null,
+}));
+
+vi.mock("../../src/application/haptics", () => ({
+  hapticTap: () => {
+    h.hapticCalls += 1;
+  },
 }));
 
 vi.mock("@dcloudio/uni-app", () => ({
@@ -29,12 +41,14 @@ vi.mock("../../src/infrastructure/repositories/bookings", () => ({
     getSlots: async (_c: unknown, shopId: number, date: string) => {
       h.slotsCalls.push({ shopId, date });
       h.lastRequestedDate = date;
+      if (h.slotsFail) return { ok: false, error: h.slotsFail } as never;
       if (h.slotsGate[date]) await h.slotsGate[date];
       if (h.slotsByDate[date]) return { ok: true, value: { date, slots: h.slotsByDate[date] } };
       return { ok: true, value: (h.slotsResponse as { date: string; slots: unknown[] } | null) ?? { date, slots: [] } };
     },
     createBooking: async (_c: unknown, body: unknown) => {
       h.submitCalls.push(body);
+      if (h.submitGate) await h.submitGate;
       return (
         h.submitResult ?? {
           ok: true,
@@ -84,6 +98,8 @@ import StubWdButton from "../stubs/wot/wd-button/wd-button.vue";
 import StubWdToast from "../stubs/wot/wd-toast/wd-toast.vue";
 import BookingPage from "../../src/pages/booking/index.vue";
 import { buildDateWindow } from "../../src/domain/booking";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const GLOBAL = { components: { "wd-popup": StubWdPopup, "wd-button": StubWdButton, "wd-toast": StubWdToast } };
 const flush = () => new Promise((r) => setTimeout(r, 30));
@@ -115,6 +131,9 @@ beforeEach(() => {
   h.slotsGate = {};
   h.slotsByDate = {};
   h.loginGate = null;
+  h.hapticCalls = 0;
+  h.slotsFail = null;
+  h.submitGate = null;
   (globalThis as { uni?: unknown }).uni = {
     getStorageSync: (k: string) => h.store.get(k) ?? "",
     setStorageSync: (k: string, v: string) => h.store.set(k, v),
@@ -180,7 +199,7 @@ describe("pages/booking（到店预约页）", () => {
     const w = await mountReady();
     await w.findAll(".slot-cell")[0].trigger("click");
     await w.find("input.form-input").setValue("张三"); // 仅填姓名，手机号留空
-    await w.find(".stub-wd-button").trigger("click");
+    await w.find(".submit-btn").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(h.submitCalls.length).toBe(0);
@@ -194,7 +213,7 @@ describe("pages/booking（到店预约页）", () => {
     const inputs = w.findAll("input.form-input");
     await inputs[0].setValue("张三");
     await inputs[1].setValue("13800138000");
-    await w.find(".stub-wd-button").trigger("click");
+    await w.find(".submit-btn").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(h.submitCalls.length).toBe(0);
@@ -207,7 +226,7 @@ describe("pages/booking（到店预约页）", () => {
     await inputs[0].setValue("张三");
     await inputs[1].setValue("13800138000");
     await w.findAll(".slot-cell")[0].trigger("click");
-    await w.find(".stub-wd-button").trigger("click");
+    await w.find(".submit-btn").trigger("click");
     await flush();
     expect(h.submitCalls.length).toBe(0); // 未登录：零提交请求
     expect(w.find(".login-card").exists()).toBe(true); // 弹登录窗
@@ -233,7 +252,7 @@ describe("pages/booking（到店预约页）", () => {
     await inputs[0].setValue("张三");
     await inputs[1].setValue("13800138000");
     await w.findAll(".slot-cell")[0].trigger("click");
-    await w.find(".stub-wd-button").trigger("click");
+    await w.find(".submit-btn").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(h.submitCalls.length).toBe(1);
@@ -253,7 +272,7 @@ describe("pages/booking（到店预约页）", () => {
     await inputs[0].setValue("张三");
     await inputs[1].setValue("13800138000");
     await w.findAll(".slot-cell")[0].trigger("click");
-    await w.find(".stub-wd-button").trigger("click");
+    await w.find(".submit-btn").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(w.text()).not.toContain("预约已提交");
@@ -316,7 +335,7 @@ describe("pages/booking（到店预约页）", () => {
     await inputs[0].setValue("张三");
     await inputs[1].setValue("13800138000");
     await w.findAll(".slot-cell")[0].trigger("click");
-    await w.find(".stub-wd-button").trigger("click");
+    await w.find(".submit-btn").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(h.submitCalls.length).toBe(1);
@@ -343,7 +362,7 @@ describe("pages/booking（到店预约页）", () => {
     await inputs[0].setValue("张三");
     await inputs[1].setValue("13800138000");
     await w.findAll(".slot-cell")[0].trigger("click");
-    await w.find(".stub-wd-button").trigger("click");
+    await w.find(".submit-btn").trigger("click");
     await flush();
     await w.vm.$nextTick();
     const toastText = w.find(".stub-wd-toast").text();
@@ -361,7 +380,7 @@ describe("pages/booking（到店预约页）", () => {
     await inputs[0].setValue("张三");
     await inputs[1].setValue("13800138000");
     await w.findAll(".slot-cell")[0].trigger("click");
-    await w.find(".stub-wd-button").trigger("click");
+    await w.find(".submit-btn").trigger("click");
     await flush();
     await w.find(".agreement-row").trigger("click");
     await w.vm.$nextTick();
@@ -379,5 +398,97 @@ describe("pages/booking（到店预约页）", () => {
     await w.vm.$nextTick();
     expect(h.phoneLoginCodes.length).toBe(1);
     expect(h.submitCalls.length).toBe(1); // 登录成功后仍只补发一次提交
+  });
+});
+
+describe("pages/booking 按钮样式：复用全局 .btn-primary / .btn-secondary（不再用蓝色 BaseButton）", () => {
+  const fill = async (w: Awaited<ReturnType<typeof mountReady>>) => {
+    const inputs = w.findAll("input.form-input");
+    await inputs[0].setValue("张三");
+    await inputs[1].setValue("13800138000");
+    await w.findAll(".slot-cell")[0].trigger("click");
+  };
+
+  it("①提交按钮＝原生 view 带 btn-primary，且不渲染 wd-button", async () => {
+    const w = await mountReady();
+    const btn = w.find(".submit-btn");
+    expect(btn.exists()).toBe(true);
+    expect(btn.element.tagName.toLowerCase()).not.toBe("button");
+    expect(btn.classes()).toContain("btn-primary");
+    expect(btn.attributes("hover-class")).toBe("press-dim");
+    expect(w.find(".stub-wd-button").exists()).toBe(false);
+  });
+
+  it("①成功态「查看我的预约」带 btn-primary", async () => {
+    const w = await mountReady();
+    seedSession("full");
+    await fill(w);
+    await w.find(".submit-btn").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    const btn = w.find(".my-bookings-btn");
+    expect(btn.exists()).toBe(true);
+    expect(btn.classes()).toContain("btn-primary");
+    expect(w.find(".stub-wd-button").exists()).toBe(false);
+  });
+
+  it("①时段加载失败「重试」带 btn-secondary，点击重新拉取并触发触感", async () => {
+    h.slotsFail = { kind: "NETWORK", businessCode: null, message: "网络不太稳定，请稍后重试", requestId: "r", retryable: true };
+    const w = await mountReady();
+    const retry = w.find(".retry-btn");
+    expect(retry.exists()).toBe(true);
+    expect(retry.classes()).toContain("btn-secondary");
+    expect(w.find(".stub-wd-button").exists()).toBe(false);
+    const before = h.slotsCalls.length;
+    const haptic0 = h.hapticCalls;
+    h.slotsFail = null;
+    await retry.trigger("click");
+    await flush();
+    expect(h.slotsCalls.length).toBe(before + 1);
+    expect(h.hapticCalls).toBe(haptic0 + 1);
+  });
+
+  it("②模板不再出现 <BaseButton（防回流到蓝色）", () => {
+    const src = readFileSync(resolve(__dirname, "../../src/pages/booking/index.vue"), "utf-8");
+    expect(src).not.toContain("<BaseButton");
+    expect(src).not.toContain("BaseButton.vue");
+  });
+
+  it("③点击提交触发 hapticTap", async () => {
+    const w = await mountReady();
+    seedSession("full");
+    await fill(w);
+    const before = h.hapticCalls;
+    await w.find(".submit-btn").trigger("click");
+    await flush();
+    expect(h.hapticCalls).toBe(before + 1);
+  });
+
+  it("④提交中再点不会重复提交（忙态：is-busy＋「提交中...」，且不再触感）", async () => {
+    const w = await mountReady();
+    seedSession("full");
+    await fill(w);
+    let release!: () => void;
+    h.submitGate = new Promise<void>((r) => (release = r));
+    const btn = w.find(".submit-btn");
+    await btn.trigger("click");
+    await btn.trigger("click");
+    await btn.trigger("click");
+    await w.vm.$nextTick();
+    expect(w.find(".submit-btn").classes()).toContain("is-busy");
+    expect(w.find(".submit-btn").text()).toContain("提交中...");
+    expect(h.submitCalls.length).toBe(1);
+    release();
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.submitCalls.length).toBe(1);
+    expect(w.text()).toContain("预约已提交");
+  });
+
+  it("未选时段点提交：仍弹 toast 引导（不改成不可点）", async () => {
+    const w = await mountReady();
+    await w.find(".submit-btn").trigger("click");
+    await flush();
+    expect(w.find(".stub-wd-toast").text()).toContain("请先选择到店时段");
   });
 });
