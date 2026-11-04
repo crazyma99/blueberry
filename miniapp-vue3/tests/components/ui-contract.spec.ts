@@ -327,21 +327,7 @@ describe("BaseDialog（对话框双平台门面，方案A收尾 §8.13）", () =
     await w.find(".base-dialog-native__btn--cancel").trigger("click");
     await expect(p2).resolves.toBe("cancel");
   });
-  it("非抖音分支：走 useDialog 通道（桩注入链），confirm/cancel 正确映射", async () => {
-    setUiPlatformOverride("mp-weixin");
-    const w = mount(BaseDialog, { global: globalWith });
-    const vm = w.vm as unknown as DialogVm;
-    const p1 = vm.confirm({ title: "t", msg: "m" });
-    await w.vm.$nextTick();
-    const stub = w.findComponent(StubDialog);
-    expect(stub.find(".stub-wd-dialog").exists()).toBe(true); // useDialog 驱动 show
-    await stub.find(".stub-dialog-confirm").trigger("click");
-    await expect(p1).resolves.toBe("confirm");
-    const p2 = vm.confirm({ title: "t2" });
-    await w.vm.$nextTick();
-    await stub.find(".stub-dialog-cancel").trigger("click");
-    await expect(p2).resolves.toBe("cancel");
-  });
+  // 非抖音（微信）分支已改品牌自绘卡片 → 见 tests/components/base-dialog.spec.ts
 });
 
 describe("BaseLoading（2026-09-21 首页下拉刷新门面）", () => {

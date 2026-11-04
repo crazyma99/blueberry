@@ -85,7 +85,6 @@ vi.mock("../../src/infrastructure/repositories/wx-auth", () => ({
 import StubWdPopup from "../stubs/wot/wd-popup/wd-popup.vue";
 import StubWdButton from "../stubs/wot/wd-button/wd-button.vue";
 import StubWdToast from "../stubs/wot/wd-toast/wd-toast.vue";
-import StubWdDialog from "../stubs/wot/wd-dialog/wd-dialog.vue";
 import StubWdLoading from "../stubs/wot/wd-loading/wd-loading.vue";
 import MyBookingsPage from "../../src/pages/myBookings/index.vue";
 
@@ -94,7 +93,6 @@ const GLOBAL = {
     "wd-popup": StubWdPopup,
     "wd-button": StubWdButton,
     "wd-toast": StubWdToast,
-    "wd-dialog": StubWdDialog,
     "wd-loading": StubWdLoading,
   },
 };
@@ -196,9 +194,9 @@ describe("pages/myBookings（我的预约页）", () => {
     await w.find(".cancel-btn").trigger("click");
     await w.vm.$nextTick();
     expect(h.cancelCalls.length).toBe(0); // 未确认前零取消请求
-    expect(w.find(".stub-wd-dialog").exists()).toBe(true); // 二次确认弹层
+    expect(w.find(".base-dialog-card").exists()).toBe(true); // 二次确认弹层
     h.pages["all:1"] = { list: [booking(11, "cancelled")], total: 1 };
-    await w.find(".stub-dialog-confirm").trigger("click");
+    await w.find(".base-dialog-btn-confirm").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(h.cancelCalls).toEqual([11]);
@@ -212,7 +210,7 @@ describe("pages/myBookings（我的预约页）", () => {
     const w = await mountPage();
     await w.find(".cancel-btn").trigger("click");
     await w.vm.$nextTick();
-    await w.find(".stub-dialog-cancel").trigger("click");
+    await w.find(".base-dialog-btn-cancel").trigger("click");
     await flush();
     expect(h.cancelCalls.length).toBe(0);
   });
@@ -224,7 +222,7 @@ describe("pages/myBookings（我的预约页）", () => {
     const before = h.listCalls.length;
     await w.find(".cancel-btn").trigger("click");
     await w.vm.$nextTick();
-    await w.find(".stub-dialog-confirm").trigger("click");
+    await w.find(".base-dialog-btn-confirm").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(h.listCalls.length).toBe(before);
@@ -337,7 +335,7 @@ describe("pages/myBookings（我的预约页）", () => {
     await w.findAll(".cancel-btn")[0].trigger("click");
     await w.vm.$nextTick();
     h.listFail["all:1"] = NET; // 取消后的重拉失败
-    await w.find(".stub-dialog-confirm").trigger("click");
+    await w.find(".base-dialog-btn-confirm").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(h.cancelCalls).toEqual([31]);
@@ -354,8 +352,8 @@ describe("pages/myBookings（我的预约页）", () => {
     await btns[0].trigger("click");
     await btns[1].trigger("click"); // 弹窗还没结算就点第二条
     await w.vm.$nextTick();
-    expect(w.findAll(".stub-wd-dialog").length).toBe(1);
-    await w.find(".stub-dialog-confirm").trigger("click");
+    expect(w.findAll(".base-dialog-card").length).toBe(1);
+    await w.find(".base-dialog-btn-confirm").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(h.cancelCalls).toEqual([41]);
@@ -366,11 +364,11 @@ describe("pages/myBookings（我的预约页）", () => {
     const w = await mountPage();
     await w.findAll(".cancel-btn")[0].trigger("click");
     await w.vm.$nextTick();
-    await w.find(".stub-dialog-cancel").trigger("click");
+    await w.find(".base-dialog-btn-cancel").trigger("click");
     await flush();
     await w.findAll(".cancel-btn")[1].trigger("click");
     await w.vm.$nextTick();
-    await w.find(".stub-dialog-confirm").trigger("click");
+    await w.find(".base-dialog-btn-confirm").trigger("click");
     await flush();
     expect(h.cancelCalls).toEqual([52]);
   });
