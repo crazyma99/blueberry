@@ -329,7 +329,7 @@ onLoad((options) => {
     <CustomNavBar title="">
       <view class="nav-center">
         <view class="title-group">
-          <view class="cn font-noto-serif">客片欣赏</view>
+          <view class="cn font-noto-serif">{{ PROFILE.features.copyGalleryTitle }}</view>
           <view class="en">DETAILS</view>
         </view>
         <image src="/static/category-title-line.png" class="line" mode="aspectFill" />
@@ -346,7 +346,7 @@ onLoad((options) => {
         </view>
         <view style="height: 16rpx;"></view>
         <view class="info-row">
-          <view class="info-left">
+          <view v-if="PROFILE.features.showServicePrice" class="info-left">
             <SkeletonBlock width="58%" height="32rpx" radius="6rpx" />
             <view style="height: 12rpx;"></view>
             <SkeletonBlock width="76%" height="32rpx" radius="6rpx" />
@@ -369,21 +369,21 @@ onLoad((options) => {
           <image src="/static/cloud.png" class="cloud" mode="aspectFill" />
         </view>
         <view class="info-row">
-          <view class="info-left">
-            <!-- 旧端 :46-54 两行均无条件渲染（空值显示为「服务价格：」「套餐内容：」标签行）；
-                 初版加的 v-if 空值守卫系迁移期自主偏差（未登记），2026-09-19 主人实测「抖音没展示套餐内容」后还原——
+          <view v-if="PROFILE.features.showServicePrice" class="info-left">
+            <!-- 旧端 :46-54 两行均无条件渲染（空值也显示标签行）；
+                 初版加的 v-if 空值守卫系迁移期自主偏差（未登记），2026-09-19 主人实测「该行未展示」后还原——
                  实测接口对空套餐返回 packageDesc:""（如 trial 相册 463），旧端该行仍展示标签 -->
             <view class="price">
               <image src="/static/prize-icon.png" class="icon" mode="aspectFill" />
-              <view>服务价格：</view>
+              <view>{{ PROFILE.features.copyPriceLabel }}</view>
               <view class="count txt">{{ detail.price }}</view>
             </view>
             <view class="package">
               <image src="/static/desc-icon.png" class="icon" mode="aspectFill" />
-              <view class="txt">套餐内容：{{ detail.packageDesc }}</view>
+              <view class="txt">{{ PROFILE.features.copyPackageLabel }}{{ detail.packageDesc }}</view>
             </view>
           </view>
-          <view class="collect" hover-class="press-dim" @click="onToggleLike">
+          <view class="collect" :class="{ collectSolo: !PROFILE.features.showServicePrice }" hover-class="press-dim" @click="onToggleLike">
             <image
               class="heart"
               :src="likeState != null && likeState.liked ? '/static/iconpark/like-filled.svg' : '/static/iconpark/like.svg'"
@@ -551,6 +551,11 @@ onLoad((options) => {
   /* 旧 .collect：图标缩小后热区补回（左右 6rpx、上下 5rpx） */
   padding: 5rpx 6rpx;
 }
+/* 抖音端隐藏价格/套餐块后：收藏按钮仍右对齐（task-75 P0 布局） */
+.collect--solo {
+  margin-left: auto;
+}
+
 .heart {
   width: 36rpx;
   height: 30rpx;

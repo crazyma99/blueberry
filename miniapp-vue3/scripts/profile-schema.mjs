@@ -142,6 +142,15 @@ export function validateProfile(raw, target) {
     // 标题文案同样经 profile 下发：抖音端给空串 ⇒ 产物内**不出现该中文标题字面量**（供产物级静态扫描，见 deviations#51）。
     servicePromise: !isDouyin,
     servicePromiseTitle: isDouyin ? "" : "服务保障",
+    // 2026-11-02 task-75 抖音审核 P0/P1：只改抖音侧、微信严格原状；恢复＝把下列抖音值改回微信值＋重构建。
+    showServicePrice: !isDouyin, // P0：相册详情「服务价格／套餐内容」整块（含图标与骨架占位）是否渲染
+    copySeriesCategory: isDouyin ? "作品分类" : "套系与子系分类",
+    copyGalleryTitle: isDouyin ? "作品欣赏" : "客片欣赏",
+    copyGalleryEmpty: isDouyin ? "暂无作品" : "暂无客片",
+    copySearchPlaceholder: isDouyin ? "搜索作品" : "搜索客片",
+    // 价格/套餐两行标签（抖音端整块已隐藏；此处仍按端下发，确保抖音产物内**不出现**这两个词——产物级静态扫描要求）
+    copyPriceLabel: isDouyin ? "" : "服务价格：",
+    copyPackageLabel: isDouyin ? "" : "套餐内容：",
     mineHintText: isDouyin ? "登录后可收藏" : "登录后可收藏与体验AI试衣",
     navStyle: isDouyin ? "default" : "custom",
     tabBarCustom: !isDouyin,

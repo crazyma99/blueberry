@@ -25,8 +25,13 @@
 				// #ifdef MP-WEIXIN
 				"navigationStyle": "custom",
 				// #endif
+				// #ifndef MP-TOUTIAO
 				"navigationBarTitleText": "客片列表",
-				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/客片列表有；客片详情/AI试衣记录/价目表为本轮新增）
+				// #endif
+				// #ifdef MP-TOUTIAO
+				"navigationBarTitleText": "作品列表",
+				// #endif
+				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/列表页有；详情页/AI试衣记录/价目表为本轮新增）
 				// backgroundTextStyle=light：抖音端为系统栏页面，下拉指示点用亮色配玄墨底
 				"enablePullDownRefresh": true,
 				"backgroundTextStyle": "light",
@@ -40,8 +45,13 @@
 				// #ifdef MP-WEIXIN
 				"navigationStyle": "custom",
 				// #endif
+				// #ifndef MP-TOUTIAO
 				"navigationBarTitleText": "客片欣赏",
-				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/客片列表有；客片详情/AI试衣记录/价目表为本轮新增）
+				// #endif
+				// #ifdef MP-TOUTIAO
+				"navigationBarTitleText": "作品欣赏",
+				// #endif
+				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/列表页有；详情页/AI试衣记录/价目表为本轮新增）
 				// backgroundTextStyle=light：抖音端为系统栏页面，下拉指示点用亮色配玄墨底
 				"enablePullDownRefresh": true,
 				"backgroundTextStyle": "light"
@@ -55,7 +65,7 @@
 				"navigationStyle": "custom",
 				// #endif
 				"navigationBarTitleText": "价目表",
-				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/客片列表有；客片详情/AI试衣记录/价目表为本轮新增）
+				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/列表页有；详情页/AI试衣记录/价目表为本轮新增）
 				// backgroundTextStyle=light：抖音端为系统栏页面，下拉指示点用亮色配玄墨底
 				"enablePullDownRefresh": true,
 				"backgroundTextStyle": "light"
@@ -144,7 +154,7 @@
 			"style": {
 				"navigationStyle": "custom",
 				"navigationBarTitleText": "AI试衣记录",
-				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/客片列表有；客片详情/AI试衣记录/价目表为本轮新增）
+				// 2026-09-21 主人：本页也要下拉刷新（旧端仅首页/列表页有；详情页/AI试衣记录/价目表为本轮新增）
 				// backgroundTextStyle=light：抖音端为系统栏页面，下拉指示点用亮色配玄墨底
 				"enablePullDownRefresh": true,
 				"backgroundTextStyle": "light"

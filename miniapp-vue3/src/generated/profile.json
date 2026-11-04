@@ -46,6 +46,13 @@
     "priceTab": true,
     "servicePromise": true,
     "servicePromiseTitle": "服务保障",
+    "showServicePrice": true,
+    "copySeriesCategory": "套系与子系分类",
+    "copyGalleryTitle": "客片欣赏",
+    "copyGalleryEmpty": "暂无客片",
+    "copySearchPlaceholder": "搜索客片",
+    "copyPriceLabel": "服务价格：",
+    "copyPackageLabel": "套餐内容：",
     "mineHintText": "登录后可收藏与体验AI试衣",
     "navStyle": "custom",
     "tabBarCustom": true

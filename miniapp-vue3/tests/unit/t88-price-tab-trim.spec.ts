@@ -31,9 +31,9 @@ describe("t88 · ① profile：抖音页清单 11→9（剔除价目表两页）
 
 describe("t88 · ② 源码级：受控点数 == 调用点数（防漏）", () => {
   const pagesJson = readFileSync(resolve(root, "src/pages.json"), "utf-8");
-  it("⭐pages.json 三处 #ifndef MP-TOUTIAO（价目表 tab 1 ＋ 两页注册 2）", () => {
+  it("⭐pages.json 五处 #ifndef MP-TOUTIAO（价目表 tab 1 ＋ 两页注册 2 ＋ task-75 相册详情标题 1 ＋ 客片列表页标题 1）", () => {
     const blocks = pagesJson.match(/#ifndef MP-TOUTIAO/g) ?? [];
-    expect(blocks.length).toBe(3);
+    expect(blocks.length).toBe(5);
     // 每处都必须配平 #endif
     expect((pagesJson.match(/#endif/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });

@@ -422,7 +422,7 @@ onReachBottom(() => {
             v-model="keyword"
             class="search-input-nav"
             type="text"
-            placeholder="搜索客片"
+            :placeholder="PROFILE.features.copySearchPlaceholder"
             placeholder-style="color: rgba(241, 205, 145, 0.7)"
             confirm-type="search"
             @confirm="onSearch"
@@ -461,7 +461,7 @@ onReachBottom(() => {
             <text class="ai-recommend-subtitle">上传照片，AI为您推荐最合适的服饰风格</text>
           </view>
         </view>
-        <view class="cat-title-row"><text class="cat-title font-noto-serif">套系与子系分类</text></view>
+        <view class="cat-title-row"><text class="cat-title font-noto-serif">{{ PROFILE.features.copySeriesCategory }}</text></view>
         <view class="tabcontainer">
           <view
             v-for="(item, idx) in categories"
@@ -532,7 +532,7 @@ onReachBottom(() => {
         <view class="search-btn" @click="reloadList">重试</view>
       </view>
       <view v-if="albums.length === 0 && listVM.error.value === null" class="list-empty">
-        <text>暂无客片</text>
+        <text>{{ PROFILE.features.copyGalleryEmpty }}</text>
       </view>
     </template>
 

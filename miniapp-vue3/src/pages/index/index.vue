@@ -371,7 +371,7 @@ onMounted(() => {
       <image class="home-btn-icon" src="/static/iconpark/shop.svg" mode="aspectFit" />
     </view>
 
-    <!-- 骨架屏：hero 通栏 → 客片欣赏标题/副标题 → 店铺卡片区（旧端 :9-23 结构还原；
+    <!-- 骨架屏：hero 通栏 → 作品标题/副标题 → 店铺卡片区（旧端 :9-23 结构还原；
          卡片用 48% 宽 + space-between，不用 flex:1+gap——抖音端组件宿主尺寸计算会致两块重合，2026-09-19 实测反馈） -->
     <view v-if="!ready" class="sk-container">
       <SkeletonBlock height="794rpx" radius="0" />
@@ -432,7 +432,7 @@ onMounted(() => {
         </view>
       </view>
 
-      <!-- 客片欣赏：shop-container-top.png 切图顶 + 内层三边线框 + photo-card 网格
+      <!-- 作品区：shop-container-top.png 切图顶 + 内层三边线框 + photo-card 网格
            （旧端 index:59-113 结构还原。2026-09-19 修正：新端初版误用 PhotoGrid 旧组件，
            首页旧端早已改用 photo-grid/photo-card 设计，见旧端 :868 注释） -->
       <view class="shop-section">
@@ -444,7 +444,7 @@ onMounted(() => {
             <view class="shop-inner-line"></view>
             <view class="shop-header">
               <view class="shop-title-wrap">
-                <text class="shop-title font-noto-serif">客片欣赏</text>
+                <text class="shop-title font-noto-serif">{{ PROFILE.features.copyGalleryTitle }}</text>
                 <text class="shop-subtitle">COLLECTION</text>
               </view>
             </view>

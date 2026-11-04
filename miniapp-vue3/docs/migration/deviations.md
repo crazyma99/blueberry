@@ -446,3 +446,16 @@
     　**⭐Compat trailer 口径更正（重要）**：上一笔 `50562e4` 写 `platform-api=no` 有误——本次新增了 `platform/uni/enter-options.ts`（容器 API 调用）⇒ **本笔应写 `platform-api=yes(platform/** 内)`**（与先例 `9f18878` 一致）；**以本笔为准**。
     　**⚠️ 待真机**：**抖音端 `getEnterOptionsSync` 的可用性未验证**（仅单测+静态层：`typeof` 守卫＋try/catch，缺失/异常一律 fail-soft 返回空）⇒ 若抖音宿主不提供该 API，则**层1 修复在抖音端为惰性、层2（形态即准入）仍解决本次 P0**；提交 trailer 按 `tested=wx` 写，抖音端另行真机确认。
     　**门禁与产物**：全量 vitest **828 passed / 3 skipped**；type-check exit 0；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261019-737f630-scanfix4/`（双端＋zip，675 文件；地址命中 0／抖音敏感词 0／AppID 正确／两端含 `application/enter-brand-sync.js`（幂等）与 `domain/enter-brand.js`（PLATFORM 过滤））。
+
+54. **抖音审核 P0/P1：相册详情价格/套餐整块屏蔽 ＋ 文案改作品向（2026-11-02 task-75）**
+    **①背景**：抖音审核打回——**相册详情页含「服务价格／套餐内容」** ⇒ 被判摄影类目（我方类目＝工具信息查询）。主人口径：**只改抖音侧，微信严格原状**。
+    **②实现（构建期 profile 特征位，逻辑层零 #ifdef；恢复＝改位一行＋重构建，不删码）**：`scripts/profile-schema.mjs` 新增 7 位（微信取值＝现状）：
+    　`showServicePrice`（bool，微信 true／抖音 **false**：价格＋套餐整块**含两图标与骨架占位**）、`copySeriesCategory`（套系与子系分类→作品分类）、`copyGalleryTitle`（客片欣赏→作品欣赏，用于首页标题＋相册详情自绘标题＋`pages.json` 抖音分支）、`copyGalleryEmpty`（暂无客片→暂无作品）、`copySearchPlaceholder`（搜索客片→搜索作品）、`copyPriceLabel`／`copyPackageLabel`（微信「服务价格：」「套餐内容：」／抖音 **空串**——整块已隐藏，仍按端下发以保证**抖音产物内不出现这两个词**）。
+    **③布局（P0 隐藏后必须自然）**：`v-if` 包**整个 `.info-left`**（real ＋ 骨架 两处同一位控制）⇒ 不留 `flex:1` 空白块；`.info-row` 只剩 `.collect` 时用 `.collect--solo{margin-left:auto}` 收尾 ⇒ **收藏仍右对齐**。微信位恒 true ⇒ 类不生效、价格块与标题行原样（含「空值也显示标签行」既有行为）。
+    **④`pages.json` 标题按端（两处）**：`pages/targetPhotoDetail`（客片欣赏→**作品欣赏**）与 `pages/demoDetail`（客片列表→**作品列表**），均用 `// #ifndef MP-TOUTIAO`（原值）＋`// #ifdef MP-TOUTIAO`（作品向）双分支；已由既有 `src/pages.json | MP-TOUTIAO` 的 C4 登记条目覆盖并扩写说明。**微信/小红书保持原文案**。
+    **⑤注释字面量同步改写**（产物扫描连注释算）：`targetPhotoDetail`(旧端空值说明/2026-09-19 实测句)、`index`(骨架屏与作品区注释)、`use-home`(作品卡片注释)、`pages.json`(下拉刷新注释)。
+    **⑥验证**：新增 `tests/unit/t92-tt-audit-copy.spec.ts`（6 例：profile 位取值 tt/wx 双向／价格块与**骨架块**同一位控制／`.collect--solo` 收尾规则／文案位接线／端侧源码不得含五词）；**变异自证 2 项**：①`showServicePrice` 改回 `true` ⇒ 1 failed ②`copyGalleryTitle` 抖音值改回微信值 ⇒ 1 failed；均还原即绿。`t88` 条件块计数同步 4→5。
+    **⑦产物级 grep（整包：app.json／pages/*.json／ttml／ttss／js／wxml／wxss）**：抖音包「**服务价格／套餐内容／套系与子系分类／客片欣赏／暂无客片 全部 0**」；微信包分别 1／1／1／2／1（**仍在＝原状**）。每页标题：tt `pages/targetPhotoDetail`=**作品欣赏**、`pages/demoDetail`=**作品列表**；wx 分别＝**客片欣赏**／**客片列表**（且 `navigationStyle: custom` 不变）。`.collect--solo{margin-left:auto}` 双端 TTSS/WXSS 均存在（wx 为未被激活的无害规则 ⇒ 视觉零变化）。
+    **⑧门禁与产物**：全量 vitest **834 passed / 3 skipped**；type-check exit 0；三端构建各 exit 0；产物 `.work/deliver/lanmei-miniapp-20261102-ttaudit1/`（双端＋zip，675 文件／5.3M；地址命中 0／抖音敏感词 0／AppID 正确）。
+    **⑨剩余风险（「客片」整词，抖音包 4 文件，属本单范围外，建议下一单处置）**：`application/share-card.js`（分享卡兜底文案「…｜客片展示」「点击查看品牌客片展示」）、`pages/_probe/wot-sample.js`（开发探针页）、`pages/policies/{user,privacy}.ttml`（协议正文）。建议：分享卡兜底改作品向（可加 profile 位）；协议文本通常不属类目判定，可保留；探针页不随正式版提交。
+    **⑩未提交**：等主人真机/提审回执后提交（提交须带 `Compat:` trailer，本笔 `platform-api=no`）。
