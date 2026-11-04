@@ -12,9 +12,9 @@
 - 包内 config 只允许出现上述两个自动分流字面量。
 
 ### 2. 分支纪律（**2026-10-09 主人明确口径：两条线，勿混**）
-- **① 线上正式版 ＝ 旧端 `src/`，分支 fork `main`**（该端自 `2026-09-15`／`2fe70ac` 起**未再改动**）；
-- **② 体验版（微信＋抖音）＝ 新端 `miniapp-vue3/`，分支 `feat/vue3-migration`**（近期所有体验版出自此线）；
-- ⚠️ **两条线不混提交**：旧端改动落 `main`、新端改动落 `feat/vue3-migration`；**不确定先问主人**；
+- **① 旧端 `src/`（uni-app x）已于 2026-11-04 封存**：分支 `main` 只读保护（禁强推、禁删除，直接推送须 PR＋1 人审批），归档标签 **`archive/miniapp-main-20261104`**（指向 `2876ec5`），不再接收提交，回溯读标签；
+- **② 新端 `miniapp-vue3/`，分支 `feat/vue3-migration`，为唯一开发线**（体验版、开发版与后续正式版均出自此线；仓库默认分支亦为此分支）；
+- ⚠ 旧端已封存，**不再有旧端提交**；如需回溯旧端，只读 `archive/miniapp-main-20261104`；
 - 原发版线 `feat/v0.0.1` 已于 2026-09-14 归档——tag **`archive/feat-v0.0.1-20260914`**（指向 `4d7b068`），fork 远程分支已删除（仅上游留存）；历史内容已全量并入 main（0 差异）；
 - 本仓库无 staging 分支；任何合并/发布前先确认。
 
@@ -48,8 +48,8 @@
 
 ## 二、快速操作流程
 ```bash
-# 新端（体验版线）：git checkout feat/vue3-migration → 提交到 fork feat/vue3-migration
-# 旧端（线上正式版线）：git checkout main → 提交到 fork main      ← 两条线不混提交
+# 新端（唯一开发线）：git checkout feat/vue3-migration → 提交到 fork feat/vue3-migration
+# 旧端：已封存（归档标签 archive/miniapp-main-20261104），不再提交
 # ⚠️ 提交前做「兼容性评估」并带 Compat: trailer（见 §4.5；触及 miniapp-vue3/src/** 时 CI 强制）
 
 # 上传体验版（忽略 env + 校验 + 上传 + 恢复）
