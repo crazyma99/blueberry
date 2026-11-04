@@ -66,3 +66,10 @@
 
 ## 四、关联脚本
 - `scripts/release-trial.sh`：**忽略 env → 构建 → 红线校验 → 上传体验版 → 恢复 env**（发布唯一入口）
+
+## 五、开发标准流程（2026-11-04 主人指示 · 必须遵守）
+1. **基线**：新端开发基线为 `feat/vue3-migration`（本仓库无 staging）。从它切出 `feat/<主题>`（修复用 `fix/<主题>`）。**禁止直接在 `feat/vue3-migration` 上提交**。
+2. **PR 前门禁**：完成后向 `feat/vue3-migration` 提 PR。提 PR 前在 `miniapp-vue3/` 下本地全绿，与 CI `.github/workflows/migration-ci.yml` 一致：`pnpm install --frozen-lockfile`、`pnpm run typecheck`、`pnpm exec vitest run`、`pnpm run build:mp-weixin`、`pnpm run build:mp-toutiao`、`pnpm run build:mp-xhs`。门禁不过不提 PR。
+3. **Compat 标记**：触及 `miniapp-vue3/src/**` 的提交必须带 `Compat:` trailer（见 §四第 3 条与 SPEC §四）。
+4. **测试环境 QA**：PR 合并进 `feat/vue3-migration` 后，经主人授权上传体验版，由 QA 在体验版测试。QA 通过后才进入正式发布；发布动作须主人授权。
+5. **共享分支**：不 force push `feat/vue3-migration`、`main` 或他人的 `feat/*`。
