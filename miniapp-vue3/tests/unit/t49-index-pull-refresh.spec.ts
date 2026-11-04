@@ -107,14 +107,15 @@ describe("首页下拉刷新 · 配置（pages.json）", () => {
     expect(/[\s,{>]\*[\s,{]/.test(styleBlock)).toBe(false);
   });
 
-  it("开启范围＝5 页（首页＋客片列表＋客片详情＋AI试衣记录＋价目表；2026-09-21 主人点名扩围）", () => {
-    expect((pagesJson.match(/"enablePullDownRefresh"/g) ?? []).length).toBe(5);
+  it("开启范围＝6 页（首页＋客片列表＋客片详情＋AI试衣记录＋价目表＋我的预约；2026-09-21 主人点名扩围，到店预约 MVP 新增我的预约页）", () => {
+    expect((pagesJson.match(/"enablePullDownRefresh"/g) ?? []).length).toBe(6);
     for (const p of [
       "pages/index/index",
       "pages/demoDetail/index",
       "pages/targetPhotoDetail/index",
       "pages/aiTryOnHistory/index",
       "pages/priceHomePage/index",
+      "pages/myBookings/index",
     ]) {
       expect(pageBlock(p)).toContain('"enablePullDownRefresh": true');
     }

@@ -1,0 +1,648 @@
+<script setup lang="ts">
+// T9 到店预约 MVP：预约页（门店名 + 14 天日期条 + 时段网格 + 表单 + 提交）。微信专属页（pages.json #ifdef MP-WEIXIN 注册，
+// 抖音/小红书不注册——同 AI 六页口径，2026-09-17 主人拍板的"仅微信注册"惯例）。
+// 产品规则（主人已确认）：免定金，页面不出现任何支付/定金/金额；可约窗口=今天起 14 天（含今天）；
+// 人数用步进器 1..20（domain/booking GUEST_COUNT_MIN/MAX）；提交需已登录（未登录先走现有登录弹窗，复用 login-flow）。
+// 入参：shopId（必填）、shopName（可选，缺失时用 shops 仓储按 id 查一次兜底）。
+import { computed, ref } from "vue";
+import { onLoad } from "@dcloudio/uni-app";
+import { PROFILE } from "../../generated/profile.config";
+import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
+import { detectUiPlatform } from "../../ui/ui-platform";
+import { isPlatform } from "../../ports/context";
+import type { Platform } from "../../ports/context";
+import { createUniTransport } from "../../platform/uni/transport";
+import { createUniStorage } from "../../platform/uni/storage";
+import { createUniLoginCode } from "../../platform/uni/login";
+import { createAuthCoordinator } from "../../application/auth-coordinator";
+import { createSilentIdentityExchange } from "../../application/silent-login";
+import { createContextFactory } from "../../application/request-context";
+import { createVersionedStorage } from "../../infrastructure/storage/versioned";
+import { createHttpClient } from "../../infrastructure/http/client";
+import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
+import { createShopRepository } from "../../infrastructure/repositories/shops";
+import { createBookingRepository, type SlotView } from "../../infrastructure/repositories/bookings";
+import { createLoadSlotsUseCase, createSubmitBookingUseCase } from "../../application/booking-flow";
+import { createUserInfoStore } from "../../application/user-info-store";
+import { createPhoneLoginFlow } from "../../application/login-flow";
+import { toast as nativeToast, showLoading, hideLoading } from "../../platform/uni/feedback";
+import {
+  GUEST_COUNT_MAX,
+  GUEST_COUNT_MIN,
+  buildDateWindow,
+  describeSlotAvailability,
+  type DateWindowDay,
+} from "../../domain/booking";
+import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
+import BaseButton from "../../ui/BaseButton.vue";
+import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
+
+// —— 装配（同 demoDetail/mine：容器安全回落；登录占位不假装成功）——
+const detected = detectUiPlatform();
+const platform: Platform = isPlatform(detected) ? detected : "mp-weixin";
+const env = resolveRuntimeEnvironment(PROFILE.environment);
+const transport = createUniTransport({ baseUrl: PROFILE.apiBases[env] });
+const uniStorage = createUniStorage();
+const versioned = createVersionedStorage({ backend: uniStorage, platform, profileKey: PROFILE.profileKey });
+const authCoordinator = createAuthCoordinator({
+  exchangeIdentity: createSilentIdentityExchange({
+    getWxAuth: () => wxAuth,
+    loginCode: createUniLoginCode({ platform }),
+    platform,
+    profileKey: PROFILE.profileKey,
+  }),
+  storage: uniStorage,
+});
+const client = createHttpClient({ transport, authCoordinator });
+const wxAuth = createWxAuthRepository({ client, platform });
+const shopRepo = createShopRepository({ client });
+const bookingRepo = createBookingRepository({ client });
+const ctxFactory = createContextFactory({
+  platform,
+  environment: env,
+  profileKey: PROFILE.profileKey,
+  appCode: PROFILE.appCode,
+  getBrandId: () => versioned.loadBrandId(),
+});
+const loadSlotsUc = createLoadSlotsUseCase({ bookings: bookingRepo });
+const userStore = createUserInfoStore({ backend: uniStorage });
+const phoneLoginFlow = createPhoneLoginFlow({
+  wxAuth,
+  authCoordinator,
+  userStore,
+  context: () => ctxFactory.next(),
+  platform,
+  profileKey: PROFILE.profileKey,
+});
+const submitUc = createSubmitBookingUseCase({
+  bookings: bookingRepo,
+  loadSession: () => versioned.loadSession(),
+  context: () => ctxFactory.next(),
+});
+
+function openLoginPopup(): void {
+  showLoginPopup.value = true;
+  void phoneLoginFlow.prefetchLoginCode();
+}
+
+const userAgreementName = `《${PROFILE.miniAppName} 用户协议》`;
+const privacyPolicyName = `《${PROFILE.miniAppName} 隐私政策》`;
+
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string, icon?: "success" | "none"): void {
+  const f = feedbackRef.value;
+  if (f != null) {
+    f.show(text, icon as never);
+    return;
+  }
+  nativeToast(text, icon as never);
+}
+
+// —— 页面状态 ——
+const ready = ref(false);
+const shopId = ref(0);
+const shopName = ref("");
+const dateWindow = ref<DateWindowDay[]>(buildDateWindow());
+const selectedDateIndex = ref(0);
+const slots = ref<SlotView[]>([]);
+const slotsLoading = ref(false);
+const slotsError = ref<string | null>(null);
+const selectedSlotId = ref<number | null>(null);
+
+const customerName = ref("");
+const customerPhone = ref("");
+const guestCount = ref(2);
+const remark = ref("");
+const submitting = ref(false);
+
+const showLoginPopup = ref(false);
+const loginAgreementChecked = ref(false);
+/** 未登录提交时挂起"提交"动作；登录成功后自动补发一次（口径同 demoDetail 点赞登录门的 pending 补发） */
+const pendingSubmit = ref(false);
+
+const submitSuccess = ref(false);
+const submittedBookingId = ref<number | null>(null);
+
+const selectedDate = computed(() => dateWindow.value[selectedDateIndex.value]?.date ?? "");
+const selectedSlot = computed(() => slots.value.find((s) => s.slotId === selectedSlotId.value) ?? null);
+
+/** 请求序号：连续切日期时只应用**最新一次**请求的响应；旧响应晚到既不覆盖时段、也不改 slotsLoading */
+let slotsSeq = 0;
+async function loadSlotsForSelectedDate(): Promise<void> {
+  if (shopId.value <= 0 || selectedDate.value === "") return;
+  const mySeq = ++slotsSeq;
+  slotsLoading.value = true;
+  slotsError.value = null;
+  selectedSlotId.value = null;
+  const r = await loadSlotsUc.load(ctxFactory.next(), shopId.value, selectedDate.value);
+  if (mySeq !== slotsSeq) return;
+  slotsLoading.value = false;
+  if (!r.ok) {
+    slots.value = [];
+    slotsError.value = r.message;
+    return;
+  }
+  slots.value = r.value.slots ?? [];
+}
+
+function onPickDate(index: number): void {
+  if (index === selectedDateIndex.value) return;
+  selectedDateIndex.value = index;
+  void loadSlotsForSelectedDate();
+}
+
+function onPickSlot(slot: SlotView): void {
+  const info = describeSlotAvailability(slot);
+  if (!info.clickable) return;
+  selectedSlotId.value = slot.slotId;
+}
+
+function slotMeta(slot: SlotView): { clickable: boolean; badge: string } {
+  return describeSlotAvailability(slot);
+}
+
+function stepGuestCount(delta: number): void {
+  const next = guestCount.value + delta;
+  if (next < GUEST_COUNT_MIN || next > GUEST_COUNT_MAX) return;
+  guestCount.value = next;
+}
+
+async function loadShopNameFallback(): Promise<void> {
+  if (shopName.value !== "" || shopId.value <= 0) return;
+  const r = await shopRepo.getShops(ctxFactory.next());
+  if (!r.ok) return;
+  const hit = r.value.find((s) => Number((s as Record<string, unknown>).id) === shopId.value);
+  const name = hit != null ? (hit as Record<string, unknown>).displayName : null;
+  if (typeof name === "string" && name !== "") shopName.value = name;
+}
+
+onLoad((options) => {
+  const raw = (options ?? {}) as Record<string, unknown>;
+  const idStr = typeof raw.shopId === "string" ? raw.shopId : String(raw.shopId ?? "");
+  const id = Number(idStr);
+  shopId.value = Number.isFinite(id) && id > 0 ? id : 0;
+  shopName.value = typeof raw.shopName === "string" ? safeDecodeURIComponent(raw.shopName) : "";
+  void initialLoad();
+});
+
+/** 非法编码保持原样、不阻断进入（同 webview/priceList 口径） */
+function safeDecodeURIComponent(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+async function initialLoad(): Promise<void> {
+  // 缺 shopId：无法定位门店，停在空态由用户返回（不发任何请求）
+  if (shopId.value > 0) await Promise.all([loadShopNameFallback(), loadSlotsForSelectedDate()]);
+  ready.value = true;
+}
+
+function goBack(): void {
+  if (typeof uni !== "undefined" && typeof uni.navigateBack === "function") uni.navigateBack();
+}
+
+// —— 提交 ——
+async function doSubmit(): Promise<void> {
+  if (submitting.value) return;
+  if (selectedSlotId.value == null) {
+    toast("请先选择到店时段");
+    return;
+  }
+  submitting.value = true;
+  try {
+    const r = await submitUc.submit({
+      shopId: shopId.value,
+      slotId: selectedSlotId.value,
+      date: selectedDate.value,
+      customerName: String(customerName.value ?? ""),
+      customerPhone: String(customerPhone.value ?? ""),
+      guestCount: guestCount.value,
+      remark: remark.value,
+    });
+    if (r.ok) {
+      submitSuccess.value = true;
+      submittedBookingId.value = r.value.id;
+      return;
+    }
+    if (r.kind === "validation") {
+      toast(r.error.message);
+      return;
+    }
+    if (r.kind === "login-required") {
+      pendingSubmit.value = true;
+      openLoginPopup();
+      return;
+    }
+    if (r.kind === "auth-expired") {
+      // 服务端 401（会话失效，client 已清会话）：提示中文原因并沿用既有登录弹窗，登录成功后自动补发本次提交
+      toast(r.message);
+      pendingSubmit.value = true;
+      openLoginPopup();
+      return;
+    }
+    // kind === "business"：服务端中文可读原因，直接展示（如"该时段已约满"/"您已预约该时段"/"未完成预约已达上限(5条)"）
+    toast(r.message);
+    // 服务端判定约满/不可约时，当前时段快照可能已过期——重拉一次时段，避免用户对着错误的余量再次提交
+    void loadSlotsForSelectedDate();
+  } finally {
+    submitting.value = false;
+  }
+}
+
+function closeLoginPopup(): void {
+  showLoginPopup.value = false;
+  loginAgreementChecked.value = false;
+  pendingSubmit.value = false;
+}
+function toggleLoginAgreement(): void {
+  loginAgreementChecked.value = !loginAgreementChecked.value;
+}
+function showLoginAgreementToast(): void {
+  toast("请先阅读并同意用户协议与隐私政策");
+}
+function openUserAgreement(): void {
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") uni.navigateTo({ url: "/pages/policies/user" });
+}
+function openPrivacyPolicy(): void {
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") uni.navigateTo({ url: "/pages/policies/privacy" });
+}
+/** 登录进行中标志：防止授权按钮连点并发跑两次登录 */
+let phoneLoginBusy = false;
+async function onGetPhoneNumber(e: unknown): Promise<void> {
+  if (phoneLoginBusy) return;
+  if (!loginAgreementChecked.value) {
+    showLoginAgreementToast();
+    return;
+  }
+  const detail = ((e as { detail?: Record<string, unknown> })?.detail ?? {}) as { errMsg?: string; code?: string };
+  if (detail.errMsg != null && detail.errMsg !== "getPhoneNumber:ok") {
+    toast(detail.errMsg.includes("deny") || detail.errMsg.includes("cancel") ? "已取消授权" : "授权失败，请重试");
+    return;
+  }
+  if (!detail.code) {
+    toast("获取手机号失败，请检查小程序认证状态");
+    return;
+  }
+  phoneLoginBusy = true;
+  showLoading("登录中...");
+  let result: Awaited<ReturnType<typeof phoneLoginFlow.runPhoneLogin>>;
+  try {
+    result = await phoneLoginFlow.runPhoneLogin(detail.code);
+  } finally {
+    hideLoading();
+    phoneLoginBusy = false;
+  }
+  if (!result.ok) {
+    toast(result.errorKind === "login" ? "获取登录凭证失败，请重试" : result.errorMsg || "登录失败");
+    return;
+  }
+  showLoginPopup.value = false;
+  loginAgreementChecked.value = false;
+  toast("登录成功", "success");
+  if (pendingSubmit.value) {
+    pendingSubmit.value = false;
+    void doSubmit(); // 登录成功后自动补发挂起的提交（同 demoDetail 点赞登录门 pending 补发语义）
+  }
+}
+
+function goMyBookings(): void {
+  if (typeof uni !== "undefined" && typeof uni.redirectTo === "function") {
+    uni.redirectTo({ url: "/pages/myBookings/index" });
+  }
+}
+</script>
+
+<template>
+  <view class="container">
+    <CustomNavBar :title="shopName !== '' ? shopName + ' · 到店预约' : '到店预约'" :manual-back="true" @back="goBack" />
+
+    <view v-if="!ready" class="sk-wrap">
+      <SkeletonBlock width="100%" height="88rpx" radius="16rpx" />
+      <view class="sk-gap"></view>
+      <SkeletonBlock width="100%" height="320rpx" radius="16rpx" />
+    </view>
+
+    <view v-else-if="shopId <= 0" class="empty-state">
+      <view class="empty-title">门店信息缺失</view>
+      <view class="empty-desc">请从门店页重新进入</view>
+    </view>
+
+    <template v-else-if="submitSuccess">
+      <view class="success-wrap">
+        <view class="success-title font-noto-serif">预约已提交</view>
+        <view class="success-desc">预约已提交，等待门店确认。可在「我的预约」查看进度</view>
+        <BaseButton label="查看我的预约" block @click="goMyBookings" />
+        <view class="success-back" hover-class="press-dim" @click="goBack">返回</view>
+      </view>
+    </template>
+
+    <template v-else>
+      <view class="section">
+        <view class="section-title">选择日期</view>
+        <scroll-view scroll-x class="date-row">
+          <view
+            v-for="(d, idx) in dateWindow"
+            :key="d.date"
+            :class="idx === selectedDateIndex ? 'date-cell is-active' : 'date-cell'"
+            hover-class="press-dim"
+            @click="onPickDate(idx)"
+          >
+            <text class="date-week">{{ d.weekLabel }}</text>
+            <text class="date-label">{{ d.label }}</text>
+          </view>
+        </scroll-view>
+      </view>
+
+      <view class="section">
+        <view class="section-title">选择时段</view>
+        <view v-if="slotsLoading" class="slot-grid">
+          <SkeletonBlock v-for="i in 6" :key="i" width="31%" height="96rpx" radius="12rpx" />
+        </view>
+        <view v-else-if="slotsError !== null" class="slot-error">
+          <text class="slot-error-text">{{ slotsError }}</text>
+          <BaseButton label="重试" size="small" @click="loadSlotsForSelectedDate" />
+        </view>
+        <view v-else-if="slots.length === 0" class="slot-empty">当日暂无可约时段</view>
+        <view v-else class="slot-grid">
+          <view
+            v-for="slot in slots"
+            :key="slot.slotId"
+            :class="[
+              'slot-cell',
+              slot.slotId === selectedSlotId ? 'is-active' : '',
+              !slotMeta(slot).clickable ? 'is-disabled' : '',
+            ]"
+            hover-class="press-dim"
+            @click="onPickSlot(slot)"
+          >
+            <text class="slot-time">{{ slot.startTime }}-{{ slot.endTime }}</text>
+            <text class="slot-badge">{{ slotMeta(slot).badge }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="section">
+        <view class="section-title">预约信息</view>
+        <view class="form-row">
+          <text class="form-label">姓名</text>
+          <input class="form-input" v-model="customerName" placeholder="请输入姓名" maxlength="32" />
+        </view>
+        <view class="form-row">
+          <text class="form-label">手机号</text>
+          <input class="form-input" v-model="customerPhone" type="number" placeholder="请输入手机号" maxlength="11" />
+        </view>
+        <view class="form-row">
+          <text class="form-label">到店人数</text>
+          <view class="stepper">
+            <view class="stepper-btn" hover-class="press-dim" @click="stepGuestCount(-1)">
+              <view class="bar-h"></view>
+            </view>
+            <text class="stepper-value">{{ guestCount }}</text>
+            <view class="stepper-btn" hover-class="press-dim" @click="stepGuestCount(1)">
+              <view class="bar-h"></view>
+              <view class="bar-v"></view>
+            </view>
+          </view>
+        </view>
+        <view class="form-row form-row-remark">
+          <text class="form-label">备注</text>
+          <textarea class="form-textarea" v-model="remark" placeholder="选填，如特殊需求" maxlength="255" />
+        </view>
+      </view>
+
+      <view class="submit-bar">
+        <BaseButton label="提交预约" block :busy="submitting" @click="doSubmit" />
+      </view>
+    </template>
+
+    <LoginPopup
+      v-if="showLoginPopup"
+      :agreement-checked="loginAgreementChecked"
+      :user-agreement-name="userAgreementName"
+      :privacy-policy-name="privacyPolicyName"
+      @close="closeLoginPopup"
+      @toggle-agreement="toggleLoginAgreement"
+      @show-toast="showLoginAgreementToast"
+      @open-user="openUserAgreement"
+      @open-privacy="openPrivacyPolicy"
+      @get-phone="onGetPhoneNumber"
+    />
+    <BaseFeedback ref="feedbackRef" />
+  </view>
+</template>
+
+<style lang="scss" scoped>
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: $color-page;
+  padding-bottom: 48rpx;
+}
+.sk-wrap {
+  padding: 32rpx;
+}
+.sk-gap {
+  height: 24rpx;
+}
+.section {
+  margin: 24rpx 24rpx 0;
+}
+.section-title {
+  font-size: $font-size-body;
+  color: $color-text-secondary;
+  margin-bottom: 16rpx;
+}
+.date-row {
+  display: flex;
+  flex-direction: row;
+  white-space: nowrap;
+}
+.date-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 108rpx;
+  height: 108rpx;
+  margin-right: 16rpx;
+  border-radius: 16rpx;
+  background: rgba(241, 205, 145, 0.06);
+  border: 2rpx solid rgba(241, 205, 145, 0.12);
+}
+.date-cell.is-active {
+  background: rgba(241, 205, 145, 0.18);
+  border-color: $color-action;
+}
+.date-week {
+  font-size: $font-size-caption;
+  color: $color-text-secondary;
+}
+.date-label {
+  margin-top: 6rpx;
+  font-size: $font-size-body;
+  color: $color-text-primary;
+}
+.slot-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.slot-cell {
+  width: calc((100% - 32rpx) / 3);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 96rpx;
+  border-radius: 12rpx;
+  background: rgba(241, 205, 145, 0.06);
+  border: 2rpx solid rgba(241, 205, 145, 0.12);
+}
+.slot-cell.is-active {
+  background: rgba(241, 205, 145, 0.18);
+  border-color: $color-action;
+}
+.slot-cell.is-disabled {
+  opacity: 0.4;
+}
+.slot-time {
+  font-size: $font-size-body;
+  color: $color-text-primary;
+}
+.slot-badge {
+  margin-top: 4rpx;
+  font-size: $font-size-caption;
+  color: $color-text-secondary;
+}
+.slot-empty,
+.slot-error {
+  padding: 32rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  color: $color-text-secondary;
+  font-size: $font-size-body;
+}
+.form-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 92rpx;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.06);
+}
+.form-row-remark {
+  align-items: flex-start;
+  padding-top: 20rpx;
+}
+.form-label {
+  width: 160rpx;
+  flex-shrink: 0;
+  font-size: $font-size-body;
+  color: $color-text-secondary;
+}
+.form-input {
+  flex: 1;
+  font-family: 'HarmonyOS-Sans-SC';
+  font-size: $font-size-body;
+  color: $color-text-primary;
+}
+.form-textarea {
+  flex: 1;
+  min-height: 120rpx;
+  font-family: 'HarmonyOS-Sans-SC';
+  font-size: $font-size-body;
+  color: $color-text-primary;
+}
+.stepper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.stepper-btn {
+  position: relative;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: rgba(241, 205, 145, 0.12);
+}
+/* 加减号用 CSS 绘制（不使用文字图标）：横条居中，竖条仅"加"按钮有 */
+.bar-h,
+.bar-v {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: $color-action;
+  border-radius: 2rpx;
+}
+.bar-h {
+  width: 24rpx;
+  height: 4rpx;
+  margin-left: -12rpx;
+  margin-top: -2rpx;
+}
+.bar-v {
+  width: 4rpx;
+  height: 24rpx;
+  margin-left: -2rpx;
+  margin-top: -12rpx;
+}
+.stepper-value {
+  width: 72rpx;
+  text-align: center;
+  font-size: $font-size-body;
+  color: $color-text-primary;
+}
+.submit-bar {
+  margin: 40rpx 24rpx 0;
+}
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 200rpx 32rpx;
+}
+.empty-title {
+  font-size: $font-size-sub-title;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 16rpx;
+}
+.empty-desc {
+  font-size: $font-size-caption;
+  color: rgba(255, 255, 255, 0.3);
+}
+.success-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 48rpx;
+  gap: 24rpx;
+}
+.success-title {
+  font-size: $font-size-title;
+  color: $color-action;
+}
+.success-desc {
+  font-size: $font-size-body;
+  color: $color-text-secondary;
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+.success-back {
+  margin-top: 16rpx;
+  font-size: $font-size-body;
+  color: $color-text-secondary;
+}
+</style>
