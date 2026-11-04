@@ -23,6 +23,7 @@ import { onLoad, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
 import { detectUiPlatform } from "../../ui/ui-platform";
+import BaseFeedback from "../../ui/BaseFeedback.vue"; // 轻提示宿主（platform/uni/feedback.toast 经 ui/toast-host 投递到此）
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
@@ -332,6 +333,9 @@ function coverThumb(url: string): string {
 
     <!-- 页脚：PageFooter 共享组件（原 :319-325 page-footer > divide + copyright 块收敛；样式随之入组件） -->
     <PageFooter :main-line="footer.mainLine" :support-line="footer.supportLine" variant="copyright" />
+
+    <!-- 轻提示宿主（wot 金色 Toast；0×0 不占位） -->
+    <BaseFeedback />
   </view>
 </template>
 

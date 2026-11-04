@@ -17,5 +17,6 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.spec.ts"],
     environment: "happy-dom",
+    setupFiles: ["tests/setup/reset-toast-host.ts"],
   },
 });

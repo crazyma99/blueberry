@@ -76,6 +76,7 @@ vi.mock("../../src/components/LoginPopup/LoginPopup.vue", () => ({
 }));
 
 import DetailPage from "../../src/pages/targetPhotoDetail/index.vue";
+import StubWdToast from "../stubs/wot/wd-toast/wd-toast.vue";
 
 const flush = () => new Promise((r) => setTimeout(r, 20));
 
@@ -96,17 +97,17 @@ describe("cosThumb／isCosHost（旧端忠实移植，含 CR 🟡 防误命中�
 
 describe("pages/targetPhotoDetail 冒烟（mock 生命周期）", () => {
   it("缺入参兜底回首页 tab（2026-09-22 主人拍板 A）；有入参 → 详情请求失败收敛错误态＋可重试", async () => {
-    const w = mount(DetailPage);
+    const w = mount(DetailPage, { global: { components: { "wd-toast": StubWdToast } } });
     await w.vm.$nextTick();
     expect(h.onLoadCalls.length).toBeGreaterThan(0);
     const reLaunch = vi.fn();
-    const toastSpy = vi.fn();
     const uniObj = (globalThis as { uni?: Record<string, unknown> }).uni ?? {};
-    (globalThis as { uni?: Record<string, unknown> }).uni = { ...uniObj, reLaunch, showToast: toastSpy };
+    (globalThis as { uni?: Record<string, unknown> }).uni = { ...uniObj, reLaunch };
     h.onLoadCalls[h.onLoadCalls.length - 1]({ liked: "true" }); // 缺 idx ⇒ 兜底
     await flush();
     await w.vm.$nextTick();
-    expect(toastSpy).toHaveBeenCalled();
+    // 轻提示统一走 wot（BaseFeedback 宿主），不再是 uni.showToast
+    expect(w.find(".stub-wd-toast").text()).toContain("分享链接已失效");
     expect(reLaunch).toHaveBeenCalledWith({ url: "/pages/index/index" });
     h.onLoadCalls[h.onLoadCalls.length - 1]({ idx: "42", type: "1" });
     await flush();

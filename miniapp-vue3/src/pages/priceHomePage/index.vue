@@ -16,6 +16,7 @@ import { syncBrandFromEnterOptionsAsync } from "../../application/enter-brand-sy
 import { readEnterOptions } from "../../platform/uni/enter-options";
 import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
 import { detectUiPlatform } from "../../ui/ui-platform";
+import BaseFeedback from "../../ui/BaseFeedback.vue"; // 轻提示宿主（platform/uni/feedback.toast 经 ui/toast-host 投递到此）
 import { isPlatform } from "../../ports/context";
 import type { Platform } from "../../ports/context";
 import { createUniTransport } from "../../platform/uni/transport";
@@ -240,6 +241,9 @@ function onDemoClick(idx: number): void {
     <!-- 自定义底部 tabbar 占位（旧 :23；全局类在 App.vue：116rpx + 安全区），仅微信端渲染
          （抖音原生 tab 不占页面区域）——避免页脚贴底 tab -->
     <view v-if="isMpWeixin" class="tabbar-safe-spacer"></view>
+
+    <!-- 轻提示宿主（wot 金色 Toast；0×0 不占位） -->
+    <BaseFeedback />
   </view>
 </template>
 

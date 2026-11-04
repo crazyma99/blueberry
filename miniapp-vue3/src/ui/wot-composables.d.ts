@@ -3,7 +3,7 @@
 import type { ToastIconType } from "@wot-ui/ui/components/wd-toast/types";
 
 export interface WotToastApi {
-  show(option: { msg?: string; iconName?: ToastIconType; duration?: number } | string): void;
+  show(option: { msg?: string; iconName?: ToastIconType; duration?: number; zIndex?: number } | string): void;
   close(): void;
   loading(option: { msg?: string } | string): void;
   success(option: { msg?: string } | string): void;

@@ -309,7 +309,8 @@ onLoad((options) => {
   const p = parseDetailParams((options ?? {}) as Record<string, unknown>);
   if (p == null) {
     // 缺 idx 兜底（2026-09-22）：原为「停留加载态」= 白屏感 ⇒ 提示 + 回首页 tab
-    uni.showToast({ title: "分享链接已失效，请返回首页重新进入", icon: "none" });
+    // onLoad 阶段 BaseFeedback 尚未挂载（且随即 reLaunch 销毁本页）⇒ 走共享 toast（无宿主回落原生；tt 原生）
+    nativeToast("分享链接已失效，请返回首页重新进入");
     uni.reLaunch({ url: "/pages/index/index" });
     return;
   }

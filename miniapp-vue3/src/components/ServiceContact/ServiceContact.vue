@@ -13,6 +13,7 @@
 import { qrPreviewUrl } from "../../application/image";
 import LifeImButton from "../../platform/ui-bridge/LifeImButton.vue";
 import { isToutiaoPlatform } from "../../ui/ui-platform";
+import { toast } from "../../platform/uni/feedback";
 
 // 2026-10-10（抖音提审打回修正）：抖音端**不再出现微信二维码**（长按加好友＝站外引流），
 // 改用官方「抖音来客 IM 客服」按钮（`platform/ui-bridge/LifeImButton.vue`，基础库 3.61.0+）；
@@ -21,7 +22,7 @@ const isToutiao = isToutiaoPlatform();
 
 /** 抖音端拉起客服失败（未开通来客／基础库低于 3.61.0／框架错误 179791）⇒ 明确提示，不静默失败 */
 function onContactFailed(): void {
-  uni.showToast({ title: "客服暂不可用，请稍后重试", icon: "none" });
+  toast("客服暂不可用，请稍后重试");
 }
 
 /**
@@ -58,7 +59,7 @@ function previewQr(src: string): void {
     current: url,
     // 文案保持中性：抖音包里**不得**出现「二维码／长按」等引流词（2026-10-10 提审打回纪律），
     // 逻辑层字符串会同时打进抖音包 ⇒ 这里只说「图片」（该函数在抖音端本就不可达）
-    fail: () => uni.showToast({ title: "图片加载失败，请稍后重试", icon: "none" }),
+    fail: () => toast("图片加载失败，请稍后重试"),
   });
 }
 

@@ -12,6 +12,7 @@ import { ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { isAllowedWebviewUrl, webviewHost } from "../../domain/webview-url";
+import { toast } from "../../platform/uni/feedback";
 
 // Profile 派生域白名单（release/trial/develop 三个 API 基址的 host，去重）
 function profileHosts(): string[] {
@@ -49,9 +50,8 @@ onLoad((options) => {
   } else {
     // 拒绝路径：不渲染 web-view，提示后返回（旧端无此分支＝本批加固）
     rejected.value = true;
-    if (typeof uni !== "undefined" && typeof uni.showToast === "function") {
-      uni.showToast({ title: "链接不可打开", icon: "none" });
-    }
+    // onLoad 阶段无宿主（web-view 原生层本也盖住 wot 层）⇒ toast() 自动回落原生
+    toast("链接不可打开");
     setTimeout(() => {
       requestBack();
     }, 800);
