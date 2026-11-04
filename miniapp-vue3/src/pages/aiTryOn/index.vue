@@ -70,6 +70,7 @@ import {
 } from "../../application/ai-photo-upload";
 import { formatUploadProgressText } from "../../application/upload-progress";
 import { createTryOnSubmitter, loadCreditInfo } from "../../application/ai-tryon-submit";
+import { TEMPLATE_DATA_INVALID_TEXT, templateLoadErrorMessage } from "../../domain/ai-template-error";
 import { createAlbumRepository } from "../../infrastructure/repositories/albums";
 import { cosThumbJpg } from "../../application/image-share";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
@@ -398,8 +399,13 @@ async function loadTemplates(): Promise<void> {
       if (gender.value !== "") params.gender = gender.value;
     }
     const res = await aiRepo.getTemplates(ctxFactory.next(), params);
-    if (!res.ok || res.value == null) {
-      toast("模板加载失败，请重试");
+    if (!res.ok) {
+      // 对齐旧端 2876ec5：仅 BUSINESS 透传服务端中文 message，其余（网络/超时/登录失效…）回落固定文案
+      toast(templateLoadErrorMessage(res.error));
+      return;
+    }
+    if (!Array.isArray(res.value)) {
+      toast(TEMPLATE_DATA_INVALID_TEXT); // 形状守卫（null/非数组）：不改 templates
       return;
     }
     const list = (res.value ?? []) as unknown as Array<{ id?: number; imageUrl?: string; tryonDisabled?: boolean }>;

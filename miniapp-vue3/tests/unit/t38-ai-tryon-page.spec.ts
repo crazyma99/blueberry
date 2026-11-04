@@ -1,6 +1,7 @@
 // T8 S2尾/S4 接线：aiTryOn 页面级测试——模板双入口与相册回退、生成守卫（未上传照片）。
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import { defineComponent } from "vue";
 
 const h = vi.hoisted(() => ({
   onLoadCalls: [] as Array<(o?: Record<string, unknown>) => void>,
@@ -24,6 +25,8 @@ const h = vi.hoisted(() => ({
   // R18 一键重试用例用：uploadOk=false 时 uploadFile 走 fail
   uploadOk: true,
   uploadCalls: 0,
+  // 模板接口结果覆盖（失败/形状异常用例；null=走 templatesByQuery）
+  templatesOverride: null as unknown,
 }));
 
 vi.mock("@dcloudio/uni-app", () => ({
@@ -39,6 +42,7 @@ vi.mock("../../src/infrastructure/repositories/ai", () => ({
   createAiRepository: () => ({
     getTemplates: async (_c: unknown, q: Record<string, string>) => {
       h.templateQueries.push(q);
+      if (h.templatesOverride != null) return h.templatesOverride as never;
       return { ok: true, value: h.templatesByQuery(q) };
     },
     getTasks: async () => ({ ok: true, value: [] }),
@@ -110,6 +114,7 @@ beforeEach(() => {
   h.compressFail = false;
   h.uploadOk = true;
   h.uploadCalls = 0;
+  h.templatesOverride = null;
   h.store.clear();
   (globalThis as { uni?: unknown }).uni = {
     getStorageSync: (k: string) => h.store.get(k) ?? "",
@@ -286,6 +291,53 @@ describe("pages/aiTryOn（T8 装配）", () => {
       await flush();
       expect(h.templateQueries.length).toBe(before + 1); // 可重试
       h.templatesByQuery = (q: Record<string, string>) => (q.album_id != null ? [] : [{ id: 11, imageUrl: "https://lanmei66.cloud/t.png" }]);
+    });
+  });
+
+  // 旧端 main 2876ec5 CR 缺口：失败提示透传 BUSINESS message；形状守卫。
+  // 轻提示走 BaseFeedback.show（exposed 代理不可 spy）⇒ 用同名桩替换宿主，把 show 文案记入 h.toasts。
+  describe("模板加载失败分支（对齐旧端 2876ec5）", () => {
+    const FeedbackStub = defineComponent({
+      name: "BaseFeedback",
+      setup(_p, { expose }) {
+        expose({ show: (t: string) => h.toasts.push(t), hide: () => undefined });
+        return () => null;
+      },
+    });
+    const G = { components: { "wd-popup": StubWdPopup }, stubs: { BaseFeedback: FeedbackStub } };
+    const load = async () => {
+      const w = mount(AiTryOnPage, { global: G });
+      h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "7" });
+      await flush();
+      await w.vm.$nextTick();
+      return w;
+    };
+
+    it("BUSINESS 错误：toast 透传服务端中文 message", async () => {
+      h.templatesOverride = { ok: false, error: { kind: "BUSINESS", businessCode: 500, message: "服务繁忙", requestId: null, retryable: false } };
+      await load();
+      expect(h.toasts).toContain("服务繁忙");
+      expect(h.toasts).not.toContain("模板加载失败，请重试");
+    });
+
+    it("NETWORK 错误：英文技术串不外露，回落固定中文", async () => {
+      h.templatesOverride = { ok: false, error: { kind: "NETWORK", businessCode: null, message: "transport failure: network", requestId: null, retryable: true } };
+      await load();
+      expect(h.toasts).toContain("模板加载失败，请重试");
+      expect(h.toasts.join("|")).not.toContain("transport failure");
+    });
+
+    it("ok 但 value 非数组：提示「模板数据异常」，templates 不被赋值（仍为空态）", async () => {
+      h.templatesOverride = { ok: true, value: { not: "array" } };
+      const w = await load();
+      expect(h.toasts).toContain("模板数据异常，请重试");
+      expect(w.find(".tpl-empty").exists()).toBe(true); // templates 仍为 []（未把对象当数组赋值）
+    });
+
+    it("ok 且 value 为 null：同样走「模板数据异常」", async () => {
+      h.templatesOverride = { ok: true, value: null };
+      await load();
+      expect(h.toasts).toContain("模板数据异常，请重试");
     });
   });
 
