@@ -299,6 +299,39 @@ describe("payAndConfirm：状态归类的边界（CR 加固）", () => {
     }
   });
 
+  it("【问题 10·时钟回拨】轮询期间系统时钟被向后调整（now 递减）：不靠时间收口也能在有限次内 timeout，次数 ≤ ceil(timeoutMs/intervalMs)+3", async () => {
+    let t = 1_000_000;
+    let calls = 0;
+    // 逃生阀：若实现没有迭代上限则在第 201 次返回 AUTH_EXPIRED 强行收口，让用例以断言失败（而不是死循环）暴露问题
+    const rd: BookingReaderLike & { count: () => number } = {
+      count: () => calls,
+      getBooking: async () => {
+        calls++;
+        return calls > 200 ? err("AUTH_EXPIRED") : ok(bk("pending"));
+      },
+    };
+    const flow = createDepositPayFlow({
+      bookings: rd,
+      payments: payments({ ok: true }),
+      poll: { intervalMs: 1000, timeoutMs: 30000 },
+      now: () => (t -= 500), // 每次读时钟都往回拨：now()-startedAt 恒为负，纯时间判断永不超时
+      sleep: async () => undefined,
+    });
+    const r = await flow.payAndConfirm(ctx, { bookingId: 1, pay });
+    expect(r).toMatchObject({ ok: false, reason: "timeout" });
+    expect(r.phase).toBeUndefined();
+    expect(rd.count()).toBe(Math.ceil(30000 / 1000) + 3); // 33 次后按迭代上限收口
+  });
+
+  it("迭代上限不影响正常时钟：时间先到则按时间停（不多轮询）", async () => {
+    const clock = fakeClock();
+    const rd = reader([ok(bk("pending"))]);
+    const flow = createDepositPayFlow({ bookings: rd, payments: payments({ ok: true }), poll: { intervalMs: 1000, timeoutMs: 3000 }, ...clock });
+    const r = await flow.payAndConfirm(ctx, { bookingId: 1, pay });
+    expect(r).toMatchObject({ ok: false, reason: "timeout" });
+    expect(rd.count()).toBe(4); // t=0,1000,2000,3000 ⇒ 第 4 次读到 3000>=timeout 停
+  });
+
   it("取消/失败后的确认轮询为 3 次（给微信异步到账通知留 2 个间隔），第 3 次才见 paid 也能判成功", async () => {
     const clock = fakeClock();
     const rd = reader([ok(bk("pending")), ok(bk("pending")), ok(bk("paid"))]);

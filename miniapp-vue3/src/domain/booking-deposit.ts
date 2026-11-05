@@ -158,9 +158,11 @@ export function describeDepositLine(deposit: DepositView | null): string {
     case "paid":
       return "保证金 " + amount + " · 已支付";
     case "refunding":
-      // 已结算（refundFen 有值）：展示实退金额；否则展示原保证金
+      // 已结算（refundFen 有值）：展示实退金额；否则展示原保证金。
+      // 带扣除时不以「保证金 ¥x」开头（会被读成原保证金金额）：写成「退还 ¥x（退还中），已扣除 ¥y（原因）」
+      if (deposit.refundFen > 0 && deposit.forfeitFen > 0) return "退还 " + formatFen(deposit.refundFen) + "（退还中）" + forfeitTail;
       return deposit.refundFen > 0
-        ? "保证金 " + formatFen(deposit.refundFen) + " · 退还中" + forfeitTail
+        ? "保证金 " + formatFen(deposit.refundFen) + " · 退还中"
         : "保证金 " + amount + " · 退还中" + forfeitTail;
     case "refunded":
       // 用 refundFen（实退金额）而非 amountFen；部分扣除时一并展示扣除金额与原因
@@ -198,14 +200,19 @@ export function expireAtMs(payExpireTime: string): number {
   return Number.isFinite(t) ? t : 0;
 }
 
-export function remainingPaySeconds(payExpireTime: string, nowMs: number): number {
+export function remainingPaySeconds(payExpireTime: string, nowMs: number, capSeconds?: number): number {
   const t = expireAtMs(payExpireTime);
   if (t === 0) return 0;
   if (typeof nowMs !== "number" || !Number.isFinite(nowMs)) return 0;
   const remainMs = t - nowMs;
   if (remainMs <= 0) return 0;
-  return Math.floor(remainMs / 1000);
+  const sec = Math.floor(remainMs / 1000);
+  // 设备时钟偏慢时本地剩余会大于真实保留期：有上限则取 min(本地剩余, 上限)，不向用户夸大剩余时间
+  return typeof capSeconds === "number" && Number.isFinite(capSeconds) && capSeconds > 0 ? Math.min(sec, Math.trunc(capSeconds)) : sec;
 }
+
+/** 契约（§10.3）里待支付保留分钟的上界（5..30）：我的预约页拿不到门店配置时用它封顶倒计时 */
+export const MAX_PAY_HOLD_MINUTES = 30;
 
 /** 秒 → "mm:ss"（非有限/负数回落 0；超过 99 分钟仍按实际分钟展示，不截断） */
 export function formatCountdown(sec: number): string {
@@ -244,7 +251,8 @@ export function summarizeDepositRule(rule: DepositRuleView): string[] {
   //   · 扣除比例为 0（全退）或 freeCancelHours=0（没有迟取消窗口，§3.1）⇒ 整体可免费取消，写「开始前取消，可免费取消」，
   //     不写「开始前 N 小时内…可免费取消」（会被误读成只有窗口内才免费），也不说「开始前 0 小时内」。
   if (hours > 0 && latePct > 0) {
-    lines.push("开始前 " + hours + " 小时内取消，扣除 " + latePct + "% 保证金");
+    // 迟取消规则只适用于「门店确认后」的预约；门店确认前（待确认）取消一律全额退还（后端 ComputeSettlement 口径）
+    lines.push("门店确认后，开始前 " + hours + " 小时内取消，扣除 " + latePct + "% 保证金；门店确认前取消全额退还");
   } else {
     lines.push("开始前取消，可免费取消");
   }
@@ -255,27 +263,51 @@ export function summarizeDepositRule(rule: DepositRuleView): string[] {
   // 退还时机（refundTrigger）：不承诺具体到账时点，只说明由谁触发
   lines.push(rule.refundTrigger === "auto_on_complete" ? "预约完成后系统自动退还保证金" : "预约完成后由门店确认退还保证金");
 
+  // 预约开始后用户不能自助取消（后端返回「预约已开始，如需处理请联系商家」）
+  lines.push("预约开始后如需处理，请联系门店");
+
   // 全额退还 + 原路退回收尾（必须说清款项去向）
   lines.push("其余情形（含门店取消）全额退还，款项原路退回");
   return lines;
 }
 
 // ———————————————————————————————————————————————————————————————
-// 取消确认文案：
-//   forfeit>0 → 「取消后将扣除 ¥x，退还 ¥y」；
+// 取消确认文案（取消**前**，将来时）：
+//   forfeit>0 → 「取消后将扣除 ¥x（迟取消），退还 ¥y」（reason 已知时追加原因，复用 describeSettleReason）；
 //   forfeit=0 且 refund>0 → 「保证金 ¥x 将原路退回」；
 //   都为 0 → 返回空串（调用方走原确认文案）。
 // ———————————————————————————————————————————————————————————————
-export function cancelConfirmText(preview: { refundFen: number; forfeitFen: number }): string {
-  const refund = typeof preview?.refundFen === "number" && Number.isFinite(preview.refundFen) && preview.refundFen > 0 ? Math.trunc(preview.refundFen) : 0;
-  const forfeit = typeof preview?.forfeitFen === "number" && Number.isFinite(preview.forfeitFen) && preview.forfeitFen > 0 ? Math.trunc(preview.forfeitFen) : 0;
+function toFen(v: unknown): number {
+  return typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.trunc(v) : 0;
+}
+function reasonSuffix(reason: unknown): string {
+  const r = describeSettleReason(typeof reason === "string" ? reason : "");
+  return r !== "" ? "（" + r + "）" : "";
+}
+
+export function cancelConfirmText(preview: { refundFen: number; forfeitFen: number; reason?: string }): string {
+  const refund = toFen(preview?.refundFen);
+  const forfeit = toFen(preview?.forfeitFen);
   if (forfeit > 0) {
-    return "取消后将扣除 " + formatFen(forfeit) + "，退还 " + formatFen(refund);
+    return "取消后将扣除 " + formatFen(forfeit) + reasonSuffix(preview?.reason) + "，退还 " + formatFen(refund);
   }
   if (refund > 0) {
     return "保证金 " + formatFen(refund) + " 将原路退回";
   }
   return "";
+}
+
+/** 取消**成功后**的提示（过去时，事情已发生）：「已取消预约，已扣除 ¥x（迟取消），退还 ¥y」／「已取消预约，保证金 ¥x 将原路退回」；无结算金额 ⇒ 「已取消预约」 */
+export function cancelDoneText(settled: { refundFen: number; forfeitFen: number; reason?: string }): string {
+  const refund = toFen(settled?.refundFen);
+  const forfeit = toFen(settled?.forfeitFen);
+  if (forfeit > 0) {
+    return "已取消预约，已扣除 " + formatFen(forfeit) + reasonSuffix(settled?.reason) + "，退还 " + formatFen(refund);
+  }
+  if (refund > 0) {
+    return "已取消预约，保证金 " + formatFen(refund) + " 将原路退回";
+  }
+  return "已取消预约";
 }
 
 // ———————————————————————————————————————————————————————————————
@@ -288,11 +320,13 @@ export function isDepositActive(booking: { deposit: DepositView | null }): boole
 // ———————————————————————————————————————————————————————————————
 // 预约保留剩余分钟（向上取整）：优先按 deposit.payExpireTime 与 now 的差计算（用户在支付面板停留过的时间不能算进「已保留」）；
 // payExpireTime 缺失/非法时回落 fallbackMinutes（config.payHoldMinutes）；已过期返回 0。
+// 设备时钟偏慢时本地剩余可能大于真实保留期 ⇒ 取 min(本地剩余, 保留期上限)：上限＝fallbackMinutes（>0 时），否则契约上界 MAX_PAY_HOLD_MINUTES。
 // ———————————————————————————————————————————————————————————————
 export function retainMinutes(deposit: DepositView | null, nowMs: number, fallbackMinutes: number): number {
   const fb = typeof fallbackMinutes === "number" && Number.isFinite(fallbackMinutes) && fallbackMinutes > 0 ? Math.trunc(fallbackMinutes) : 0;
   if (deposit == null || !EXPIRE_RE.test(String(deposit.payExpireTime ?? "").trim())) return fb;
-  return Math.ceil(remainingPaySeconds(deposit.payExpireTime, nowMs) / 60);
+  const cap = fb > 0 ? fb : MAX_PAY_HOLD_MINUTES;
+  return Math.min(Math.ceil(remainingPaySeconds(deposit.payExpireTime, nowMs) / 60), cap);
 }
 
 // ———————————————————————————————————————————————————————————————
@@ -315,7 +349,9 @@ export type DepositUnpaidReason =
   | "authExpired"
   | "busy"
   | "no-pay-params"
-  | "rules-unseen";
+  | "rules-unseen"
+  /** 创建后服务端下发的保证金金额与用户已同意的金额不一致（商家在页面打开后改了金额）：不自动付款 */
+  | "amount-changed";
 
 export function describeUnpaidResult(reason: string, minutes: number): SubmitResultText {
   const m = typeof minutes === "number" && Number.isFinite(minutes) && minutes > 0 ? Math.trunc(minutes) : 0;
@@ -328,7 +364,7 @@ export function describeUnpaidResult(reason: string, minutes: number): SubmitRes
     case "timeout":
       return {
         title: "支付结果确认中",
-        desc: "暂未收到支付结果，请稍后在「我的预约」查看。如已扣款，状态会自动更新，请勿重复支付",
+        desc: "暂未收到支付结果，请到「我的预约」查看支付结果，请勿重复支付",
       };
     case "closed":
       return { title: "预约已关闭", desc: "本次预约因未完成支付已关闭，如已扣款将原路退回。可重新预约" };
@@ -336,6 +372,11 @@ export function describeUnpaidResult(reason: string, minutes: number): SubmitRes
       return { title: "预约已保留", desc: "当前环境暂不支持支付。" + hold };
     case "authExpired":
       return { title: "预约已保留", desc: "登录已失效，请重新登录后到「我的预约」继续支付。" + hold };
+    case "amount-changed":
+      return {
+        title: "预约已保留",
+        desc: "保证金金额已变化，请到「我的预约」查看后再支付" + (m > 0 ? "。预约已保留 " + m + " 分钟" : "。预约保留时间即将结束，请尽快查看"),
+      };
     default:
       // no-pay-params / rules-unseen / 未知：不自动拉起支付，引导到「我的预约」查看保证金并自行决定
       return {

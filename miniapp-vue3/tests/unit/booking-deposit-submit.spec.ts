@@ -268,6 +268,33 @@ describe("异常与竞态防御", () => {
     expect(h.log).toEqual(["create"]); // 没有 pay、没有 subscribe
   });
 
+  it("【问题 6·金额漂移】创建后服务端下发的金额与用户已同意的金额不一致：不拉起支付，unpaid/amount-changed，预约保留", async () => {
+    const h = harness({ createValue: { ...bk("awaiting_payment", "pending", { amountFen: 8000 }), pay: PAY } });
+    const r = await h.flow.submit(input, { ...OPTS_ON, agreedAmountFen: 5000 });
+    expect(r).toMatchObject({ kind: "unpaid", reason: "amount-changed" });
+    expect(h.log).toEqual(["subscribe", "create"]); // 没有 pay、没有轮询
+  });
+
+  it("金额一致 ⇒ 正常拉起支付并以服务端状态判成功；未传 agreedAmountFen ⇒ 不做比较（兼容）", async () => {
+    const same = harness({ polls: [bk("pending", "paid")] });
+    expect((await same.flow.submit(input, { ...OPTS_ON, agreedAmountFen: 5000 })).kind).toBe("paid");
+    expect(same.log).toContain("pay");
+    const noCheck = harness({ createValue: { ...bk("awaiting_payment", "pending", { amountFen: 8000 }), pay: PAY }, polls: [bk("pending", "paid")] });
+    expect((await noCheck.flow.submit(input, OPTS_ON)).kind).toBe("paid");
+  });
+
+  it("【问题 4·时钟偏慢】截止时间看起来比保留期上限晚很多：保留分钟取 min(本地剩余, payHoldMinutes)，不夸大", async () => {
+    // 本地时钟 12:00，deposit 截止 12:50（设备时钟比服务端慢 40 分钟）；配置保留期 10 分钟
+    const h = harness({
+      createValue: { ...bk("awaiting_payment", "pending", { payExpireTime: "2026-11-05 12:50:00" }), pay: PAY },
+      polls: [bk("awaiting_payment", "pending", { payExpireTime: "2026-11-05 12:50:00" })],
+      payResult: { ok: false, reason: "cancelled" },
+    });
+    const r = await h.flow.submit(input, OPTS_ON);
+    if (r.kind !== "unpaid") throw new Error("unreachable");
+    expect(r.retainMinutes).toBe(10);
+  });
+
   it("支付流程内部抛异常 → 收口为 unpaid/payment-failed，不向页面抛", async () => {
     const throwing = createDepositSubmitFlow({
       submitUc: { submit: async () => ({ ok: true, value: { ...bk("awaiting_payment", "pending"), pay: PAY } }) },

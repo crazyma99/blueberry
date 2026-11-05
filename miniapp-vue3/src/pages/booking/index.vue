@@ -7,7 +7,7 @@
 //   **勾选同意后方可提交**；提交 = 订阅授权（点击手势内）→ 创建预约 → 拉起微信支付 → 以服务端状态为准确认到账（编排见 application/booking-deposit-submit）。
 //   未开启保证金的门店：页面与流程与此前完全一致（无保证金文案、无授权弹窗、无支付）。对用户一律称「预约保证金」。
 // 入参：shopId（必填）、shopName（可选，缺失时用 shops 仓储按 id 查一次兜底）。
-import { computed, ref } from "vue";
+import { computed, onUnmounted, ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
@@ -154,8 +154,19 @@ const resultCta = ref("查看我的预约");
 // —— 预约保证金配置（booking-config）——
 const config = ref<BookingConfig | null>(null);
 const configLoading = ref(false);
-/** 配置拉取失败文案：fail-closed——拿不到配置不允许提交（避免在可能需要保证金的门店跳过规则明示） */
+/** 配置拉取失败文案：fail-closed——拿不到配置不允许提交（避免在可能需要保证金的门店跳过规则明示）。
+ *  自动重试期间保持 null（静默），重试用尽后才置位并出现「重试」入口 */
 const configError = ref<string | null>(null);
+/** 页面已销毁：此后配置重试不再发请求；支付流收尾不再写状态 */
+let disposed = false;
+let configRetryTimer: ReturnType<typeof setTimeout> | null = null;
+/** 配置拉取失败后的静默自动重试退避（至多 2 次）：瞬时的网络抖动/限流不应让所有门店（含未开启保证金的）无法提交 */
+const CONFIG_RETRY_DELAYS_MS = [600, 1500];
+onUnmounted(() => {
+  disposed = true;
+  if (configRetryTimer != null) clearTimeout(configRetryTimer);
+  configRetryTimer = null;
+});
 const depositAgreed = ref(false);
 const depositEnabled = computed(() => config.value?.deposit.enabled === true);
 const depositAmountText = computed(() => formatFen(config.value?.deposit.amountFen ?? 0));
@@ -242,23 +253,50 @@ function safeDecodeURIComponent(value: string): string {
   }
 }
 
-async function loadConfig(): Promise<void> {
-  if (shopId.value <= 0 || configLoading.value) return;
+type ConfigLoadOutcome = { ok: true } | { ok: false; message: string };
+/** 在飞的配置请求（去重：初始加载／自动重试／提交时重取共用同一个请求，不并发） */
+let configInflight: Promise<ConfigLoadOutcome> | null = null;
+function fetchConfig(): Promise<ConfigLoadOutcome> {
+  if (configInflight != null) return configInflight;
   configLoading.value = true;
-  configError.value = null;
-  const r = await loadConfigUc.load(ctxFactory.next(), shopId.value);
-  configLoading.value = false;
-  if (r.ok) {
-    config.value = r.value;
+  configInflight = (async (): Promise<ConfigLoadOutcome> => {
+    try {
+      const r = await loadConfigUc.load(ctxFactory.next(), shopId.value);
+      if (r.ok) {
+        config.value = r.value;
+        configError.value = null;
+        return { ok: true };
+      }
+      config.value = null;
+      return { ok: false, message: r.message };
+    } finally {
+      configLoading.value = false;
+      configInflight = null;
+    }
+  })();
+  return configInflight;
+}
+
+/** 首次加载 + 失败后静默自动重试（600ms／1500ms 两次）；重试用尽仍失败才展示错误卡片与「重试」入口（fail-closed 保持不变） */
+async function loadConfig(attempt = 0): Promise<void> {
+  if (shopId.value <= 0 || disposed) return;
+  const r = await fetchConfig();
+  if (r.ok || disposed) return;
+  if (attempt < CONFIG_RETRY_DELAYS_MS.length) {
+    configRetryTimer = setTimeout(() => {
+      configRetryTimer = null;
+      if (disposed || config.value != null) return;
+      void loadConfig(attempt + 1);
+    }, CONFIG_RETRY_DELAYS_MS[attempt]);
     return;
   }
-  config.value = null;
   configError.value = r.message;
 }
 
 function onRetryConfig(): void {
   hapticTap();
-  void loadConfig();
+  configError.value = null;
+  void loadConfig(CONFIG_RETRY_DELAYS_MS.length); // 手动重试：单次请求，失败则立刻回到错误卡片（不再叠加自动重试）
 }
 
 function toggleDepositAgree(): void {
@@ -293,11 +331,37 @@ async function doSubmit(resumed = false): Promise<void> {
     toast("请先选择到店时段");
     return;
   }
-  const cfg = config.value;
+  let cfg = config.value;
   if (cfg == null) {
-    // fail-closed：没有拿到门店预约配置就不提交（可能是开启保证金的门店）；页面上有「重试」入口
-    toast(configError.value ?? "预约规则加载失败，请重试");
-    return;
+    // 配置没拿到（初始加载及自动重试都失败）：不 fail-open，但也不让一次瞬时失败阻断所有门店——点击提交时先重取一次。
+    //   · 重取成功且未开启保证金 ⇒ 继续走**无保证金的原提交流程**（此时已脱离点击手势，但未开启保证金本来就不弹订阅授权，行为同旧版）；
+    //   · 重取成功且已开启 ⇒ 展示规则卡片并提示勾选，**不直接提交**（用户尚未看过规则）；
+    //   · 重取也失败 ⇒ 才拦截并提示重试（错误卡片＋「重试」入口）。
+    submitting.value = true;
+    let r: ConfigLoadOutcome;
+    try {
+      r = await fetchConfig();
+    } finally {
+      submitting.value = false;
+    }
+    if (disposed) return;
+    if (!r.ok) {
+      configError.value = r.message;
+      toast(r.message !== "" ? r.message : "预约规则加载失败，请重试");
+      return;
+    }
+    cfg = config.value;
+    if (cfg == null) return;
+    if (cfg.deposit.enabled) {
+      depositAgreed.value = false; // 规则刚展示出来，之前的勾选（若有）不算数
+      toast("请先阅读预约保证金规则，勾选同意后再提交");
+      return;
+    }
+    if (selectedSlotId.value == null) {
+      toast("请先选择到店时段");
+      return;
+    }
+    resumed = true; // 已不在点击手势内：未开启保证金不请求订阅授权（本来也不请求）
   }
   if (cfg.deposit.enabled && !depositAgreed.value) {
     toast("请先阅读并勾选同意预约保证金规则");
@@ -321,8 +385,11 @@ async function doSubmit(resumed = false): Promise<void> {
         agreed: depositAgreed.value,
         templates: resumed ? { result: "", done: "" } : cfg.subscribeTemplates,
         payHoldMinutes: cfg.payHoldMinutes,
+        agreedAmountFen: cfg.deposit.amountFen,
       },
     );
+    // 页面已销毁（用户在支付流程中离开）：不再写结果页状态、不弹别的页面上的 toast；支付结果以「我的预约」为准
+    if (disposed) return;
     switch (outcome.kind) {
       case "blocked":
         toast("请先阅读并勾选同意预约保证金规则");

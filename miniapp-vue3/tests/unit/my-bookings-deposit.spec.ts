@@ -25,6 +25,8 @@ const h = vi.hoisted(() => ({
   payGate: null as Promise<void> | null,
   /** cancelBooking 成功时返回的 value（带保证金结算结果）；null＝空对象 */
   cancelResultValue: null as unknown,
+  /** 非 null 时 cancelBooking 返回该错误（AppError 形状） */
+  cancelError: null as unknown,
   /** true 时 listBookings 返回网络失败 */
   listFail: false,
 }));
@@ -67,6 +69,7 @@ vi.mock("../../src/infrastructure/repositories/bookings", () => ({
     cancelBooking: async (_c: unknown, id: number) => {
       h.log.push("cancel");
       h.cancelCalls.push(id);
+      if (h.cancelError != null) return { ok: false, error: h.cancelError } as never;
       return { ok: true, value: h.cancelResultValue ?? {} } as never;
     },
     getCancelPreview: async () => {
@@ -140,6 +143,7 @@ beforeEach(() => {
   h.cancelCalls.length = 0;
   h.payGate = null;
   h.cancelResultValue = null;
+  h.cancelError = null;
   h.listFail = false;
   seedFull();
   (globalThis as { uni?: unknown }).uni = {
@@ -153,12 +157,25 @@ beforeEach(() => {
     hideLoading: () => undefined,
   };
 });
+/** 本文件挂载的页面实例：afterEach 统一卸载。未卸载的待支付页面会在真实计时器上一直滴答，下一个用例装上 fake timers 后其下一跳会落进假时钟，污染 getTimerCount／请求计数 */
+const mountedPages: Array<{ unmount: () => void }> = [];
+function track<T extends { unmount: () => void }>(w: T): T {
+  mountedPages.push(w);
+  return w;
+}
 afterEach(() => {
+  for (const w of mountedPages.splice(0)) {
+    try {
+      w.unmount();
+    } catch {
+      /* 用例内已卸载 */
+    }
+  }
   vi.useRealTimers();
 });
 
 async function mountPage() {
-  const w = mount(MyBookingsPage, { global: GLOBAL });
+  const w = track(mount(MyBookingsPage, { global: GLOBAL }));
   h.onLoadCalls[h.onLoadCalls.length - 1]();
   await flush();
   await w.vm.$nextTick();
@@ -214,11 +231,20 @@ describe("保证金状态展示", () => {
     expect(cards(w)[0].text()).toMatch(/支付剩余 0[45]:\d\d/);
   });
 
-  it("过滤标签含「待支付」「已爽约」", async () => {
+  it("过滤标签：有保证金预约时含「待支付」「已爽约」；无保证金预约时不出现", async () => {
+    h.lists = [[awaiting(1)]];
     const w = await mountPage();
     const labels = w.findAll(".filter-item").map((n) => n.text());
     expect(labels).toContain("待支付");
     expect(labels).toContain("已爽约");
+    w.unmount();
+    h.listIdx = 0;
+    h.onLoadCalls.length = 0;
+    h.lists = [[bk(9, "pending", null)]];
+    const w2 = await mountPage();
+    const labels2 = w2.findAll(".filter-item").map((n) => n.text());
+    expect(labels2).not.toContain("待支付");
+    expect(labels2).not.toContain("已爽约");
   });
 
   it("无保证金的预约（deposit=null）：不出现任何保证金文案，取消确认框保持原文案且不拉取预览", async () => {
@@ -331,7 +357,7 @@ describe("倒计时到 0：自动刷新为已取消，不得再继续支付", ()
       [bk(1, "awaiting_payment", dep("pending", { payExpireTime: "2026-11-05 12:00:03" }))],
       [bk(1, "cancelled", dep("closed", { settleReason: "hold_expired" }))],
     ];
-    const w = mount(MyBookingsPage, { global: GLOBAL });
+    const w = track(mount(MyBookingsPage, { global: GLOBAL }));
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await vi.advanceTimersByTimeAsync(10);
     await w.vm.$nextTick();
@@ -352,7 +378,7 @@ describe("倒计时到 0：自动刷新为已取消，不得再继续支付", ()
     vi.setSystemTime(BASE);
     const stillAwaiting = [bk(1, "awaiting_payment", dep("pending", { payExpireTime: "2026-11-05 12:00:02" }))];
     h.lists = [stillAwaiting];
-    const w = mount(MyBookingsPage, { global: GLOBAL });
+    const w = track(mount(MyBookingsPage, { global: GLOBAL }));
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await vi.advanceTimersByTimeAsync(10); // 首次加载
     await w.vm.$nextTick();
@@ -386,7 +412,7 @@ describe("倒计时到 0：自动刷新为已取消，不得再继续支付", ()
       [bk(1, "awaiting_payment", dep("pending", { payExpireTime: "2026-11-05 12:00:02" }))], // 归零时服务端尚未关单
       [bk(1, "cancelled", dep("closed", { settleReason: "hold_expired" }))], // +5s 关单
     ];
-    const w = mount(MyBookingsPage, { global: GLOBAL });
+    const w = track(mount(MyBookingsPage, { global: GLOBAL }));
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await vi.advanceTimersByTimeAsync(10);
     await vi.advanceTimersByTimeAsync(3000);
@@ -404,7 +430,7 @@ describe("倒计时到 0：自动刷新为已取消，不得再继续支付", ()
     vi.setSystemTime(BASE);
     h.polls = [bk(1, "awaiting_payment", dep("pending"))]; // 面板回调成功但服务端一直待支付 ⇒ timeout
     h.lists = [[bk(1, "awaiting_payment", dep("pending", { payExpireTime: "2026-11-05 12:10:00" }))]];
-    const w = mount(MyBookingsPage, { global: GLOBAL });
+    const w = track(mount(MyBookingsPage, { global: GLOBAL }));
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await vi.advanceTimersByTimeAsync(10);
     await w.vm.$nextTick();
@@ -414,10 +440,95 @@ describe("倒计时到 0：自动刷新为已取消，不得再继续支付", ()
     expect(h.payBookingCalls).toBe(1);
     expect(w.find(".pay-btn").exists()).toBe(false);
     expect(cards(w)[0].text()).toContain("支付结果确认中");
+    const listsBeforeCooldownEnd = h.log.filter((x) => x === "list").length;
     await vi.advanceTimersByTimeAsync(16_000);
     await w.vm.$nextTick();
     expect(w.find(".pay-btn").exists()).toBe(true); // 冷却结束，允许再次尝试（服务端仍是权威）
+    // 问题 9：冷却结束时补一次刷新（面板兜底超时后用户可能已付款，卡片不应一直停在待支付）
+    expect(h.log.filter((x) => x === "list").length - listsBeforeCooldownEnd).toBeGreaterThanOrEqual(1);
     w.unmount();
+  });
+
+  it("【问题 4·设备时钟偏快】本机认为早已过期、服务端仍返回待支付：5 次退避刷新用尽后恢复「继续支付」，点击后由服务端 payBooking 裁决", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(BASE);
+    // 设备时钟比服务端快 10 分钟：本机看截止时间已过去 10 分钟，服务端其实还没过期（列表始终返回待支付）
+    const behind = [bk(1, "awaiting_payment", dep("pending", { payExpireTime: "2026-11-05 11:50:00" }))];
+    h.lists = [behind];
+    h.payBookingResult = { ok: false, error: { kind: "BUSINESS", businessCode: 500, message: "支付已超时,预约已释放,请重新预约", requestId: "r", retryable: false } };
+    const w = track(mount(MyBookingsPage, { global: GLOBAL }));
+    h.onLoadCalls[h.onLoadCalls.length - 1]();
+    await vi.advanceTimersByTimeAsync(10);
+    await w.vm.$nextTick();
+    expect(w.find(".pay-btn").exists()).toBe(false); // 刷新配额未用尽：先等服务端关单
+    expect(cards(w)[0].text()).toContain("支付已超时，正在更新状态");
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(w.find(".pay-btn").exists()).toBe(false);
+    await vi.advanceTimersByTimeAsync(10_000); // 5 次刷新（每秒一次）用尽
+    await w.vm.$nextTick();
+    expect(h.log.filter((x) => x === "list").length).toBe(6); // 首次加载 + 5 次退避刷新，之后不再自动请求
+    expect(w.find(".pay-btn").exists()).toBe(true); // 恢复按钮
+    expect(cards(w)[0].text()).not.toContain("正在更新状态");
+    // 服务端是权威：点击后 payBooking 被调用，服务端拒绝 ⇒ 展示服务端原因（放开按钮不绕过服务端裁决）
+    await w.find(".pay-btn").trigger("click");
+    await vi.advanceTimersByTimeAsync(100);
+    await w.vm.$nextTick();
+    expect(h.payBookingCalls).toBe(1);
+    expect(toastText(w)).toContain("支付已超时,预约已释放,请重新预约");
+    expect(h.log).not.toContain("pay"); // 服务端拒绝 ⇒ 未拉起支付面板
+    w.unmount();
+  });
+
+  it("【问题 4·设备时钟偏快】刷新用尽但最后一次刷新里服务端已关单：不恢复按钮（已取消）", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(BASE);
+    const behind = bk(1, "awaiting_payment", dep("pending", { payExpireTime: "2026-11-05 11:50:00" }));
+    h.lists = [[behind], [behind], [behind], [behind], [behind], [bk(1, "cancelled", dep("closed", { settleReason: "hold_expired" }))]];
+    const w = track(mount(MyBookingsPage, { global: GLOBAL }));
+    h.onLoadCalls[h.onLoadCalls.length - 1]();
+    await vi.advanceTimersByTimeAsync(12_000);
+    await w.vm.$nextTick();
+    expect(cards(w)[0].find(".card-status").text()).toBe("已取消");
+    expect(w.find(".pay-btn").exists()).toBe(false);
+    w.unmount();
+  });
+
+  it("【问题 4·设备时钟偏慢】本机看还剩 45 分钟：倒计时按保留期上限 30 分钟封顶，不夸大", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(BASE);
+    h.lists = [[bk(1, "awaiting_payment", dep("pending", { payExpireTime: "2026-11-05 12:45:00" }))]];
+    const w = track(mount(MyBookingsPage, { global: GLOBAL }));
+    h.onLoadCalls[h.onLoadCalls.length - 1]();
+    await vi.advanceTimersByTimeAsync(10);
+    await w.vm.$nextTick();
+    const t = cards(w)[0].text();
+    expect(t).toMatch(/支付剩余 (30:00|29:5\d)/);
+    expect(t).not.toMatch(/支付剩余 (3[1-9]|4\d):/);
+    expect(w.find(".pay-btn").exists()).toBe(true);
+    w.unmount();
+  });
+
+  it("【问题 8】卸载后触发支付超时分支：不再 scheduleTick（零计时器）、不再重拉列表", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(BASE);
+    let release!: () => void;
+    h.payGate = new Promise<void>((r) => (release = r));
+    h.polls = [bk(1, "awaiting_payment", dep("pending"))]; // 面板回调成功但服务端一直待支付 ⇒ timeout 分支
+    h.lists = [[bk(1, "awaiting_payment", dep("pending", { payExpireTime: "2026-11-05 12:10:00" }))]];
+    const w = track(mount(MyBookingsPage, { global: GLOBAL }));
+    h.onLoadCalls[h.onLoadCalls.length - 1]();
+    await vi.advanceTimersByTimeAsync(10);
+    await w.vm.$nextTick();
+    await w.find(".pay-btn").trigger("click");
+    await vi.advanceTimersByTimeAsync(10);
+    expect(h.payBookingCalls).toBe(1);
+    w.unmount(); // 用户在支付面板/轮询期间离开页面
+    const listsAtUnmount = h.log.filter((x) => x === "list").length;
+    release(); // 面板回调返回 ⇒ 流程走完 timeout 分支
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(vi.getTimerCount()).toBe(0); // 没有重新挂起的 1 秒计时器链
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(h.log.filter((x) => x === "list").length).toBe(listsAtUnmount); // 卸载后零请求（含冷却结束补刷新）
   });
 
   it("pending 缺截止时间（契约外的防御）：不显示倒计时行，「继续支付」仍可点由服务端裁决，不堵死用户", async () => {
@@ -437,7 +548,7 @@ describe("倒计时到 0：自动刷新为已取消，不得再继续支付", ()
     vi.useFakeTimers();
     vi.setSystemTime(BASE);
     h.lists = [[bk(1, "awaiting_payment", dep("pending", { payExpireTime: "2026-11-05 12:10:00" }))]];
-    const w = mount(MyBookingsPage, { global: GLOBAL });
+    const w = track(mount(MyBookingsPage, { global: GLOBAL }));
     h.onLoadCalls[h.onLoadCalls.length - 1]();
     await vi.advanceTimersByTimeAsync(1500);
     w.unmount();
@@ -457,7 +568,7 @@ describe("取消前结算预览", () => {
     await flush();
     await w.vm.$nextTick();
     expect(h.previewCalls).toBe(1);
-    expect(w.find(".base-dialog-msg").text()).toBe("确认取消本次到店预约吗？取消后将扣除 ¥25.00，退还 ¥25.00");
+    expect(w.find(".base-dialog-msg").text()).toBe("确认取消本次到店预约吗？取消后将扣除 ¥25.00（迟取消），退还 ¥25.00");
     expect(h.cancelCalls).toEqual([]); // 未确认前零取消
     await w.find(".base-dialog-btn-confirm").trigger("click");
     await flush();
@@ -478,30 +589,74 @@ describe("取消前结算预览", () => {
     await w.find(".base-dialog-btn-confirm").trigger("click");
     await flush();
     await w.vm.$nextTick();
-    expect(toastText(w)).toContain("已取消预约。取消后将扣除 ¥25.00，退还 ¥25.00");
+    expect(toastText(w)).toContain("已取消预约，已扣除 ¥25.00（迟取消），退还 ¥25.00");
+    expect(toastText(w)).not.toContain("将扣除"); // 事情已发生：过去时，不再是确认框里的「将扣除」
     const t = cards(w)[0].text();
     expect(t).toContain("已取消");
     expect(t).not.toContain("· 已支付");
     expect(t).toContain("已扣除 ¥25.00（迟取消）");
   });
 
-  it("全额退：确认框写「保证金 ¥50.00 将原路退回」", async () => {
+  it("全额退：确认框写「保证金 ¥50.00 将原路退回」；取消成功后 toast 用过去时「已取消预约，保证金 ¥50.00 将原路退回」", async () => {
     h.lists = [[bk(22, "pending", dep("paid"))]];
+    h.cancelResultValue = bk(22, "cancelled", dep("refunding", { refundFen: 5000, settleReason: "cancel_free" }));
     const w = await mountPage();
     await w.find(".cancel-btn").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(w.find(".base-dialog-msg").text()).toBe("确认取消本次到店预约吗？保证金 ¥50.00 将原路退回");
+    await w.find(".base-dialog-btn-confirm").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(toastText(w)).toContain("已取消预约，保证金 ¥50.00 将原路退回");
   });
 
-  it("待支付取消：不拉预览，提示尚未支付、不会扣款", async () => {
+  // —— 终审问题 7：服务端对「已确认且已开始」的取消/预览返回业务错误；入口不据本地时间隐藏（时钟偏差会误伤），由服务端兜底 ——
+  const STARTED = "预约已开始，如需处理请联系商家";
+  it("预览返回「预约已开始」：toast 原样展示该句，不弹确认框、不取消，previewingId 复位（按钮恢复「取消预约」）", async () => {
+    h.previewResult = { ok: false, error: { kind: "BUSINESS", businessCode: 500, message: STARTED, requestId: "r", retryable: false } };
+    h.lists = [[bk(27, "confirmed", dep("paid"))]];
+    const w = await mountPage();
+    await w.find(".cancel-btn").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(toastText(w)).toContain(STARTED);
+    expect(w.find(".base-dialog-card").exists()).toBe(false);
+    expect(h.cancelCalls).toEqual([]);
+    expect(w.find(".cancel-btn").text()).toBe("取消预约"); // 不是「查询中...」
+    // 复位后可再次发起（占位已释放）
+    h.previewResult = { ok: true, value: { refundFen: 5000, forfeitFen: 0, reason: "cancel_free" } };
+    await w.find(".cancel-btn").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(w.find(".base-dialog-card").exists()).toBe(true);
+  });
+
+  it("待支付取消：不拉预览，提示尚未支付、不会扣款；不得出现「款项将原路退回」（服务端发现已支付会拒绝取消，不会退款）", async () => {
     h.lists = [[awaiting(23)]];
     const w = await mountPage();
     await w.find(".cancel-btn").trigger("click");
     await flush();
     await w.vm.$nextTick();
     expect(h.previewCalls).toBe(0);
-    expect(w.find(".base-dialog-msg").text()).toContain("保证金尚未支付，取消不会产生扣款；如您刚完成支付，款项将原路退回");
+    expect(w.find(".base-dialog-msg").text()).toBe("确认取消本次到店预约吗？保证金尚未支付，取消不会产生扣款");
+    expect(w.find(".base-dialog-msg").text()).not.toMatch(/原路退回|刚完成支付/);
+  });
+
+  it("取消请求返回「预约已开始」（预览与取消之间跨过开始时间）：toast 原样展示该句，列表不被改动，占位释放", async () => {
+    h.cancelError = { kind: "BUSINESS", businessCode: 500, message: STARTED, requestId: "r", retryable: false };
+    h.lists = [[bk(28, "confirmed", dep("paid"))]];
+    const w = await mountPage();
+    await w.find(".cancel-btn").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    await w.find(".base-dialog-btn-confirm").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.cancelCalls).toEqual([28]);
+    expect(toastText(w)).toContain(STARTED);
+    expect(cards(w)[0].find(".card-status").text()).toBe("已确认");
+    expect(w.find(".cancel-btn").text()).toBe("取消预约");
   });
 
   it("【fail-closed】预览拉取失败：不弹确认框、不取消，toast 提示（不让用户在不知扣款结果时取消）", async () => {
