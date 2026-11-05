@@ -2,12 +2,13 @@
 // T9 到店预约 MVP：预约页（门店名 + 14 天日期条 + 时段网格 + 表单 + 提交）。微信专属页（pages.json #ifdef MP-WEIXIN 注册，
 // 抖音/小红书不注册——同 AI 六页口径，2026-09-17 主人拍板的"仅微信注册"惯例）。
 // 产品规则（主人已确认）：可约窗口=今天起 14 天（含今天）；人数用步进器 1..20（domain/booking GUEST_COUNT_MIN/MAX）；
+//   档期容量＝席位＝可预约的总人数（2026-11 主人口径）：人数上限 = min(20, 所选档期 remaining)，由 domain/booking maxGuestCountForSlot 计算；
 // 提交需已登录（未登录先走现有登录弹窗，复用 login-flow）。
 // 预约保证金（2026-11-05 §10 冻结契约）：进入页面拉 booking-config；门店开启保证金时在提交区上方展示「预约保证金 ¥xx」＋规则摘要，
 //   **勾选同意后方可提交**；提交 = 订阅授权（点击手势内）→ 创建预约 → 拉起微信支付 → 以服务端状态为准确认到账（编排见 application/booking-deposit-submit）。
 //   未开启保证金的门店：页面与流程与此前完全一致（无保证金文案、无授权弹窗、无支付）。对用户一律称「预约保证金」。
 // 入参：shopId（必填）、shopName（可选，缺失时用 shops 仓储按 id 查一次兜底）。
-import { computed, onUnmounted, ref } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
@@ -43,7 +44,9 @@ import {
   GUEST_COUNT_MAX,
   GUEST_COUNT_MIN,
   buildDateWindow,
+  clampGuestCount,
   describeSlotAvailability,
+  maxGuestCountForSlot,
   type DateWindowDay,
 } from "../../domain/booking";
 import { describePaidResult, describeUnpaidResult, formatFen, summarizeDepositRule } from "../../domain/booking-deposit";
@@ -179,24 +182,37 @@ const submitLabel = computed(() => (depositEnabled.value ? "提交并支付保�
 
 const selectedDate = computed(() => dateWindow.value[selectedDateIndex.value]?.date ?? "");
 const selectedSlot = computed(() => slots.value.find((s) => s.slotId === selectedSlotId.value) ?? null);
+/** 当前可选人数上限（席位口径：min(20, 所选档期剩余席位)）；未选档期时为 20，由服务端兜底校验 */
+const guestMax = computed(() => maxGuestCountForSlot(selectedSlot.value));
+// 上限变化（换档期／刷新档期后剩余席位变少）时，当前人数超限则自动收敛到上限
+watch(guestMax, (max) => {
+  if (guestCount.value > max) guestCount.value = clampGuestCount(guestCount.value, max);
+});
 
 /** 请求序号：连续切日期时只应用**最新一次**请求的响应；旧响应晚到既不覆盖时段、也不改 slotsLoading */
 let slotsSeq = 0;
-async function loadSlotsForSelectedDate(): Promise<void> {
+/** @param keepSelection 提交被服务端拒绝后的刷新：保留原选中档期（刷新后仍可约才保留），用户可直接下调人数重提，不必重选 */
+async function loadSlotsForSelectedDate(keepSelection = false): Promise<void> {
   if (shopId.value <= 0 || selectedDate.value === "") return;
   const mySeq = ++slotsSeq;
   slotsLoading.value = true;
   slotsError.value = null;
-  selectedSlotId.value = null;
+  const keepId = keepSelection ? selectedSlotId.value : null;
+  if (keepId == null) selectedSlotId.value = null;
   const r = await loadSlotsUc.load(ctxFactory.next(), shopId.value, selectedDate.value);
   if (mySeq !== slotsSeq) return;
   slotsLoading.value = false;
   if (!r.ok) {
     slots.value = [];
+    selectedSlotId.value = null;
     slotsError.value = r.message;
     return;
   }
   slots.value = r.value.slots ?? [];
+  if (keepId != null && selectedSlotId.value === keepId) {
+    const hit = slots.value.find((s) => s.slotId === keepId);
+    if (hit == null || !describeSlotAvailability(hit).clickable) selectedSlotId.value = null; // 已约满／已过时：取消选中，让用户重选
+  }
 }
 
 function onRetrySlots(): void {
@@ -214,6 +230,12 @@ function onPickSlot(slot: SlotView): void {
   const info = describeSlotAvailability(slot);
   if (!info.clickable) return;
   selectedSlotId.value = slot.slotId;
+  // 席位口径：当前人数超过该档期剩余席位 ⇒ 立即收敛并轻提示（watch 兜底处理刷新场景，不弹提示以免盖住服务端文案）
+  const max = maxGuestCountForSlot(slot);
+  if (guestCount.value > max) {
+    guestCount.value = clampGuestCount(guestCount.value, max);
+    toast("该时段仅剩 " + max + " 席，已调整为 " + max + " 人");
+  }
 }
 
 function slotMeta(slot: SlotView): { clickable: boolean; badge: string } {
@@ -223,6 +245,10 @@ function slotMeta(slot: SlotView): { clickable: boolean; badge: string } {
 function stepGuestCount(delta: number): void {
   const next = guestCount.value + delta;
   if (next < GUEST_COUNT_MIN || next > GUEST_COUNT_MAX) return;
+  if (next > guestMax.value) {
+    toast("该时段仅剩 " + guestMax.value + " 席"); // next<=20 且 >guestMax ⇒ 上限来自档期剩余席位
+    return;
+  }
   guestCount.value = next;
 }
 
@@ -449,7 +475,7 @@ function handleSubmitFailure(r: Exclude<SubmitBookingResult, { ok: true }>): voi
   // kind === "business"：服务端中文可读原因，直接展示（如"该时段已约满"/"您已预约该时段"/"未完成预约已达上限(5条)"）
   toast(r.message);
   // 服务端判定约满/不可约时，当前时段快照可能已过期——重拉一次时段，避免用户对着错误的余量再次提交
-  void loadSlotsForSelectedDate();
+  void loadSlotsForSelectedDate(true);
 }
 
 function closeLoginPopup(): void {
@@ -606,7 +632,7 @@ function goMyBookings(): void {
               <view class="bar-h"></view>
             </view>
             <text class="stepper-value">{{ guestCount }}</text>
-            <view class="stepper-btn" hover-class="press-dim" @click="stepGuestCount(1)">
+            <view :class="guestCount >= guestMax ? 'stepper-btn is-disabled' : 'stepper-btn'" hover-class="press-dim" @click="stepGuestCount(1)">
               <view class="bar-h"></view>
               <view class="bar-v"></view>
             </view>
@@ -811,6 +837,9 @@ function goMyBookings(): void {
   background: rgba(241, 205, 145, 0.12);
 }
 /* 加减号用 CSS 绘制（不使用文字图标）：横条居中，竖条仅"加"按钮有 */
+.stepper-btn.is-disabled {
+  opacity: 0.4;
+}
 .bar-h,
 .bar-v {
   position: absolute;

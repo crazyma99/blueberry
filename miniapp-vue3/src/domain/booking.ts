@@ -113,6 +113,23 @@ export interface FormFieldError {
 export const GUEST_COUNT_MIN = 1;
 export const GUEST_COUNT_MAX = 20;
 
+/**
+ * 到店人数上限（2026-11 主人口径：档期容量＝席位＝可预约的总人数；slot.remaining 即剩余席位数）。
+ * 上限 = min(GUEST_COUNT_MAX, 所选档期 remaining)，下限不低于 GUEST_COUNT_MIN（remaining<=0 的档期本就不可选，仅作防御）。
+ * 未选档期（null/undefined）或 remaining 非有限数（旧后端/缺字段）⇒ 回落为 GUEST_COUNT_MAX，由服务端兜底校验。
+ */
+export function maxGuestCountForSlot(slot: { remaining: number } | null | undefined): number {
+  if (slot == null || typeof slot.remaining !== "number" || !Number.isFinite(slot.remaining)) return GUEST_COUNT_MAX;
+  return Math.max(GUEST_COUNT_MIN, Math.min(GUEST_COUNT_MAX, Math.floor(slot.remaining)));
+}
+
+/** 人数收敛：超出上限收敛到上限、低于下限收敛到下限、非有限数回落下限；合法值（含取整）原样保留 */
+export function clampGuestCount(count: number, max: number = GUEST_COUNT_MAX): number {
+  const hi = Number.isFinite(max) ? Math.max(GUEST_COUNT_MIN, Math.min(GUEST_COUNT_MAX, Math.floor(max))) : GUEST_COUNT_MAX;
+  if (!Number.isFinite(count)) return GUEST_COUNT_MIN;
+  return Math.max(GUEST_COUNT_MIN, Math.min(hi, Math.floor(count)));
+}
+
 /** 表单校验：姓名(1-32)／手机号(11位1开头)／人数(1-20)／备注(<=255)。返回首个命中的错误，全部通过返回 null。 */
 export function validateBookingForm(input: BookingFormInput): FormFieldError | null {
   const name = String(input.customerName ?? "").trim();
