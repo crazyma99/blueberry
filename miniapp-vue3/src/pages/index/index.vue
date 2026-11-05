@@ -435,13 +435,13 @@ onMounted(() => {
         </view>
       </view>
 
-      <!-- 作品区：shop-container-top.png 切图顶 + 内层三边线框 + photo-card 网格
+      <!-- 作品区：shop-container-top.jpg 切图顶 + 内层三边线框 + photo-card 网格
            （旧端 index:59-113 结构还原。2026-09-19 修正：新端初版误用 PhotoGrid 旧组件，
            首页旧端早已改用 photo-grid/photo-card 设计，见旧端 :868 注释） -->
       <view class="shop-section">
         <view class="shop-content">
           <view class="shop-header-wrap">
-            <image class="shop-top" src="/static/shop-container-top.png" mode="aspectFill" />
+            <image class="shop-top" src="/static/shop-container-top.jpg" mode="aspectFill" />
           </view>
           <view class="shop-container">
             <view class="shop-inner-line"></view>
@@ -477,10 +477,10 @@ onMounted(() => {
               </view>
               <!-- 无店铺 fallback：2 张 demo 图（旧端 :97-104） -->
               <view v-if="shops.length === 0" class="photo-card" hover-class="press-dim" @click="onDemoClick(1)">
-                <image class="photo-card-img" src="/static/demo1.png" mode="aspectFill" />
+                <image class="photo-card-img" src="/static/demo1.jpg" mode="aspectFill" />
               </view>
               <view v-if="shops.length === 0" class="photo-card" hover-class="press-dim" @click="onDemoClick(2)">
-                <image class="photo-card-img" src="/static/demo2.png" mode="aspectFill" />
+                <image class="photo-card-img" src="/static/demo2.jpg" mode="aspectFill" />
               </view>
             </view>
           </view>

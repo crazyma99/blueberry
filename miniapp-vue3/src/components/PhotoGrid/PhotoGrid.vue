@@ -56,10 +56,10 @@ const showPlaceholder = computed(() => {
       </view>
     </view>
     <view v-if="shopList.length === 0" class="shopCard" @click="emit('demo-click', 1)">
-      <image class="demoPhoto" src="/static/demo1.png" mode="aspectFill" />
+      <image class="demoPhoto" src="/static/demo1.jpg" mode="aspectFill" />
     </view>
     <view v-if="shopList.length === 0" class="shopCard" @click="emit('demo-click', 2)">
-      <image class="demoPhoto" src="/static/demo2.png" mode="aspectFill" />
+      <image class="demoPhoto" src="/static/demo2.jpg" mode="aspectFill" />
     </view>
   </view>
 </template>

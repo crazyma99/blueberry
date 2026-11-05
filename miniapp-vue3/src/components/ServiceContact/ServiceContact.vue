@@ -141,7 +141,7 @@ withDefaults(
         </template>
       </LifeImButton>
       <view class="contact-main" :class="{ 'contact-main--im': isToutiao }">
-        <image v-if="!isToutiao" src="/static/contact-bg.png" class="contact-bg" mode="aspectFill" />
+        <image v-if="!isToutiao" src="/static/contact-bg.jpg" class="contact-bg" mode="aspectFill" />
         <image
           v-if="!isToutiao"
           class="code"
