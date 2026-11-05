@@ -165,8 +165,9 @@ describe("pages/myBookings（我的预约页）", () => {
     expect(labels).toEqual(["待确认", "已确认", "已完成", "已取消", "已过期"]);
     const cancelables = cards.map((c) => c.find(".cancel-btn").exists());
     expect(cancelables).toEqual([true, true, false, false, false]);
-    // 免定金：页面不出现任何支付/定金/金额字样
-    expect(w.text()).not.toMatch(/定金|支付|金额|元/);
+    // 无保证金的预约（deposit=null）：卡片不出现任何保证金/金额/支付文案（与改造前一致）
+    for (const c of cards) expect(c.text()).not.toMatch(/保证金|¥|支付|金额/);
+    expect(w.text()).not.toMatch(/定金|押金/);
   });
 
   it("空列表：展示空态；首屏请求带 page=1、pageSize=20、无 status", async () => {

@@ -38,6 +38,8 @@ export function createMyBookingsViewModel(
   /** 登录失效（401）：页面应展示「请先登录 / 去登录」 */
   const authExpired = ref(false);
   const cancellingId = ref<number | null>(null);
+  /** 最近一次**取消成功**的服务端返回（含 deposit 结算结果）；页面据此提示实际退还/扣除金额（预览与实际之间可能跨过迟取消边界） */
+  const lastCancelled = ref<BookingView | null>(null);
   let seq = 0;
 
   function statusParam(): BookingStatus | undefined {
@@ -107,10 +109,12 @@ export function createMyBookingsViewModel(
     }
   }
 
-  /** 取消成功后的本地收口：当前筛选含「已取消」则改状态，否则从当前筛选摘除（total 同步减 1） */
-  function applyLocalCancelled(bookingId: number): void {
+  /** 取消成功后的本地收口：当前筛选含「已取消」则改状态（并并入响应里的保证金结算结果，避免重拉失败时卡片仍显示「已支付」），否则从当前筛选摘除（total 同步减 1） */
+  function applyLocalCancelled(bookingId: number, settled?: BookingView): void {
     if (status.value === "" || status.value === "cancelled") {
-      items.value = items.value.map((b) => (b.id === bookingId ? { ...b, status: "cancelled" as const } : b));
+      items.value = items.value.map((b) =>
+        b.id === bookingId ? { ...b, status: "cancelled" as const, deposit: settled?.deposit ?? b.deposit } : b,
+      );
       return;
     }
     const before = items.value.length;
@@ -134,7 +138,8 @@ export function createMyBookingsViewModel(
         if (r.authExpired === true) authExpired.value = true;
         return { ok: false, message: r.message };
       }
-      applyLocalCancelled(bookingId);
+      lastCancelled.value = r.value ?? null;
+      applyLocalCancelled(bookingId, r.value);
       await loadFirst(context); // 失败已在 loadFirst 内保留旧列表；此处不看结果
       return { ok: true };
     } finally {
@@ -143,7 +148,7 @@ export function createMyBookingsViewModel(
   }
 
   return {
-    items, status, page, total, noMore, loading, loadingMore, error, loadMoreError, authExpired, cancellingId, pageSize,
+    items, status, page, total, noMore, loading, loadingMore, error, loadMoreError, authExpired, cancellingId, lastCancelled, pageSize,
     loadFirst, loadMore, cancelBooking,
   };
 }

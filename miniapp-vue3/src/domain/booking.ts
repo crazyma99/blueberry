@@ -4,12 +4,21 @@
 //   POST /api/bookings                                  → booking 视图
 //   GET  /api/bookings?status=&page=&pageSize=          → {list, total, page, pageSize}
 //   POST /api/bookings/:id/cancel                       → booking 视图
-// booking 视图：{id,shopId,shopName,slotId,startTime,endTime,date,customerName,customerPhone,guestCount,remark,status,channel,createTime}
-// 产品规则（主人已确认）：免定金，页面不出现任何支付/定金/金额；可约窗口＝今天起 14 天（含今天）；
-// 人数用步进器 1..20（主人拍板：5+ 用步进器更简单，不做"5+"离散档）。
-export type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled" | "expired";
+// booking 视图：{id,shopId,shopName,slotId,startTime,endTime,date,customerName,customerPhone,guestCount,remark,status,channel,createTime,deposit}
+// 产品规则（主人已确认）：可约窗口＝今天起 14 天（含今天）；人数用步进器 1..20（主人拍板：5+ 用步进器更简单，不做"5+"离散档）。
+// 预约保证金（2026-11-05 §10 冻结契约）：门店可配「是否开启预约保证金」；开启的门店下单进入 awaiting_payment（待支付、已占档期），
+//   支付链路与保证金展示由 domain/booking-deposit.ts（纯函数）承载，本文件只负责预约 status 本身。未开启的门店行为与此前的免保证金预约完全一致。
+export type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled" | "expired" | "awaiting_payment" | "no_show";
 
-export const BOOKING_STATUSES: readonly BookingStatus[] = ["pending", "confirmed", "completed", "cancelled", "expired"];
+export const BOOKING_STATUSES: readonly BookingStatus[] = [
+  "pending",
+  "confirmed",
+  "completed",
+  "cancelled",
+  "expired",
+  "awaiting_payment",
+  "no_show",
+];
 
 export interface BookingStatusMeta {
   readonly label: string;
@@ -23,6 +32,10 @@ const STATUS_META: Record<BookingStatus, BookingStatusMeta> = {
   completed: { label: "已完成", tone: "muted" },
   cancelled: { label: "已取消", tone: "danger" },
   expired: { label: "已过期", tone: "muted" },
+  // 待支付：需要用户继续支付预约保证金 ⇒ 用 action（金色强调）引导其完成支付，与 pending/confirmed 同档的「需用户行动」语义
+  awaiting_payment: { label: "待支付", tone: "action" },
+  // 已爽约：到店预约未履约（按规则可能已扣除保证金），属负向终态 ⇒ 用 danger（与「已取消」同为警示色，和中性的「已完成/已过期」区分开）
+  no_show: { label: "已爽约", tone: "danger" },
 };
 
 /** 状态 → 展示文案＋色阶；未知状态安全回落为「已过期」档（muted，不假装成功态） */
@@ -30,9 +43,12 @@ export function describeBookingStatus(status: string): BookingStatusMeta {
   return (STATUS_META as Record<string, BookingStatusMeta>)[status] ?? { label: status, tone: "muted" };
 }
 
-/** pending/confirmed 才允许取消（其余态——已完成/已取消/已过期——按钮不出现） */
+/**
+ * 可取消态：pending/confirmed（既有）＋ awaiting_payment（待支付——用户可放弃支付并取消占位，仅释放档期、无结算）。
+ * 其余态（已完成/已取消/已过期/已爽约）按钮不出现。no_show 为履约终态，不可由用户主动取消。
+ */
 export function isCancellableStatus(status: string): boolean {
-  return status === "pending" || status === "confirmed";
+  return status === "pending" || status === "confirmed" || status === "awaiting_payment";
 }
 
 export interface DateWindowDay {

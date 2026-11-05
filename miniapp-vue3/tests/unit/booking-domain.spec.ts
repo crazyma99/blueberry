@@ -21,23 +21,27 @@ import {
 } from "../../src/domain/booking";
 
 describe("domain/booking · 状态映射", () => {
-  it("五个状态各有固定文案与色阶；文案为产品确认口径", () => {
+  it("七个状态各有固定文案与色阶；文案为产品确认口径（含预约保证金新增的待支付/已爽约）", () => {
     expect(describeBookingStatus("pending")).toEqual({ label: "待确认", tone: "action" });
     expect(describeBookingStatus("confirmed")).toEqual({ label: "已确认", tone: "action" });
     expect(describeBookingStatus("completed")).toEqual({ label: "已完成", tone: "muted" });
     expect(describeBookingStatus("cancelled")).toEqual({ label: "已取消", tone: "danger" });
     expect(describeBookingStatus("expired")).toEqual({ label: "已过期", tone: "muted" });
-    expect(BOOKING_STATUSES.length).toBe(5);
+    // 预约保证金（§10.2）新增：待支付（需用户行动 ⇒ action）／已爽约（负向终态 ⇒ danger）
+    expect(describeBookingStatus("awaiting_payment")).toEqual({ label: "待支付", tone: "action" });
+    expect(describeBookingStatus("no_show")).toEqual({ label: "已爽约", tone: "danger" });
+    expect(BOOKING_STATUSES.length).toBe(7);
   });
 
   it("未知状态不抛错，原样展示、弱化色阶（不假装成功态）", () => {
     expect(describeBookingStatus("weird")).toEqual({ label: "weird", tone: "muted" });
   });
 
-  it("仅 pending/confirmed 可取消", () => {
+  it("仅 pending/confirmed/awaiting_payment 可取消（待支付可放弃占位；已爽约是履约终态不可取消）", () => {
     expect(isCancellableStatus("pending")).toBe(true);
     expect(isCancellableStatus("confirmed")).toBe(true);
-    for (const s of ["completed", "cancelled", "expired", "", "x"]) expect(isCancellableStatus(s)).toBe(false);
+    expect(isCancellableStatus("awaiting_payment")).toBe(true);
+    for (const s of ["completed", "cancelled", "expired", "no_show", "", "x"]) expect(isCancellableStatus(s)).toBe(false);
   });
 });
 

@@ -25,6 +25,12 @@ export {
   type BookingView,
   type BookingListResult,
   type CreateBookingParams,
+  type CreateBookingResult,
   type SlotView,
   type SlotsResult,
+  type DepositView,
+  type PayParams,
+  type BookingConfig,
+  type DepositRuleView,
+  type CancelPreview,
 } from "./bookings";
