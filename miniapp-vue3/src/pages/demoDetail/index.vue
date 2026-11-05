@@ -457,11 +457,11 @@ onReachBottom(() => {
         <view v-if="platform === 'mp-weixin'" class="ai-recommend-banner" @click="goAiRecommend">
           <image class="ai-recommend-bg" src="/static/ai-recom-banner.jpg" mode="aspectFill" />
           <view class="ai-recommend-content">
-            <text class="ai-recommend-title font-noto-serif">AI智能推荐·拍照选服饰</text>
+            <text class="ai-recommend-title">AI智能推荐·拍照选服饰</text>
             <text class="ai-recommend-subtitle">上传照片，AI为您推荐最合适的服饰风格</text>
           </view>
         </view>
-        <view class="cat-title-row"><text class="cat-title font-noto-serif">{{ PROFILE.features.copySeriesCategory }}</text></view>
+        <view class="cat-title-row"><text class="cat-title">{{ PROFILE.features.copySeriesCategory }}</text></view>
         <view class="tabcontainer">
           <view
             v-for="(item, idx) in categories"
@@ -469,7 +469,7 @@ onReachBottom(() => {
             :class="selectedParent === idx ? 'tab-wrap choosed-wrap' : 'tab-wrap'"
             @click="changeTab(idx, 'parent')"
           >
-            <view :class="selectedParent === idx ? 'tab choosed font-noto-serif' : 'tab font-noto-serif'">{{ item.parentName }}</view>
+            <view :class="selectedParent === idx ? 'tab choosed' : 'tab'">{{ item.parentName }}</view>
           </view>
         </view>
         <view v-if="childTabs.length > 0" class="tabcontainer">
@@ -479,7 +479,7 @@ onReachBottom(() => {
             :class="selectedChild === idx ? 'tab-wrap choosed-wrap' : 'tab-wrap'"
             @click="changeTab(idx, 'child')"
           >
-            <view :class="selectedChild === idx ? 'tab choosed font-noto-serif' : 'tab font-noto-serif'">{{ item.name }}</view>
+            <view :class="selectedChild === idx ? 'tab choosed' : 'tab'">{{ item.name }}</view>
           </view>
         </view>
       </view>
@@ -495,7 +495,7 @@ onReachBottom(() => {
               <view class="album-desc">
                 <!-- 左列：标题 + 点赞（右侧 AI 试衣按钮为兄弟节点、绝对定位垂直居中——旧端 :1091-1110 口径） -->
                 <view class="desc-main">
-                  <text class="album-title font-noto-serif">{{ formatAlbumTitle(item.title) }}</text>
+                  <text class="album-title">{{ formatAlbumTitle(item.title) }}</text>
                   <view class="like-row" hover-class="press-dim" @click.stop="onToggleLike(item)">
                     <image
                       class="like-icon"
@@ -596,9 +596,7 @@ onReachBottom(() => {
 }
 .search-input-nav {
   flex: 1;
-  /* 2026-09-20：小程序 <input> 不继承 page{font-family} ⇒ 真机落系统字体、字重观感与旧端不一致；
-     显式声明正文字体（旧端靠 App.uvue page 字号/字体族继承） */
-  font-family: 'HarmonyOS-Sans-SC';
+  /* 输入控件使用小程序运行平台的系统默认字体。 */
   font-size: 26rpx; /* 旧 var(--font-size-body-lg) */
   color: $color-text-primary; /* 深色主题 = #F1CD91（旧 var(--color-primary)） */
   margin-left: 12rpx;

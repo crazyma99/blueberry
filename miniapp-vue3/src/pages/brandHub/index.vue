@@ -12,8 +12,7 @@
 // 卡片点击 hapticTap＋setBrandId＋switchTab('/pages/index/index')（:111-116）。
 // 有意偏差（已声明）：①主题：2026-09-19 撤回迁移期亮色、恢复旧端深色（colorPage=#160F04，同旧 --color-bg）；
 // desc/空态文字色仍取 colorTextSecondary（深色下=金 70%，与旧白 50%/40% 观感接近，亮色期 CR 🟡3 口径保留）；
-// ②卡片 fade-in 入场动画未带（旧 :38，属全局样式批次）；③font-harmony/font-noto-serif 全局类新端未定义
-// （沿用 PhotoGrid/priceList 既有口径，仅引用不定义）。
+// ②卡片 fade-in 入场动画未带（旧 :38，属全局样式批次）；③文字使用平台系统默认字体。
 import { ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
@@ -165,8 +164,8 @@ function enterBrand(b: BrandBrief): void {
             </view>
           </view>
           <view class="brand-info">
-            <view class="brand-name font-noto-serif">{{ b.brandName }}</view>
-            <view v-if="b.description" class="brand-desc font-harmony">{{ b.description }}</view>
+            <view class="brand-name">{{ b.brandName }}</view>
+            <view v-if="b.description" class="brand-desc">{{ b.description }}</view>
           </view>
           <view class="brand-enter">
             <text class="brand-enter-text">进入</text>

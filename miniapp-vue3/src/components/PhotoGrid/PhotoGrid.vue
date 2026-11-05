@@ -45,13 +45,13 @@ const showPlaceholder = computed(() => {
         lazy-load
       />
       <view class="shopName">
-        <view class="font-noto-serif">{{ shop.displayName }}</view>
+        <view>{{ shop.displayName }}</view>
         <view class="enName">{{ shop.displayNameEn }}</view>
       </view>
     </view>
     <view v-if="showPlaceholder" class="shopCard shopCard-placeholder">
       <view class="placeholderContent">
-        <view class="placeholderTitle font-noto-serif">敬请期待</view>
+        <view class="placeholderTitle">敬请期待</view>
         <view class="placeholderSub">COMING SOON</view>
       </view>
     </view>
@@ -145,9 +145,5 @@ const showPlaceholder = computed(() => {
   letter-spacing: 2rpx;
 }
 
-/* 2026-09-22 主人报「弹窗内字体不对」根因族：自定义组件**默认样式隔离（isolated）** ⇒ app.wxss 的
-   `page{font-family}` 与全局类 `.font-noto-serif`／`.font-harmony` 都进不来 ⇒ 组件内自带声明。 */
-.font-noto-serif {
-  font-family: 'NotoSerifSC-Bold';
-}
+/* 自定义组件使用小程序运行平台的系统默认字体。 */
 </style>

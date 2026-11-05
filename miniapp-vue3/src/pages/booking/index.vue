@@ -559,7 +559,7 @@ function goMyBookings(): void {
 
     <template v-else-if="submitSuccess">
       <view class="success-wrap">
-        <view class="success-title font-noto-serif">{{ resultTitle }}</view>
+        <view class="success-title">{{ resultTitle }}</view>
         <view class="success-desc">{{ resultDesc }}</view>
         <view class="btn-primary success-btn my-bookings-btn" hover-class="press-dim" @click="goMyBookings">
           <text>{{ resultCta }}</text>
@@ -813,14 +813,14 @@ function goMyBookings(): void {
 }
 .form-input {
   flex: 1;
-  font-family: 'HarmonyOS-Sans-SC';
+
   font-size: $font-size-body;
   color: $color-text-primary;
 }
 .form-textarea {
   flex: 1;
   min-height: 120rpx;
-  font-family: 'HarmonyOS-Sans-SC';
+
   font-size: $font-size-body;
   color: $color-text-primary;
 }

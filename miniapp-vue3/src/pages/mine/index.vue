@@ -484,7 +484,7 @@ function handleMenuClick(item: MenuItem): void {
             <image v-if="displayAvatar !== ''" class="avatar-img" :src="displayAvatar" mode="aspectFill"></image>
           </view>
           <view class="user-info">
-            <view class="nickname font-noto-serif">{{ displayNickname }}</view>
+            <view class="nickname">{{ displayNickname }}</view>
             <view class="user-sub">{{ userSub }}</view>
           </view>
           <image class="user-arrow" src="/static/iconpark/right.svg" mode="aspectFit"></image>
@@ -496,14 +496,14 @@ function handleMenuClick(item: MenuItem): void {
           hover-class="press-row"
           @click="handleMenuClick(item)"
         >
-          <view class="menu-title font-noto-serif" :class="{ 'special-font': item.specialFont === true }">
+          <view class="menu-title" :class="{ 'special-font': item.specialFont === true }">
             {{ item.title }}
           </view>
           <image class="menu-arrow" src="/static/iconpark/right.svg" mode="aspectFit"></image>
         </view>
         <!-- #ifdef MP-WEIXIN -->
         <view class="menu-row" hover-class="press-row" @click="goMyBookings">
-          <view class="menu-title font-noto-serif">我的预约</view>
+          <view class="menu-title">我的预约</view>
           <image class="menu-arrow" src="/static/iconpark/right.svg" mode="aspectFit"></image>
         </view>
         <!-- #endif -->

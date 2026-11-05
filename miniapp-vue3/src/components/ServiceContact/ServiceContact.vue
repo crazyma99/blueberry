@@ -5,7 +5,7 @@
 // 的优先级链保留在用例内（profile 注入锚点 contactQrSrc/contactPhoneText 由 PROFILE 承载，字段名不变量）。
 // 有意偏差（已声明）：①主题：本区块沿用旧端深色卡片/金色描边——2026-09-19 colorPage 已恢复深色 #160F04，与旧端口径一致；
 // ②字号：旧端若干 CSS 变量（--font-size-slogan/--font-size-display 等）未盘点，按近似档硬编码并注释；
-// ③font-noto-serif 全局类新端未定义（沿用既有口径仅引用）。
+// ③文字使用平台系统默认字体。
 // 2026-10-13（主人 DevTools 实测 · 表1 #25 二次返修）：二维码展示**改回原图**（对齐线上旧端 `:src="qrSrc"`）。
 // **撤销 2026-09-30 流量成本 PRD R2/R3 的 cosThumb(300) 缩略**：源图仅 327×326 / 57KB（流量可忽略），
 // 缩略链路既非「更暗」的成因、又降低扫码清晰度；线上旧端原图口径已被主人验证正常。
@@ -93,14 +93,14 @@ withDefaults(
     <view v-if="showPromise" class="divideTit">
       <image src="/static/left-divider.png" class="divider" mode="aspectFill" />
       <view class="demoPhotoTit">
-        <view class="font-noto-serif">{{ promiseTitle }}</view>
+        <view>{{ promiseTitle }}</view>
         <image src="/static/service-icon.png" class="icon" mode="aspectFill" />
       </view>
       <image src="/static/right-divider.png" class="divider" mode="aspectFill" />
     </view>
     <view v-if="showPromise" class="service-contain">
       <image src="/static/service-flower.png" class="flower" mode="aspectFill" />
-      <view class="tit font-noto-serif">{{ slogan }}</view>
+      <view class="tit">{{ slogan }}</view>
       <view class="main-wrap">
         <view class="main">
           <view v-for="(item, index) in list" :key="index" class="item">
@@ -121,7 +121,7 @@ withDefaults(
     <view class="divideTit">
       <image src="/static/left-divider.png" class="divider" mode="aspectFill" />
       <view class="demoPhotoTit">
-        <view class="font-noto-serif">联系我们</view>
+        <view>联系我们</view>
         <image src="/static/contact-icon.png" class="icon" mode="aspectFill" />
       </view>
       <image src="/static/right-divider.png" class="divider" mode="aspectFill" />
@@ -136,7 +136,7 @@ withDefaults(
                独立 CR 🟡1：初版用 `#ifdef MP-WEIXIN` 会让**小红书端**只剩二维码、丢掉该指引文案 ⇒ 已改。
                抖音包里连此字符串都不存在（防审核静态扫描）；模板/样式允许条件编译、逻辑层仍零 #ifdef
                （合 SPEC §C3；无 #else 兜底 ⇒ 已在 scan-platform-usage.mjs 的 C4 登记）。 -->
-          <view class="tit font-noto-serif">长按二维码扫码添加客服</view>
+          <view class="tit">长按二维码扫码添加客服</view>
           <!-- #endif -->
         </template>
       </LifeImButton>
@@ -152,9 +152,9 @@ withDefaults(
           @click="previewQr(qrSrc)"
         ></image>
         <view class="label">联系电话</view>
-        <view class="val font-noto-serif">{{ phone }}</view>
+        <view class="val">{{ phone }}</view>
         <view class="label">商务合作</view>
-        <view class="val font-noto-serif">{{ coopPhone }}</view>
+        <view class="val">{{ coopPhone }}</view>
       </view>
     </view>
   </view>
@@ -323,9 +323,5 @@ withDefaults(
   margin-bottom: 20rpx;
 }
 
-/* 2026-09-22 主人报「弹窗内字体不对」根因族：自定义组件**默认样式隔离（isolated）** ⇒ app.wxss 的
-   `page{font-family}` 与全局类 `.font-noto-serif`／`.font-harmony` 都进不来 ⇒ 组件内自带声明。 */
-.font-noto-serif {
-  font-family: 'NotoSerifSC-Bold';
-}
+/* 自定义组件使用小程序运行平台的系统默认字体。 */
 </style>

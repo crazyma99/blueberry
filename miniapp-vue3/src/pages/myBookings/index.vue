@@ -565,7 +565,7 @@ async function onPayTap(booking: BookingView): Promise<void> {
     <view v-else class="list">
       <view v-for="item in vm.items.value" :key="item.id" class="card">
         <view class="card-top">
-          <text class="card-shop font-noto-serif">{{ item.shopName }}</text>
+          <text class="card-shop">{{ item.shopName }}</text>
           <text :class="'card-status card-status-' + statusLabel(item.status).tone">{{ statusLabel(item.status).label }}</text>
         </view>
         <view class="card-row">

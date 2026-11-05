@@ -43,7 +43,7 @@
   margin-top: 6rpx;
   font-size: 24rpx;
   font-weight: 700;
-  /* 字体由全局类控制（如 font-noto-serif），此处不再写死 font-family */
+  /* 使用小程序运行平台的系统默认字体。 */
   /* 未选中：压暗（2026-09-15 主人指示） */
   color: rgba(241, 205, 145, 0.55);
 }

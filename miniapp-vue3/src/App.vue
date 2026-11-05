@@ -14,26 +14,6 @@ const versioned = createVersionedStorage({
 });
 onLaunch(() => {
   console.log("App Launch");
-  // 全局加载自定义字体（旧端 App.uvue :9-32 移植；微信小程序需在 mp 后台配置 downloadFile 合法域名：
-  // www.lanmei66.cloud）。使用方式：全局类名 font-noto-serif / font-harmony。
-  // 2026-09-19 补：迁移时遗漏 ⇒ 抖音端 font-noto-serif 全部回落系统字体（微信端靠 custom-tab-bar 的
-  // wx.loadFontFace 兜底才没暴露）；uni.loadFontFace 抖音映射 tt.loadFontFace，旧端抖音线上已验证。
-  if (typeof uni !== "undefined" && typeof uni.loadFontFace === "function") {
-    uni.loadFontFace({
-      global: true,
-      family: "NotoSerifSC-Bold",
-      source: 'url("https://www.lanmei66.cloud/font/NotoSerifSC-Bold-subset.woff")',
-      success: () => console.log("[font] NotoSerifSC-Bold 加载成功"),
-      fail: (err) => console.warn("NotoSerifSC-Bold 字体加载失败", err),
-    });
-    uni.loadFontFace({
-      global: true,
-      family: "HarmonyOS-Sans-SC",
-      source: 'url("https://www.lanmei66.cloud/font/HarmonyOS_Sans_SC-subset.woff")',
-      success: () => console.log("[font] HarmonyOS-Sans-SC 加载成功"),
-      fail: (err) => console.warn("HarmonyOS-Sans-SC 字体加载失败", err),
-    });
-  }
 });
 /**
  * ⭐2026-10-19（task-71 线上 P0）：**App 级 onShow 统一消费「本次进入参数」**——任何落地页（含将来可配置的 brand_page）
@@ -78,22 +58,6 @@ onHide(() => {
 		flex-direction: row;
 	}
 
-/* ========== 全局自定义字体（微信端在 App onLaunch 中通过 uni.loadFontFace 全局加载） ========== */
-/* 抖音端：小程序侧无 tt.loadFontFace（仅小游戏有 tt.loadFont），官方 FAQ 指定 TTSS @font-face 加载外部字体。
-   微信 wxss 不支持远程 @font-face（只能靠 loadFontFace）⇒ 条件编译只进抖音 ttss。
-   ⚠️ 字体一律走 CDN 域（2026-09-28 流量成本 PRD R1，与 COS 源站同 ETag 已实证）；
-   真机如需下载域名白名单：www.lanmei66.cloud 配到抖音后台 downloadFile 域名。 */
-/* #ifdef MP-TOUTIAO */
-@font-face {
-	font-family: 'NotoSerifSC-Bold';
-	src: url("https://www.lanmei66.cloud/font/NotoSerifSC-Bold-subset.woff");
-}
-@font-face {
-	font-family: 'HarmonyOS-Sans-SC';
-	src: url("https://www.lanmei66.cloud/font/HarmonyOS_Sans_SC-subset.woff");
-}
-/* #endif */
-/* 宋体标题：font-family: 'NotoSerifSC-Bold' */
 /* ========== 全局按压反馈（hover-class 引用） ========== */
 /* 可点击元素加 hover-class="press-dim"，按压时降透明度 + 轻微变亮，不改变布局 */
 .press-dim {
@@ -155,18 +119,8 @@ onHide(() => {
   to { opacity: 1; }
 }
 
-.font-noto-serif {
-  font-family: 'NotoSerifSC-Bold';
-}
-/* 正文/界面文字：font-family: 'HarmonyOS-Sans-SC' */
-.font-harmony {
-  font-family: 'HarmonyOS-Sans-SC';
-}
-
-/* 全局默认字体：HarmonyOS Sans SC（个别标题可用 font-noto-serif 覆盖） */
-/* 页面底色：深色主题必须显式设置，否则 tab 切换重绘间隙会透出默认白底（闪白） */
+/* 页面采用各运行平台的系统默认字体。页面底色必须显式设置，避免 tab 切换重绘时闪白。 */
 page {
-  font-family: 'HarmonyOS-Sans-SC';
   background-color: #160F04;
 }
 

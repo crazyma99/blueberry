@@ -186,13 +186,6 @@ export const COMPAT_DECLARATIONS = [
       "影响端＝抖音/小红书（用户可见后果＝菜单无该行，其余菜单项不变）。属有意平台裁剪，非漏兜底。",
   },
   {
-    file: "src/App.vue",
-    macro: "MP-TOUTIAO",
-    ends: ["wx", "xhs"],
-    reason:
-      "样式级 `@font-face` 差异：仅抖音端注入该字体族；其余端不命中该规则即回落全局字体（**样式级天然兜底**），微信端另有其字体注入位点 ⇒ 无功能缺口。",
-  },
-  {
     file: "src/components/ServiceContact/ServiceContact.vue",
     macro: "MP-TOUTIAO",
     ends: ["tt"],

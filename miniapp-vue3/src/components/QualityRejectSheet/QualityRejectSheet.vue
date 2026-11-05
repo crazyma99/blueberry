@@ -83,8 +83,7 @@ const copy = computed(() => ({
 
 <style scoped lang="scss">
 .qr-sheet {
-  /* 组件样式隔离 ⇒ 字体自带（不依赖全局类/页面继承） */
-  font-family: 'HarmonyOS-Sans-SC';
+  /* 组件使用小程序运行平台的系统默认字体。 */
   box-sizing: border-box;
   width: 100%;
   /* 卡片面（🔴CR：门面 `BasePopup` 把 wot 弹层面置透明 ⇒ 内容必须自带面与上圆角；同 LoginPopup/ProfilePopup 写法） */
@@ -101,7 +100,7 @@ const copy = computed(() => ({
   align-items: center;
 }
 .qr-title {
-  font-family: 'NotoSerifSC-Bold'; /* 与弹窗族标题同口径（组件内自带衬线） */
+  /* 标题使用小程序运行平台的系统默认字体。 */
   font-size: $font-size-sub-title;
   color: $color-action;
   text-align: center;

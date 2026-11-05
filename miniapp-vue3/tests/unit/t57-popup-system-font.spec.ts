@@ -1,4 +1,4 @@
-// 2026-09-22 主人三项收口（AI 试衣详情旧 loading→wot loading；弹窗文案 HarmonyOS Sans；弹窗统一 wot Popup）——
+// 弹窗经统一 wot Popup 门面；小程序文字使用运行平台系统默认字体。
 // 本 spec 含**源码守卫**与**渲染级断言**（独立 CR 🟡10：纯字符串断言测不到白底/层级/cancel 语义，故补渲染层）。
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -27,7 +27,7 @@ const StubWdPopup = defineComponent({
     '<view class="stub-popup"><view class="stub-popup__mask" @click="$emit(\'close\')" /><view class="stub-popup__content"><slot /></view></view>',
 });
 
-describe("弹窗统一 wot Popup 门面 ＋ HarmonyOS Sans 文案（源码守卫）", () => {
+describe("弹窗统一 wot Popup 门面 ＋ 系统默认字体（源码守卫）", () => {
   it("门面 BasePopup/BaseLoading 内部确为 wot 组件，且保留抖音自绘分支", () => {
     const popup = read("src/ui/BasePopup.vue");
     expect(popup).toContain("wd-popup");
@@ -40,22 +40,33 @@ describe("弹窗统一 wot Popup 门面 ＋ HarmonyOS Sans 文案（源码守卫
     ["src/components/LoginPopup/LoginPopup.vue", "login-card", "login-overlay"],
   ];
   for (const [file, cardClass, deadClass] of cases) {
-    it(`${file.split("/").pop()}：经 BasePopup 渲染 ＋ 容器挂 font-harmony ＋ 无自绘遮罩残留`, () => {
+    it(`${file.split("/").pop()}：经 BasePopup 渲染、无旧字体类 ＋ 无自绘遮罩残留`, () => {
       const s = read(file);
       expect(s).toContain('import BasePopup from "../../ui/BasePopup.vue";');
       expect(s).toContain("<BasePopup");
       expect(s).toContain("</BasePopup>");
-      expect(s).toMatch(new RegExp(`class="${cardClass}[^"]*font-harmony`));
+      expect(s).toContain(`class="${cardClass}`);
+      expect(s).not.toMatch(/\bfont-(?:harmony|noto-serif)\b/);
       expect(s).not.toContain(deadClass);
       expect(s).not.toContain(`.${deadClass} {`);
     });
   }
 
-  it("ProfilePopup 标题仍为衬线（font-noto-serif 优先）；遮罩点击语义由门面 cancel 转发", () => {
+  it("ProfilePopup 标题使用系统默认字体；遮罩点击语义由门面 cancel 转发", () => {
     const prof = read("src/components/ProfilePopup/ProfilePopup.vue");
-    expect(prof).toContain('class="card-title font-noto-serif"');
+    expect(prof).toContain('class="card-title"');
+    expect(prof).not.toMatch(/\bfont-(?:harmony|noto-serif)\b/);
     expect(prof).toContain('@cancel="emit(\'skip\')"');
     expect(read("src/components/LoginPopup/LoginPopup.vue")).toContain('@cancel="emit(\'close\')"');
+  });
+
+  it("App 与自定义 Tab 栏不再加载远程字体", () => {
+    const app = read("src/App.vue");
+    const tabBar = read("src/custom-tab-bar/index.js");
+    expect(app).not.toContain("loadFontFace");
+    expect(tabBar).not.toContain("loadFontFace");
+    expect(app).not.toMatch(/font-(?:harmony|noto-serif)/);
+    expect(tabBar).not.toMatch(/NotoSerif|HarmonyOS|\.woff2?/i);
   });
 
   it("aiTryOnResult：经门面 BaseLoading 渲染（加载中/生成中），旧自绘 spinner 与规则不得回流", () => {
@@ -85,10 +96,10 @@ describe("弹窗统一 wot Popup 门面 ＋ HarmonyOS Sans 文案（源码守卫
     }
   });
 
-  it("输入框字体（🔴CR1）：`.app-input-field` 显式 HarmonyOS ＋ 内联 placeholder-style（scoped 的 placeholder-class 不命中）", () => {
+  it("输入框保留占位文字样式且不指定自定义字体", () => {
     const s = read("src/components/ProfilePopup/ProfilePopup.vue");
     const block = s.slice(s.indexOf(".app-input-field {"), s.indexOf(".app-input-field {") + 400);
-    expect(block).toContain("font-family: 'HarmonyOS-Sans-SC'");
+    expect(block).not.toContain("font-family");
     expect(s).toContain("PLACEHOLDER_STYLE");
     expect(s).not.toContain("placeholder-class=");
   });
