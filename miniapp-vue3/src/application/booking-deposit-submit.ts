@@ -36,6 +36,8 @@ export interface DepositSubmitOptions {
   templates: { result: string; done: string };
   /** 配置的待支付保留分钟（payExpireTime 缺失时的兜底） */
   payHoldMinutes: number;
+  /** 用户已同意的保证金金额（分，来自页面展示时的 booking-config）。创建后服务端返回的 deposit.amountFen 与之不一致 ⇒ 不自动付款（amount-changed） */
+  agreedAmountFen?: number;
 }
 
 export interface DepositSubmitDeps {
@@ -87,6 +89,12 @@ export function createDepositSubmitFlow(deps: DepositSubmitDeps) {
     // ④ 服务端要求支付但用户未曾看到规则（配置过期等竞态）：不自动拉起支付
     if (!opts.depositEnabled || !opts.agreed) return unpaid("rules-unseen", booking);
 
+    // ④' 金额漂移：用户同意的是页面配置里的金额；商家在页面打开后改了金额则服务端会按新金额建单。
+    //    返回的金额与已同意金额不一致 ⇒ 不自动付款（预约已保留），引导去「我的预约」查看后再决定
+    if (opts.agreedAmountFen != null && created.deposit != null && created.deposit.amountFen !== opts.agreedAmountFen) {
+      return unpaid("amount-changed", booking);
+    }
+
     // ⑤ 拉起支付并以服务端状态确认
     let outcome: DepositPayOutcome;
     try {
@@ -98,7 +106,7 @@ export function createDepositSubmitFlow(deps: DepositSubmitDeps) {
     const snapshot = outcome.booking ?? booking;
     return unpaid(outcome.reason ?? "payment-failed", snapshot);
 
-    function unpaid(reason: DepositPayReason | "no-pay-params" | "rules-unseen", snap: BookingView): DepositSubmitOutcome {
+    function unpaid(reason: DepositPayReason | "no-pay-params" | "rules-unseen" | "amount-changed", snap: BookingView): DepositSubmitOutcome {
       return {
         kind: "unpaid",
         reason,

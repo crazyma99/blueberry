@@ -67,15 +67,34 @@ describe("getBookingConfig：公开、幂等，不带 authRequired", () => {
     });
   });
 
-  it("非法 refundTrigger 回落 manual；非数字金额归 0", async () => {
+  it("非法 refundTrigger 回落 manual；金额缺失但未开启 → 归 0 仍有效", async () => {
     const f = fakeClient(() => ({
       ok: true,
-      value: { deposit: { enabled: true, amountFen: "bad", refundTrigger: "weird" } },
+      value: { deposit: { enabled: true, amountFen: 5000, refundTrigger: "weird" } },
     }));
     const r = await createBookingRepository({ client: f.client }).getBookingConfig(ctx, 1);
     if (!r.ok) throw new Error("unreachable");
     expect(r.value.deposit.refundTrigger).toBe("manual");
-    expect(r.value.deposit.amountFen).toBe(0);
+    const off = fakeClient(() => ({ ok: true, value: { deposit: { enabled: false, amountFen: "bad" } } }));
+    const r2 = await createBookingRepository({ client: off.client }).getBookingConfig(ctx, 1);
+    if (!r2.ok) throw new Error("unreachable");
+    expect(r2.value.deposit.enabled).toBe(false);
+    expect(r2.value.deposit.amountFen).toBe(0);
+  });
+
+  it("【问题 12】enabled=true 但金额 ≤0／缺失／非数字（脏配置）→ 视为无效配置，按拉取失败返回错误（不得渲染 ¥0.00）", async () => {
+    for (const amountFen of [0, -100, "bad", undefined, null]) {
+      const f = fakeClient(() => ({ ok: true, value: { deposit: { enabled: true, amountFen }, payHoldMinutes: 10 } }));
+      const r = await createBookingRepository({ client: f.client }).getBookingConfig(ctx, 1);
+      expect(r.ok, String(amountFen)).toBe(false);
+      if (r.ok) throw new Error("unreachable");
+      expect(r.error.kind).toBe("BUSINESS");
+      expect(r.error.message).toBe("预约规则加载失败，请重试");
+      expect(r.error.retryable).toBe(true);
+    }
+    // 缺 deposit.amountFen 的开启态同样无效
+    const missing = fakeClient(() => ({ ok: true, value: { deposit: { enabled: true } } }));
+    expect((await createBookingRepository({ client: missing.client }).getBookingConfig(ctx, 1)).ok).toBe(false);
   });
 });
 

@@ -12,6 +12,7 @@
 // 防御性规整：deposit 缺失当 null、pay 缺失当 null、booking-config 缺字段给安全默认（enabled=false）。
 import type { RequestContext } from "../../ports/context";
 import type { ClientLike, RepoResult } from "./carousels";
+import type { AppError } from "../http/errors";
 import type { BookingStatus, SlotReason } from "../../domain/booking";
 import { normalizeSlotReason } from "../../domain/booking";
 import type {
@@ -140,6 +141,15 @@ function normalizeCreateResult(raw: unknown): CreateBookingResult {
   return { ...normalizeBookingView(b), pay: normalizePay(b.pay) };
 }
 
+/** 无效配置（enabled=true 但金额 ≤0）的错误：按业务失败文案走页面既有「重试」路径；retryable 让重试入口可用 */
+const INVALID_CONFIG_ERROR: AppError = {
+  kind: "BUSINESS",
+  businessCode: null,
+  message: "预约规则加载失败，请重试",
+  requestId: null,
+  retryable: true,
+};
+
 const DEFAULT_RULE: DepositRuleView = {
   enabled: false,
   amountFen: 0,
@@ -149,16 +159,20 @@ const DEFAULT_RULE: DepositRuleView = {
   refundTrigger: "manual",
 };
 
-/** 防御性规整 BookingConfig：门店未开启/不存在/缺字段 → enabled=false 且其余为安全默认，模板缺失为 "" */
-function normalizeBookingConfig(raw: unknown): BookingConfig {
+/** 防御性规整 BookingConfig：门店未开启/不存在/缺字段 → enabled=false 且其余为安全默认，模板缺失为 "" 。
+ *  返回 null＝**无效配置**：enabled=true 但金额 ≤0（缺字段/脏数据）——不能渲染「¥0.00」，调用方按「拉取失败」同一条重试/拦截路径处理。 */
+function normalizeBookingConfig(raw: unknown): BookingConfig | null {
   const c = (raw ?? {}) as Record<string, unknown>;
   const d = (c.deposit ?? {}) as Record<string, unknown>;
   const trigger: RefundTrigger = d.refundTrigger === "auto_on_complete" ? "auto_on_complete" : "manual";
   const tpl = (c.subscribeTemplates ?? {}) as Record<string, unknown>;
+  const enabled = d.enabled === true;
+  const amountFen = toInt(d.amountFen);
+  if (enabled && amountFen <= 0) return null;
   return {
     deposit: {
-      enabled: d.enabled === true,
-      amountFen: toInt(d.amountFen),
+      enabled,
+      amountFen,
       freeCancelHours: toInt(d.freeCancelHours),
       lateCancelForfeitPct: toInt(d.lateCancelForfeitPct),
       noShowForfeitPct: toInt(d.noShowForfeitPct),
@@ -266,7 +280,13 @@ export function createBookingRepository(deps: { client: ClientLike }) {
           replayPolicy: "idempotent",
           context,
         })
-        .then((r) => (r.ok ? { ...r, value: normalizeBookingConfig(r.value) } : r));
+        .then((r): RepoResult<BookingConfig> => {
+          if (!r.ok) return r;
+          const value = normalizeBookingConfig(r.value);
+          // 无效配置（开启但金额 ≤0）：按拉取失败处理（页面走同一条重试/拦截路径），不渲染 ¥0.00
+          if (value == null) return { ok: false, error: INVALID_CONFIG_ERROR };
+          return { ...r, value };
+        });
     },
     /** 本人单条（含 deposit）：用于支付后轮询状态。幂等 */
     getBooking(context: RequestContext, bookingId: number): Promise<RepoResult<BookingView>> {

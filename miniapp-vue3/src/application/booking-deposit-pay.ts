@@ -91,8 +91,10 @@ export function createDepositPayFlow(deps: {
     bookingId: number,
   ): Promise<DepositPayOutcome> {
     const startedAt = now();
+    // 迭代次数上限与时间上限并行（谁先到谁停）：系统时钟被回拨（自动校时）时 now()-startedAt 变小甚至为负，仅靠时间会空转超过 timeoutMs
+    const maxIterations = Math.ceil(timeoutMs / intervalMs) + 3;
     let last: BookingView | undefined;
-    for (;;) {
+    for (let i = 1; ; i++) {
       const r = await deps.bookings.getBooking(context, bookingId);
       if (r.ok) {
         last = r.value;
@@ -104,7 +106,7 @@ export function createDepositPayFlow(deps: {
         return { ok: false, reason: "authExpired", booking: last };
       }
       // 网络抖动（非 auth 的 ok:false）：不终止，继续轮询
-      if (now() - startedAt >= timeoutMs) {
+      if (now() - startedAt >= timeoutMs || i >= maxIterations) {
         return { ok: false, reason: "timeout", booking: last };
       }
       await sleep(intervalMs);

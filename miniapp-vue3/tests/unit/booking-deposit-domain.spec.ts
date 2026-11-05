@@ -2,7 +2,9 @@
 // 倒计时（注入 now、UTC+8、过期=0、非法=0）、规则摘要（各分支）、取消确认文案、结算原因、一行文案。
 import { describe, expect, it } from "vitest";
 import {
+  MAX_PAY_HOLD_MINUTES,
   cancelConfirmText,
+  cancelDoneText,
   describePaidResult,
   expireAtMs,
   describeDepositLine,
@@ -128,7 +130,11 @@ describe("describeDepositLine：一行文案", () => {
     ).toBe("¥25.00 已原路退还，已扣除 ¥25.00（迟取消）");
     expect(
       describeDepositLine(dep({ status: "refunding", refundFen: 2500, forfeitFen: 2500, settleReason: "no_show" })),
-    ).toBe("保证金 ¥25.00 · 退还中，已扣除 ¥25.00（爽约）");
+    ).toBe("退还 ¥25.00（退还中），已扣除 ¥25.00（爽约）");
+    // 不得以「保证金 ¥x」开头（会被读成原保证金金额）
+    expect(
+      describeDepositLine(dep({ status: "refunding", refundFen: 3000, forfeitFen: 2000, settleReason: "cancel_late" })),
+    ).toBe("退还 ¥30.00（退还中），已扣除 ¥20.00（迟取消）");
   });
   it("全额退还无扣除：不出现「已扣除」", () => {
     expect(describeDepositLine(dep({ status: "refunded", refundFen: 5000, forfeitFen: 0, settleReason: "cancel_free" }))).toBe(
@@ -152,6 +158,13 @@ describe("retainMinutes：预约保留剩余分钟（向上取整，优先按截
     expect(retainMinutes(null, base, 15)).toBe(15);
     expect(retainMinutes(null, base, NaN)).toBe(0);
   });
+  it("【时钟偏慢】本地剩余大于保留期上限 → 取 min(本地剩余, 上限)：不超过 payHoldMinutes；无配置时以契约上界 30 封顶", () => {
+    // 设备时钟比服务端慢 40 分钟：本地看还剩 50 分钟，但保留期上限只有 10 分钟
+    expect(retainMinutes(dep({ payExpireTime: "2026-11-05 12:50:00" }), base, 10)).toBe(10);
+    expect(retainMinutes(dep({ payExpireTime: "2026-11-05 12:50:00" }), base, 0)).toBe(MAX_PAY_HOLD_MINUTES);
+    // 不超上限时仍按本地剩余
+    expect(retainMinutes(dep({ payExpireTime: "2026-11-05 12:03:00" }), base, 10)).toBe(3);
+  });
 });
 
 describe("提交结果页文案", () => {
@@ -167,11 +180,19 @@ describe("提交结果页文案", () => {
     expect(d).not.toContain("0 分钟");
     expect(d).toContain("我的预约");
   });
-  it("超时（结果未知）：不得说失败，提示稍后查看且勿重复支付", () => {
+  it("超时（结果未知）：不得说失败，提示到「我的预约」查看支付结果且勿重复支付；不承诺「状态会自动更新」（预约页不再轮询）", () => {
     const r = describeUnpaidResult("timeout", 5);
     expect(r.title).toBe("支付结果确认中");
-    expect(r.desc).toContain("请勿重复支付");
+    expect(r.desc).toBe("暂未收到支付结果，请到「我的预约」查看支付结果，请勿重复支付");
     expect(r.desc).not.toContain("失败");
+    expect(r.desc).not.toContain("自动更新");
+  });
+  it("金额已变化（amount-changed）：不自动付款，文案说明金额变化并引导到「我的预约」查看后再支付", () => {
+    const r = describeUnpaidResult("amount-changed", 8);
+    expect(r.title).toBe("预约已保留");
+    expect(r.desc).toContain("保证金金额已变化，请到「我的预约」查看后再支付");
+    expect(r.desc).toContain("8 分钟");
+    expect(describeUnpaidResult("amount-changed", 0).desc).not.toContain("0 分钟");
   });
   it("已关闭：说明已关闭且已扣款会原路退回", () => {
     const r = describeUnpaidResult("closed", 0);
@@ -217,6 +238,12 @@ describe("remainingPaySeconds：按 UTC+8 解析，可注入 now", () => {
   it("非法 now 回落 0", () => {
     expect(remainingPaySeconds("2026-11-05 12:05:00", NaN)).toBe(0);
   });
+  it("capSeconds：取 min(本地剩余, 上限)；已到期仍为 0；未传上限不变", () => {
+    expect(remainingPaySeconds("2026-11-05 12:50:00", base, 600)).toBe(600);
+    expect(remainingPaySeconds("2026-11-05 12:05:00", base, 600)).toBe(300);
+    expect(remainingPaySeconds("2026-11-05 11:59:00", base, 600)).toBe(0);
+    expect(remainingPaySeconds("2026-11-05 12:50:00", base)).toBe(3000);
+  });
 });
 
 describe("expireAtMs：UTC+8 墙钟 → 绝对毫秒", () => {
@@ -261,9 +288,10 @@ describe("summarizeDepositRule：规则摘要（字符串数组）", () => {
   });
   it("典型：迟取消扣 50%、爽约扣 100%（人工退还）", () => {
     expect(summarizeDepositRule(rule({}))).toEqual([
-      "开始前 24 小时内取消，扣除 50% 保证金",
+      "门店确认后，开始前 24 小时内取消，扣除 50% 保证金；门店确认前取消全额退还",
       "爽约扣除 100% 保证金",
       "预约完成后由门店确认退还保证金",
+      "预约开始后如需处理，请联系门店",
       "其余情形（含门店取消）全额退还，款项原路退回",
     ]);
   });
@@ -276,8 +304,27 @@ describe("summarizeDepositRule：规则摘要（字符串数组）", () => {
     expect(r.join("")).not.toContain("24 小时");
     expect(r).toContain("爽约不扣除保证金");
   });
-  it("迟取消扣 100% → 与其它比例同口径写「扣除 100% 保证金」", () => {
-    expect(summarizeDepositRule(rule({ lateCancelForfeitPct: 100 }))[0]).toBe("开始前 24 小时内取消，扣除 100% 保证金");
+  it("迟取消扣 100% → 与其它比例同口径写「扣除 100% 保证金」；且声明仅适用于门店确认后", () => {
+    expect(summarizeDepositRule(rule({ lateCancelForfeitPct: 100 }))[0]).toBe(
+      "门店确认后，开始前 24 小时内取消，扣除 100% 保证金；门店确认前取消全额退还",
+    );
+  });
+  it("【摘要补全】迟取消规则只适用于门店确认后；各取值下都说明预约开始后联系门店", () => {
+    for (const r of [
+      rule({}),
+      rule({ lateCancelForfeitPct: 0, noShowForfeitPct: 0 }),
+      rule({ freeCancelHours: 0 }),
+      rule({ lateCancelForfeitPct: 100, noShowForfeitPct: 100, refundTrigger: "auto_on_complete" }),
+    ]) {
+      const lines = summarizeDepositRule(r);
+      expect(lines).toContain("预约开始后如需处理，请联系门店");
+      expect(lines[lines.length - 1]).toBe("其余情形（含门店取消）全额退还，款项原路退回");
+    }
+    // 有迟取消扣除窗口的取值：必须出现「门店确认后」「门店确认前取消全额退还」；无窗口/全退的取值不出现（免费取消不分确认前后）
+    expect(summarizeDepositRule(rule({}))[0]).toContain("门店确认后");
+    expect(summarizeDepositRule(rule({}))[0]).toContain("门店确认前取消全额退还");
+    expect(summarizeDepositRule(rule({ lateCancelForfeitPct: 0 }))[0]).toBe("开始前取消，可免费取消");
+    expect(summarizeDepositRule(rule({ freeCancelHours: 0 }))[0]).toBe("开始前取消，可免费取消");
   });
   it("freeCancelHours=0（无迟取消窗口）→ 不说「开始前 0 小时内」，开始前取消可免费取消，不展示迟取消扣除比例", () => {
     for (const pct of [0, 50, 100]) {
@@ -300,9 +347,12 @@ describe("summarizeDepositRule：规则摘要（字符串数组）", () => {
 });
 
 describe("cancelConfirmText：取消确认文案", () => {
-  it("forfeit>0 → 取消后将扣除 ¥x，退还 ¥y", () => {
+  it("forfeit>0 → 取消后将扣除 ¥x，退还 ¥y；已知原因时追加（迟取消）", () => {
     expect(cancelConfirmText({ refundFen: 2500, forfeitFen: 2500 })).toBe("取消后将扣除 ¥25.00，退还 ¥25.00");
-    expect(cancelConfirmText({ refundFen: 0, forfeitFen: 5000 })).toBe("取消后将扣除 ¥50.00，退还 ¥0.00");
+    expect(cancelConfirmText({ refundFen: 2500, forfeitFen: 2500, reason: "cancel_late" })).toBe("取消后将扣除 ¥25.00（迟取消），退还 ¥25.00");
+    expect(cancelConfirmText({ refundFen: 0, forfeitFen: 5000, reason: "cancel_late" })).toBe("取消后将扣除 ¥50.00（迟取消），退还 ¥0.00");
+    // 未知原因不透出英文
+    expect(cancelConfirmText({ refundFen: 0, forfeitFen: 5000, reason: "weird" })).toBe("取消后将扣除 ¥50.00，退还 ¥0.00");
   });
   it("forfeit=0 且 refund>0 → 保证金 ¥x 将原路退回", () => {
     expect(cancelConfirmText({ refundFen: 5000, forfeitFen: 0 })).toBe("保证金 ¥50.00 将原路退回");
@@ -312,6 +362,21 @@ describe("cancelConfirmText：取消确认文案", () => {
   });
   it("脏数据安全", () => {
     expect(cancelConfirmText({ refundFen: -1, forfeitFen: NaN })).toBe("");
+  });
+});
+
+describe("cancelDoneText：取消成功后的提示（过去时）", () => {
+  it("扣款：已取消预约，已扣除 ¥x（原因），退还 ¥y；不再出现「将扣除」", () => {
+    const t = cancelDoneText({ refundFen: 2500, forfeitFen: 2500, reason: "cancel_late" });
+    expect(t).toBe("已取消预约，已扣除 ¥25.00（迟取消），退还 ¥25.00");
+    expect(t).not.toContain("将扣除");
+  });
+  it("全退：已取消预约，保证金 ¥x 将原路退回", () => {
+    expect(cancelDoneText({ refundFen: 5000, forfeitFen: 0, reason: "cancel_free" })).toBe("已取消预约，保证金 ¥50.00 将原路退回");
+  });
+  it("无结算金额 → 已取消预约；脏数据安全", () => {
+    expect(cancelDoneText({ refundFen: 0, forfeitFen: 0 })).toBe("已取消预约");
+    expect(cancelDoneText({ refundFen: -1, forfeitFen: NaN })).toBe("已取消预约");
   });
 });
 
