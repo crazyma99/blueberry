@@ -34,19 +34,37 @@ function onTap(): void {
 </template>
 
 <style lang="scss" scoped>
+/* 文字居中：几何上确定（2026-11 热修 H1，主人真机反馈「文字不在按钮正中」）。
+   旧写法根因：容器无固定高度/行高，高度由「父 view 默认 16px 字号的 strut 行盒 + padding」决定，
+   内层 20rpx 行内 text 按基线对齐 ⇒ 文字相对胶囊垂直方向偏离几何中心，且偏移量随字体度量而变；
+   另 letter-spacing:1rpx 会在末字右侧多留空白，使字形整体偏左。
+   新写法：容器 flex 居中三件套 + 固定 height（border-box，含 2×1rpx 描边）；
+   文字 height 与 line-height 同值 = 容器内框高，行盒恰好占满内框，不再依赖默认行高/strut；
+   取消 letter-spacing（不依赖各端对「末字尾随间距」的处理差异，比 margin/text-indent 补偿更稳）。
+   高度 44rpx：与旧写法在桌面 Chromium 的实测渲染高度一致（点击热区不缩小）；
+   横向 padding 18rpx 补回取消字间距损失的 4rpx 宽度，胶囊总宽与旧版持平（≈118rpx）。 */
 .booking-entry {
   position: absolute;
   top: 10rpx;
   right: 10rpx;
   z-index: 2;
-  padding: 6rpx 16rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 44rpx;
+  padding: 0 18rpx;
   border-radius: 999rpx;
   background: rgba(22, 15, 4, 0.72);
   border: 1rpx solid rgba(241, 205, 145, 0.6);
 }
 .booking-entry-text {
+  flex-shrink: 0;
+  height: 42rpx;
   font-size: 20rpx;
+  line-height: 42rpx;
+  white-space: nowrap;
   color: $color-action;
-  letter-spacing: 1rpx;
 }
 </style>
