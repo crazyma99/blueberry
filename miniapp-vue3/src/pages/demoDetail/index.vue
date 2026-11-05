@@ -455,7 +455,7 @@ onReachBottom(() => {
       <view v-if="!searching && categories.length > 0">
         <!-- AI 六页仅微信注册（2026-09-17 主人拍板）：抖音端渲染该入口会跳未注册页、点击无反应 ⇒ 平台门控 -->
         <view v-if="platform === 'mp-weixin'" class="ai-recommend-banner" @click="goAiRecommend">
-          <image class="ai-recommend-bg" src="/static/ai-recom-banner.png" mode="aspectFill" />
+          <image class="ai-recommend-bg" src="/static/ai-recom-banner.jpg" mode="aspectFill" />
           <view class="ai-recommend-content">
             <text class="ai-recommend-title font-noto-serif">AI智能推荐·拍照选服饰</text>
             <text class="ai-recommend-subtitle">上传照片，AI为您推荐最合适的服饰风格</text>
