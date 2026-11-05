@@ -128,7 +128,10 @@ describe("平台作用域守卫（仅微信端）", () => {
   it("逻辑层零 #ifdef：domain/application/composables/repositories 新文件无条件编译", () => {
     for (const f of [
       "src/domain/booking.ts",
+      "src/domain/booking-deposit.ts",
       "src/application/booking-flow.ts",
+      "src/application/booking-deposit-pay.ts",
+      "src/application/booking-deposit-submit.ts",
       "src/composables/use-my-bookings.ts",
       "src/infrastructure/repositories/bookings.ts",
     ]) {
@@ -136,14 +139,43 @@ describe("平台作用域守卫（仅微信端）", () => {
     }
   });
 
-  it("免定金：预约两页与入口源码不出现支付/定金/金额字样（产品规则）", () => {
-    for (const f of ["src/pages/booking/index.vue", "src/pages/myBookings/index.vue", "src/components/BookingEntry/BookingEntry.vue"]) {
+  it("对外文案合规：预约两页与入口源码（去注释后）不出现「定金」「押金」字样，保证金一律称「预约保证金」（主人 2026-11-05 决议 4）", () => {
+    for (const f of [
+      "src/pages/booking/index.vue",
+      "src/pages/myBookings/index.vue",
+      "src/components/BookingEntry/BookingEntry.vue",
+      "src/domain/booking-deposit.ts",
+      "src/domain/booking.ts",
+      "src/application/booking-deposit-submit.ts",
+    ]) {
       const code = read(f)
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/<!--[\s\S]*?-->/g, "")
-        .replace(/^\s*\/\/.*$/gm, "");
-      expect(code, f).not.toMatch(/定金|支付|金额|付款|¥|￥/);
+        .replace(/^\s*\/\/.*$/gm, "")
+        .replace(/\s\/\/.*$/gm, "");
+      expect(code, f).not.toMatch(/定金|押金/);
     }
+  });
+
+  it("无保证金场景不出现支付字样：BookingEntry 全文零支付/金额字样；myBookings 模板里的支付字样仅限「继续支付」按钮（其余只能经运行时数据出现），且保证金专属筛选标签受 depositSeen 门控", () => {
+    const strip = (s: string) =>
+      s
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/<!--[\s\S]*?-->/g, "")
+        .replace(/^\s*\/\/.*$/gm, "")
+        .replace(/\s\/\/.*$/gm, "");
+    // 入口组件：与改动前一致，完全不含
+    expect(strip(read("src/components/BookingEntry/BookingEntry.vue"))).not.toMatch(/定金|保证金|押金|支付|金额|付款|¥|￥/);
+    // 我的预约页：<template> 内字面量的支付类词汇白名单（新增无条件的支付字样会让此处变红）
+    const code = strip(read("src/pages/myBookings/index.vue"));
+    const tpl = /<template>([\s\S]*?)<\/template>\s*<style/.exec(code)?.[1] ?? "";
+    expect(tpl.length).toBeGreaterThan(100);
+    const hits = new Set(tpl.match(/[^\s"'<>{}]*(?:定金|押金|保证金|支付|金额|付款|¥|￥)[^\s"'<>{}]*/g) ?? []);
+    expect([...hits].sort()).toEqual(["支付中...", "继续支付"]);
+    // 保证金专属标签：模板遍历的是经 depositSeen 门控的 visibleTabs，而不是全量 FILTER_TABS
+    expect(tpl).toContain('v-for="tab in visibleTabs"');
+    expect(tpl).not.toContain("in FILTER_TABS");
+    expect(code).toMatch(/depositSeen\.value/);
   });
 
   it("预约页源码不含 emoji / 文字图标（项目规范：图标用 IconPark 方案）", () => {

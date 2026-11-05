@@ -141,7 +141,7 @@ withDefaults(
         </template>
       </LifeImButton>
       <view class="contact-main" :class="{ 'contact-main--im': isToutiao }">
-        <image v-if="!isToutiao" src="/static/contact-bg.png" class="contact-bg" mode="aspectFill" />
+        <image v-if="!isToutiao" src="/static/contact-bg.jpg" class="contact-bg" mode="aspectFill" />
         <image
           v-if="!isToutiao"
           class="code"
@@ -283,7 +283,13 @@ withDefaults(
   height: 536rpx;
 }
 .service-contain .contact-main .contact-bg {
+  /* 2026-11-05（S2 瘦包回归热修）：背景层**显式压到最底**（z-index:0），其上内容（.code/.label/.val）一律
+     `position:relative; z-index:1`——图层次序由 z-index 决定，**不依赖 DOM 先后、不依赖图片是否半透明**。
+     根因：contact-bg 是 absolute 铺满，按 CSS 绘制顺序定位元素（step 6）画在静态块内容（step 3）之上；
+     旧 PNG 整图半透明，文字从下面透出，瘦包换成不透明 JPEG（扁平化到 #160F04）后 .label/.val 被彻底盖住。
+     守卫：tests/unit/s2-layer-order-guard.spec.ts。 */
   position: absolute;
+  z-index: 0;
   width: 100%;
   height: 100%;
 }
@@ -303,11 +309,15 @@ withDefaults(
   padding: 30rpx 0;
 }
 .service-contain .contact-main .label {
+  position: relative; /* S2：无 top/left 偏移 ⇒ 不改布局，仅提升到 contact-bg 之上 */
+  z-index: 1;
   font-size: 26rpx; /* 旧 --font-size-body-lg=26rpx */
   font-weight: 400;
   margin-bottom: 10rpx; /* 旧 --spacing-xs=10rpx（CR 🟡2 纠错） */
 }
 .service-contain .contact-main .val {
+  position: relative; /* S2：同 .label */
+  z-index: 1;
   font-size: 34rpx; /* 旧 --font-size-slogan=34rpx（CR 🟡2 纠错） */
   font-weight: 400;
   margin-bottom: 20rpx;

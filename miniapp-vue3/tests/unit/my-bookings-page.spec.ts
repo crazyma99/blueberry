@@ -165,8 +165,27 @@ describe("pages/myBookings（我的预约页）", () => {
     expect(labels).toEqual(["待确认", "已确认", "已完成", "已取消", "已过期"]);
     const cancelables = cards.map((c) => c.find(".cancel-btn").exists());
     expect(cancelables).toEqual([true, true, false, false, false]);
-    // 免定金：页面不出现任何支付/定金/金额字样
-    expect(w.text()).not.toMatch(/定金|支付|金额|元/);
+    // 无保证金的预约（deposit=null）：整页（含筛选标签）不出现任何保证金/金额/支付文案（与改造前一致）
+    expect(w.text()).not.toMatch(/保证金|定金|押金|¥|支付/);
+    const tabLabels = w.findAll(".filter-item").map((n) => n.text());
+    expect(tabLabels).toEqual(["全部", "待确认", "已确认", "已完成", "已取消", "已过期"]);
+    for (const c of cards) expect(c.text()).not.toMatch(/保证金|¥|支付|金额/);
+  });
+
+  it("存在保证金预约时才出现「待支付」「已爽约」标签（正向）；切到其它筛选后标签保持，不闪烁", async () => {
+    h.pages["all:1"] = {
+      list: [booking(1, "pending"), booking(2, "awaiting_payment", { deposit: { status: "pending", amountFen: 5000, refundFen: 0, forfeitFen: 0, payExpireTime: "", settleReason: "" } })],
+      total: 2,
+    };
+    h.pages["completed:1"] = { list: [booking(3, "completed")], total: 1 }; // 该筛选下的结果不含保证金预约
+    const w = await mountPage();
+    const labels = () => w.findAll(".filter-item").map((n) => n.text());
+    expect(labels()).toEqual(["全部", "待支付", "待确认", "已确认", "已完成", "已取消", "已过期", "已爽约"]);
+    await w.findAll(".filter-item").find((t) => t.text() === "已完成")!.trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(labels()).toContain("待支付");
+    expect(labels()).toContain("已爽约");
   });
 
   it("空列表：展示空态；首屏请求带 page=1、pageSize=20、无 status", async () => {

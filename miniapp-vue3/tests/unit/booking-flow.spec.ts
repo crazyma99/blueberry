@@ -57,6 +57,7 @@ function booking(id: number, status: BookingView["status"] = "pending"): Booking
     status,
     channel: "wx",
     createTime: "2026-11-04 10:00:00",
+    deposit: null,
   };
 }
 
