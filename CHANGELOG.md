@@ -2,6 +2,12 @@
 
 > 记录小程序 C 端每次实质性改动，最新在上。多人合作提交前先补本文件（与代码同一提交）。
 
+## 2026-11-05 · 移除 HarmonyOS Sans 与 Noto Serif 自定义字体
+
+- 全局启动与自定义 Tab 栏不再请求远程 WOFF 字体；页面、弹窗、表单和共用组件移除品牌字体族，使用各平台系统默认字体。
+- 删除字体加载对应的抖音兼容登记，并更新弹窗字体守卫测试，防止远程字体加载回归。
+- 验证：`pnpm install --frozen-lockfile`、`pnpm run typecheck`、`pnpm exec vitest run`（987 passed、3 skipped）、`pnpm run build:mp-weixin`、`pnpm run build:mp-toutiao`、`pnpm run build:mp-xhs` 均通过；三端构建产物未发现自定义字体族名、加载调用或字体 CDN URL。
+
 ## 2026-11-02 · 抖音审核 P0/P1：屏蔽服务价格/套餐 ＋ 文案改作品向（微信严格原状）
 
 - **P0**：相册详情「服务价格／套餐内容」整块（含两图标与骨架占位）由 `features.showServicePrice` 控制，抖音＝false；隐藏后 `.collect--solo{margin-left:auto}` 保证收藏右对齐、无空白块。

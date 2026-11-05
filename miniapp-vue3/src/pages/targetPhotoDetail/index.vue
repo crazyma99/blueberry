@@ -330,7 +330,7 @@ onLoad((options) => {
     <CustomNavBar title="">
       <view class="nav-center">
         <view class="title-group">
-          <view class="cn font-noto-serif">{{ PROFILE.features.copyGalleryTitle }}</view>
+          <view class="cn">{{ PROFILE.features.copyGalleryTitle }}</view>
           <view class="en">DETAILS</view>
         </view>
         <image src="/static/category-title-line.png" class="line" mode="aspectFill" />
@@ -366,7 +366,7 @@ onLoad((options) => {
       <!-- 头部描述块在图片区之上（旧端 :38-66；初版误置图后，2026-09-19 还原） -->
       <view class="meta">
         <view class="title-first">
-          <view class="title font-noto-serif">{{ detail.title }}</view>
+          <view class="title">{{ detail.title }}</view>
           <image src="/static/cloud.png" class="cloud" mode="aspectFill" />
         </view>
         <view class="info-row">

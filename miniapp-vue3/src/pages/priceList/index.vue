@@ -146,7 +146,7 @@ async function loadPackages(shopId: string): Promise<void> {
       <image class="price" :src="cosThumb(priceImage, 750)" mode="widthFix" lazy-load></image>
       <view v-if="packages.length > 0" class="pkg-section">
         <view class="pkg-title-wrap">
-          <text class="pkg-title font-noto-serif">套餐</text>
+          <text class="pkg-title">套餐</text>
           <text class="pkg-sub">PACKAGE</text>
         </view>
         <view class="pkg-list">
@@ -159,7 +159,7 @@ async function loadPackages(shopId: string): Promise<void> {
               </view>
             </view>
             <view class="pkg-info">
-              <text class="pkg-name font-noto-serif">{{ pkg.name }}</text>
+              <text class="pkg-name">{{ pkg.name }}</text>
               <text v-if="pkg.detail" class="pkg-detail">{{ pkg.detail }}</text>
               <view class="pkg-price-row">
                 <text class="pkg-price-symbol">¥</text>

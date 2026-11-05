@@ -9,7 +9,7 @@
 // ⚠️ 平台：抖音侧 AI 6 页**不注册**（2026-09-17 主人拍板）⇒ pages.json 中本页条目以 `#ifdef MP-WEIXIN` 包裹。
 // 有意偏差（已声明）：①主题：2026-09-19 撤回迁移期亮色、恢复旧端深色（colorPage=#160F04，同旧 --color-bg）；
 // 空态文案仍取 colorTextSecondary（深色下=金 70%，与旧白 50%／30% 观感接近）；骨架/照片占位底已按旧端还原白 8%/6%；
-// ②font-noto-serif/harmony 全局类未定义（沿用既有口径）；③AppFooter 由 P2-21 的纯 props 组件接入（内容经 page-config 用例）。
+// ②文字使用平台系统默认字体；③AppFooter 由 P2-21 的纯 props 组件接入（内容经 page-config 用例）。
 import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
@@ -214,7 +214,7 @@ function pad(n: number): string {
       </view>
 
       <!-- 列表网格与卡片**对齐「相册列表」（demoDetail）标准**（2026-09-21 主人：「AI试衣列表的 Grid 与卡片样式以相册列表为标准统一」）：
-           外描边卡（1rpx 金 30%）＋内圈圆角（13rpx）＋底部渐变蒙层（55%→85%）＋左下描述区（20rpx）＋金标题（26rpx 衬线，单行省略）；
+           外描边卡（1rpx 金 30%）＋内圈圆角（13rpx）＋底部渐变蒙层（55%→85%）＋左下描述区（20rpx）＋金标题（26rpx，单行省略）；
            AI 专属内容仅「状态遮罩」（生成中／生成失败）保留，配色同步改为品牌金系。 -->
       <view v-else class="album-grid">
         <view v-for="(item, index) in taskList" :key="index" class="album-card">
@@ -235,7 +235,7 @@ function pad(n: number): string {
 
             <view class="album-mask" hover-class="press-dim" @click="handleItemClick(item)">
               <view class="album-desc">
-                <text class="album-title font-noto-serif">{{ item.style_name || "AI 试衣" }}</text>
+                <text class="album-title">{{ item.style_name || "AI 试衣" }}</text>
                 <text class="album-time">{{ formatTime(item.created_at) }}</text>
               </view>
             </view>

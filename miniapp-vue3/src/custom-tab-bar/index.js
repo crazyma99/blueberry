@@ -45,12 +45,6 @@ Component({
   },
   lifetimes: {
     attached() {
-      // 字体尽早注册（CR 🟡：原先排在 nextTick 之后，一旦 nextTick 异常会连带跳过）
-      wx.loadFontFace({
-        global: true,
-        family: 'NotoSerifSC-Bold',
-        source: 'url("https://www.lanmei66.cloud/font/NotoSerifSC-Bold-subset.woff")',
-      });
       // 首帧：优先用点击写入的共享值（attached 时路由可能还是旧页），否则按路由
       this.syncSelected(true);
     },

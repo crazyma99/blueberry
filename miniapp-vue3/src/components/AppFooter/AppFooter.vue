@@ -4,7 +4,7 @@
 // 本批按 phases「上提请求到用例/组合函数，再 props 注入」改造：优先级链 props 覆盖 → OPS 下发 →
 // Profile 注入（copyrightText）→ 本地兜底，保留在用例内（AppFooter.uvue 的注入锚点字段名不变量）。
 // 有意偏差（已声明）：①主题暗→亮——旧端浅底文字用 --color-primary-50（金 50%），白底≈1.3:1，
-// 新端取 colorTextSecondary（CR 🟡3 同口径）；②font-noto-serif/harmony 全局类未定义（仅引用）。
+// 新端取 colorTextSecondary（CR 🟡3 同口径）；文字使用平台系统默认字体。
 withDefaults(defineProps<{ mainLine?: string; supportLine?: string }>(), { mainLine: "", supportLine: "" });
 </script>
 

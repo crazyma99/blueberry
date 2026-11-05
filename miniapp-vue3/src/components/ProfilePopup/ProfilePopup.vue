@@ -6,7 +6,7 @@
 // 层叠（2026-09-22 主人报「弹窗仍被 Tab 栏盖住」）：**不用 `root-portal`**——微信端 `custom-tab-bar` 与 `root-portal`
 //   都是运行时注入的独立层，弹层进 root-portal 后会离开页面层叠上下文、z-index 再高也压不住 Tab 栏；
 //   故回到**页面内层叠**并显式 `z-index: 2000`（> 自绘栏 998 / Tab 栏 900）。
-// 视觉：居中卡片 + 顶部金色氛围光 + Noto Serif 金色标题 + 头像金描边角标
+// 视觉：居中卡片 + 顶部金色氛围光 + 金色标题 + 头像金描边角标
 //       + 深色输入面板 + 渐变主按钮 + 弹入动画。
 // 交互：emit 事件交回页面既有 handler（业务逻辑完全不变）。
 // 事件：@choose-avatar 头像选择（透传 open-type="chooseAvatar" 原始事件对象，detail.avatarUrl）；
@@ -31,7 +31,7 @@ import BasePopup from "../../ui/BasePopup.vue";
 import AvatarPickerButton from "../../platform/ui-bridge/AvatarPickerButton.vue";
 
 /** 🟡CR3：`placeholder-class` 在 scoped 下**永不命中**（基座自造 class，不带 data-v）⇒ 改内联 style（含字体，见 🔴1） */
-const PLACEHOLDER_STYLE = "font-family:'HarmonyOS-Sans-SC';color:rgba(255,255,255,0.35)";
+const PLACEHOLDER_STYLE = "color:rgba(255,255,255,0.35)";
 
 const props = withDefaults(
   defineProps<{
@@ -101,15 +101,14 @@ function onNicknameInput(e: unknown): void {
 </script>
 
 <template>
-  <!-- 2026-09-22 主人两项：①「完善个人资料」弹窗文字须为 HarmonyOS Sans（本仓 HarmonyOS 靠全局类 `.font-harmony`，
-       默认仍是系统字体）⇒ 容器挂类、所有文案继承（标题 font-noto-serif 优先）；②弹窗统一走 **wot Popup 门面** `ui/BasePopup`
+  <!-- 2026-09-22 主人两项：①「完善个人资料」弹窗文字使用平台系统默认字体；②弹窗统一走 **wot Popup 门面** `ui/BasePopup`
        （内部＝wot `wd-popup`，遮罩点击关闭由门面 `cancel` 转发为 `skip`，业务组件零 `wd-*` 直用）。
        2026-09-29 还原旧端居中形态（同 LoginPopup）：旧端为 620rpx 定宽居中卡片（ProfilePopup.uvue :65-100），迁移期误用底部弹层。 -->
   <BasePopup :show="true" position="center" :bare="true" :root-portal="false" :z-index="2000" @cancel="emit('skip')">
-    <view class="profile-card font-harmony">
+    <view class="profile-card">
       <!-- 顶部氛围光 -->
       <view class="card-aura"></view>
-      <view class="card-title font-noto-serif">完善个人资料</view>
+      <view class="card-title">完善个人资料</view>
       <view class="card-desc">设置头像和昵称以获得完整体验</view>
 
       <!-- 头像选择（2026-10-13 task-62 真机反馈后定型）：
@@ -177,7 +176,7 @@ function onNicknameInput(e: unknown): void {
   overflow: hidden;
   /* 居中弹层：微信 wd-popup 自带缩放过渡，抖音自绘分支随门面淡入，不再叠加卡片动画 */
 
-  font-family: 'HarmonyOS-Sans-SC'; /* 组件样式隔离（默认 isolated）⇒ app.wxss 的 page/.font-harmony 进不来，必须自带 */
+  /* 组件使用各运行平台的系统默认字体。 */
 }
 /* 顶部金色氛围光 */
 .card-aura {
@@ -196,8 +195,7 @@ function onNicknameInput(e: unknown): void {
   font-weight: 400;
   color: $color-action; /* 旧 var(--color-primary) #F1CD91 */
   margin-bottom: 12rpx;
-
-  font-family: 'NotoSerifSC-Bold'; /* 同上：组件内自带衬线，不依赖全局类 */}
+}
 
 .card-desc {
   font-size: 22rpx; /* 旧 var(--font-size-body-sm) 22rpx */
@@ -280,9 +278,6 @@ function onNicknameInput(e: unknown): void {
   margin-right: 20rpx;
 }
 .app-input-field {
-  /* 🔴CR1（2026-09-22）：小程序 `<input>` **不继承**父级/容器 font-family（基座对 wx-input 硬编码 UICTFontTextStyleBody）
-     ⇒ 必须在元素自身声明；与仓内先例 `pages/demoDetail:474-476`／`pages/favorites:364-365` 同法 */
-  font-family: 'HarmonyOS-Sans-SC';
   flex: 1;
   font-size: 24rpx; /* 旧 var(--font-size-body) 24rpx */
   color: #fff;

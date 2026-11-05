@@ -87,9 +87,8 @@ defineExpose<{ confirm: (options?: BaseDialogOptions) => Promise<"confirm" | "ca
 </template>
 
 <style lang="scss" scoped>
-/* 微信分支：品牌卡片（token 写法同 QualityRejectSheet；组件隔离 ⇒ 字体/按钮样式全部自带） */
+/* 微信分支：品牌卡片（token 写法同 QualityRejectSheet；组件隔离，样式自包含） */
 .base-dialog-card {
-  font-family: 'HarmonyOS-Sans-SC';
   box-sizing: border-box;
   width: 560rpx; /* 沿用抖音分支定宽；无对应 token */
   max-width: 80vw; /* 居中弹层容器随内容收缩，百分比无参照 ⇒ 用 vw */
@@ -101,7 +100,6 @@ defineExpose<{ confirm: (options?: BaseDialogOptions) => Promise<"confirm" | "ca
   align-items: center;
 }
 .base-dialog-title {
-  font-family: 'NotoSerifSC-Bold';
   font-size: $font-size-sub-title;
   color: $color-action;
   text-align: center;

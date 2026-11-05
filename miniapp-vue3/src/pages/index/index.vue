@@ -418,7 +418,7 @@ onMounted(() => {
         <view class="hero-mask"></view>
         <!-- 前景层（顶层）：文字=bottom:0+height:25% 居中；图片=全幅 hero-fg-layer-full，与 bg 等高等宽严丝合缝覆盖 -->
         <view class="hero-fg-layer" :class="currentBanner.overlayType === 2 ? 'hero-fg-layer-full' : ''">
-          <!-- 上层配置 2 选 1：上层图片 / 标题(NotoSerif)+副标题(HarmonyOS Sans)；
+          <!-- 上层配置 2 选 1：上层图片 / 标题与副标题均使用系统默认字体；
                :key=fgTick 每次切换重挂载；渐入渐出=两段式 opacity 过渡（先淡出旧、再淡入新） -->
           <view :key="fgTick" :class="fgHidden ? 'hero-fg-content hero-fg-hide' : 'hero-fg-content'">
             <image
@@ -428,7 +428,7 @@ onMounted(() => {
               mode="aspectFill"
             />
             <view v-else-if="currentBanner.title" class="hero-fg-text">
-              <text class="hero-fg-title font-noto-serif">{{ currentBanner.title }}</text>
+              <text class="hero-fg-title">{{ currentBanner.title }}</text>
               <text v-if="currentBanner.subtitle" class="hero-fg-subtitle">{{ currentBanner.subtitle }}</text>
             </view>
           </view>
@@ -447,7 +447,7 @@ onMounted(() => {
             <view class="shop-inner-line"></view>
             <view class="shop-header">
               <view class="shop-title-wrap">
-                <text class="shop-title font-noto-serif">{{ PROFILE.features.copyGalleryTitle }}</text>
+                <text class="shop-title">{{ PROFILE.features.copyGalleryTitle }}</text>
                 <text class="shop-subtitle">COLLECTION</text>
               </view>
             </view>
@@ -463,7 +463,7 @@ onMounted(() => {
                 <image class="photo-card-img fade-in" :src="shop.homeImage" mode="aspectFill" lazy-load />
                 <view class="photo-card-mask"></view>
                 <view class="photo-card-info">
-                  <text class="photo-card-name font-noto-serif">{{ shop.displayName }}</text>
+                  <text class="photo-card-name">{{ shop.displayName }}</text>
                   <text class="photo-card-sub">{{ shop.displayNameEn }}</text>
                 </view>
                 <BookingEntry :shop-id="shop.id" :shop-name="shop.displayName" />
@@ -471,7 +471,7 @@ onMounted(() => {
               <!-- 占位卡：店铺数为奇数(≥3)时补全网格，不可点击（旧端 :90-95） -->
               <view v-if="showPlaceholder" class="photo-card photo-card-placeholder">
                 <view class="placeholder-content">
-                  <text class="placeholder-title font-noto-serif">敬请期待</text>
+                  <text class="placeholder-title">敬请期待</text>
                   <text class="placeholder-sub">COMING SOON</text>
                 </view>
               </view>
@@ -626,7 +626,7 @@ onMounted(() => {
 }
 .hero-fg-title {
   width: 100%;
-  /* 旧 var(--font-display)＝NotoSerif：新端用全局 font-noto-serif 类（模板侧） */
+  /* 标题使用小程序运行平台的系统默认字体。 */
   font-size: 44rpx;
   letter-spacing: 0.1em;
   color: #F1CD91; /* 旧 var(--color-primary) */
@@ -634,7 +634,7 @@ onMounted(() => {
 }
 .hero-fg-subtitle {
   width: 100%;
-  /* 旧 var(--font-body)＝HarmonyOS Sans＝新端全局默认字体 */
+  /* 副标题使用小程序运行平台的系统默认字体。 */
   font-size: 26rpx;
   letter-spacing: 0.2em;
   color: rgba(241, 205, 145, 0.7); /* 旧 var(--color-primary-70) */

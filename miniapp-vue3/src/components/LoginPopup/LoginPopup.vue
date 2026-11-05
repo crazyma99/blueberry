@@ -8,7 +8,7 @@ import { hapticTap } from "../../application/haptics";
 // 层叠（2026-09-22 主人报「弹窗仍被 Tab 栏盖住」）：**不用 `root-portal`**——微信端 `custom-tab-bar` 与 `root-portal`
 //   都是运行时注入的独立层，弹层进 root-portal 后会离开页面层叠上下文、z-index 再高也压不住 Tab 栏；
 //   故回到**页面内层叠**并显式 `z-index: 2000`（> 自绘栏 998 / Tab 栏 900）。
-// 视觉：居中卡片 + 顶部金色氛围光 + Noto Serif 金色标题 + 自绘勾选 + 渐变主按钮 + 弹入动画。
+// 视觉：居中卡片 + 顶部金色氛围光 + 金色标题 + 自绘勾选 + 渐变主按钮 + 弹入动画。
 // 交互：emit 事件交回页面既有 handler（业务逻辑完全不变）。
 // 事件：@close 关闭；@toggle-agreement 协议勾选；@show-toast 未勾选提示；
 //       @open-user @open-privacy 协议链接；@get-phone 一键登录(getPhoneNumber 回调，透传原始事件对象)。
@@ -28,7 +28,7 @@ import { hapticTap } from "../../application/haptics";
 //   --color-popup-card #262626→ 硬编码 #262626（tokens 无该深色卡片档）
 //   --radius-2xl 48rpx / --radius-full 999rpx → 硬编码（tokens.component.popupRadiusRpx=24rpx 为不同档位）
 //   --font-size-body-plus 28rpx / -body-sm 22rpx / -body-xs 20rpx → 硬编码（tokens 无对应档位）
-// 注意：.font-noto-serif / .btn-primary / .press-dim 旧端为 App.uvue 全局类；新端 App.vue 全局样式
+// 注意：.btn-primary / .press-dim 旧端为 App.uvue 全局类；新端 App.vue 全局样式
 // 已补齐（与旧端逐字一致），本组件仅引用不定义（2026-09-18 删除迁移期 scoped 临时副本）。
 
 withDefaults(
@@ -80,10 +80,10 @@ function onSkip(): void {
        2026-09-29 还原旧端居中形态：旧端为 620rpx 定宽居中卡片（LoginPopup.uvue :77-111），迁移期误用底部弹层 ⇒
        position="center"（微信 wd-popup 居中缩放过渡）；`bare` 供抖音自绘分支裸盒承载卡片。 -->
   <BasePopup :show="true" position="center" :bare="true" :root-portal="false" :z-index="2000" @cancel="emit('close')">
-    <view class="login-card font-harmony">
+    <view class="login-card">
       <!-- 顶部氛围光 -->
       <view class="card-aura"></view>
-      <view class="card-title font-noto-serif">手机号快捷登录</view>
+      <view class="card-title">手机号快捷登录</view>
       <view class="card-desc">登录后可使用收藏与 AI 试衣</view>
 
       <!-- 协议勾选（自绘） -->
@@ -136,7 +136,7 @@ function onSkip(): void {
   overflow: hidden;
   /* 居中弹层：微信 wd-popup 自带缩放过渡（近似旧端 cardPopIn），抖音自绘分支随门面淡入，不再叠加卡片动画 */
 
-  font-family: 'HarmonyOS-Sans-SC'; /* 组件样式隔离（默认 isolated）⇒ app.wxss 的 page/.font-harmony 进不来，必须自带 */
+  /* 组件使用各运行平台的系统默认字体。 */
 }
 /* 顶部金色氛围光 */
 .card-aura {
@@ -155,8 +155,7 @@ function onSkip(): void {
   font-weight: 400;
   color: $color-action; /* 旧 var(--color-primary) #F1CD91 */
   margin-bottom: 12rpx;
-
-  font-family: 'NotoSerifSC-Bold'; /* 同上：组件内自带衬线，不依赖全局类 */}
+}
 
 .card-desc {
   font-size: 22rpx; /* 旧 var(--font-size-body-sm) 22rpx */

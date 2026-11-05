@@ -218,7 +218,7 @@ function onDemoClick(idx: number): void {
     </view>
     <template v-else>
       <view class="divideTit">PRICE LIST</view>
-      <view class="demoPhotoTit font-noto-serif">价目表</view>
+      <view class="demoPhotoTit">价目表</view>
       <PhotoGrid :shop-list="gridShops" @shop-click="onShopClick" @demo-click="onDemoClick" />
       <!-- P2-21：承诺块/联系我们（旧 :19）＋页脚（旧 :20）——内容经用例注入 -->
       <ServiceContact

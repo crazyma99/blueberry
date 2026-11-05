@@ -34,8 +34,8 @@
 //    （onShow enable／onHide＋onUnload disable，`onUnload` 兜住 redirectTo/reLaunch 只触发 onUnload 的残留路径）。
 //  ③token：旧 `--font-size-body`(24rpx)／`--font-size-body-plus`(28rpx)／`--font-size-body-lg`(26rpx)／
 //    `--font-size-body-sm`(22rpx) **一律写旧值字面量**（**勿映射** `tokens.semantic.fontSizeBody`=32rpx，档位不符）；
-//    派生透明度色（白 5%/10%/15%、金 10%/6%）按旧端字面 rgba 保留；`--font-display` 新端无对应 token ⇒ 写
-//    `'NotoSerifSC-Bold', serif` 字面值；`--spacing-lg`(32rpx)／`--spacing-sm`(20rpx)／`--radius-sm`(16rpx)／
+//    派生透明度色（白 5%/10%/15%、金 10%/6%）按旧端字面 rgba 保留；字体使用平台系统默认值；
+//    `--spacing-lg`(32rpx)／`--spacing-sm`(20rpx)／`--radius-sm`(16rpx)／
 //    `--radius-xs`(8rpx)／`--radius-container`(24rpx) 按 App.uvue 旧值字面量。
 //  ④旧端 `<AppFooter />` 无 props（组件内 mounted 自取 OPS copyright）；新端 AppFooter 为纯 props 组件
 //    ⇒ 改由用例 `pageContent.loadFooter(ctx)` 取数后 props 注入（口径同本批已迁页面）。
@@ -362,7 +362,6 @@ function safeDecode(value: string): string {
 }
 .card-title {
   font-size: 32rpx; /* 旧端字面值（档位高于 --font-size-body-plus） */
-  font-family: "NotoSerifSC-Bold", serif; /* 旧 --font-display */
   color: #fff;
   font-weight: 400;
   margin-bottom: 24rpx;
@@ -406,7 +405,6 @@ function safeDecode(value: string): string {
 }
 .section-title {
   font-size: 32rpx;
-  font-family: "NotoSerifSC-Bold", serif; /* 旧 --font-display */
   color: #fff;
   font-weight: 400;
   margin-bottom: 24rpx;
