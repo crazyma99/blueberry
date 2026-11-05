@@ -24,6 +24,9 @@ const h = vi.hoisted(() => ({
   slotsFail: null as unknown,
   /** 挂起 createBooking（模拟提交中） */
   submitGate: null as Promise<void> | null,
+  /** booking-config 响应：null＝未开启保证金（默认，页面应与改造前完全一致） */
+  configResult: null as unknown,
+  configCalls: 0,
 }));
 
 vi.mock("../../src/application/haptics", () => ({
@@ -46,6 +49,19 @@ vi.mock("../../src/infrastructure/repositories/bookings", () => ({
       if (h.slotsByDate[date]) return { ok: true, value: { date, slots: h.slotsByDate[date] } };
       return { ok: true, value: (h.slotsResponse as { date: string; slots: unknown[] } | null) ?? { date, slots: [] } };
     },
+    getBookingConfig: async () => {
+      h.configCalls += 1;
+      return (
+        h.configResult ?? {
+          ok: true,
+          value: {
+            deposit: { enabled: false, amountFen: 0, freeCancelHours: 0, lateCancelForfeitPct: 0, noShowForfeitPct: 0, refundTrigger: "manual" },
+            payHoldMinutes: 0,
+            subscribeTemplates: { result: "", done: "" },
+          },
+        }
+      ) as never;
+    },
     createBooking: async (_c: unknown, body: unknown) => {
       h.submitCalls.push(body);
       if (h.submitGate) await h.submitGate;
@@ -55,7 +71,7 @@ vi.mock("../../src/infrastructure/repositories/bookings", () => ({
           value: {
             id: 1, shopId: 1, shopName: "红河水乡店", slotId: 1, startTime: "10:00", endTime: "11:00",
             date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2, remark: "",
-            status: "pending", channel: "wx", createTime: "",
+            status: "pending", channel: "wx", createTime: "", deposit: null, pay: null,
           },
         }
       ) as never;
@@ -134,6 +150,8 @@ beforeEach(() => {
   h.hapticCalls = 0;
   h.slotsFail = null;
   h.submitGate = null;
+  h.configResult = null;
+  h.configCalls = 0;
   (globalThis as { uni?: unknown }).uni = {
     getStorageSync: (k: string) => h.store.get(k) ?? "",
     setStorageSync: (k: string, v: string) => h.store.set(k, v),

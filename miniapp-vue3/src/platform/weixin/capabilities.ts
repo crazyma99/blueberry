@@ -5,7 +5,11 @@
 interface WxLike {
   canIUse?: (schema: string) => boolean;
   setVisualEffectOnCapture?: (options: { visualEffect: string }) => void;
-  requestSubscribeMessage?: (options: { tmplIds: string[]; success: () => void; fail: () => void }) => void;
+  requestSubscribeMessage?: (options: {
+    tmplIds: string[];
+    success: (res: Record<string, unknown>) => void;
+    fail: (err?: { errMsg?: string; errCode?: number }) => void;
+  }) => void;
   showShareMenu?: (options: { menus?: string[] }) => void;
 }
 
@@ -74,6 +78,90 @@ export function requestTaskNotify(tmplIds: string[]): Promise<TaskNotifyResult> 
       });
     } catch {
       resolve({ ok: false, reason: "unsupported" });
+    }
+  });
+}
+
+// ———————————————————————————————————————————————————————————————
+// 预约保证金订阅消息（逐模板解析版）：预约结果/完成通知两个模板，模板 ID 由后端下发（不写死）。
+// 与 requestTaskNotify 的区别：本函数**逐模板返回** accept/reject/ban/filter，供页面据此决定是否重新引导订阅；
+// requestTaskNotify 行为/返回值不变（旧 AI 链路继续用它，现有测试必须仍绿）。
+// ———————————————————————————————————————————————————————————————
+
+/** 单模板订阅结果：accept 同意／reject 拒绝／ban 后台封禁／filter 同名被过滤／unknown 返回缺该键或非法值 */
+export type SubscribeDecision = "accept" | "reject" | "ban" | "filter" | "unknown";
+
+export interface SubscribeOutcome {
+  /** 汇总：至少有一个模板 accept 才为 true（reject 不算成功） */
+  ok: boolean;
+  /** 逐模板结果映射：key=模板 ID，value=该模板的订阅决定 */
+  results: Record<string, SubscribeDecision>;
+  /** fail-soft 原因：unsupported（无 wx/无 API/低基础库/空输入）｜failed（fail 回调，如用户关闭订阅总开关） */
+  reason?: "unsupported" | "failed";
+}
+
+/**
+ * 微信一次最多可订阅 **5** 条消息模板（官方文档：
+ *   https://developers.weixin.qq.com/miniprogram/dev/api/open-api/subscribe-message/wx.requestSubscribeMessage.html
+ *   「tmplIds …一次调用最多可订阅5条消息」）。超过则**截断取前 5 条**。
+ */
+export const MAX_SUBSCRIBE_TMPL_IDS = 5;
+
+/** 把微信 success 回调里 [模板ID]→'accept'|'reject'|'ban'|'filter' 的动态键收窄为 SubscribeDecision */
+function toDecision(v: unknown): SubscribeDecision {
+  return v === "accept" || v === "reject" || v === "ban" || v === "filter" ? v : "unknown";
+}
+
+/**
+ * 逐模板订阅：
+ *  · 去重后为空（含空串/空数组/全非法）→ 直接 unsupported-or-empty 的 fail-soft 返回，不调 wx。
+ *  · 无 wx/无 API/低基础库 → unsupported。
+ *  · fail 回调（如用户关闭订阅总开关 errCode=20004）→ failed（fail-soft，results 内已请求的模板置 reject）。
+ *  · reject 不当成功；仅存在 accept 时 ok=true。
+ *  · 永不 reject（Promise 一定 resolve）。
+ */
+export function requestSubscribe(tmplIds: string[]): Promise<SubscribeOutcome> {
+  return new Promise((resolve) => {
+    // 规整输入：去空串、去重；超过上限截断取前 MAX_SUBSCRIBE_TMPL_IDS 条
+    const cleaned = Array.isArray(tmplIds)
+      ? [...new Set(tmplIds.filter((t) => typeof t === "string" && t.trim() !== "").map((t) => t.trim()))]
+      : [];
+    const ids = cleaned.slice(0, MAX_SUBSCRIBE_TMPL_IDS);
+    if (ids.length === 0) {
+      resolve({ ok: false, results: {}, reason: "unsupported" });
+      return;
+    }
+    try {
+      const wx = wxGlobal();
+      if (wx == null || typeof wx.requestSubscribeMessage !== "function") {
+        resolve({ ok: false, results: {}, reason: "unsupported" });
+        return;
+      }
+      if (typeof wx.canIUse === "function" && !wx.canIUse("requestSubscribeMessage")) {
+        resolve({ ok: false, results: {}, reason: "unsupported" });
+        return;
+      }
+      wx.requestSubscribeMessage({
+        tmplIds: ids,
+        success: (res) => {
+          const results: Record<string, SubscribeDecision> = {};
+          let anyAccept = false;
+          for (const id of ids) {
+            const d = toDecision((res as Record<string, unknown>)?.[id]);
+            results[id] = d;
+            if (d === "accept") anyAccept = true;
+          }
+          resolve({ ok: anyAccept, results });
+        },
+        fail: () => {
+          // fail-soft：用户关闭订阅总开关/网络失败等 ⇒ 不阻断业务，已请求模板统一置 reject
+          const results: Record<string, SubscribeDecision> = {};
+          for (const id of ids) results[id] = "reject";
+          resolve({ ok: false, results, reason: "failed" });
+        },
+      });
+    } catch {
+      resolve({ ok: false, results: {}, reason: "unsupported" });
     }
   });
 }

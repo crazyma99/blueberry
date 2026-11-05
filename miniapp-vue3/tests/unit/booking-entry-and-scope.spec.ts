@@ -128,7 +128,10 @@ describe("平台作用域守卫（仅微信端）", () => {
   it("逻辑层零 #ifdef：domain/application/composables/repositories 新文件无条件编译", () => {
     for (const f of [
       "src/domain/booking.ts",
+      "src/domain/booking-deposit.ts",
       "src/application/booking-flow.ts",
+      "src/application/booking-deposit-pay.ts",
+      "src/application/booking-deposit-submit.ts",
       "src/composables/use-my-bookings.ts",
       "src/infrastructure/repositories/bookings.ts",
     ]) {
@@ -136,13 +139,21 @@ describe("平台作用域守卫（仅微信端）", () => {
     }
   });
 
-  it("免定金：预约两页与入口源码不出现支付/定金/金额字样（产品规则）", () => {
-    for (const f of ["src/pages/booking/index.vue", "src/pages/myBookings/index.vue", "src/components/BookingEntry/BookingEntry.vue"]) {
+  it("对外文案合规：预约两页与入口源码（去注释后）不出现「定金」「押金」字样，保证金一律称「预约保证金」（主人 2026-11-05 决议 4）", () => {
+    for (const f of [
+      "src/pages/booking/index.vue",
+      "src/pages/myBookings/index.vue",
+      "src/components/BookingEntry/BookingEntry.vue",
+      "src/domain/booking-deposit.ts",
+      "src/domain/booking.ts",
+      "src/application/booking-deposit-submit.ts",
+    ]) {
       const code = read(f)
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/<!--[\s\S]*?-->/g, "")
-        .replace(/^\s*\/\/.*$/gm, "");
-      expect(code, f).not.toMatch(/定金|支付|金额|付款|¥|￥/);
+        .replace(/^\s*\/\/.*$/gm, "")
+        .replace(/\s\/\/.*$/gm, "");
+      expect(code, f).not.toMatch(/定金|押金/);
     }
   });
 

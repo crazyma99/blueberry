@@ -1,8 +1,11 @@
 <script setup lang="ts">
 // T9 到店预约 MVP：预约页（门店名 + 14 天日期条 + 时段网格 + 表单 + 提交）。微信专属页（pages.json #ifdef MP-WEIXIN 注册，
 // 抖音/小红书不注册——同 AI 六页口径，2026-09-17 主人拍板的"仅微信注册"惯例）。
-// 产品规则（主人已确认）：免定金，页面不出现任何支付/定金/金额；可约窗口=今天起 14 天（含今天）；
-// 人数用步进器 1..20（domain/booking GUEST_COUNT_MIN/MAX）；提交需已登录（未登录先走现有登录弹窗，复用 login-flow）。
+// 产品规则（主人已确认）：可约窗口=今天起 14 天（含今天）；人数用步进器 1..20（domain/booking GUEST_COUNT_MIN/MAX）；
+// 提交需已登录（未登录先走现有登录弹窗，复用 login-flow）。
+// 预约保证金（2026-11-05 §10 冻结契约）：进入页面拉 booking-config；门店开启保证金时在提交区上方展示「预约保证金 ¥xx」＋规则摘要，
+//   **勾选同意后方可提交**；提交 = 订阅授权（点击手势内）→ 创建预约 → 拉起微信支付 → 以服务端状态为准确认到账（编排见 application/booking-deposit-submit）。
+//   未开启保证金的门店：页面与流程与此前完全一致（无保证金文案、无授权弹窗、无支付）。对用户一律称「预约保证金」。
 // 入参：shopId（必填）、shopName（可选，缺失时用 shops 仓储按 id 查一次兜底）。
 import { computed, ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
@@ -21,8 +24,17 @@ import { createVersionedStorage } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import { createShopRepository } from "../../infrastructure/repositories/shops";
-import { createBookingRepository, type SlotView } from "../../infrastructure/repositories/bookings";
-import { createLoadSlotsUseCase, createSubmitBookingUseCase } from "../../application/booking-flow";
+import { createBookingRepository, type BookingConfig, type SlotView } from "../../infrastructure/repositories/bookings";
+import {
+  createLoadBookingConfigUseCase,
+  createLoadSlotsUseCase,
+  createSubmitBookingUseCase,
+  type SubmitBookingResult,
+} from "../../application/booking-flow";
+import { createDepositPayFlow } from "../../application/booking-deposit-pay";
+import { createDepositSubmitFlow } from "../../application/booking-deposit-submit";
+import { createWeixinPayments } from "../../platform/weixin/payments";
+import { requestSubscribe } from "../../platform/weixin/capabilities";
 import { createUserInfoStore } from "../../application/user-info-store";
 import { createPhoneLoginFlow } from "../../application/login-flow";
 import { toast as nativeToast, showLoading, hideLoading } from "../../platform/uni/feedback";
@@ -34,6 +46,7 @@ import {
   describeSlotAvailability,
   type DateWindowDay,
 } from "../../domain/booking";
+import { describePaidResult, describeUnpaidResult, formatFen, summarizeDepositRule } from "../../domain/booking-deposit";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
@@ -81,6 +94,15 @@ const submitUc = createSubmitBookingUseCase({
   loadSession: () => versioned.loadSession(),
   context: () => ctxFactory.next(),
 });
+const loadConfigUc = createLoadBookingConfigUseCase({ bookings: bookingRepo });
+// 预约保证金提交编排：订阅授权 → 创建 → 支付 → 轮询服务端状态（支付回调不作依据）
+const depositPayFlow = createDepositPayFlow({ bookings: bookingRepo, payments: createWeixinPayments() });
+const depositSubmit = createDepositSubmitFlow({
+  submitUc,
+  payFlow: depositPayFlow,
+  subscribe: requestSubscribe,
+  context: () => ctxFactory.next(),
+});
 
 function openLoginPopup(): void {
   showLoginPopup.value = true;
@@ -124,6 +146,25 @@ const pendingSubmit = ref(false);
 
 const submitSuccess = ref(false);
 const submittedBookingId = ref<number | null>(null);
+/** 结果页文案：默认＝既有免保证金预约成功态；保证金流程按结果覆盖（已支付／已保留待支付／确认中／已关闭） */
+const resultTitle = ref("预约已提交");
+const resultDesc = ref("预约已提交，等待门店确认。可在「我的预约」查看进度");
+const resultCta = ref("查看我的预约");
+
+// —— 预约保证金配置（booking-config）——
+const config = ref<BookingConfig | null>(null);
+const configLoading = ref(false);
+/** 配置拉取失败文案：fail-closed——拿不到配置不允许提交（避免在可能需要保证金的门店跳过规则明示） */
+const configError = ref<string | null>(null);
+const depositAgreed = ref(false);
+const depositEnabled = computed(() => config.value?.deposit.enabled === true);
+const depositAmountText = computed(() => formatFen(config.value?.deposit.amountFen ?? 0));
+const depositRuleLines = computed(() => (config.value != null ? summarizeDepositRule(config.value.deposit) : []));
+const depositHoldText = computed(() => {
+  const m = config.value?.payHoldMinutes ?? 0;
+  return m > 0 ? "提交后请在 " + m + " 分钟内完成支付，超时预约将自动取消" : "提交后请尽快完成支付，超时预约将自动取消";
+});
+const submitLabel = computed(() => (depositEnabled.value ? "提交并支付保证金 " + depositAmountText.value : "提交预约"));
 
 const selectedDate = computed(() => dateWindow.value[selectedDateIndex.value]?.date ?? "");
 const selectedSlot = computed(() => slots.value.find((s) => s.slotId === selectedSlotId.value) ?? null);
@@ -201,9 +242,32 @@ function safeDecodeURIComponent(value: string): string {
   }
 }
 
+async function loadConfig(): Promise<void> {
+  if (shopId.value <= 0 || configLoading.value) return;
+  configLoading.value = true;
+  configError.value = null;
+  const r = await loadConfigUc.load(ctxFactory.next(), shopId.value);
+  configLoading.value = false;
+  if (r.ok) {
+    config.value = r.value;
+    return;
+  }
+  config.value = null;
+  configError.value = r.message;
+}
+
+function onRetryConfig(): void {
+  hapticTap();
+  void loadConfig();
+}
+
+function toggleDepositAgree(): void {
+  depositAgreed.value = !depositAgreed.value;
+}
+
 async function initialLoad(): Promise<void> {
   // 缺 shopId：无法定位门店，停在空态由用户返回（不发任何请求）
-  if (shopId.value > 0) await Promise.all([loadShopNameFallback(), loadSlotsForSelectedDate()]);
+  if (shopId.value > 0) await Promise.all([loadShopNameFallback(), loadSlotsForSelectedDate(), loadConfig()]);
   ready.value = true;
 }
 
@@ -219,51 +283,106 @@ function onSubmitTap(): void {
   void doSubmit();
 }
 
-async function doSubmit(): Promise<void> {
+/**
+ * @param resumed 登录成功后自动补发（已脱离点击手势：wx.requestSubscribeMessage 必然被微信拒绝）⇒ 不再请求订阅授权，避免白白报错；
+ *                支付与其余流程不变。
+ */
+async function doSubmit(resumed = false): Promise<void> {
   if (submitting.value) return;
   if (selectedSlotId.value == null) {
     toast("请先选择到店时段");
     return;
   }
+  const cfg = config.value;
+  if (cfg == null) {
+    // fail-closed：没有拿到门店预约配置就不提交（可能是开启保证金的门店）；页面上有「重试」入口
+    toast(configError.value ?? "预约规则加载失败，请重试");
+    return;
+  }
+  if (cfg.deposit.enabled && !depositAgreed.value) {
+    toast("请先阅读并勾选同意预约保证金规则");
+    return;
+  }
   submitting.value = true;
   try {
-    const r = await submitUc.submit({
-      shopId: shopId.value,
-      slotId: selectedSlotId.value,
-      date: selectedDate.value,
-      customerName: String(customerName.value ?? ""),
-      customerPhone: String(customerPhone.value ?? ""),
-      guestCount: guestCount.value,
-      remark: remark.value,
-    });
-    if (r.ok) {
-      submitSuccess.value = true;
-      submittedBookingId.value = r.value.id;
-      return;
+    // 注意：此处到 depositSubmit.submit 的同步调用链内**不得出现 await**：订阅授权（wx.requestSubscribeMessage）必须在点击手势的同步调用栈内触发
+    const outcome = await depositSubmit.submit(
+      {
+        shopId: shopId.value,
+        slotId: selectedSlotId.value,
+        date: selectedDate.value,
+        customerName: String(customerName.value ?? ""),
+        customerPhone: String(customerPhone.value ?? ""),
+        guestCount: guestCount.value,
+        remark: remark.value,
+      },
+      {
+        depositEnabled: cfg.deposit.enabled,
+        agreed: depositAgreed.value,
+        templates: resumed ? { result: "", done: "" } : cfg.subscribeTemplates,
+        payHoldMinutes: cfg.payHoldMinutes,
+      },
+    );
+    switch (outcome.kind) {
+      case "blocked":
+        toast("请先阅读并勾选同意预约保证金规则");
+        return;
+      case "failed":
+        handleSubmitFailure(outcome.result);
+        return;
+      case "created":
+        showResult(outcome.booking.id);
+        return;
+      case "paid": {
+        const t = describePaidResult(outcome.booking.deposit?.amountFen ?? cfg.deposit.amountFen);
+        showResult(outcome.booking.id, t.title, t.desc);
+        return;
+      }
+      case "unpaid": {
+        if (outcome.reason === "busy") return; // 已有支付在飞：忽略重复触发
+        if (outcome.reason === "authExpired") toast("登录已失效，请重新登录");
+        const t = describeUnpaidResult(outcome.reason, outcome.retainMinutes);
+        showResult(outcome.booking.id, t.title, t.desc, outcome.reason === "closed" ? "查看我的预约" : "去我的预约");
+        if (outcome.reason === "closed") void loadSlotsForSelectedDate(); // 档期已释放，刷新余量
+        return;
+      }
     }
-    if (r.kind === "validation") {
-      toast(r.error.message);
-      return;
-    }
-    if (r.kind === "login-required") {
-      pendingSubmit.value = true;
-      openLoginPopup();
-      return;
-    }
-    if (r.kind === "auth-expired") {
-      // 服务端 401（会话失效，client 已清会话）：提示中文原因并沿用既有登录弹窗，登录成功后自动补发本次提交
-      toast(r.message);
-      pendingSubmit.value = true;
-      openLoginPopup();
-      return;
-    }
-    // kind === "business"：服务端中文可读原因，直接展示（如"该时段已约满"/"您已预约该时段"/"未完成预约已达上限(5条)"）
-    toast(r.message);
-    // 服务端判定约满/不可约时，当前时段快照可能已过期——重拉一次时段，避免用户对着错误的余量再次提交
-    void loadSlotsForSelectedDate();
   } finally {
     submitting.value = false;
   }
+}
+
+/** 展示结果页（创建成功／保证金已支付／已保留待支付／确认中／已关闭）；默认值＝既有免保证金预约成功态 */
+function showResult(bookingId: number, title = "预约已提交", desc = "预约已提交，等待门店确认。可在「我的预约」查看进度", cta = "查看我的预约"): void {
+  submitSuccess.value = true;
+  submittedBookingId.value = bookingId;
+  resultTitle.value = title;
+  resultDesc.value = desc;
+  resultCta.value = cta;
+}
+
+/** 创建前失败（校验／未登录／会话失效／业务失败）：沿用既有分支，行为与保证金改造前一致 */
+function handleSubmitFailure(r: Exclude<SubmitBookingResult, { ok: true }>): void {
+  if (r.kind === "validation") {
+    toast(r.error.message);
+    return;
+  }
+  if (r.kind === "login-required") {
+    pendingSubmit.value = true;
+    openLoginPopup();
+    return;
+  }
+  if (r.kind === "auth-expired") {
+    // 服务端 401（会话失效，client 已清会话）：提示中文原因并沿用既有登录弹窗，登录成功后自动补发本次提交
+    toast(r.message);
+    pendingSubmit.value = true;
+    openLoginPopup();
+    return;
+  }
+  // kind === "business"：服务端中文可读原因，直接展示（如"该时段已约满"/"您已预约该时段"/"未完成预约已达上限(5条)"）
+  toast(r.message);
+  // 服务端判定约满/不可约时，当前时段快照可能已过期——重拉一次时段，避免用户对着错误的余量再次提交
+  void loadSlotsForSelectedDate();
 }
 
 function closeLoginPopup(): void {
@@ -318,7 +437,7 @@ async function onGetPhoneNumber(e: unknown): Promise<void> {
   toast("登录成功", "success");
   if (pendingSubmit.value) {
     pendingSubmit.value = false;
-    void doSubmit(); // 登录成功后自动补发挂起的提交（同 demoDetail 点赞登录门 pending 补发语义）
+    void doSubmit(true); // 登录成功后自动补发挂起的提交（同 demoDetail 点赞登录门 pending 补发语义）
   }
 }
 
@@ -347,10 +466,10 @@ function goMyBookings(): void {
 
     <template v-else-if="submitSuccess">
       <view class="success-wrap">
-        <view class="success-title font-noto-serif">预约已提交</view>
-        <view class="success-desc">预约已提交，等待门店确认。可在「我的预约」查看进度</view>
+        <view class="success-title font-noto-serif">{{ resultTitle }}</view>
+        <view class="success-desc">{{ resultDesc }}</view>
         <view class="btn-primary success-btn my-bookings-btn" hover-class="press-dim" @click="goMyBookings">
-          <text>查看我的预约</text>
+          <text>{{ resultCta }}</text>
         </view>
         <view class="success-back" hover-class="press-dim" @click="goBack">返回</view>
       </view>
@@ -432,13 +551,40 @@ function goMyBookings(): void {
         </view>
       </view>
 
+      <!-- 预约保证金：仅门店开启时展示（金额＋规则摘要＋勾选同意）；未开启的门店这一块完全不渲染 -->
+      <view v-if="depositEnabled" class="section deposit-card">
+        <view class="deposit-head">
+          <text class="deposit-title">预约保证金</text>
+          <text class="deposit-amount">{{ depositAmountText }}</text>
+        </view>
+        <view v-for="(line, idx) in depositRuleLines" :key="idx" class="deposit-line">
+          <text class="deposit-line-text">{{ line }}</text>
+        </view>
+        <view class="deposit-line">
+          <text class="deposit-line-text">{{ depositHoldText }}</text>
+        </view>
+        <view class="deposit-agree" hover-class="press-dim" @click="toggleDepositAgree">
+          <view :class="depositAgreed ? 'deposit-check is-checked' : 'deposit-check'">
+            <view v-if="depositAgreed" class="deposit-mark"></view>
+          </view>
+          <text class="deposit-agree-text">我已阅读并同意以上预约保证金规则</text>
+        </view>
+      </view>
+      <!-- 配置拉取失败（fail-closed）：不允许在未明示规则的情况下提交，给出重试入口 -->
+      <view v-else-if="configError !== null" class="section deposit-card">
+        <text class="deposit-line-text">{{ configError }}</text>
+        <view class="btn-secondary config-retry-btn" hover-class="press-dim" @click="onRetryConfig">
+          <text>重试</text>
+        </view>
+      </view>
+
       <view class="submit-bar">
         <view
           :class="submitting ? 'btn-primary submit-btn is-busy' : 'btn-primary submit-btn'"
           hover-class="press-dim"
           @click="onSubmitTap"
         >
-          <text>{{ submitting ? "提交中..." : "提交预约" }}</text>
+          <text>{{ submitting ? "提交中..." : submitLabel }}</text>
         </view>
       </view>
     </template>
@@ -638,6 +784,73 @@ function goMyBookings(): void {
   pointer-events: none;
 }
 .retry-btn {
+  box-sizing: border-box;
+}
+/* 预约保证金卡片：配色沿用页面既有 token（金描边卡片面），勾选框画法同 LoginPopup 协议勾选（平铺选择器，不嵌套） */
+.deposit-card {
+  padding: 24rpx;
+  border-radius: 20rpx;
+  background: rgba(241, 205, 145, 0.06);
+  border: 2rpx solid rgba(241, 205, 145, 0.12);
+}
+.deposit-head {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+.deposit-title {
+  font-size: $font-size-body;
+  color: $color-action;
+}
+.deposit-amount {
+  font-size: $font-size-sub-title;
+  color: $color-action;
+}
+.deposit-line {
+  margin-top: 8rpx;
+}
+.deposit-line-text {
+  font-size: $font-size-caption;
+  color: $color-text-secondary;
+  line-height: 1.5;
+}
+.deposit-agree {
+  margin-top: 20rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.deposit-check {
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2rpx solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.deposit-check.is-checked {
+  border-color: $color-action;
+  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);
+}
+.deposit-mark {
+  width: 18rpx;
+  height: 10rpx;
+  border-left: 4rpx solid $color-action-text;
+  border-bottom: 4rpx solid $color-action-text;
+  transform: rotate(-45deg) translate(1rpx, -2rpx);
+}
+.deposit-agree-text {
+  flex: 1;
+  font-size: $font-size-caption;
+  color: $color-text-primary;
+}
+.config-retry-btn {
+  margin-top: 16rpx;
   box-sizing: border-box;
 }
 .empty-state {
