@@ -17,6 +17,8 @@ import {
   formatLocalDate,
   isCancellableStatus,
   isValidPhone,
+  clampGuestCount,
+  maxGuestCountForSlot,
   validateBookingForm,
 } from "../../src/domain/booking";
 
@@ -218,5 +220,37 @@ describe("domain/booking · 错误文案映射（按 AppError.kind）", () => {
 
   it("创建预约遇网络类失败的专属文案（含‘请勿重复提交’与‘我的预约’）", () => {
     expect(BOOKING_CREATE_NETWORK_TEXT).toBe("网络不太稳定。若稍后在「我的预约」里看到该预约，说明已提交成功，请勿重复提交");
+  });
+});
+
+describe("domain/booking · 席位口径的人数上限（档期容量＝席位＝可预约总人数）", () => {
+  it("上限 = min(20, 剩余席位)：remaining 小于 20 取 remaining，大于等于 20 封顶 20", () => {
+    expect(maxGuestCountForSlot({ remaining: 6 })).toBe(6);
+    expect(maxGuestCountForSlot({ remaining: 1 })).toBe(1);
+    expect(maxGuestCountForSlot({ remaining: 20 })).toBe(20);
+    expect(maxGuestCountForSlot({ remaining: 35 })).toBe(GUEST_COUNT_MAX);
+  });
+
+  it("未选档期或 remaining 缺失/非有限数 ⇒ 回落 20（由服务端兜底）；remaining<=0 防御性不低于 1", () => {
+    expect(maxGuestCountForSlot(null)).toBe(GUEST_COUNT_MAX);
+    expect(maxGuestCountForSlot(undefined)).toBe(GUEST_COUNT_MAX);
+    expect(maxGuestCountForSlot({ remaining: Number.NaN })).toBe(GUEST_COUNT_MAX);
+    expect(maxGuestCountForSlot({ remaining: undefined as unknown as number })).toBe(GUEST_COUNT_MAX);
+    expect(maxGuestCountForSlot({ remaining: 0 })).toBe(GUEST_COUNT_MIN);
+    expect(maxGuestCountForSlot({ remaining: -3 })).toBe(GUEST_COUNT_MIN);
+    expect(maxGuestCountForSlot({ remaining: 4.9 })).toBe(4); // 席位为整数，小数向下取整
+  });
+
+  it("人数收敛：超限收敛到上限、合法值原样、低于下限/非有限数回落 1", () => {
+    expect(clampGuestCount(11, 6)).toBe(6);
+    expect(clampGuestCount(6, 6)).toBe(6);
+    expect(clampGuestCount(2, 6)).toBe(2);
+    expect(clampGuestCount(0, 6)).toBe(GUEST_COUNT_MIN);
+    expect(clampGuestCount(Number.NaN, 6)).toBe(GUEST_COUNT_MIN);
+    expect(clampGuestCount(25)).toBe(GUEST_COUNT_MAX); // 缺省上限＝20
+    expect(clampGuestCount(5, 0)).toBe(GUEST_COUNT_MIN); // 非法上限不低于 1
+    expect(clampGuestCount(5, 99)).toBe(5); // 上限不超过 20 的全局封顶
+    expect(clampGuestCount(30, 99)).toBe(GUEST_COUNT_MAX);
+    expect(clampGuestCount(5, Number.NaN)).toBe(5);
   });
 });

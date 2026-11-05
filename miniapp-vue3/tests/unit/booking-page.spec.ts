@@ -297,6 +297,93 @@ describe("pages/booking（到店预约页）", () => {
     expect(w.find(".stub-wd-toast").text()).toContain("该时段已约满"); // 服务端可读原因原样展示
   });
 
+  // —— 席位口径（档期容量＝席位＝可预约总人数）：人数上限 = min(20, 所选档期 remaining) ——
+  const SEAT_SLOTS = {
+    slots: [
+      { slotId: 1, startTime: "10:00", endTime: "11:00", capacity: 6, used: 0, remaining: 6, bookable: true },
+      { slotId: 2, startTime: "11:00", endTime: "12:00", capacity: 3, used: 0, remaining: 3, bookable: true },
+    ],
+  };
+  const stepBtns = (w: Awaited<ReturnType<typeof mountReady>>) => w.findAll(".stepper-btn");
+
+  it("席位上限：选 6 席档期后加号加到 6 即置灰，再点不再增加并轻提示'该时段仅剩 6 席'", async () => {
+    const w = await mountReady({ shopId: "1" }, SEAT_SLOTS);
+    await w.findAll(".slot-cell")[0].trigger("click");
+    for (let i = 0; i < 10; i++) await stepBtns(w)[1].trigger("click"); // 2 → 6 后停住
+    expect(w.find(".stepper-value").text()).toBe("6");
+    expect(stepBtns(w)[1].classes()).toContain("is-disabled");
+    expect(stepBtns(w)[0].classes()).not.toContain("is-disabled");
+    await w.vm.$nextTick();
+    expect(w.find(".stub-wd-toast").text()).toContain("该时段仅剩 6 席");
+  });
+
+  it("席位上限：人数未到上限时加号可用；未选档期时上限仍为 20", async () => {
+    const w = await mountReady({ shopId: "1" }, SEAT_SLOTS);
+    expect(stepBtns(w)[1].classes()).not.toContain("is-disabled");
+    for (let i = 0; i < 30; i++) await stepBtns(w)[1].trigger("click");
+    expect(w.find(".stepper-value").text()).toBe("20");
+    expect(stepBtns(w)[1].classes()).toContain("is-disabled");
+  });
+
+  it("换到剩余更少的档期：当前人数超限则自动收敛到新上限并提示", async () => {
+    const w = await mountReady({ shopId: "1" }, SEAT_SLOTS);
+    await w.findAll(".slot-cell")[0].trigger("click");
+    for (let i = 0; i < 4; i++) await stepBtns(w)[1].trigger("click"); // 2 → 6
+    expect(w.find(".stepper-value").text()).toBe("6");
+    await w.findAll(".slot-cell")[1].trigger("click"); // 剩余 3 席
+    await w.vm.$nextTick();
+    expect(w.find(".stepper-value").text()).toBe("3");
+    expect(w.find(".stub-wd-toast").text()).toContain("该时段仅剩 3 席");
+  });
+
+  it("提交被服务端以席位不足拒绝：原样 toast 服务端文案，并刷新档期（保留选中，remaining 更新后人数自动收敛）", async () => {
+    h.submitResult = { ok: false, error: { kind: "BUSINESS", businessCode: 500, message: "该时段剩余 3 席，不足 6 人", requestId: "r", retryable: false } };
+    const w = await mountReady({ shopId: "1" }, SEAT_SLOTS);
+    seedSession("full");
+    const inputs = w.findAll("input.form-input");
+    await inputs[0].setValue("张三");
+    await inputs[1].setValue("13800138000");
+    await w.findAll(".slot-cell")[0].trigger("click");
+    for (let i = 0; i < 4; i++) await stepBtns(w)[1].trigger("click"); // 6 人
+    // 刷新后服务端告知该档期仅剩 3 席
+    const date = h.lastRequestedDate;
+    h.slotsByDate[date] = [
+      { slotId: 1, startTime: "10:00", endTime: "11:00", capacity: 6, used: 3, remaining: 3, bookable: true },
+      { slotId: 2, startTime: "11:00", endTime: "12:00", capacity: 3, used: 0, remaining: 3, bookable: true },
+    ];
+    const before = h.slotsCalls.length;
+    await w.find(".submit-btn").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.submitCalls.length).toBe(1);
+    expect(h.slotsCalls.length).toBe(before + 1); // 失败后刷新了档期
+    expect(w.text()).not.toContain("预约已提交");
+    expect(w.find(".stub-wd-toast").text()).toContain("该时段剩余 3 席，不足 6 人");
+    expect(w.findAll(".slot-cell")[0].text()).toContain("剩余3席");
+    expect(w.findAll(".slot-cell")[0].classes()).toContain("is-active"); // 仍可约 ⇒ 保留选中
+    expect(w.find(".stepper-value").text()).toBe("3"); // 人数收敛到新上限
+  });
+
+  it("提交被拒后刷新发现该档期已约满：取消选中（不让用户卡在旧数据上）", async () => {
+    h.submitResult = { ok: false, error: { kind: "BUSINESS", businessCode: 500, message: "该时段已约满", requestId: "r", retryable: false } };
+    const w = await mountReady({ shopId: "1" }, SEAT_SLOTS);
+    seedSession("full");
+    const inputs = w.findAll("input.form-input");
+    await inputs[0].setValue("张三");
+    await inputs[1].setValue("13800138000");
+    await w.findAll(".slot-cell")[0].trigger("click");
+    h.slotsByDate[h.lastRequestedDate] = [
+      { slotId: 1, startTime: "10:00", endTime: "11:00", capacity: 6, used: 6, remaining: 0, bookable: false, reason: "full" },
+      { slotId: 2, startTime: "11:00", endTime: "12:00", capacity: 3, used: 0, remaining: 3, bookable: true },
+    ];
+    await w.find(".submit-btn").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(w.findAll(".slot-cell")[0].text()).toContain("已约满");
+    expect(w.findAll(".slot-cell")[0].classes()).not.toContain("is-active");
+    expect(w.findAll(".slot-cell")[0].classes()).toContain("is-disabled");
+  });
+
   // —— CR 建议 4：时段请求序号（只应用最新一次响应）——
   const slotOf = (id: number, start: string, end: string) => ({ slotId: id, startTime: start, endTime: end, capacity: 3, used: 0, remaining: 3, bookable: true });
 
