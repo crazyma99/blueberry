@@ -362,10 +362,13 @@ onMounted(() => {
     <!-- 下拉刷新指示器：共享组件（玄墨胶囊＋品牌金 30% 描边＋门面 BaseLoading 的金 spinner/文案；token 默认值） -->
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
 
-    <!-- 品牌馆入口：圆形悬浮左上角，开关驱动默认不渲染（旧端 index:4-8 语义） -->
+    <!-- 品牌馆入口（对外名称「入驻门店」，2026-11-06）：圆形悬浮左上角，开关驱动默认不渲染（旧端 index:4-8 语义）；
+         aria-role/aria-label 仅为无障碍读屏文案，视觉不变；brand_hub / goBrandHub 等内部命名不改 -->
     <view
       v-if="brandHubOn"
       class="home-btn"
+      aria-role="button"
+      aria-label="入驻门店"
       :style="{ top: statusBarHeight + 8 + 'px' }"
       @click="goBrandHub"
     >

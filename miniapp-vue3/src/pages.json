@@ -107,7 +107,7 @@
 				// #ifdef MP-WEIXIN
 				"navigationStyle": "custom",
 				// #endif
-				"navigationBarTitleText": "品牌馆"
+				"navigationBarTitleText": "入驻门店"
 			}
 		},
 		{
