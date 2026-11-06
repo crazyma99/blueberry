@@ -10,13 +10,18 @@ import {
   classifyBookingError,
   GUEST_COUNT_MAX,
   GUEST_COUNT_MIN,
+  BOOKING_SILENT_REFRESH_INTERVAL_MS,
+  BOOKING_SUCCESS_MAX_AGE_MS,
   buildDateWindow,
   describeBookingStatus,
   describeSlotAvailability,
   normalizeSlotReason,
   formatLocalDate,
   isCancellableStatus,
+  isNoBrandContextError,
   isValidPhone,
+  planBookingShowRefresh,
+  shouldLeaveSuccessState,
   clampGuestCount,
   maxGuestCountForSlot,
   validateBookingForm,
@@ -252,5 +257,165 @@ describe("domain/booking · 席位口径的人数上限（档期容量＝席位�
     expect(clampGuestCount(5, 99)).toBe(5); // 上限不超过 20 的全局封顶
     expect(clampGuestCount(30, 99)).toBe(GUEST_COUNT_MAX);
     expect(clampGuestCount(5, Number.NaN)).toBe(5);
+  });
+});
+
+// —— tab 页常驻：onShow 的「重建窗口／重拉」判定（纯函数，注入 now）——
+describe("domain/booking · planBookingShowRefresh（跨日重建／选中日纠偏／间隔重拉）", () => {
+  const at = (y: number, m: number, d: number, hh = 10, mm = 0, ss = 0) => new Date(y, m - 1, d, hh, mm, ss);
+  const T0 = at(2026, 11, 10).getTime();
+
+  it("常量：静默重拉间隔 30s、成功页保留 60s", () => {
+    expect(BOOKING_SILENT_REFRESH_INTERVAL_MS).toBe(30_000);
+    expect(BOOKING_SUCCESS_MAX_AGE_MS).toBe(60_000);
+  });
+
+  type Case = {
+    name: string;
+    now: Date;
+    windowFirst: string;
+    selected: string;
+    lastAt: number;
+    expected: { rebuildWindow: boolean; selectedDateIndex: number; selectedDateChanged: boolean; refetch: boolean };
+  };
+  const cases: Case[] = [
+    {
+      name: "同日 + 间隔未到：不重建、不重拉",
+      now: at(2026, 11, 10, 10, 0, 29),
+      windowFirst: "2026-11-10",
+      selected: "2026-11-12",
+      lastAt: T0,
+      expected: { rebuildWindow: false, selectedDateIndex: 2, selectedDateChanged: false, refetch: false },
+    },
+    {
+      name: "同日 + 间隔恰好 30s：不重建、重拉（边界含等号）",
+      now: at(2026, 11, 10, 10, 0, 30),
+      windowFirst: "2026-11-10",
+      selected: "2026-11-10",
+      lastAt: T0,
+      expected: { rebuildWindow: false, selectedDateIndex: 0, selectedDateChanged: false, refetch: true },
+    },
+    {
+      name: "同日 + 间隔 29.999s：不重拉（边界）",
+      now: new Date(T0 + 29_999),
+      windowFirst: "2026-11-10",
+      selected: "2026-11-10",
+      lastAt: T0,
+      expected: { rebuildWindow: false, selectedDateIndex: 0, selectedDateChanged: false, refetch: false },
+    },
+    {
+      name: "同日 + 间隔已久：不重建、重拉",
+      now: at(2026, 11, 10, 18, 0, 0),
+      windowFirst: "2026-11-10",
+      selected: "2026-11-15",
+      lastAt: T0,
+      expected: { rebuildWindow: false, selectedDateIndex: 5, selectedDateChanged: false, refetch: true },
+    },
+    {
+      name: "跨日 + 间隔未到（刚拉过）：仍重建且重拉；选中日期仍在窗口内 ⇒ 保留日期、下标左移一格",
+      now: at(2026, 11, 11, 0, 0, 5),
+      windowFirst: "2026-11-10",
+      selected: "2026-11-12",
+      lastAt: at(2026, 11, 11, 0, 0, 1).getTime(),
+      expected: { rebuildWindow: true, selectedDateIndex: 1, selectedDateChanged: false, refetch: true },
+    },
+    {
+      name: "跨日 + 选中的是昨天（已被挤出窗口）：纠偏到今天（下标 0）并标记已变更",
+      now: at(2026, 11, 11, 9, 0, 0),
+      windowFirst: "2026-11-10",
+      selected: "2026-11-10",
+      lastAt: T0,
+      expected: { rebuildWindow: true, selectedDateIndex: 0, selectedDateChanged: true, refetch: true },
+    },
+    {
+      name: "跨日 + 选中窗口最后一天（新窗口末格仍包含）：保留",
+      now: at(2026, 11, 11, 9, 0, 0),
+      windowFirst: "2026-11-10",
+      selected: "2026-11-23",
+      lastAt: T0,
+      expected: { rebuildWindow: true, selectedDateIndex: 12, selectedDateChanged: false, refetch: true },
+    },
+    {
+      name: "跨月：10-31 → 11-01，选中 11-02 仍在窗口",
+      now: at(2026, 11, 1, 8, 0, 0),
+      windowFirst: "2026-10-31",
+      selected: "2026-11-02",
+      lastAt: at(2026, 10, 31, 23, 59, 0).getTime(),
+      expected: { rebuildWindow: true, selectedDateIndex: 1, selectedDateChanged: false, refetch: true },
+    },
+    {
+      name: "跨年：12-31 → 01-01，选中 12-31 被挤出 ⇒ 纠偏",
+      now: at(2027, 1, 1, 8, 0, 0),
+      windowFirst: "2026-12-31",
+      selected: "2026-12-31",
+      lastAt: at(2026, 12, 31, 23, 59, 0).getTime(),
+      expected: { rebuildWindow: true, selectedDateIndex: 0, selectedDateChanged: true, refetch: true },
+    },
+    {
+      name: "窗口首日为空串（异常）：视为需要重建",
+      now: at(2026, 11, 10),
+      windowFirst: "",
+      selected: "2026-11-10",
+      lastAt: T0,
+      expected: { rebuildWindow: true, selectedDateIndex: 0, selectedDateChanged: false, refetch: true },
+    },
+    {
+      name: "时钟回拨（now 早于上次拉取）：按到期重拉",
+      now: new Date(T0 - 5_000),
+      windowFirst: "2026-11-10",
+      selected: "2026-11-10",
+      lastAt: T0,
+      expected: { rebuildWindow: false, selectedDateIndex: 0, selectedDateChanged: false, refetch: true },
+    },
+    {
+      name: "从未拉取过（lastAt=NaN）：按到期重拉",
+      now: new Date(T0),
+      windowFirst: "2026-11-10",
+      selected: "2026-11-10",
+      lastAt: Number.NaN,
+      expected: { rebuildWindow: false, selectedDateIndex: 0, selectedDateChanged: false, refetch: true },
+    },
+  ];
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(
+        planBookingShowRefresh({ now: c.now, windowFirstDate: c.windowFirst, selectedDate: c.selected, lastRefreshAt: c.lastAt }),
+      ).toEqual(c.expected);
+    });
+  }
+
+  it("间隔可注入：intervalMs=5s 时 6s 即到期", () => {
+    const p = planBookingShowRefresh({ now: new Date(T0 + 6_000), windowFirstDate: "2026-11-10", selectedDate: "2026-11-10", lastRefreshAt: T0, intervalMs: 5_000 });
+    expect(p.refetch).toBe(true);
+  });
+
+  it("「今天」口径与 buildDateWindow／formatLocalDate 一致：窗口首日恰为 formatLocalDate(now) 时不判跨日", () => {
+    const now = at(2026, 11, 10, 23, 59, 59);
+    expect(buildDateWindow(now)[0].date).toBe(formatLocalDate(now));
+    expect(planBookingShowRefresh({ now, windowFirstDate: buildDateWindow(now)[0].date, selectedDate: "2026-11-10", lastRefreshAt: now.getTime() }).rebuildWindow).toBe(false);
+  });
+});
+
+describe("domain/booking · shouldLeaveSuccessState（成功页回到表单态）", () => {
+  const S = 1_000_000;
+  const table: Array<[string, { nowMs: number; successAt: number | null; wasHidden: boolean }, boolean]> = [
+    ["非成功态（successAt=null）：不处理", { nowMs: S + 999_999, successAt: null, wasHidden: true }, false],
+    ["成功后未切走、未满 60s：保持成功页", { nowMs: S + 59_999, successAt: S, wasHidden: false }, false],
+    ["成功后未切走、恰满 60s：回表单", { nowMs: S + 60_000, successAt: S, wasHidden: false }, true],
+    ["成功后切走过（即便只过 1s）：回表单", { nowMs: S + 1_000, successAt: S, wasHidden: true }, true],
+    ["时钟回拨：按到期处理", { nowMs: S - 1, successAt: S, wasHidden: false }, true],
+  ];
+  for (const [name, input, expected] of table) {
+    it(name, () => expect(shouldLeaveSuccessState(input)).toBe(expected));
+  }
+});
+
+describe("domain/booking · isNoBrandContextError", () => {
+  it("仅业务失败 + 契约文案命中（容忍首尾空白）；其余一律不算", () => {
+    expect(isNoBrandContextError({ kind: "BUSINESS", message: "请先选择入驻门店" })).toBe(true);
+    expect(isNoBrandContextError({ kind: "BUSINESS", message: " 请先选择入驻门店 " })).toBe(true);
+    expect(isNoBrandContextError({ kind: "BUSINESS", message: "该时段已约满" })).toBe(false);
+    expect(isNoBrandContextError({ kind: "NETWORK", message: "请先选择入驻门店" })).toBe(false);
+    expect(isNoBrandContextError({ kind: "BUSINESS" })).toBe(false);
   });
 });

@@ -91,6 +91,79 @@ export function buildDateWindow(now: Date = new Date(), days = 14): DateWindowDa
   return result;
 }
 
+/** tab 页常驻后的静默重拉间隔：onShow 距上次拉取档期不足该值则不重拉（避免来回切 Tab 狂打接口） */
+export const BOOKING_SILENT_REFRESH_INTERVAL_MS = 30_000;
+/** 成功页保留时长：onShow 发现距成功已超过该值，回到可继续预约的表单态 */
+export const BOOKING_SUCCESS_MAX_AGE_MS = 60_000;
+
+export interface BookingShowRefreshInput {
+  /** 当前时刻（可注入，测试用） */
+  now: Date;
+  /** 页面当前日期窗口第一格的日期（YYYY-MM-DD，即建窗时的「今天」） */
+  windowFirstDate: string;
+  /** 页面当前选中的日期 */
+  selectedDate: string;
+  /** 上次拉取档期的时间戳（毫秒） */
+  lastRefreshAt: number;
+  intervalMs?: number;
+  days?: number;
+}
+
+export interface BookingShowRefreshPlan {
+  /** 跨日：窗口第一格已不是今天，需用 buildDateWindow(now) 重建 */
+  rebuildWindow: boolean;
+  /** 重建（或沿用）后的窗口里，选中日期的下标；原选中日期被挤出窗口时纠偏为 0（今天） */
+  selectedDateIndex: number;
+  /** 选中日期被挤出窗口、已纠偏到另一天（此时旧档期与选中时段都不可再用，需回骨架重拉） */
+  selectedDateChanged: boolean;
+  /** 需要重拉当前选中日期的档期（跨日，或距上次拉取已达间隔） */
+  refetch: boolean;
+}
+
+/**
+ * onShow 的「是否重建日期窗口／重拉档期」判定（纯函数，可注入 now）。
+ * 「今天」口径沿用本文件的 formatLocalDate／buildDateWindow（本地自然日），不另造时区逻辑。
+ * 时钟回拨（elapsed<0）或 lastRefreshAt 非有限数一律视为到期，宁可多拉一次也不展示陈旧余量。
+ */
+export function planBookingShowRefresh(input: BookingShowRefreshInput): BookingShowRefreshPlan {
+  const { now } = input;
+  const rebuildWindow = input.windowFirstDate !== formatLocalDate(now);
+  const win = buildDateWindow(now, input.days ?? 14);
+  const idx = win.findIndex((d) => d.date === input.selectedDate);
+  const elapsed = now.getTime() - input.lastRefreshAt;
+  const intervalDue = !Number.isFinite(elapsed) || elapsed < 0 || elapsed >= (input.intervalMs ?? BOOKING_SILENT_REFRESH_INTERVAL_MS);
+  return {
+    rebuildWindow,
+    selectedDateIndex: idx >= 0 ? idx : 0,
+    selectedDateChanged: idx < 0,
+    refetch: rebuildWindow || intervalDue,
+  };
+}
+
+/**
+ * 成功页是否应回到表单态：已展示成功态，且（页面曾被切走 或 距成功已达 maxAgeMs）。
+ * 时钟回拨（elapsed<0）按到期处理。
+ */
+export function shouldLeaveSuccessState(input: {
+  nowMs: number;
+  successAt: number | null;
+  wasHidden: boolean;
+  maxAgeMs?: number;
+}): boolean {
+  if (input.successAt == null) return false;
+  if (input.wasHidden) return true;
+  const elapsed = input.nowMs - input.successAt;
+  return !Number.isFinite(elapsed) || elapsed < 0 || elapsed >= (input.maxAgeMs ?? BOOKING_SUCCESS_MAX_AGE_MS);
+}
+
+/** 服务端「解析不到商家」的业务失败文案（契约《预约商家收敛》§3：code=500，message 原样展示）。确定性错误，重试无意义 */
+export const NO_BRAND_CONTEXT_MESSAGE = "请先选择入驻门店";
+
+/** 是否「无品牌上下文」：仅匹配业务失败 + 契约固定文案 */
+export function isNoBrandContextError(err: { kind: string; message?: string }): boolean {
+  return err.kind === "BUSINESS" && typeof err.message === "string" && err.message.trim() === NO_BRAND_CONTEXT_MESSAGE;
+}
+
 /** 手机号校验：11 位、1 开头（前端先校验，服务端仍会二次校验并回「手机号格式不正确」） */
 export function isValidPhone(phone: string): boolean {
   // String() 兜底：`<input type="number">` 的 v-model 在部分容器会得到 number，不能假定一定是 string

@@ -33,6 +33,9 @@ vi.mock("../../src/application/haptics", () => ({ hapticTap: () => undefined }))
 vi.mock("@dcloudio/uni-app", () => ({
   onLoad: (fn: (o?: Record<string, unknown>) => void) => h.onLoadCalls.push(fn),
   onShow: () => undefined,
+  onHide: () => undefined,
+  onShareAppMessage: () => undefined,
+  onShareTimeline: () => undefined,
 }));
 
 vi.mock("../../src/platform/weixin/capabilities", () => ({

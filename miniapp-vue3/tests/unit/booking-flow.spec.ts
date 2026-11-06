@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createBookingRepository, type BookingView } from "../../src/infrastructure/repositories";
 import {
   createCancelBookingUseCase,
+  createLoadBookingConfigUseCase,
   createLoadSlotsUseCase,
   createMyBookingsUseCase,
   createSubmitBookingUseCase,
@@ -440,5 +441,23 @@ describe("我的预约 VM：失败保留策略（CR 建议 5）", () => {
     expect(vm.authExpired.value).toBe(true);
     await vm.loadFirst(ctx);
     expect(vm.authExpired.value).toBe(false);
+  });
+});
+
+describe("无品牌上下文：档期／配置用例标记 noBrand（确定性业务错误，页面据此不重试）", () => {
+  it("请先选择入驻门店 ⇒ noBrand:true；其它业务失败／网络失败不带该标记", async () => {
+    const noBrand = fail("请先选择入驻门店");
+    const slots = createLoadSlotsUseCase({ bookings: { getMerchantSlots: async () => noBrand } as never });
+    expect(await slots.load(ctx, "2026-11-07")).toEqual({ ok: false, message: "请先选择入驻门店", noBrand: true });
+    const cfg = createLoadBookingConfigUseCase({ bookings: { getMerchantBookingConfig: async () => noBrand } as never });
+    expect(await cfg.load(ctx)).toEqual({ ok: false, message: "请先选择入驻门店", failed: true, noBrand: true });
+
+    const other = fail("该商家未开通预约");
+    expect(await createLoadSlotsUseCase({ bookings: { getMerchantSlots: async () => other } as never }).load(ctx, "d")).toEqual({ ok: false, message: "该商家未开通预约" });
+    expect(await createLoadBookingConfigUseCase({ bookings: { getMerchantBookingConfig: async () => other } as never }).load(ctx)).toEqual({
+      ok: false,
+      message: "该商家未开通预约",
+      failed: true,
+    });
   });
 });

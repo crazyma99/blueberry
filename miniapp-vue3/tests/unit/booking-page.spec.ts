@@ -6,6 +6,9 @@ import { mount } from "@vue/test-utils";
 const h = vi.hoisted(() => ({
   onLoadCalls: [] as Array<(o?: Record<string, unknown>) => void>,
   onShowCalls: [] as Array<() => void>,
+  onHideCalls: [] as Array<() => void>,
+  shareAppCalls: [] as Array<() => { title: string; path: string; imageUrl?: string }>,
+  shareTimelineCalls: [] as Array<() => { title: string; query?: string; imageUrl?: string }>,
   tabSelected: [] as number[],
   store: new Map<string, string>(),
   lastRequestedDate: "",
@@ -44,6 +47,9 @@ vi.mock("../../src/application/haptics", () => ({
 vi.mock("@dcloudio/uni-app", () => ({
   onLoad: (fn: (o?: Record<string, unknown>) => void) => h.onLoadCalls.push(fn),
   onShow: (fn: () => void) => h.onShowCalls.push(fn),
+  onHide: (fn: () => void) => h.onHideCalls.push(fn),
+  onShareAppMessage: (fn: () => { title: string; path: string }) => h.shareAppCalls.push(fn),
+  onShareTimeline: (fn: () => { title: string }) => h.shareTimelineCalls.push(fn),
 }));
 
 vi.mock("../../src/application/tabbar", async (orig) => {
@@ -154,6 +160,9 @@ const SLOTS_SAMPLE = {
 beforeEach(() => {
   h.onLoadCalls.length = 0;
   h.onShowCalls.length = 0;
+  h.onHideCalls.length = 0;
+  h.shareAppCalls.length = 0;
+  h.shareTimelineCalls.length = 0;
   h.tabSelected.length = 0;
   h.store.clear();
   h.lastRequestedDate = "";

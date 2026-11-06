@@ -17,6 +17,7 @@ import {
   BOOKING_CREATE_NETWORK_TEXT,
   bookingErrorMessage,
   classifyBookingError,
+  isNoBrandContextError,
   validateBookingForm,
   type BookingFormInput,
   type FormFieldError,
@@ -27,7 +28,8 @@ import type { Session } from "../infrastructure/http/client";
 
 type BookingRepo = ReturnType<typeof createBookingRepository>;
 
-export type LoadSlotsResult = { ok: true; value: SlotsResult } | { ok: false; message: string };
+/** noBrand＝服务端判定「无品牌上下文」（请先选择入驻门店）：确定性业务错误，页面不应自动重试 */
+export type LoadSlotsResult = { ok: true; value: SlotsResult } | { ok: false; message: string; noBrand?: true };
 
 export function createLoadSlotsUseCase(deps: { bookings: BookingRepo }) {
   return {
@@ -35,7 +37,8 @@ export function createLoadSlotsUseCase(deps: { bookings: BookingRepo }) {
     async load(context: RequestContext, date: string): Promise<LoadSlotsResult> {
       const res = await deps.bookings.getMerchantSlots(context, date);
       if (res.ok) return { ok: true, value: res.value };
-      return { ok: false, message: bookingErrorMessage(res.error, "时段加载失败，请重试") };
+      const message = bookingErrorMessage(res.error, "时段加载失败，请重试");
+      return isNoBrandContextError(res.error) ? { ok: false, message, noBrand: true } : { ok: false, message };
     },
   };
 }
@@ -166,7 +169,7 @@ export type LoadBookingConfigResult =
   /** 失败：带 failed 标记（authExpired 仅登录失效时置位）。
    *  纪律：**不做静默降级**——配置拉取失败时如实返回 ok:false，页面自行决定（提交前可能需要再拉一次/提示重试），
    *  避免在"可能需要保证金"的门店把用户当成"无保证金"直接提交。 */
-  | { ok: false; message: string; failed: true; authExpired?: true };
+  | { ok: false; message: string; failed: true; authExpired?: true; noBrand?: true };
 
 /**
  * 加载商家预约配置用例。失败如实返回 {ok:false, failed:true}（不静默降级为 enabled=false 放行）。
@@ -178,6 +181,7 @@ export function createLoadBookingConfigUseCase(deps: { bookings: BookingRepo }) 
       const res = await deps.bookings.getMerchantBookingConfig(context);
       if (res.ok) return { ok: true, value: res.value };
       const message = bookingErrorMessage(res.error, "配置加载失败，请重试");
+      if (isNoBrandContextError(res.error)) return { ok: false, message, failed: true, noBrand: true };
       return classifyBookingError(res.error) === "auth"
         ? { ok: false, message, failed: true, authExpired: true }
         : { ok: false, message, failed: true };
