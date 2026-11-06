@@ -839,7 +839,16 @@ function goMyBookings(): void {
         </view>
         <view class="form-row form-row-remark">
           <text class="form-label">备注</text>
-          <textarea class="form-textarea" v-model="remark" placeholder="选填，如特殊需求" maxlength="255" />
+          <!-- auto-height：默认单行紧凑、内容多时自增高（CSS max-height 封顶后内部滚动）；
+               disable-default-padding：去掉 iOS 默认内边距，使 placeholder 与「备注」label 顶对齐 -->
+          <textarea
+            class="form-textarea"
+            v-model="remark"
+            placeholder="选填，如特殊需求"
+            maxlength="255"
+            auto-height
+            :disable-default-padding="true"
+          />
         </view>
       </view>
 
@@ -1004,7 +1013,12 @@ function goMyBookings(): void {
 }
 .form-row-remark {
   align-items: flex-start;
-  padding-top: 20rpx;
+  // 上下各 24rpx：与单行 form-row（92rpx 内居中 44rpx 行高 ⇒ 顶部 24rpx）的文字起点一致
+  padding: 24rpx 0;
+}
+.form-row-remark .form-label {
+  // 与 textarea 同为 44rpx 行高，保证 label 与 placeholder/首行文字基线对齐
+  line-height: 44rpx;
 }
 .form-label {
   width: 160rpx;
@@ -1020,7 +1034,10 @@ function goMyBookings(): void {
 }
 .form-textarea {
   flex: 1;
-  min-height: 120rpx;
+  // 默认约一行半（auto-height 下 height 不生效，由 min/max-height 约束）；超过 200rpx 在控件内部滚动
+  min-height: 64rpx;
+  max-height: 200rpx;
+  line-height: 44rpx;
 
   font-size: $font-size-body;
   color: $color-text-primary;
