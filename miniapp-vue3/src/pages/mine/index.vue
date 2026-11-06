@@ -38,7 +38,7 @@ import { createUserInfoStore } from "../../application/user-info-store";
 import { cosThumb } from "../../application/image";
 import { createPhoneLoginFlow, toLocalUser } from "../../application/login-flow";
 import { hapticTap } from "../../application/haptics";
-import { syncTabBarSelected } from "../../application/tabbar";
+import { syncTabBarSelected, TAB_INDEX } from "../../application/tabbar";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import LoginPopup from "../../components/LoginPopup/LoginPopup.vue";
 import ProfilePopup from "../../components/ProfilePopup/ProfilePopup.vue";
@@ -187,7 +187,7 @@ onLoad(() => {
 });
 
 onShow(() => {
-  syncTabBarSelected(2);
+  syncTabBarSelected(TAB_INDEX.mine);
   // 页面显示时刷新登录状态（旧端 :177）
   updateLoginState();
   // 兜底：已登录但本地缺头像 → 拉一次后端最新（旧端 :178-190）

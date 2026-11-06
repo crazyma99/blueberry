@@ -30,6 +30,12 @@ Component({
         text: '首页',
       },
       {
+        pagePath: 'pages/booking/index',
+        icon: '/static/iconpark/booking.svg',
+        iconActive: '/static/iconpark/booking-filled.svg',
+        text: '到店预约',
+      },
+      {
         pagePath: 'pages/priceHomePage/index',
         icon: '/static/iconpark/price.svg',
         iconActive: '/static/iconpark/price-filled.svg',

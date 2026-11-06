@@ -9,7 +9,7 @@
 //   未开启保证金的门店：页面与流程与此前完全一致（无保证金文案、无授权弹窗、无支付）。对用户一律称「预约保证金」。
 // 入参：shopId（必填）、shopName（可选，缺失时用 shops 仓储按 id 查一次兜底）。
 import { computed, onUnmounted, ref, watch } from "vue";
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
 import { detectUiPlatform } from "../../ui/ui-platform";
@@ -36,6 +36,7 @@ import { createDepositPayFlow } from "../../application/booking-deposit-pay";
 import { createDepositSubmitFlow } from "../../application/booking-deposit-submit";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { requestSubscribe } from "../../platform/weixin/capabilities";
+import { syncTabBarSelected, TAB_INDEX } from "../../application/tabbar";
 import { createUserInfoStore } from "../../application/user-info-store";
 import { createPhoneLoginFlow } from "../../application/login-flow";
 import { toast as nativeToast, showLoading, hideLoading } from "../../platform/uni/feedback";
@@ -268,6 +269,11 @@ onLoad((options) => {
   shopId.value = Number.isFinite(id) && id > 0 ? id : 0;
   shopName.value = typeof raw.shopName === "string" ? safeDecodeURIComponent(raw.shopName) : "";
   void initialLoad();
+});
+
+onShow(() => {
+  // 第二个底部 Tab：自定义 tabBar 选中态由页面 onShow 同步（唯一必然触发的入口）
+  syncTabBarSelected(TAB_INDEX.booking);
 });
 
 /** 非法编码保持原样、不阻断进入（同 webview/priceList 口径） */

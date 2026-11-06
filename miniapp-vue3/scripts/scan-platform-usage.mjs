@@ -167,7 +167,8 @@ export const COMPAT_DECLARATIONS = [
     macro: "MP-WEIXIN",
     ends: ["tt", "xhs"],
     reason:
-      "抖音/小红书侧**不注册**这些页面（AI 六页＋微信专属页；2026-09-17 主人拍板），且两端入口亦不下发 ⇒ 用户看不到、无功能缺口。属**有意平台裁剪**，非漏兜底。",
+      "抖音/小红书侧**不注册**这些页面（AI 六页＋微信专属页；2026-09-17 主人拍板），且两端入口亦不下发 ⇒ 用户看不到、无功能缺口。属**有意平台裁剪**，非漏兜底。" +
+      "（2026-11-06 追加：底部 `tabBar.list` 的「到店预约」第二 Tab 项亦包在 `MP-WEIXIN` 宏内——仅微信自绘 custom-tab-bar 渲染；抖音/小红书不注册 pages/booking ⇒ 原生 tabBar 列表保持原状（抖音「首页、我的」，小红书「首页、价目表、我的」），用户看不到该 Tab，无功能缺口。由 tests/unit/tab-bar-consistency.spec.ts 固定。）",
   },
   {
     file: "src/components/BookingEntry/BookingEntry.vue",

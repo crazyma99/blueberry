@@ -37,6 +37,7 @@ vi.mock("../../src/application/haptics", () => ({
 
 vi.mock("@dcloudio/uni-app", () => ({
   onLoad: (fn: (o?: Record<string, unknown>) => void) => h.onLoadCalls.push(fn),
+  onShow: () => undefined,
 }));
 
 vi.mock("../../src/infrastructure/repositories/bookings", () => ({

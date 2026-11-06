@@ -30,7 +30,7 @@ import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
 import { createShopRepository, type ShopBrief } from "../../infrastructure/repositories/shops";
 import { cosThumb } from "../../application/image";
-import { syncTabBarSelected } from "../../application/tabbar";
+import { syncTabBarSelected, TAB_INDEX } from "../../application/tabbar";
 import PhotoGrid from "../../components/PhotoGrid/PhotoGrid.vue";
 import type { PhotoGridShop } from "../../components/PhotoGrid/PhotoGrid.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
@@ -157,7 +157,7 @@ onLoad(() => {
 });
 
 onShow(() => {
-  // ①tab 选中同步（本页下标 1）②品牌切换后重载：否则仍显示上一品牌门店（旧端 :49-52）
+  // ①tab 选中同步（本页下标 TAB_INDEX.price＝2；到店预约插入后由 1 改 2）②品牌切换后重载：否则仍显示上一品牌门店（旧端 :49-52）
   // ③⭐task-74：本页也消费一次进参（幂等、与 App 级共用同一编排器）——避免 App.onShow 晚于页面 onShow 时漏刷一帧
   void syncBrandFromEnterOptionsAsync({
     readEnterOptions,
@@ -165,7 +165,7 @@ onShow(() => {
     saveBrandId: (id) => versioned.saveBrandId(id),
     bumpScope: () => ctxFactory.bumpScope(),
   });
-  syncTabBarSelected(1);
+  syncTabBarSelected(TAB_INDEX.price);
   const brandId = versioned.loadBrandId();
   if (brandId !== lastBrandId.value) {
     lastBrandId.value = brandId;

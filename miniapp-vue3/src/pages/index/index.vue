@@ -34,7 +34,7 @@ import { createPageConfigRepository } from "../../infrastructure/repositories/pa
 import { createShareCardResolver, DEFAULT_SHARE_CARDS, type ShareCard } from "../../application/share-card";
 import { createHomeViewModel } from "../../composables/use-home";
 import { createPullRefresh } from "../../composables/use-pull-refresh";
-import { syncTabBarSelected } from "../../application/tabbar";
+import { syncTabBarSelected, TAB_INDEX } from "../../application/tabbar";
 // 2026-09-19：首页网格还原旧端 photo-grid/photo-card 结构（不再用 PhotoGrid 组件），类型沿用其接口
 import type { PhotoGridShop } from "../../components/PhotoGrid/PhotoGrid.vue";
 import ServiceContact from "../../components/ServiceContact/ServiceContact.vue";
@@ -337,7 +337,7 @@ onShareTimeline(() => ({
 
 onShow(() => {
   // P2-12：自定义 tabBar 选中态由页面 onShow 同步（唯一必然触发的入口）
-  syncTabBarSelected(0);
+  syncTabBarSelected(TAB_INDEX.home);
   // ⭐task-71（线上 P0）：**热启动/再次扫码时 onLoad 不再执行**（微信官方社区 2024-02-02）⇒ 必须在 onShow 消费本次进入参数，
   // 否则新商户被丢弃、仍停在旧商户。优先级：扫码 scene > 分享卡片 ?brandId= > 记忆值（见 domain/enter-brand.ts）。
   const enter = readEnterOptions();
