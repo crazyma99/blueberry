@@ -31,8 +31,9 @@ export type LoadSlotsResult = { ok: true; value: SlotsResult } | { ok: false; me
 
 export function createLoadSlotsUseCase(deps: { bookings: BookingRepo }) {
   return {
-    async load(context: RequestContext, shopId: number, date: string): Promise<LoadSlotsResult> {
-      const res = await deps.bookings.getSlots(context, shopId, date);
+    /** 当前品牌商家某日档期（商家由请求头 X-Brand-Id 解析，不再按 shopId） */
+    async load(context: RequestContext, date: string): Promise<LoadSlotsResult> {
+      const res = await deps.bookings.getMerchantSlots(context, date);
       if (res.ok) return { ok: true, value: res.value };
       return { ok: false, message: bookingErrorMessage(res.error, "时段加载失败，请重试") };
     },
@@ -50,7 +51,6 @@ export type SubmitBookingResult =
   | { ok: false; kind: "business"; message: string };
 
 export interface SubmitBookingParams extends BookingFormInput {
-  shopId: number;
   slotId: number;
   date: string;
 }
@@ -99,7 +99,6 @@ export function createSubmitBookingUseCase(deps: {
         }
       }
       const res = await deps.bookings.createBooking(deps.context(), {
-        shopId: input.shopId,
         slotId: input.slotId,
         date: input.date,
         customerName: input.customerName.trim(),
@@ -162,7 +161,7 @@ export function createCancelBookingUseCase(deps: { bookings: BookingRepo }) {
 // ———————————————————————————————————————————————————————————————
 
 export type LoadBookingConfigResult =
-  /** 成功：透传门店预约配置（含保证金规则与订阅模板） */
+  /** 成功：透传商家预约配置（含保证金规则与订阅模板） */
   | { ok: true; value: BookingConfig }
   /** 失败：带 failed 标记（authExpired 仅登录失效时置位）。
    *  纪律：**不做静默降级**——配置拉取失败时如实返回 ok:false，页面自行决定（提交前可能需要再拉一次/提示重试），
@@ -170,12 +169,13 @@ export type LoadBookingConfigResult =
   | { ok: false; message: string; failed: true; authExpired?: true };
 
 /**
- * 加载门店预约配置用例。失败如实返回 {ok:false, failed:true}（不静默降级为 enabled=false 放行）。
+ * 加载商家预约配置用例。失败如实返回 {ok:false, failed:true}（不静默降级为 enabled=false 放行）。
  */
 export function createLoadBookingConfigUseCase(deps: { bookings: BookingRepo }) {
   return {
-    async load(context: RequestContext, shopId: number): Promise<LoadBookingConfigResult> {
-      const res = await deps.bookings.getBookingConfig(context, shopId);
+    /** 当前品牌商家的预约配置（商家由请求头 X-Brand-Id 解析，不再按 shopId） */
+    async load(context: RequestContext): Promise<LoadBookingConfigResult> {
+      const res = await deps.bookings.getMerchantBookingConfig(context);
       if (res.ok) return { ok: true, value: res.value };
       const message = bookingErrorMessage(res.error, "配置加载失败，请重试");
       return classifyBookingError(res.error) === "auth"

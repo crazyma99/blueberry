@@ -44,7 +44,8 @@ const fail = (message: string) => ({
 function booking(id: number, status: BookingView["status"] = "pending"): BookingView {
   return {
     id,
-    shopId: 1,
+    shopId: 0,
+    merchantId: 7,
     shopName: "红河水乡店",
     slotId: 7,
     startTime: "10:00",
@@ -106,14 +107,15 @@ describe("bookings 仓储：请求形状（冻结契约）", () => {
     const f = fakeClient(() => ({ ok: true, value: booking(1) }));
     const repo = createBookingRepository({ client: f.client });
     await repo.createBooking(ctx, {
-      shopId: 1, slotId: 7, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2,
+      slotId: 7, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2,
     });
     expect(f.calls[0]).toMatchObject({ method: "POST", url: "/api/bookings", authRequired: true, replayPolicy: "never" });
+    expect(f.calls[0].body).not.toHaveProperty("shopId"); // 商家由 X-Brand-Id 解析
     expect(f.calls[0].body).toEqual({
-      shopId: 1, slotId: 7, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2,
+      slotId: 7, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2,
     });
     await repo.createBooking(ctx, {
-      shopId: 1, slotId: 7, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2, remark: "靠窗",
+      slotId: 7, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2, remark: "靠窗",
     });
     expect((f.calls[1].body as Record<string, unknown>).remark).toBe("靠窗");
   });
@@ -138,19 +140,19 @@ describe("bookings 仓储：请求形状（冻结契约）", () => {
 describe("用例：加载时段", () => {
   it("成功透传 slots；失败透传服务端可读 message，空 message 回落通用文案", async () => {
     const ok = createLoadSlotsUseCase({
-      bookings: { getSlots: async () => ({ ok: true, value: { date: "d", slots: [] } }) } as never,
+      bookings: { getMerchantSlots: async () => ({ ok: true, value: { date: "d", slots: [] } }) } as never,
     });
-    expect(await ok.load(ctx, 1, "d")).toEqual({ ok: true, value: { date: "d", slots: [] } });
-    const bad = createLoadSlotsUseCase({ bookings: { getSlots: async () => fail("超出可预约日期") } as never });
-    expect(await bad.load(ctx, 1, "d")).toEqual({ ok: false, message: "超出可预约日期" });
-    const empty = createLoadSlotsUseCase({ bookings: { getSlots: async () => fail("") } as never });
-    expect(await empty.load(ctx, 1, "d")).toEqual({ ok: false, message: "时段加载失败，请重试" });
+    expect(await ok.load(ctx, "d")).toEqual({ ok: true, value: { date: "d", slots: [] } });
+    const bad = createLoadSlotsUseCase({ bookings: { getMerchantSlots: async () => fail("超出可预约日期") } as never });
+    expect(await bad.load(ctx, "d")).toEqual({ ok: false, message: "超出可预约日期" });
+    const empty = createLoadSlotsUseCase({ bookings: { getMerchantSlots: async () => fail("") } as never });
+    expect(await empty.load(ctx, "d")).toEqual({ ok: false, message: "时段加载失败，请重试" });
   });
 });
 
 describe("用例：提交预约（校验→登录前置→提交）", () => {
   const input = {
-    shopId: 1, slotId: 7, date: "2026-11-05", customerName: " 张三 ", customerPhone: "13800138000", guestCount: 2, remark: " 靠窗 ",
+    slotId: 7, date: "2026-11-05", customerName: " 张三 ", customerPhone: "13800138000", guestCount: 2, remark: " 靠窗 ",
   };
 
   it("表单不合法：零请求，返回 validation 与字段", async () => {
@@ -176,7 +178,7 @@ describe("用例：提交预约（校验→登录前置→提交）", () => {
     const r = await uc.submit(input);
     expect(r).toMatchObject({ ok: true, value: { id: 5 } });
     expect(create).toHaveBeenCalledWith(ctx, {
-      shopId: 1, slotId: 7, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2, remark: "靠窗",
+      slotId: 7, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2, remark: "靠窗",
     });
   });
 
@@ -305,7 +307,7 @@ const failKind = (kind: string, message: string) => ({
 });
 
 describe("用例：非业务失败不透出英文技术串", () => {
-  const input = { shopId: 1, slotId: 7, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2 };
+  const input = { slotId: 7, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2 };
   const submitWith = (res: unknown) =>
     createSubmitBookingUseCase({ bookings: { createBooking: async () => res } as never, loadSession: () => fullSession, context: () => ctx }).submit(input);
 
@@ -328,7 +330,7 @@ describe("用例：非业务失败不透出英文技术串", () => {
 
   it("‘网络专属文案’只对 create 生效：加载时段/列表/取消遇网络失败用通用‘网络不太稳定，请稍后重试’", async () => {
     const net = failKind("TIMEOUT", "transport failure: timeout");
-    expect(await createLoadSlotsUseCase({ bookings: { getSlots: async () => net } as never }).load(ctx, 1, "d")).toEqual({ ok: false, message: "网络不太稳定，请稍后重试" });
+    expect(await createLoadSlotsUseCase({ bookings: { getMerchantSlots: async () => net } as never }).load(ctx, "d")).toEqual({ ok: false, message: "网络不太稳定，请稍后重试" });
     expect(await createMyBookingsUseCase({ bookings: { listBookings: async () => net } as never }).load(ctx)).toEqual({ ok: false, message: "网络不太稳定，请稍后重试" });
     expect(await createCancelBookingUseCase({ bookings: { cancelBooking: async () => net } as never }).cancel(ctx, 1)).toEqual({ ok: false, message: "网络不太稳定，请稍后重试" });
   });
@@ -346,7 +348,7 @@ describe("用例：非业务失败不透出英文技术串", () => {
   it("replayPolicy 不变：createBooking／cancelBooking 仍为 never", async () => {
     const f = fakeClient(() => ({ ok: true, value: booking(1) }));
     const repo = createBookingRepository({ client: f.client });
-    await repo.createBooking(ctx, { shopId: 1, slotId: 1, date: "2026-11-05", customerName: "a", customerPhone: "13800138000", guestCount: 1 });
+    await repo.createBooking(ctx, { slotId: 1, date: "2026-11-05", customerName: "a", customerPhone: "13800138000", guestCount: 1 });
     await repo.cancelBooking(ctx, 1);
     expect(f.calls.map((c) => c.replayPolicy)).toEqual(["never", "never"]);
   });

@@ -5,10 +5,16 @@ import { mount } from "@vue/test-utils";
 
 const h = vi.hoisted(() => ({
   onLoadCalls: [] as Array<(o?: Record<string, unknown>) => void>,
+  onShowCalls: [] as Array<() => void>,
+  tabSelected: [] as number[],
   store: new Map<string, string>(),
   lastRequestedDate: "",
   slotsResponse: null as unknown,
-  slotsCalls: [] as Array<{ shopId: number; date: string }>,
+  slotsCalls: [] as Array<{ date: string }>,
+  /** 旧 shopId 接口被调用的次数（页面已不再使用，恒应为 0） */
+  legacyCalls: [] as string[],
+  /** booking-config 返回的商家名（导航标题用） */
+  merchantName: "红河水乡店",
   submitResult: null as unknown,
   submitCalls: [] as unknown[],
   prefetchCalls: 0,
@@ -37,25 +43,39 @@ vi.mock("../../src/application/haptics", () => ({
 
 vi.mock("@dcloudio/uni-app", () => ({
   onLoad: (fn: (o?: Record<string, unknown>) => void) => h.onLoadCalls.push(fn),
-  onShow: () => undefined,
+  onShow: (fn: () => void) => h.onShowCalls.push(fn),
 }));
+
+vi.mock("../../src/application/tabbar", async (orig) => {
+  const m = await orig<typeof import("../../src/application/tabbar")>();
+  return { ...m, syncTabBarSelected: (i: number) => void h.tabSelected.push(i) };
+});
 
 vi.mock("../../src/infrastructure/repositories/bookings", () => ({
   createBookingRepository: () => ({
-    getSlots: async (_c: unknown, shopId: number, date: string) => {
-      h.slotsCalls.push({ shopId, date });
+    getSlots: async () => {
+      h.legacyCalls.push("getSlots");
+      return { ok: false, error: { kind: "BUSINESS", message: "legacy" } } as never;
+    },
+    getBookingConfig: async () => {
+      h.legacyCalls.push("getBookingConfig");
+      return { ok: false, error: { kind: "BUSINESS", message: "legacy" } } as never;
+    },
+    getMerchantSlots: async (_c: unknown, date: string) => {
+      h.slotsCalls.push({ date });
       h.lastRequestedDate = date;
       if (h.slotsFail) return { ok: false, error: h.slotsFail } as never;
       if (h.slotsGate[date]) await h.slotsGate[date];
       if (h.slotsByDate[date]) return { ok: true, value: { date, slots: h.slotsByDate[date] } };
       return { ok: true, value: (h.slotsResponse as { date: string; slots: unknown[] } | null) ?? { date, slots: [] } };
     },
-    getBookingConfig: async () => {
+    getMerchantBookingConfig: async () => {
       h.configCalls += 1;
       return (
         h.configResult ?? {
           ok: true,
           value: {
+            merchantName: h.merchantName,
             deposit: { enabled: false, amountFen: 0, freeCancelHours: 0, lateCancelForfeitPct: 0, noShowForfeitPct: 0, refundTrigger: "manual" },
             payHoldMinutes: 0,
             subscribeTemplates: { result: "", done: "" },
@@ -70,7 +90,7 @@ vi.mock("../../src/infrastructure/repositories/bookings", () => ({
         h.submitResult ?? {
           ok: true,
           value: {
-            id: 1, shopId: 1, shopName: "红河水乡店", slotId: 1, startTime: "10:00", endTime: "11:00",
+            id: 1, shopId: 0, merchantId: 7, shopName: "红河水乡店", slotId: 1, startTime: "10:00", endTime: "11:00",
             date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 2, remark: "",
             status: "pending", channel: "wx", createTime: "", deposit: null, pay: null,
           },
@@ -80,10 +100,6 @@ vi.mock("../../src/infrastructure/repositories/bookings", () => ({
     listBookings: async () => ({ ok: true, value: { list: [], total: 0, page: 1, pageSize: 20 } }),
     cancelBooking: async () => ({ ok: true, value: {} }),
   }),
-}));
-
-vi.mock("../../src/infrastructure/repositories/shops", () => ({
-  createShopRepository: () => ({ getShops: async () => ({ ok: true, value: [{ id: 1, displayName: "红河水乡店" }] }) }),
 }));
 
 // 登录流：真实 runPhoneLogin 依赖平台 login code 与服务端换票，页面级用例只关心"登录成功后会话变 full 并补发提交"
@@ -137,10 +153,14 @@ const SLOTS_SAMPLE = {
 
 beforeEach(() => {
   h.onLoadCalls.length = 0;
+  h.onShowCalls.length = 0;
+  h.tabSelected.length = 0;
   h.store.clear();
   h.lastRequestedDate = "";
   h.slotsResponse = null;
   h.slotsCalls.length = 0;
+  h.legacyCalls.length = 0;
+  h.merchantName = "红河水乡店";
   h.submitResult = null;
   h.submitCalls.length = 0;
   h.prefetchCalls = 0;
@@ -168,7 +188,7 @@ beforeEach(() => {
 
 /** 页面 onMounted 内按"今天"日期拉首批时段——先挂载一次探出真实请求日期，再把桩数据注册到该日期重新挂载，
  *  避免用例里硬编码日期字符串与 `domain/booking.buildDateWindow()` 的"今天"产生耦合/脆弱。 */
-async function mountReady(query: Record<string, unknown> = { shopId: "1" }, slots = SLOTS_SAMPLE) {
+async function mountReady(query: Record<string, unknown> = {}, slots = SLOTS_SAMPLE) {
   const probe = mount(BookingPage, { global: GLOBAL });
   h.onLoadCalls[h.onLoadCalls.length - 1](query);
   await flush();
@@ -183,18 +203,27 @@ async function mountReady(query: Record<string, unknown> = { shopId: "1" }, slot
 }
 
 describe("pages/booking（到店预约页）", () => {
-  it("缺 shopId：不发请求，展示空态", async () => {
-    const w = mount(BookingPage, { global: GLOBAL });
-    h.onLoadCalls[h.onLoadCalls.length - 1]({});
-    await flush();
-    await w.vm.$nextTick();
-    expect(h.slotsCalls.length).toBe(0);
-    expect(w.text()).toContain("门店信息缺失");
+  it("⭐tab 页不依赖 query：无参数照常发请求；query 里带 shopId/shopName 也被忽略（请求不含 shopId，标题不取 query，不调用旧 shopId 接口）", async () => {
+    const w = await mountReady({ shopId: "99", shopName: encodeURIComponent("别家系列") });
+    expect(h.slotsCalls.length).toBeGreaterThan(0);
+    expect(h.slotsCalls.every((c) => Object.keys(c).sort().join() === "date")).toBe(true);
+    expect(h.legacyCalls).toEqual([]);
+    expect(w.text()).toContain("红河水乡店 · 到店预约");
+    expect(w.text()).not.toContain("别家系列");
+    expect(w.text()).not.toContain("门店信息缺失");
   });
 
-  it("有 shopId：门店名展示、日期条渲染 14 天、首日默认选中", async () => {
+  it("导航标题：{merchantName} · 到店预约；config 未返回商家名（缺失/拉取失败）则回落「到店预约」", async () => {
     const w = await mountReady();
-    expect(w.text()).toContain("红河水乡店");
+    expect(w.text()).toContain("红河水乡店 · 到店预约");
+    h.merchantName = "";
+    const w2 = await mountReady();
+    expect(w2.text()).toContain("到店预约");
+    expect(w2.text()).not.toContain(" · 到店预约");
+  });
+
+  it("日期条渲染 14 天、首日默认选中", async () => {
+    const w = await mountReady();
     expect(w.findAll(".date-cell").length).toBe(14);
     expect(w.findAll(".date-cell")[0].classes()).toContain("is-active");
   });
@@ -276,6 +305,7 @@ describe("pages/booking（到店预约页）", () => {
     await w.vm.$nextTick();
     expect(h.submitCalls.length).toBe(1);
     expect(h.submitCalls[0]).toMatchObject({ customerName: "张三", customerPhone: "13800138000", slotId: 1 });
+    expect(h.submitCalls[0]).not.toHaveProperty("shopId"); // 商家由 X-Brand-Id 解析，提交不再带 shopId
     expect(w.text()).toContain("预约已提交");
     expect(w.text()).toContain("等待门店确认");
     expect(w.text()).toContain("我的预约");
@@ -308,7 +338,7 @@ describe("pages/booking（到店预约页）", () => {
   const stepBtns = (w: Awaited<ReturnType<typeof mountReady>>) => w.findAll(".stepper-btn");
 
   it("席位上限：选 6 席档期后加号加到 6 即置灰，再点不再增加并轻提示'该时段仅剩 6 席'", async () => {
-    const w = await mountReady({ shopId: "1" }, SEAT_SLOTS);
+    const w = await mountReady({}, SEAT_SLOTS);
     await w.findAll(".slot-cell")[0].trigger("click");
     for (let i = 0; i < 10; i++) await stepBtns(w)[1].trigger("click"); // 2 → 6 后停住
     expect(w.find(".stepper-value").text()).toBe("6");
@@ -319,7 +349,7 @@ describe("pages/booking（到店预约页）", () => {
   });
 
   it("席位上限：人数未到上限时加号可用；未选档期时上限仍为 20", async () => {
-    const w = await mountReady({ shopId: "1" }, SEAT_SLOTS);
+    const w = await mountReady({}, SEAT_SLOTS);
     expect(stepBtns(w)[1].classes()).not.toContain("is-disabled");
     for (let i = 0; i < 30; i++) await stepBtns(w)[1].trigger("click");
     expect(w.find(".stepper-value").text()).toBe("20");
@@ -327,7 +357,7 @@ describe("pages/booking（到店预约页）", () => {
   });
 
   it("换到剩余更少的档期：当前人数超限则自动收敛到新上限并提示", async () => {
-    const w = await mountReady({ shopId: "1" }, SEAT_SLOTS);
+    const w = await mountReady({}, SEAT_SLOTS);
     await w.findAll(".slot-cell")[0].trigger("click");
     for (let i = 0; i < 4; i++) await stepBtns(w)[1].trigger("click"); // 2 → 6
     expect(w.find(".stepper-value").text()).toBe("6");
@@ -339,7 +369,7 @@ describe("pages/booking（到店预约页）", () => {
 
   it("提交被服务端以席位不足拒绝：原样 toast 服务端文案，并刷新档期（保留选中，remaining 更新后人数自动收敛）", async () => {
     h.submitResult = { ok: false, error: { kind: "BUSINESS", businessCode: 500, message: "该时段剩余 3 席，不足 6 人", requestId: "r", retryable: false } };
-    const w = await mountReady({ shopId: "1" }, SEAT_SLOTS);
+    const w = await mountReady({}, SEAT_SLOTS);
     seedSession("full");
     const inputs = w.findAll("input.form-input");
     await inputs[0].setValue("张三");
@@ -367,7 +397,7 @@ describe("pages/booking（到店预约页）", () => {
 
   it("提交被拒后刷新发现该档期已约满：取消选中（不让用户卡在旧数据上）", async () => {
     h.submitResult = { ok: false, error: { kind: "BUSINESS", businessCode: 500, message: "该时段已约满", requestId: "r", retryable: false } };
-    const w = await mountReady({ shopId: "1" }, SEAT_SLOTS);
+    const w = await mountReady({}, SEAT_SLOTS);
     seedSession("full");
     const inputs = w.findAll("input.form-input");
     await inputs[0].setValue("张三");
@@ -596,5 +626,64 @@ describe("pages/booking 按钮样式：复用全局 .btn-primary / .btn-secondar
     await w.find(".submit-btn").trigger("click");
     await flush();
     expect(w.find(".stub-wd-toast").text()).toContain("请先选择到店时段");
+  });
+});
+
+describe("pages/booking 作为底部 Tab：onShow 同步与品牌切换", () => {
+  const BRAND_KEY = "lm.brand.v1";
+  const show = () => h.onShowCalls[h.onShowCalls.length - 1]();
+
+  it("⭐onShow 同步底部 Tab 选中下标 1（到店预约）", async () => {
+    await mountReady();
+    show();
+    expect(h.tabSelected).toEqual([1]);
+  });
+
+  it("⭐品牌（商家）未变：再次 onShow 不重复请求；品牌变化：整页重载，标题与档期换成新商家", async () => {
+    h.store.set(BRAND_KEY, "brandA");
+    const w = await mountReady();
+    const slotsBefore = h.slotsCalls.length;
+    const cfgBefore = h.configCalls;
+    show();
+    await flush();
+    expect(h.slotsCalls.length).toBe(slotsBefore);
+    expect(h.configCalls).toBe(cfgBefore);
+
+    h.store.set(BRAND_KEY, "brandB");
+    h.merchantName = "新商家";
+    show();
+    await flush();
+    await w.vm.$nextTick();
+    expect(h.slotsCalls.length).toBe(slotsBefore + 1);
+    expect(h.configCalls).toBe(cfgBefore + 1);
+    expect(w.text()).toContain("新商家 · 到店预约");
+    expect(w.text()).not.toContain("红河水乡店");
+  });
+
+  it("成功态「继续预约」：回到表单（tab 页没有上一页），所选时段清空并重拉余量", async () => {
+    const w = await mountReady();
+    seedSession("full");
+    const inputs = w.findAll("input.form-input");
+    await inputs[0].setValue("张三");
+    await inputs[1].setValue("13800138000");
+    await w.findAll(".slot-cell")[0].trigger("click");
+    await w.find(".submit-btn").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(w.find(".success-back").exists()).toBe(true);
+    const before = h.slotsCalls.length;
+    await w.find(".success-back").trigger("click");
+    await flush();
+    await w.vm.$nextTick();
+    expect(w.find(".success-back").exists()).toBe(false);
+    expect(w.findAll(".date-cell").length).toBe(14);
+    expect(w.findAll(".slot-cell.is-active").length).toBe(0);
+    expect(h.slotsCalls.length).toBe(before + 1);
+  });
+
+  it("源码守卫：页面不再引用 shopId/shopName/shops 仓储/旧 shopId 接口方法/query 解析", () => {
+    const src = readFileSync(resolve(__dirname, "../../src/pages/booking/index.vue"), "utf-8");
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/<!--[\s\S]*?-->/g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(code).not.toMatch(/shopId|shopName|createShopRepository|getShops|\.getSlots\(|getBookingConfig\(|options\b/);
   });
 });

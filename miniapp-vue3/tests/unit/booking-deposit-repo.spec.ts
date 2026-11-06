@@ -50,6 +50,7 @@ describe("getBookingConfig：公开、幂等，不带 authRequired", () => {
     expect(r.ok).toBe(true);
     if (!r.ok) throw new Error("unreachable");
     expect(r.value).toEqual({
+      merchantName: "", // 旧接口无该字段 → ""
       deposit: { enabled: true, amountFen: 5000, freeCancelHours: 24, lateCancelForfeitPct: 50, noShowForfeitPct: 100, refundTrigger: "auto_on_complete" },
       payHoldMinutes: 10,
       subscribeTemplates: { result: "T1", done: "T2" },
@@ -61,6 +62,7 @@ describe("getBookingConfig：公开、幂等，不带 authRequired", () => {
     const r = await createBookingRepository({ client: f.client }).getBookingConfig(ctx, 1);
     if (!r.ok) throw new Error("unreachable");
     expect(r.value).toEqual({
+      merchantName: "",
       deposit: { enabled: false, amountFen: 0, freeCancelHours: 0, lateCancelForfeitPct: 0, noShowForfeitPct: 0, refundTrigger: "manual" },
       payHoldMinutes: 0,
       subscribeTemplates: { result: "", done: "" },
@@ -169,7 +171,7 @@ describe("createBooking：返回带 pay（规整），列表 deposit 规整", ()
   it("createBooking 响应 pay 缺失 → null、deposit 缺失 → null", async () => {
     const f = fakeClient(() => ({ ok: true, value: { id: 1, status: "pending" } }));
     const r = await createBookingRepository({ client: f.client }).createBooking(ctx, {
-      shopId: 1, slotId: 1, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 1,
+      slotId: 1, date: "2026-11-05", customerName: "张三", customerPhone: "13800138000", guestCount: 1,
     });
     if (!r.ok) throw new Error("unreachable");
     expect(r.value.pay).toBeNull();
