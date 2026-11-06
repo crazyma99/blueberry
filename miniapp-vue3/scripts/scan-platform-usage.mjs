@@ -171,14 +171,6 @@ export const COMPAT_DECLARATIONS = [
       "（2026-11-06 追加：底部 `tabBar.list` 的「到店预约」第二 Tab 项亦包在 `MP-WEIXIN` 宏内——仅微信自绘 custom-tab-bar 渲染；抖音/小红书不注册 pages/booking ⇒ 原生 tabBar 列表保持原状（抖音「首页、我的」，小红书「首页、价目表、我的」），用户看不到该 Tab，无功能缺口。由 tests/unit/tab-bar-consistency.spec.ts 固定。）",
   },
   {
-    file: "src/components/BookingEntry/BookingEntry.vue",
-    macro: "MP-WEIXIN",
-    ends: ["tt", "xhs"],
-    reason:
-      "**到店预约 MVP（仅微信端）**：首页店铺卡片右上角的「到店预约」入口组件——**模板（入口与文案）与点击跳转脚本（/pages/booking/index 路径字面量）两处都包在 `MP-WEIXIN` 宏内**（首页自身保持零条件编译，t86 守卫）；预约页 pages/booking、pages/myBookings 在 pages.json 仅微信注册 ⇒ 抖音/小红书包内**不含入口、文案与预约页路径**。" +
-      "影响端＝抖音/小红书（用户可见后果＝看不到该入口，无功能缺口；卡片整体点击跳转 demoDetail 不变）。属有意平台裁剪，非漏兜底。",
-  },
-  {
     file: "src/pages/mine/index.vue",
     macro: "MP-WEIXIN",
     ends: ["tt", "xhs"],
