@@ -25,7 +25,6 @@ const fullSession: Session = { userId: "1", token: "t", platform: "mp-weixin", p
 const silentSession: Session = { ...fullSession, kind: "silent" };
 
 const input: SubmitBookingParams = {
-  shopId: 1,
   slotId: 7,
   date: "2026-11-05",
   customerName: "张三",
@@ -37,7 +36,7 @@ const PAY: PayParams = { outTradeNo: "T1", prepayId: "p", appId: "a", timeStamp:
 
 function bk(status: BookingView["status"], dep: DepositStatus | null, extra: Partial<BookingView["deposit"] & object> = {}): BookingView {
   return {
-    id: 9, shopId: 1, shopName: "红河水乡店", slotId: 7, startTime: "10:00", endTime: "11:00", date: "2026-11-05",
+    id: 9, shopId: 0, merchantId: 7, shopName: "红河水乡店", slotId: 7, startTime: "10:00", endTime: "11:00", date: "2026-11-05",
     customerName: "张三", customerPhone: "13800138000", guestCount: 2, remark: "", status, channel: "wx", createTime: "",
     deposit:
       dep == null

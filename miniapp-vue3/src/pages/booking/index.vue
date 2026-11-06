@@ -1,15 +1,21 @@
 <script setup lang="ts">
-// T9 到店预约 MVP：预约页（门店名 + 14 天日期条 + 时段网格 + 表单 + 提交）。微信专属页（pages.json #ifdef MP-WEIXIN 注册，
+// T9 到店预约 MVP：预约页（商家名 + 14 天日期条 + 时段网格 + 表单 + 提交）。微信专属页（pages.json #ifdef MP-WEIXIN 注册，
 // 抖音/小红书不注册——同 AI 六页口径，2026-09-17 主人拍板的"仅微信注册"惯例）。
+// 【2026-11-06 预约商家收敛】本页是底部第二个 Tab（tab 页不能带参）：**不再读取 query 的 shopId/shopName（即使带了也忽略）**；
+//   商家由请求头 X-Brand-Id 解析（http client 按 RequestContext.brandId 统一注入）：档期 GET /api/booking/slots、配置 GET /api/booking/config、
+//   创建 POST /api/bookings（不传 shopId）。导航标题 `{merchantName} · 到店预约`（merchantName 取自 config），取不到则「到店预约」。
+//   切换品牌后再进入本页（onShow 检测品牌变化）整页重载，不残留上一商家的档期/配置。
+// tab 页常驻（不销毁）⇒ onShow 还负责：①跨日重建日期窗口并纠偏选中日期；②距上次拉取 ≥30s 静默重拉档期与配置（不回骨架、不清表单）；
+//   ③成功页在页面被切走再回来（或超过 60s）后回到表单态。判定集中在 domain/booking planBookingShowRefresh／shouldLeaveSuccessState（纯函数，表驱动单测）。
+// 无品牌上下文（服务端「请先选择入驻门店」）：只显示一条提示，不自动重试；brand_hub 开关开启时提示旁给「去入驻门店」入口（复用首页同款闸门与跳转）。
 // 产品规则（主人已确认）：可约窗口=今天起 14 天（含今天）；人数用步进器 1..20（domain/booking GUEST_COUNT_MIN/MAX）；
 //   档期容量＝席位＝可预约的总人数（2026-11 主人口径）：人数上限 = min(20, 所选档期 remaining)，由 domain/booking maxGuestCountForSlot 计算；
 // 提交需已登录（未登录先走现有登录弹窗，复用 login-flow）。
 // 预约保证金（2026-11-05 §10 冻结契约）：进入页面拉 booking-config；门店开启保证金时在提交区上方展示「预约保证金 ¥xx」＋规则摘要，
 //   **勾选同意后方可提交**；提交 = 订阅授权（点击手势内）→ 创建预约 → 拉起微信支付 → 以服务端状态为准确认到账（编排见 application/booking-deposit-submit）。
 //   未开启保证金的门店：页面与流程与此前完全一致（无保证金文案、无授权弹窗、无支付）。对用户一律称「预约保证金」。
-// 入参：shopId（必填）、shopName（可选，缺失时用 shops 仓储按 id 查一次兜底）。
 import { computed, onUnmounted, ref, watch } from "vue";
-import { onLoad } from "@dcloudio/uni-app";
+import { onHide, onLoad, onShareAppMessage, onShareTimeline, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
 import { detectUiPlatform } from "../../ui/ui-platform";
@@ -24,8 +30,9 @@ import { createContextFactory } from "../../application/request-context";
 import { createVersionedStorage } from "../../infrastructure/storage/versioned";
 import { createHttpClient } from "../../infrastructure/http/client";
 import { createWxAuthRepository } from "../../infrastructure/repositories/wx-auth";
-import { createShopRepository } from "../../infrastructure/repositories/shops";
 import { createBookingRepository, type BookingConfig, type SlotView } from "../../infrastructure/repositories/bookings";
+import { createPageConfigRepository } from "../../infrastructure/repositories/page-config";
+import { createBrandHubGate } from "../../application/brand-hub-gate";
 import {
   createLoadBookingConfigUseCase,
   createLoadSlotsUseCase,
@@ -36,6 +43,7 @@ import { createDepositPayFlow } from "../../application/booking-deposit-pay";
 import { createDepositSubmitFlow } from "../../application/booking-deposit-submit";
 import { createWeixinPayments } from "../../platform/weixin/payments";
 import { requestSubscribe } from "../../platform/weixin/capabilities";
+import { syncTabBarSelected, TAB_INDEX } from "../../application/tabbar";
 import { createUserInfoStore } from "../../application/user-info-store";
 import { createPhoneLoginFlow } from "../../application/login-flow";
 import { toast as nativeToast, showLoading, hideLoading } from "../../platform/uni/feedback";
@@ -47,6 +55,9 @@ import {
   clampGuestCount,
   describeSlotAvailability,
   maxGuestCountForSlot,
+  NO_BRAND_CONTEXT_MESSAGE,
+  planBookingShowRefresh,
+  shouldLeaveSuccessState,
   type DateWindowDay,
 } from "../../domain/booking";
 import { describePaidResult, describeUnpaidResult, formatFen, summarizeDepositRule } from "../../domain/booking-deposit";
@@ -73,7 +84,6 @@ const authCoordinator = createAuthCoordinator({
 });
 const client = createHttpClient({ transport, authCoordinator });
 const wxAuth = createWxAuthRepository({ client, platform });
-const shopRepo = createShopRepository({ client });
 const bookingRepo = createBookingRepository({ client });
 const ctxFactory = createContextFactory({
   platform,
@@ -83,6 +93,8 @@ const ctxFactory = createContextFactory({
   getBrandId: () => versioned.loadBrandId(),
 });
 const loadSlotsUc = createLoadSlotsUseCase({ bookings: bookingRepo });
+// 品牌馆开关闸门：与首页入口同源（同一 /api/page-config 解析，不新增开关机制）
+const brandHubGate = createBrandHubGate({ pageConfig: createPageConfigRepository({ client }) });
 const userStore = createUserInfoStore({ backend: uniStorage });
 const phoneLoginFlow = createPhoneLoginFlow({
   wxAuth,
@@ -112,6 +124,7 @@ function openLoginPopup(): void {
   void phoneLoginFlow.prefetchLoginCode();
 }
 
+const NO_BRAND_TEXT = NO_BRAND_CONTEXT_MESSAGE;
 const userAgreementName = `《${PROFILE.miniAppName} 用户协议》`;
 const privacyPolicyName = `《${PROFILE.miniAppName} 隐私政策》`;
 
@@ -127,8 +140,20 @@ function toast(text: string, icon?: "success" | "none"): void {
 
 // —— 页面状态 ——
 const ready = ref(false);
-const shopId = ref(0);
-const shopName = ref("");
+/** 无品牌上下文（服务端「请先选择入驻门店」）：档期区只显示这一条提示，配置卡片不再重复 */
+const noBrand = ref(false);
+/** brand_hub 开关（仅 noBrand 时才查询）：开启才显示「去入驻门店」入口 */
+const brandHubOn = ref(false);
+/** 当前页面所属品牌（商家）：onShow 与最新品牌比对，变化即整页重载 */
+let lastBrandId = "";
+/** 作用域代次：品牌切换时自增，使旧品牌在飞的配置响应被丢弃 */
+let scopeEpoch = 0;
+/** 上次拉取档期的时间戳（ms）：onShow 据此判定是否到静默重拉间隔 */
+let lastRefreshAt = 0;
+/** 成功页展示时刻（ms）；非成功态为 null */
+let successAt: number | null = null;
+/** 成功之后页面是否被切走过（onHide 置位；showResult 清零——支付等发生在成功之前的隐藏不算） */
+let wasHidden = false;
 const dateWindow = ref<DateWindowDay[]>(buildDateWindow());
 const selectedDateIndex = ref(0);
 const slots = ref<SlotView[]>([]);
@@ -171,6 +196,11 @@ onUnmounted(() => {
   configRetryTimer = null;
 });
 const depositAgreed = ref(false);
+/** 导航标题：商家名取自 booking-config（契约 §6）；取不到则「到店预约」 */
+const navTitle = computed(() => {
+  const name = config.value?.merchantName ?? "";
+  return name !== "" ? name + " · 到店预约" : "到店预约";
+});
 const depositEnabled = computed(() => config.value?.deposit.enabled === true);
 const depositAmountText = computed(() => formatFen(config.value?.deposit.amountFen ?? 0));
 const depositRuleLines = computed(() => (config.value != null ? summarizeDepositRule(config.value.deposit) : []));
@@ -191,27 +221,67 @@ watch(guestMax, (max) => {
 
 /** 请求序号：连续切日期时只应用**最新一次**请求的响应；旧响应晚到既不覆盖时段、也不改 slotsLoading */
 let slotsSeq = 0;
-/** @param keepSelection 提交被服务端拒绝后的刷新：保留原选中档期（刷新后仍可约才保留），用户可直接下调人数重提，不必重选 */
-async function loadSlotsForSelectedDate(keepSelection = false): Promise<void> {
-  if (shopId.value <= 0 || selectedDate.value === "") return;
+/**
+ * @param keepSelection 提交被服务端拒绝后的刷新：保留原选中档期（刷新后仍可约才保留），用户可直接下调人数重提，不必重选
+ * @param silent onShow 的静默重拉：不回骨架、不清选中/表单；失败保持旧数据不报错（仅「无品牌上下文」仍如实展示）；所选时段变为不可约时提示一次
+ */
+async function loadSlotsForSelectedDate(keepSelection = false, silent = false): Promise<void> {
+  if (selectedDate.value === "") return;
+  lastRefreshAt = Date.now();
   const mySeq = ++slotsSeq;
-  slotsLoading.value = true;
-  slotsError.value = null;
-  const keepId = keepSelection ? selectedSlotId.value : null;
-  if (keepId == null) selectedSlotId.value = null;
-  const r = await loadSlotsUc.load(ctxFactory.next(), shopId.value, selectedDate.value);
+  if (!silent) {
+    slotsLoading.value = true;
+    slotsError.value = null;
+  }
+  const keepId = keepSelection || silent ? selectedSlotId.value : null;
+  if (keepId == null && !silent) selectedSlotId.value = null;
+  const r = await loadSlotsUc.load(ctxFactory.next(), selectedDate.value);
   if (mySeq !== slotsSeq) return;
   slotsLoading.value = false;
   if (!r.ok) {
+    if (r.noBrand === true) {
+      slots.value = [];
+      selectedSlotId.value = null;
+      slotsError.value = null;
+      markNoBrand();
+      return;
+    }
+    if (silent) return; // 静默重拉失败：保持旧数据，不打断用户
     slots.value = [];
     selectedSlotId.value = null;
     slotsError.value = r.message;
     return;
   }
+  clearNoBrand();
+  slotsError.value = null;
   slots.value = r.value.slots ?? [];
   if (keepId != null && selectedSlotId.value === keepId) {
     const hit = slots.value.find((s) => s.slotId === keepId);
-    if (hit == null || !describeSlotAvailability(hit).clickable) selectedSlotId.value = null; // 已约满／已过时：取消选中，让用户重选
+    if (hit == null || !describeSlotAvailability(hit).clickable) {
+      selectedSlotId.value = null; // 已约满／已过时：取消选中，让用户重选
+      if (silent) toast("所选时段已约满，请重新选择");
+    }
+  }
+}
+
+/** 无品牌上下文：置位并（仅首次）查询 brand_hub 开关决定是否给「去入驻门店」入口 */
+function markNoBrand(): void {
+  if (noBrand.value) return;
+  noBrand.value = true;
+  const myEpoch = scopeEpoch;
+  void brandHubGate.isEnabled(ctxFactory.next()).then((on) => {
+    if (myEpoch === scopeEpoch && !disposed && noBrand.value) brandHubOn.value = on;
+  });
+}
+function clearNoBrand(): void {
+  noBrand.value = false;
+  brandHubOn.value = false;
+}
+
+function goBrandHub(): void {
+  hapticTap();
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") {
+    uni.navigateTo({ url: "/pages/brandHub/index" });
   }
 }
 
@@ -252,66 +322,184 @@ function stepGuestCount(delta: number): void {
   guestCount.value = next;
 }
 
-async function loadShopNameFallback(): Promise<void> {
-  if (shopName.value !== "" || shopId.value <= 0) return;
-  const r = await shopRepo.getShops(ctxFactory.next());
-  if (!r.ok) return;
-  const hit = r.value.find((s) => Number((s as Record<string, unknown>).id) === shopId.value);
-  const name = hit != null ? (hit as Record<string, unknown>).displayName : null;
-  if (typeof name === "string" && name !== "") shopName.value = name;
-}
-
-onLoad((options) => {
-  const raw = (options ?? {}) as Record<string, unknown>;
-  const idStr = typeof raw.shopId === "string" ? raw.shopId : String(raw.shopId ?? "");
-  const id = Number(idStr);
-  shopId.value = Number.isFinite(id) && id > 0 ? id : 0;
-  shopName.value = typeof raw.shopName === "string" ? safeDecodeURIComponent(raw.shopName) : "";
+onLoad(() => {
+  // tab 页不接收参数：query 里即使带了 shopId/shopName 也一律忽略
+  lastBrandId = versioned.loadBrandId() ?? "";
   void initialLoad();
 });
 
-/** 非法编码保持原样、不阻断进入（同 webview/priceList 口径） */
-function safeDecodeURIComponent(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
+onHide(() => {
+  wasHidden = true;
+});
+
+// 分享：tab 页分享出去的落地页是首页（/pages/index/index?brandId=…，首页 onLoad 消费 brandId 切到同一商家），
+// 不落回本 tab 页带参（tab 页不接收参数）。本页没有既有分享卡片键（ShareCardKey 仅 index/demoDetail/targetPhotoDetail），
+// 不新造配置键 ⇒ 标题取导航标题（商家名 · 到店预约），不设 imageUrl（微信按页面截图出卡片图）。
+onShareAppMessage(() => {
+  const brandId = versioned.loadBrandId() ?? "";
+  return {
+    title: navTitle.value,
+    path: "/pages/index/index" + (brandId !== "" ? "?brandId=" + encodeURIComponent(brandId) : ""),
+  };
+});
+// 朋友圈单页模式只能落到本页本身（微信不允许改 path），与首页同口径：只给标题，不带 query
+onShareTimeline(() => ({ title: navTitle.value }));
+
+onShow(() => {
+  // 第二个底部 Tab：自定义 tabBar 选中态由页面 onShow 同步（唯一必然触发的入口）
+  syncTabBarSelected(TAB_INDEX.booking);
+  const hidden = wasHidden;
+  wasHidden = false;
+  // tab 页常驻：品牌（商家）切换后再进入本页，必须整页重载（否则仍显示上一商家的档期与保证金规则）
+  const brandId = versioned.loadBrandId() ?? "";
+  if (brandId !== lastBrandId) {
+    lastBrandId = brandId;
+    resetForMerchantSwitch();
+    void initialLoad();
+    return;
+  }
+  // 首轮加载未完成／提交进行中：不叠加请求，也不动表单
+  if (!ready.value || submitting.value || disposed) return;
+  const now = new Date();
+  let reload = false;
+  if (submitSuccess.value) {
+    // 成功页：切走再回来（或超过 60s）回到可继续预约的表单态；否则原样保留
+    if (!shouldLeaveSuccessState({ nowMs: now.getTime(), successAt, wasHidden: hidden })) return;
+    leaveSuccessState();
+    reload = true; // 刚占掉的席位：表单态下非静默重拉余量
+  }
+  refreshOnShow(now, reload);
+});
+
+/**
+ * tab 页常驻后的刷新：跨日重建日期窗口并纠偏选中日期；到间隔则静默重拉档期与配置。
+ * 「是否重建／重拉」由 domain planBookingShowRefresh 判定（今天口径沿用 domain/booking 的本地自然日）。
+ */
+function refreshOnShow(now: Date, forceReload: boolean): void {
+  const plan = planBookingShowRefresh({
+    now,
+    windowFirstDate: dateWindow.value[0]?.date ?? "",
+    selectedDate: selectedDate.value,
+    lastRefreshAt,
+  });
+  if (plan.rebuildWindow) {
+    dateWindow.value = buildDateWindow(now);
+    selectedDateIndex.value = plan.selectedDateIndex;
+  }
+  if (plan.selectedDateChanged || forceReload) {
+    // 选中日期已被挤出窗口（已纠偏到今天）／刚离开成功页：旧档期与所选时段都不可再用 ⇒ 清掉并正常（带骨架）重拉
+    if (plan.selectedDateChanged) {
+      slots.value = [];
+      selectedSlotId.value = null;
+    }
+    void loadSlotsForSelectedDate();
+    silentRefreshConfig();
+    return;
+  }
+  if (plan.refetch) {
+    void loadSlotsForSelectedDate(true, true);
+    silentRefreshConfig();
   }
 }
 
-type ConfigLoadOutcome = { ok: true } | { ok: false; message: string };
-/** 在飞的配置请求（去重：初始加载／自动重试／提交时重取共用同一个请求，不并发） */
-let configInflight: Promise<ConfigLoadOutcome> | null = null;
-function fetchConfig(): Promise<ConfigLoadOutcome> {
-  if (configInflight != null) return configInflight;
-  configLoading.value = true;
-  configInflight = (async (): Promise<ConfigLoadOutcome> => {
-    try {
-      const r = await loadConfigUc.load(ctxFactory.next(), shopId.value);
-      if (r.ok) {
-        config.value = r.value;
-        configError.value = null;
-        return { ok: true };
-      }
-      config.value = null;
-      return { ok: false, message: r.message };
-    } finally {
-      configLoading.value = false;
-      configInflight = null;
-    }
-  })();
-  return configInflight;
+function silentRefreshConfig(): void {
+  fetchConfig(true).catch(() => undefined);
 }
 
-/** 首次加载 + 失败后静默自动重试（600ms／1500ms 两次）；重试用尽仍失败才展示错误卡片与「重试」入口（fail-closed 保持不变） */
+/** 离开成功页回到表单：清成功态；保留姓名/手机号/人数（沿用既有默认值口径同 backToForm），清掉所选时段、备注与保证金勾选 */
+function leaveSuccessState(): void {
+  submitSuccess.value = false;
+  submittedBookingId.value = null;
+  successAt = null;
+  selectedSlotId.value = null;
+  remark.value = "";
+  depositAgreed.value = false;
+}
+
+/** 品牌切换：清空与旧商家绑定的一切状态（档期、选中、配置、勾选、结果页），回到骨架 */
+function resetForMerchantSwitch(): void {
+  scopeEpoch += 1;
+  slotsSeq += 1; // 丢弃旧品牌在飞的档期响应
+  if (configRetryTimer != null) clearTimeout(configRetryTimer);
+  configRetryTimer = null;
+  configInflight = null;
+  ready.value = false;
+  config.value = null;
+  configError.value = null;
+  configLoading.value = false;
+  depositAgreed.value = false;
+  slots.value = [];
+  slotsLoading.value = false;
+  slotsError.value = null;
+  selectedSlotId.value = null;
+  selectedDateIndex.value = 0;
+  dateWindow.value = buildDateWindow();
+  submitSuccess.value = false;
+  submittedBookingId.value = null;
+  successAt = null;
+  wasHidden = false;
+  clearNoBrand();
+  brandHubGate.invalidate();
+  // 登录弹窗与挂起的提交属于上一商家：不清掉的话，切换后登录会补发上一品牌的提交（且未选时段误提示「请先选择到店时段」）
+  showLoginPopup.value = false;
+  pendingSubmit.value = false;
+}
+
+type ConfigLoadOutcome = { ok: true } | { ok: false; message: string; noBrand?: true };
+/** 在飞的配置请求（去重：初始加载／自动重试／提交时重取／静默重拉共用同一个请求，不并发） */
+let configInflight: Promise<ConfigLoadOutcome> | null = null;
+/** 保证金规则是否变化（用户已勾选的同意只对当时展示的规则有效） */
+function depositRuleChanged(a: BookingConfig, b: BookingConfig): boolean {
+  return JSON.stringify(a.deposit) !== JSON.stringify(b.deposit) || a.payHoldMinutes !== b.payHoldMinutes;
+}
+/** @param silent 静默重拉：不置 configLoading；失败保持旧配置（不置空、不写错误）；规则变化则作废已勾选的同意 */
+function fetchConfig(silent = false): Promise<ConfigLoadOutcome> {
+  if (configInflight != null) return configInflight;
+  if (!silent) configLoading.value = true;
+  const myEpoch = scopeEpoch;
+  const inflight = (async (): Promise<ConfigLoadOutcome> => {
+    try {
+      const r = await loadConfigUc.load(ctxFactory.next());
+      // 品牌已切换：旧商家的响应一律丢弃（不写 config、不写错误），由新一轮加载接管
+      if (myEpoch !== scopeEpoch) return { ok: false, message: "" };
+      if (r.ok) {
+        const prev = config.value;
+        config.value = r.value;
+        configError.value = null;
+        clearNoBrand();
+        if (prev != null && depositRuleChanged(prev, r.value)) depositAgreed.value = false;
+        return { ok: true };
+      }
+      if (r.noBrand === true) {
+        config.value = null;
+        markNoBrand();
+        return { ok: false, message: r.message, noBrand: true };
+      }
+      if (!silent) config.value = null;
+      return { ok: false, message: r.message };
+    } finally {
+      if (myEpoch === scopeEpoch) {
+        configLoading.value = false;
+        configInflight = null;
+      }
+    }
+  })();
+  configInflight = inflight;
+  return inflight;
+}
+
+/** 首次加载 + 失败后静默自动重试（600ms／1500ms 两次）；重试用尽仍失败才展示错误卡片与「重试」入口（fail-closed 保持不变）。
+ *  「无品牌上下文」是确定性业务错误：不重试、不展示配置错误卡片（档期区已有唯一一条提示） */
 async function loadConfig(attempt = 0): Promise<void> {
-  if (shopId.value <= 0 || disposed) return;
+  if (disposed) return;
+  const myEpoch = scopeEpoch;
   const r = await fetchConfig();
-  if (r.ok || disposed) return;
+  if (r.ok || disposed || myEpoch !== scopeEpoch) return;
+  if (r.noBrand === true) return;
   if (attempt < CONFIG_RETRY_DELAYS_MS.length) {
     configRetryTimer = setTimeout(() => {
       configRetryTimer = null;
-      if (disposed || config.value != null) return;
+      if (disposed || config.value != null || myEpoch !== scopeEpoch) return;
       void loadConfig(attempt + 1);
     }, CONFIG_RETRY_DELAYS_MS[attempt]);
     return;
@@ -330,13 +518,16 @@ function toggleDepositAgree(): void {
 }
 
 async function initialLoad(): Promise<void> {
-  // 缺 shopId：无法定位门店，停在空态由用户返回（不发任何请求）
-  if (shopId.value > 0) await Promise.all([loadShopNameFallback(), loadSlotsForSelectedDate(), loadConfig()]);
-  ready.value = true;
+  const myEpoch = scopeEpoch;
+  await Promise.all([loadSlotsForSelectedDate(), loadConfig()]);
+  if (myEpoch === scopeEpoch) ready.value = true; // 期间若又切了品牌，由新一轮 initialLoad 置位
 }
 
-function goBack(): void {
-  if (typeof uni !== "undefined" && typeof uni.navigateBack === "function") uni.navigateBack();
+/** 结果页「继续预约」：回到表单（tab 页没有上一页可返回）；保留已填的姓名/手机号，清掉所选时段并刷新余量 */
+function backToForm(): void {
+  hapticTap();
+  leaveSuccessState();
+  void loadSlotsForSelectedDate();
 }
 
 // —— 提交 ——
@@ -372,6 +563,10 @@ async function doSubmit(resumed = false): Promise<void> {
     }
     if (disposed) return;
     if (!r.ok) {
+      if (r.noBrand === true) {
+        toast(r.message);
+        return;
+      }
       configError.value = r.message;
       toast(r.message !== "" ? r.message : "预约规则加载失败，请重试");
       return;
@@ -398,7 +593,6 @@ async function doSubmit(resumed = false): Promise<void> {
     // 注意：此处到 depositSubmit.submit 的同步调用链内**不得出现 await**：订阅授权（wx.requestSubscribeMessage）必须在点击手势的同步调用栈内触发
     const outcome = await depositSubmit.submit(
       {
-        shopId: shopId.value,
         slotId: selectedSlotId.value,
         date: selectedDate.value,
         customerName: String(customerName.value ?? ""),
@@ -449,6 +643,8 @@ async function doSubmit(resumed = false): Promise<void> {
 function showResult(bookingId: number, title = "预约已提交", desc = "预约已提交，等待门店确认。可在「我的预约」查看进度", cta = "查看我的预约"): void {
   submitSuccess.value = true;
   submittedBookingId.value = bookingId;
+  successAt = Date.now();
+  wasHidden = false; // 只认成功之后的切走（支付拉起/返回造成的隐藏发生在成功之前，不算）
   resultTitle.value = title;
   resultDesc.value = desc;
   resultCta.value = cta;
@@ -536,25 +732,22 @@ async function onGetPhoneNumber(e: unknown): Promise<void> {
 
 function goMyBookings(): void {
   hapticTap();
-  if (typeof uni !== "undefined" && typeof uni.redirectTo === "function") {
-    uni.redirectTo({ url: "/pages/myBookings/index" });
+  // tab 页不能 redirectTo 掉自己（会销毁 tab 页、返回无路）⇒ navigateTo，用户在「我的预约」点返回仍回到本 Tab
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") {
+    uni.navigateTo({ url: "/pages/myBookings/index" });
   }
 }
 </script>
 
 <template>
   <view class="container">
-    <CustomNavBar :title="shopName !== '' ? shopName + ' · 到店预约' : '到店预约'" :manual-back="true" @back="goBack" />
+    <!-- tab 页：栈深为 1 ⇒ 组件自身不渲染返回键，无需 manual-back -->
+    <CustomNavBar :title="navTitle" />
 
     <view v-if="!ready" class="sk-wrap">
       <SkeletonBlock width="100%" height="88rpx" radius="16rpx" />
       <view class="sk-gap"></view>
       <SkeletonBlock width="100%" height="320rpx" radius="16rpx" />
-    </view>
-
-    <view v-else-if="shopId <= 0" class="empty-state">
-      <view class="empty-title">门店信息缺失</view>
-      <view class="empty-desc">请从门店页重新进入</view>
     </view>
 
     <template v-else-if="submitSuccess">
@@ -564,7 +757,7 @@ function goMyBookings(): void {
         <view class="btn-primary success-btn my-bookings-btn" hover-class="press-dim" @click="goMyBookings">
           <text>{{ resultCta }}</text>
         </view>
-        <view class="success-back" hover-class="press-dim" @click="goBack">返回</view>
+        <view class="success-back" hover-class="press-dim" @click="backToForm">继续预约</view>
       </view>
     </template>
 
@@ -587,7 +780,13 @@ function goMyBookings(): void {
 
       <view class="section">
         <view class="section-title">选择时段</view>
-        <view v-if="slotsLoading" class="slot-grid">
+        <view v-if="noBrand" class="slot-error">
+          <text class="slot-error-text">{{ NO_BRAND_TEXT }}</text>
+          <view v-if="brandHubOn" class="btn-secondary retry-btn go-brand-hub-btn" hover-class="press-dim" @click="goBrandHub">
+            <text>去入驻门店</text>
+          </view>
+        </view>
+        <view v-else-if="slotsLoading" class="slot-grid">
           <SkeletonBlock v-for="i in 6" :key="i" width="31%" height="96rpx" radius="12rpx" />
         </view>
         <view v-else-if="slotsError !== null" class="slot-error">
@@ -640,7 +839,16 @@ function goMyBookings(): void {
         </view>
         <view class="form-row form-row-remark">
           <text class="form-label">备注</text>
-          <textarea class="form-textarea" v-model="remark" placeholder="选填，如特殊需求" maxlength="255" />
+          <!-- auto-height：默认单行紧凑、内容多时自增高（CSS max-height 封顶后内部滚动）；
+               disable-default-padding：去掉 iOS 默认内边距，使 placeholder 与「备注」label 顶对齐 -->
+          <textarea
+            class="form-textarea"
+            v-model="remark"
+            placeholder="选填，如特殊需求"
+            maxlength="255"
+            auto-height
+            :disable-default-padding="true"
+          />
         </view>
       </view>
 
@@ -664,7 +872,7 @@ function goMyBookings(): void {
         </view>
       </view>
       <!-- 配置拉取失败（fail-closed）：不允许在未明示规则的情况下提交，给出重试入口 -->
-      <view v-else-if="configError !== null" class="section deposit-card">
+      <view v-else-if="configError !== null && !noBrand" class="section deposit-card">
         <text class="deposit-line-text">{{ configError }}</text>
         <view class="btn-secondary config-retry-btn" hover-class="press-dim" @click="onRetryConfig">
           <text>重试</text>
@@ -681,6 +889,8 @@ function goMyBookings(): void {
         </view>
       </view>
     </template>
+    <!-- 自定义底部 tabbar 占位（全局类在 App.vue：116rpx + 安全区）；本页仅微信注册，恒为自绘 tabBar，无需按端判断 -->
+    <view class="tabbar-safe-spacer"></view>
 
     <LoginPopup
       v-if="showLoginPopup"
@@ -803,7 +1013,12 @@ function goMyBookings(): void {
 }
 .form-row-remark {
   align-items: flex-start;
-  padding-top: 20rpx;
+  // 上下各 24rpx：与单行 form-row（92rpx 内居中 44rpx 行高 ⇒ 顶部 24rpx）的文字起点一致
+  padding: 24rpx 0;
+}
+.form-row-remark .form-label {
+  // 与 textarea 同为 44rpx 行高，保证 label 与 placeholder/首行文字基线对齐
+  line-height: 44rpx;
 }
 .form-label {
   width: 160rpx;
@@ -819,7 +1034,10 @@ function goMyBookings(): void {
 }
 .form-textarea {
   flex: 1;
-  min-height: 120rpx;
+  // 默认约一行半（auto-height 下 height 不生效，由 min/max-height 约束）；超过 200rpx 在控件内部滚动
+  min-height: 64rpx;
+  max-height: 200rpx;
+  line-height: 44rpx;
 
   font-size: $font-size-body;
   color: $color-text-primary;
@@ -948,23 +1166,6 @@ function goMyBookings(): void {
 .config-retry-btn {
   margin-top: 16rpx;
   box-sizing: border-box;
-}
-.empty-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 200rpx 32rpx;
-}
-.empty-title {
-  font-size: $font-size-sub-title;
-  color: rgba(255, 255, 255, 0.5);
-  margin-bottom: 16rpx;
-}
-.empty-desc {
-  font-size: $font-size-caption;
-  color: rgba(255, 255, 255, 0.3);
 }
 .success-wrap {
   flex: 1;

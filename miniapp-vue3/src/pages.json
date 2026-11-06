@@ -107,7 +107,7 @@
 				// #ifdef MP-WEIXIN
 				"navigationStyle": "custom",
 				// #endif
-				"navigationBarTitleText": "品牌馆"
+				"navigationBarTitleText": "入驻门店"
 			}
 		},
 		{
@@ -230,6 +230,14 @@
 				"selectedIconPath": "static/home-bar.png",
 				"text": "首页"
 			},
+			// 2026-11-06 到店预约第二 Tab（仅微信：自绘 custom-tab-bar 渲染，图标见 custom-tab-bar/index.js；
+			// 此条目不带 iconPath——custom:true 下原生图标不显示）。抖音/小红书不注册预约页，原生 tabBar 列表保持原状。
+			// #ifdef MP-WEIXIN
+			{
+				"pagePath": "pages/booking/index",
+				"text": "到店预约"
+			},
+			// #endif
 			// #ifndef MP-TOUTIAO
 			{
 				"pagePath": "pages/priceHomePage/index",

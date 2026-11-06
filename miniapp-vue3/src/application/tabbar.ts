@@ -2,6 +2,19 @@
 // 微信官方模式＝tab 页 onShow 经 getTabBar() 拿本页实例；webview 渲染器下自定义 tabbar
 // 位于独立元素树、pageLifetimes 很可能收不到 ⇒ **页面 onShow 是唯一必然入口**。
 // 抖音端为原生 tabBar（pages.json custom 条件编译仅微信），本调用安全无害（getTabBar 不存在即返回）。
+//
+// 下标语义（2026-11-06「到店预约」第二 Tab）：**下标只对微信自绘 custom-tab-bar 有意义**（pages.json 的
+// `tabBar.custom` 仅在 `#ifdef MP-WEIXIN` 内）——微信四项：首页 0、到店预约 1、价目表 2、我的 3。
+// 抖音为原生 tabBar（列表仅「首页、我的」，页面实例无 getTabBar）⇒ 本函数在抖音端恒为静默空操作，
+// 页面里传的下标不会被消费，因此各页**统一传 TAB_INDEX 常量（微信口径）**，不为抖音单设下标。
+// 一致性由 tests/unit/tab-bar-consistency.spec.ts 固定（pages.json 微信四项 ≡ custom-tab-bar 列表 ≡ 本常量）。
+export const TAB_INDEX = {
+  home: 0,
+  booking: 1,
+  price: 2,
+  mine: 3,
+} as const;
+
 export function syncTabBarSelected(index: number): void {
   try {
     if (typeof getCurrentPages !== "function") return;

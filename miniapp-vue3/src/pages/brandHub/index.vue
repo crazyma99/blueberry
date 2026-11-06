@@ -133,7 +133,7 @@ function enterBrand(b: BrandBrief): void {
 
 <template>
   <view class="container">
-    <CustomNavBar title="品牌馆" />
+    <CustomNavBar title="入驻门店" />
     <view class="brand-hub">
       <view class="hub-aura"></view>
 

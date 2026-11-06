@@ -32,6 +32,10 @@ const h = vi.hoisted(() => ({
 vi.mock("../../src/application/haptics", () => ({ hapticTap: () => undefined }));
 vi.mock("@dcloudio/uni-app", () => ({
   onLoad: (fn: (o?: Record<string, unknown>) => void) => h.onLoadCalls.push(fn),
+  onShow: () => undefined,
+  onHide: () => undefined,
+  onShareAppMessage: () => undefined,
+  onShareTimeline: () => undefined,
 }));
 
 vi.mock("../../src/platform/weixin/capabilities", () => ({
@@ -63,7 +67,7 @@ vi.mock("../../src/application/booking-deposit-pay", async (orig) => {
 
 vi.mock("../../src/infrastructure/repositories/bookings", () => ({
   createBookingRepository: () => ({
-    getSlots: async (_c: unknown, _shopId: number, date: string) => {
+    getMerchantSlots: async (_c: unknown, date: string) => {
       h.slotCalls += 1;
       return {
         ok: true,
@@ -73,7 +77,7 @@ vi.mock("../../src/infrastructure/repositories/bookings", () => ({
         },
       };
     },
-    getBookingConfig: async () => {
+    getMerchantBookingConfig: async () => {
       h.configCalls += 1;
       const r = typeof h.configResult === "function" ? (h.configResult as () => unknown)() : h.configResult;
       return r as never;
@@ -90,9 +94,6 @@ vi.mock("../../src/infrastructure/repositories/bookings", () => ({
     listBookings: async () => ({ ok: true, value: { list: [], total: 0, page: 1, pageSize: 20 } }),
     cancelBooking: async () => ({ ok: true, value: {} }),
   }),
-}));
-vi.mock("../../src/infrastructure/repositories/shops", () => ({
-  createShopRepository: () => ({ getShops: async () => ({ ok: true, value: [{ id: 1, displayName: "红河水乡店" }] }) }),
 }));
 vi.mock("../../src/application/login-flow", () => ({
   createPhoneLoginFlow: () => ({
@@ -128,7 +129,7 @@ function depositView(status: string, extra: Anyobj = {}): Anyobj {
 }
 function bookingView(status: string, deposit: Anyobj | null, extra: Anyobj = {}): Anyobj {
   return {
-    id: 9, shopId: 1, shopName: "红河水乡店", slotId: 1, startTime: "10:00", endTime: "11:00", date: "2026-11-05",
+    id: 9, shopId: 0, merchantId: 7, shopName: "红河水乡店", slotId: 1, startTime: "10:00", endTime: "11:00", date: "2026-11-05",
     customerName: "张三", customerPhone: "13800138000", guestCount: 2, remark: "", status, channel: "wx", createTime: "", deposit, ...extra,
   };
 }
@@ -203,7 +204,7 @@ afterEach(() => {
 
 async function mountPage() {
   const w = track(mount(BookingPage, { global: GLOBAL }));
-  h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "1" });
+  h.onLoadCalls[h.onLoadCalls.length - 1]({});
   await flush();
   await w.vm.$nextTick();
   return w;
@@ -212,7 +213,7 @@ async function mountPage() {
 async function mountFake() {
   vi.useFakeTimers();
   const w = track(mount(BookingPage, { global: GLOBAL }));
-  h.onLoadCalls[h.onLoadCalls.length - 1]({ shopId: "1" });
+  h.onLoadCalls[h.onLoadCalls.length - 1]({});
   await vi.advanceTimersByTimeAsync(10);
   await w.vm.$nextTick();
   return w;
@@ -369,7 +370,9 @@ describe("开启保证金：提交流程顺序与结果", () => {
     const cta = w.find(".my-bookings-btn");
     expect(cta.text()).toBe("去我的预约");
     await cta.trigger("click");
-    expect(h.redirectCalls).toEqual(["/pages/myBookings/index"]);
+    // tab 页不能 redirectTo 掉自己：用 navigateTo 进入「我的预约」，返回仍回到本 Tab
+    expect(h.navCalls).toContain("/pages/myBookings/index");
+    expect(h.redirectCalls).toEqual([]);
   });
 
   it("支付失败同样保留预约并提示继续支付", async () => {

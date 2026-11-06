@@ -33,7 +33,7 @@ const pay = {
 
 function bk(depositStatus: DepositStatus | null, status: BookingView["status"] = "awaiting_payment"): BookingView {
   return {
-    id: 1, shopId: 1, shopName: "s", slotId: 1, startTime: "", endTime: "", date: "2026-11-05",
+    id: 1, shopId: 0, merchantId: 7, shopName: "s", slotId: 1, startTime: "", endTime: "", date: "2026-11-05",
     customerName: "x", customerPhone: "13800138000", guestCount: 1, remark: "", status, channel: "wx", createTime: "",
     deposit: depositStatus == null ? null : { status: depositStatus, amountFen: 5000, refundFen: 0, forfeitFen: 0, payExpireTime: "", settleReason: "" },
   };

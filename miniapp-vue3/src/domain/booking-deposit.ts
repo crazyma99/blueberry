@@ -67,8 +67,10 @@ export interface DepositRuleView {
   refundTrigger: RefundTrigger;
 }
 
-/** 门店预约配置（§10.3 GET /api/shops/:id/booking-config 整体） */
+/** 商家预约配置（§10.3 booking-config 整体；2026-11-06 起取自 GET /api/booking/config，旧 GET /api/shops/:id/booking-config 形态相同但无 merchantName） */
 export interface BookingConfig {
+  /** 商家名（导航标题「{merchantName} · 到店预约」用；服务端缺失/旧接口为 ""） */
+  merchantName: string;
   deposit: DepositRuleView;
   /** 待支付保留分钟数（5..30） */
   payHoldMinutes: number;
