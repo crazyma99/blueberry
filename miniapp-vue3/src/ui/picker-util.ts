@@ -18,6 +18,9 @@ export interface PickerOption {
 /** BasePicker 弹层默认层级：高于业务 sheet（2000），否则从 sheet 内打开的选择器会被压在下面 */
 export const PICKER_Z_INDEX = 2100;
 
+/** pickstart 后超过该时长仍未收到 pickend（事件丢失/手势被打断）⇒ 自动复位 picking，避免「确定」永远被挂起 */
+export const PICKING_WATCHDOG_MS = 800;
+
 /** 在 options 里按值找项（宽松比较：数字/字符串同值视为相等，与 wot 的 toString 比较口径一致） */
 function findByValue(list: readonly PickerOption[], value: string | number | undefined): PickerOption | undefined {
   if (value === undefined || value === null) return undefined;

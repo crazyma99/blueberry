@@ -11,11 +11,11 @@
 //  · 层级：默认 z-index 2100 ＞ 业务 sheet 2000 ＞ BasePopup 默认 1001 ＞ CustomNavBar 998（wd-picker 默认仅 15）。
 //  · 抖音端：自绘底部面板（纯 view+fixed，不经 wot 组件链），同合同；级联用左右两列（一级/二级）。
 //  对外合同：confirm(values, labels)——第二个参数（label 路径）可选，旧调用方只收第一个参数不受影响；cancel/clear/update:show 语义不变。
-import { computed, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import { isToutiaoPlatform } from "./ui-platform";
 import { hapticTap } from "../application/haptics";
 import BasePopup from "./BasePopup.vue";
-import { PICKER_VIEW_THEME_STYLE, PICKER_Z_INDEX, childrenOfValue, completeCascadePath, labelsOfPath, type PickerOption } from "./picker-util";
+import { PICKER_VIEW_THEME_STYLE, PICKER_Z_INDEX, PICKING_WATCHDOG_MS, childrenOfValue, completeCascadePath, labelsOfPath, type PickerOption } from "./picker-util";
 
 const props = withDefaults(
   defineProps<{
@@ -83,6 +83,23 @@ const viewRef = ref<PickerViewExpose | null>(null);
 const pickerValue = ref<(string | number)[]>([]);
 const picking = ref(false);
 let pendingConfirm = false;
+/**
+ * 每次打开自增，作为 <wd-picker-view :key> —— 让滚轮视图**整体重建**。
+ * 为什么必须重建：wd-popup/wd-transition 关闭时只是 display:none，**子节点不销毁**；wd-picker-view 的 watch 只在 columns 内容变化时才
+ * resetColumns/buildCascadeColumns，否则仅 selectWithValue(modelValue)——沿用上次滚动后 updateCascadeColumns 留下的**旧列**。
+ * 级联「滚到另一个一级 → 取消 → 重开」时，二级列仍是别的一级的子项，受控值在旧列里找不到而回退到第 0 行，确定即回传错位路径；
+ * 单列模式「滚动 → 取消 → 重开」选中行也不会回到受控值。重建后先有 columns、再有 modelValue（同一次 watch 里先赋 pickerValue 再自增 key），
+ * wd-picker-view 的 immediate watch 即按全新列初始化。picking/pendingConfirm/兜底计时器同步重置。
+ */
+const openToken = ref(0);
+let pickWatchdog: ReturnType<typeof setTimeout> | null = null;
+function clearWatchdog() {
+  if (pickWatchdog !== null) {
+    clearTimeout(pickWatchdog);
+    pickWatchdog = null;
+  }
+}
+onUnmounted(clearWatchdog);
 
 function initialValue(): (string | number)[] {
   return props.cascade ? completeCascadePath(props.options, props.modelValue) : [...props.modelValue];
@@ -91,10 +108,14 @@ watch(
   () => props.show,
   (visible) => {
     if (!visible) return;
+    clearWatchdog();
     picking.value = false;
     pendingConfirm = false;
     if (useNative) draft.value = initialValue();
-    else pickerValue.value = initialValue();
+    else {
+      pickerValue.value = initialValue();
+      openToken.value++; // 整体重建滚轮视图（见 openToken 注释）
+    }
   },
   { immediate: true },
 );
@@ -117,8 +138,20 @@ function onConfirm() {
 }
 function onPickStart() {
   picking.value = true;
+  clearWatchdog();
+  // 兜底：pickend 丢失时不让 picking 卡死（卡死 ⇒ 「确定」被无限挂起、用户以为按钮失灵）
+  pickWatchdog = setTimeout(() => {
+    pickWatchdog = null;
+    if (!picking.value) return;
+    picking.value = false;
+    if (pendingConfirm) {
+      pendingConfirm = false;
+      onConfirm();
+    }
+  }, PICKING_WATCHDOG_MS);
 }
 function onPickEnd() {
+  clearWatchdog();
   picking.value = false;
   if (pendingConfirm) {
     pendingConfirm = false;
@@ -155,6 +188,7 @@ const nativeRight = computed(() => (props.cascade ? childrenOfValue(props.option
           <view class="base-picker-sheet__btn" hover-class="press-dim" @click="onConfirm"><text class="base-picker-sheet__btn-text base-picker-sheet__btn-text--ok">确定</text></view>
         </view>
         <wd-picker-view
+          :key="openToken"
           ref="viewRef"
           v-model="pickerValue"
           :columns="columns"
