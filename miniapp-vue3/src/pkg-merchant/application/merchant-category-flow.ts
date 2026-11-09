@@ -14,6 +14,7 @@ import {
   type MerchantCategory,
 } from "../domain/merchant-category";
 import { isPositiveId } from "../domain/merchant-http";
+import { buildCategoryTree, type CategoryTreeNode } from "../domain/merchant-category-tree";
 import { hasPermission, PERM, type MerchantProfile } from "../domain/merchant-auth";
 import { createExclusive, failFrom, type FlowFail } from "./merchant-flow-common";
 
@@ -38,6 +39,23 @@ export function createCategoryUseCases(deps: { categories: CatRepo; albums: Albu
       const r = await deps.categories.listSubs(context, parentId);
       if (!r.ok) return failFrom(r.error, "子分类加载失败，请重试");
       return { ok: true, list: sortCategories(r.value) };
+    },
+
+    /**
+     * 加载整棵分类树（相册页选分类/筛选用）：一级 + 每个一级的二级（get-by-parent，逐个串行）。
+     * 任何一次失败整体失败（不返回半棵树，否则相册会被误判「无分类可选」）。
+     */
+    async loadTree(context: RequestContext, shopId: number): Promise<{ ok: true; tree: CategoryTreeNode[] } | FlowFail> {
+      if (!isPositiveId(shopId)) return { ok: false, kind: "validation", message: "请先选择系列" };
+      const ps = await deps.categories.listParents(context, shopId);
+      if (!ps.ok) return failFrom(ps.error, "分类加载失败，请重试");
+      const subsByParent: Record<number, MerchantCategory[]> = {};
+      for (const p of ps.value) {
+        const ss = await deps.categories.listSubs(context, p.id);
+        if (!ss.ok) return failFrom(ss.error, "分类加载失败，请重试");
+        subsByParent[p.id] = ss.value;
+      }
+      return { ok: true, tree: buildCategoryTree(ps.value, subsByParent) };
     },
 
     createParent(context: RequestContext, input: { shopId: number; name: string; sortOrder: string | number }) {

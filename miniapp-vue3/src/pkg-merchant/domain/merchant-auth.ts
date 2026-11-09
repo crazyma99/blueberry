@@ -78,6 +78,7 @@ export const MERCHANT_ENTRIES: readonly MerchantEntry[] = [
   { key: "booking", title: "预约管理", desc: "接单、核销、取消客人预约", url: "/pkg-merchant/booking/list", perm: PERM.booking },
   { key: "slot", title: "档期管理", desc: "新增时段、调整容量、启停、套用模板", url: "/pkg-merchant/slot/list", perm: PERM.bookingSlot },
   { key: "category", title: "分类管理", desc: "一级/二级分类的新增、改名、排序、删除", url: "/pkg-merchant/category/list", perm: PERM.category },
+  { key: "album", title: "相册管理", desc: "相册与图片：新建、封面、批量上传、排序、删除", url: "/pkg-merchant/album/list", perm: PERM.album },
 ];
 
 /** 按权限过滤后的功能入口 */

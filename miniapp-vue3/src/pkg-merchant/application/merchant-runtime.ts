@@ -15,6 +15,12 @@ import { createMerchantSession, type MerchantSession } from "./merchant-session"
 
 let instance: MerchantSession | null = null;
 
+/** 接口根地址（运行时按小程序版本自动分流；与 transport 同口径，去尾斜杠）——multipart 上传需要绝对地址 */
+export function merchantApiBase(): string {
+  const env = resolveRuntimeEnvironment(PROFILE.environment);
+  return PROFILE.apiBases[env].replace(/\/+$/, "");
+}
+
 export function getMerchantRuntime(): MerchantSession {
   if (instance != null) return instance;
   const detected = detectUiPlatform();

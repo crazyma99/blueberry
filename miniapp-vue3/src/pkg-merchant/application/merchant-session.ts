@@ -155,6 +155,8 @@ export function createMerchantSession(deps: {
     /** 每次请求取新上下文（brandId 恒 null） */
     nextContext: (): RequestContext => ctxFactory.next(),
     getState,
+    /** 当前商家会话 token（上传等 multipart 请求手工带 Authorization 用）；未登录/会话缺失 ⇒ ""。只读商家命名空间，不碰 C 端会话 */
+    getToken: (): string => readSession()?.token ?? "",
     login,
     logout,
     /** 仅供测试断言隔离键名 */

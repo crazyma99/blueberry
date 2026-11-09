@@ -263,6 +263,15 @@
 						"enablePullDownRefresh": true,
 						"backgroundTextStyle": "light"
 					}
+				},
+				{
+					"path": "album/list",
+					"style": {
+						"navigationStyle": "custom",
+						"navigationBarTitleText": "相册管理",
+						"enablePullDownRefresh": true,
+						"backgroundTextStyle": "light"
+					}
 				}
 			]
 		}

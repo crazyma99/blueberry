@@ -336,7 +336,9 @@ describe("工作台入口 / 页面接线（源码级）", () => {
   it("预约入口按 booking 权限显隐", () => {
     expect(MERCHANT_ENTRIES.map((e) => e.key)).toContain("booking");
     expect(visibleEntries({ permissions: ["booking"] }).map((e) => e.key)).toEqual(["booking"]);
-    expect(visibleEntries({ permissions: ["album"] })).toEqual([]);
+    // 无关权限不显示预约入口（相册入口随 M2 出现，所以不再断言整体为空，只断言「不含预约」）
+    expect(visibleEntries({ permissions: ["album"] }).map((e) => e.key)).not.toContain("booking");
+    expect(visibleEntries({ permissions: ["unrelated"] })).toEqual([]);
     expect(visibleEntries(null)).toEqual([]);
   });
   it("页面：取消走 BaseDialog 确认、拨号走 platform dialer、不直调 uni.makePhoneCall / wx.*", () => {
