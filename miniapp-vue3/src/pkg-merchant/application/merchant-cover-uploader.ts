@@ -5,7 +5,7 @@
 // 认证用商家会话 token（由调用方注入）。纯编排，依赖全部注入，便于单测。
 import type { UploadPort } from "../../ports/upload";
 import type { ImageCompressPort } from "../../platform/weixin/image-compress";
-import { COMPRESS_FAIL_TEXT, MERCHANT_UPLOAD_TIMEOUT_MS, UPLOAD_NETWORK_TEXT, UPLOAD_TIMEOUT_TEXT } from "../domain/merchant-upload";
+import { COMPRESS_FAIL_TEXT, MERCHANT_UPLOAD_TIMEOUT_MS, uploadFailText } from "../domain/merchant-upload";
 import { isPositiveId } from "../domain/merchant-http";
 
 export type CoverUploadResult =
@@ -60,7 +60,7 @@ export function createCoverUploader(deps: {
         timeoutMs: MERCHANT_UPLOAD_TIMEOUT_MS,
         onProgress,
       });
-      if (!res.ok) return { ok: false, kind: "network", message: res.reason === "timeout" ? UPLOAD_TIMEOUT_TEXT : UPLOAD_NETWORK_TEXT };
+      if (!res.ok) return { ok: false, kind: "network", message: uploadFailText(res.reason) };
       const p = parseCoverResponse(res.value.statusCode, res.value.data);
       if (!p.ok) {
         if (p.authExpired) {

@@ -86,7 +86,14 @@ export function parseUploadResponse(statusCode: number, body: string): { ok: tru
 export const UPLOAD_SILENT_DROP_TEXT = "服务器未接收该图片（可能格式不支持或体积超限），请换一张或重试";
 export const UPLOAD_NETWORK_TEXT = "网络不稳定，上传失败，可点击重试";
 export const UPLOAD_TIMEOUT_TEXT = "上传超时，可点击重试";
-export const UPLOAD_DOMAIN_HINT = "上传域名未配置：请联系管理员在小程序后台「服务器域名 → uploadFile 合法域名」中添加";
+/** 微信 uploadFile 域名未配置（errMsg 含 "url not in domain list" 等，端口层归为 reason "domain"）。重试无意义，需管理员处理 */
+export const UPLOAD_DOMAIN_HINT = "上传域名未配置，请联系管理员在小程序后台添加 uploadFile 合法域名";
+/** 上传端口失败原因 → 商家可读文案（timeout / domain / 其余按网络） */
+export function uploadFailText(reason: string): string {
+  if (reason === "timeout") return UPLOAD_TIMEOUT_TEXT;
+  if (reason === "domain") return UPLOAD_DOMAIN_HINT;
+  return UPLOAD_NETWORK_TEXT;
+}
 export const COMPRESS_FAIL_TEXT = "图片处理失败（格式不支持或过大），请换一张";
 export const PICK_FAIL_TEXT = "选择图片失败，请检查相册权限后重试";
 

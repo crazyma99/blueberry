@@ -21,6 +21,15 @@ function uniApi<T>(): T | undefined {
   return typeof uni !== "undefined" ? (uni as unknown as T) : undefined;
 }
 
+/**
+ * 微信 uploadFile 的「域名未配置」类失败（errMsg 形如 "uploadFile:fail url not in domain list"；开发者工具/不同基础库另有中文变体）。
+ * 单独识别为 reason "domain"：该失败重试无意义，需管理员在小程序后台添加 uploadFile 合法域名；
+ * 既有调用方只区分 "timeout"，其余一律按网络失败处理 ⇒ 新增 reason 对它们零影响。
+ */
+export function isUploadDomainNotConfigured(errMsg: string): boolean {
+  return /not in domain list|domain list|合法域名|不在.*域名/i.test(errMsg);
+}
+
 export function createUniUpload(deps?: { defaultTimeoutMs?: number }): UploadPort {
   const defaultTimeoutMs = deps?.defaultTimeoutMs ?? DEFAULT_UPLOAD_TIMEOUT_MS;
   let task: { abort?: () => void } | null = null;
@@ -65,7 +74,7 @@ export function createUniUpload(deps?: { defaultTimeoutMs?: number }): UploadPor
               task = null;
               // 超时与普通网络失败区分（页面可给「上传超时，请重试」而非笼统失败）
               const msg = typeof (err as { errMsg?: unknown } | undefined)?.errMsg === "string" ? String((err as { errMsg: string }).errMsg) : "";
-              resolve({ ok: false, reason: msg.includes("timeout") ? "timeout" : "network" });
+              resolve({ ok: false, reason: msg.includes("timeout") ? "timeout" : isUploadDomainNotConfigured(msg) ? "domain" : "network" });
             },
           }) as { abort?: () => void; onProgressUpdate?: (cb: (res: { progress?: number }) => void) => void } | undefined;
           // PRD R18：挂进度回调（容器不支持则静默跳过；回调异常绝不影响上传本身）

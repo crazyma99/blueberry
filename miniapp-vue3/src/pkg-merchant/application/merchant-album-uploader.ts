@@ -19,7 +19,7 @@ import {
   MERCHANT_UPLOAD_TIMEOUT_MS,
   UPLOAD_NETWORK_TEXT,
   UPLOAD_SILENT_DROP_TEXT,
-  UPLOAD_TIMEOUT_TEXT,
+  uploadFailText,
   parseUploadResponse,
   type UploadQueueItem,
 } from "../domain/merchant-upload";
@@ -117,7 +117,7 @@ export function createAlbumUploader(deps: AlbumUploaderDeps): AlbumUploader {
     const res: Result<UploadResponse> = await deps.upload.upload(req);
     if (cancelled) return;
     if (!res.ok) {
-      patch(item.key, { status: "failed", error: res.reason === "timeout" ? UPLOAD_TIMEOUT_TEXT : UPLOAD_NETWORK_TEXT, failedAt: "upload" });
+      patch(item.key, { status: "failed", error: uploadFailText(res.reason), failedAt: "upload" });
       return;
     }
     const parsed = parseUploadResponse(res.value.statusCode, res.value.data);
