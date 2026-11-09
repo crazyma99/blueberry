@@ -254,6 +254,15 @@
 						"enablePullDownRefresh": true,
 						"backgroundTextStyle": "light"
 					}
+				},
+				{
+					"path": "category/list",
+					"style": {
+						"navigationStyle": "custom",
+						"navigationBarTitleText": "分类管理",
+						"enablePullDownRefresh": true,
+						"backgroundTextStyle": "light"
+					}
 				}
 			]
 		}

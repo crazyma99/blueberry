@@ -85,7 +85,8 @@ export function createMerchantSession(deps: {
     try {
       const p = JSON.parse(raw) as MerchantProfile | null;
       if (p == null || typeof p.merchantId !== "number" || !Array.isArray(p.permissions)) return null;
-      return p;
+      // 兼容升级前落盘的旧资料（没有 shopList）：缺失/畸形 ⇒ []，不要求重新登录
+      return { ...p, shopList: Array.isArray((p as { shopList?: unknown }).shopList) ? p.shopList : [] };
     } catch {
       return null;
     }

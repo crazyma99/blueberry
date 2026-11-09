@@ -109,7 +109,7 @@ describe("首页下拉刷新 · 配置（pages.json）", () => {
 
   it("开启范围＝6 页（首页＋客片列表＋客片详情＋AI试衣记录＋价目表＋我的预约；2026-09-21 主人点名扩围，到店预约 MVP 新增我的预约页）", () => {
     // 商家端分包（issue #14）的下拉刷新页单独计数、逐个点名——C 端范围仍锁死为 6 页，新增 C 端页仍会被这里拦住
-    const MERCHANT_PULL_PAGES = ["booking/list", "slot/list"];
+    const MERCHANT_PULL_PAGES = ["booking/list", "slot/list", "category/list"];
     const merchantPart = pagesJson.slice(pagesJson.indexOf('"subPackages"'), pagesJson.indexOf('"tabBar"'));
     expect((merchantPart.match(/"enablePullDownRefresh"/g) ?? []).length).toBe(MERCHANT_PULL_PAGES.length);
     for (const mp of MERCHANT_PULL_PAGES) {

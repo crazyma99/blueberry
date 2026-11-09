@@ -37,6 +37,8 @@ export const PERM = {
   booking: "booking",
   bookingSlot: "booking_slot",
   bookingSlotTemplate: "booking_slot_template",
+  category: "category",
+  album: "album",
 } as const;
 
 export type RoleGate = { ok: true } | { ok: false; message: string };
@@ -64,7 +66,7 @@ export function canApplySlotTemplate(profile: Pick<MerchantProfile, "permissions
 }
 
 export interface MerchantEntry {
-  key: "booking" | "slot";
+  key: "booking" | "slot" | "category" | "album";
   title: string;
   desc: string;
   url: string;
@@ -75,6 +77,7 @@ export interface MerchantEntry {
 export const MERCHANT_ENTRIES: readonly MerchantEntry[] = [
   { key: "booking", title: "预约管理", desc: "接单、核销、取消客人预约", url: "/pkg-merchant/booking/list", perm: PERM.booking },
   { key: "slot", title: "档期管理", desc: "新增时段、调整容量、启停、套用模板", url: "/pkg-merchant/slot/list", perm: PERM.bookingSlot },
+  { key: "category", title: "分类管理", desc: "一级/二级分类的新增、改名、排序、删除", url: "/pkg-merchant/category/list", perm: PERM.category },
 ];
 
 /** 按权限过滤后的功能入口 */
