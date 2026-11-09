@@ -26,6 +26,10 @@ import {
   BOOKING_DEFAULT_PAGE_SIZE,
   CHANNEL_TABS,
   EMPTY_BOOKING_FILTER,
+  QUICK_DATE_TABS,
+  activeQuickTab,
+  withQuickDate,
+  withSpecificDate,
   STATUS_TABS,
   actionConfirmCopy,
   availableActions,
@@ -98,16 +102,27 @@ const { refreshing, indicatorTop } = createPullRefresh({ label: "merchantBooking
 const statusFilter = computed(() => vm.filter.value.status);
 const channelFilter = computed(() => vm.filter.value.channel);
 const dateFilter = computed(() => vm.filter.value.date);
+const quickActive = computed(() => activeQuickTab(vm.filter.value));
 function applyFilter(next: Partial<MerchantBookingFilter>): void {
   if (needLogin.value) return;
   hapticTap();
   void vm.loadFirst(rt.nextContext(), { ...vm.filter.value, ...next });
 }
+// 快捷日期（全部/今天/明天）：filter 只记意图，真实日期在每次请求时按设备本地时间现算（见 domain 的 resolveFilterDate）
+function applyQuick(q: "" | "today" | "tomorrow"): void {
+  if (needLogin.value) return;
+  hapticTap();
+  void vm.loadFirst(rt.nextContext(), withQuickDate(vm.filter.value, q));
+}
 function onDateChange(e: { detail?: { value?: string } }): void {
-  applyFilter({ date: e?.detail?.value ?? "" });
+  if (needLogin.value) return;
+  hapticTap();
+  void vm.loadFirst(rt.nextContext(), withSpecificDate(vm.filter.value, e?.detail?.value ?? ""));
 }
 function clearDate(): void {
-  applyFilter({ date: "" });
+  if (needLogin.value) return;
+  hapticTap();
+  void vm.loadFirst(rt.nextContext(), withSpecificDate(vm.filter.value, ""));
 }
 
 // —— 操作 ——
@@ -175,6 +190,15 @@ function actionBtnClass(a: MerchantBookingAction): string {
         </view>
       </view>
       <view class="filter-row filter-row--sub">
+        <view
+          v-for="q in QUICK_DATE_TABS"
+          :key="'q' + q.value"
+          :class="q.value === quickActive ? 'chip is-active' : 'chip'"
+          hover-class="press-dim"
+          @click="applyQuick(q.value)"
+        >
+          <text class="chip-text">{{ q.label }}</text>
+        </view>
         <picker mode="date" :value="dateFilter" @change="onDateChange">
           <view :class="dateFilter !== '' ? 'chip is-active' : 'chip'" hover-class="press-dim">
             <text class="chip-text">{{ dateFilter !== "" ? "日期 " + dateFilter : "选择日期" }}</text>

@@ -11,20 +11,68 @@
 //   · 商家 cancel：有保证金时触发**全额微信退款**，且只需 booking 权限（无资金权限）⇒ 确认框必须明示；
 //   · **不做** no-show、deposit/refund/preview/retry、保证金规则（资金权限，主人 2026-11-09 拍板）。
 import type { BookingStatus } from "../../domain/booking";
+import { formatLocalDate } from "../../domain/booking";
 import { describeDepositLine } from "../../domain/booking-deposit";
 import type { DepositView } from "../../domain/booking-deposit";
 
 export type MerchantBookingAction = "confirm" | "complete" | "cancel";
 export type MerchantChannel = "" | "wx" | "tt" | "xhs";
 
+/** 快捷日期：不缓存具体日期串，只记「意图」；真实日期在**每次请求时**按设备本地时间解析（跨零点刷新自动取新的今天） */
+export type QuickDate = "today" | "tomorrow";
+
 export interface MerchantBookingFilter {
   status: BookingStatus | "";
-  /** YYYY-MM-DD；空串＝不限日期 */
+  /** 用户在日期选择器里选的**具体日期** YYYY-MM-DD；空串＝没有具体日期。与 quick 互斥（选其一会清掉另一个） */
   date: string;
   channel: MerchantChannel;
+  /** 快捷日期（今天/明天）；缺省＝未选。默认「全部」＝quick 缺省且 date 为空，行为与加快捷前完全一致 */
+  quick?: QuickDate;
 }
 
 export const EMPTY_BOOKING_FILTER: MerchantBookingFilter = { status: "", date: "", channel: "" };
+
+/**
+ * 设备**本地**自然日 + offset 天 → YYYY-MM-DD。用本地年月日构造 Date 再做日历运算（Date 自动进位），
+ * 跨月/跨年/闰年 2 月都正确；**不经 UTC**（凌晨 00:30 不会错成前一天，晚上 23:30 也不会错成后一天）。可注入 now。
+ */
+export function localDateOffset(now: Date, offsetDays: number): string {
+  return formatLocalDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays));
+}
+
+export const QUICK_DATE_TABS: ReadonlyArray<{ value: "" | QuickDate; label: string }> = [
+  { value: "", label: "全部" },
+  { value: "today", label: "今天" },
+  { value: "tomorrow", label: "明天" },
+];
+
+/** 生效的日期：快捷 ⇒ 按 now 现算；否则取具体日期；都没有 ⇒ ""（不带 date） */
+export function resolveFilterDate(filter: Pick<MerchantBookingFilter, "date" | "quick">, now: Date): string {
+  if (filter.quick === "today") return localDateOffset(now, 0);
+  if (filter.quick === "tomorrow") return localDateOffset(now, 1);
+  return filter.date;
+}
+
+/** 高亮哪个快捷胶囊：选了具体日期 ⇒ 三个都不高亮；选了快捷 ⇒ 对应项；否则「全部」 */
+export function activeQuickTab(filter: Pick<MerchantBookingFilter, "date" | "quick">): "" | QuickDate | null {
+  if (filter.quick !== undefined) return filter.quick;
+  return filter.date !== "" ? null : "";
+}
+
+/** 点快捷：设置/清除 quick，并清掉具体日期（互斥）；其余筛选原样保留（可叠加） */
+export function withQuickDate(filter: MerchantBookingFilter, quick: "" | QuickDate): MerchantBookingFilter {
+  const next: MerchantBookingFilter = { ...filter, date: "" };
+  if (quick === "") delete next.quick;
+  else next.quick = quick;
+  return next;
+}
+
+/** 选具体日期：清掉快捷；传空串＝清除日期（回到「全部」） */
+export function withSpecificDate(filter: MerchantBookingFilter, date: string): MerchantBookingFilter {
+  const next: MerchantBookingFilter = { ...filter, date };
+  delete next.quick;
+  return next;
+}
 
 /** 后端 pageSize 上限（超出被服务端截断，客户端先行收敛） */
 export const BOOKING_MAX_PAGE_SIZE = 50;
@@ -60,10 +108,11 @@ export const CHANNEL_TABS: readonly ChannelTab[] = [
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** 筛选 + 分页 → 查询参数：空值不传；page/pageSize 收敛到 [1,∞)/[1,50] 的整数 */
-export function buildBookingQuery(filter: MerchantBookingFilter, page: number, pageSize: number): Record<string, string> {
+export function buildBookingQuery(filter: MerchantBookingFilter, page: number, pageSize: number, now: Date = new Date()): Record<string, string> {
   const q: Record<string, string> = {};
   if (filter.status !== "") q.status = filter.status;
-  if (DATE_RE.test(filter.date)) q.date = filter.date;
+  const date = resolveFilterDate(filter, now);
+  if (DATE_RE.test(date)) q.date = date;
   if (filter.channel !== "") q.channel = filter.channel;
   q.page = String(Number.isFinite(page) && page >= 1 ? Math.trunc(page) : 1);
   const ps = Number.isFinite(pageSize) && pageSize >= 1 ? Math.trunc(pageSize) : BOOKING_DEFAULT_PAGE_SIZE;

@@ -19,7 +19,7 @@ export interface MerchantBookingPage {
   pageSize: number;
 }
 
-export function createMerchantBookingRepository(deps: { client: ClientLike }) {
+export function createMerchantBookingRepository(deps: { client: ClientLike; /** 注入时钟（测试用）；默认设备本地当前时间，**每次请求现取**，不缓存 */ now?: () => Date }) {
   return {
     /** 预约列表（幂等读；商家范围由服务端按 JWT 收敛，**不传 merchantId**） */
     async list(
@@ -29,7 +29,7 @@ export function createMerchantBookingRepository(deps: { client: ClientLike }) {
       const res = await deps.client.request<{ list?: unknown; total?: unknown; page?: unknown; pageSize?: unknown }>({
         method: "GET",
         url: "/booking/bookings",
-        query: buildBookingQuery(args.filter, args.page, args.pageSize),
+        query: buildBookingQuery(args.filter, args.page, args.pageSize, (deps.now ?? (() => new Date()))()),
         authRequired: true,
         replayPolicy: "idempotent",
         context,

@@ -13,11 +13,18 @@ import {
   actionConfirmCopy,
   availableActions,
   buildBookingQuery,
+  QUICK_DATE_TABS,
+  activeQuickTab,
+  localDateOffset,
+  resolveFilterDate,
+  withQuickDate,
+  withSpecificDate,
   describeMerchantStatus,
   normalizeMerchantBooking,
 } from "../../src/pkg-merchant/domain/merchant-booking";
 import { createMerchantBookingRepository } from "../../src/pkg-merchant/infrastructure/merchant-bookings";
 import { createBookingActionRunner, createBookingListFetch } from "../../src/pkg-merchant/application/merchant-booking-flow";
+import { createPagedListViewModel } from "../../src/pkg-merchant/composables/use-merchant-list";
 import { MERCHANT_ENTRIES, visibleEntries } from "../../src/pkg-merchant/domain/merchant-auth";
 import { MERCHANT_ACTION_UNKNOWN_TEXT } from "../../src/pkg-merchant/domain/merchant-error";
 import type { ClientRequestInput, ClientResult } from "../../src/infrastructure/http/client";
@@ -26,6 +33,7 @@ import type { RequestContext } from "../../src/ports/context";
 
 const root = resolve(__dirname, "../..");
 const ctx = { requestId: "r" } as RequestContext;
+const page = readFileSync(resolve(root, "src/pkg-merchant/booking/list.vue"), "utf-8");
 
 const err = (kind: AppError["kind"], message = "", businessCode: number | null = null): AppError => ({ kind, businessCode, message, requestId: null, retryable: false });
 function fakeClient(responder: (i: ClientRequestInput) => ClientResult<unknown> | Promise<ClientResult<unknown>>) {
@@ -49,6 +57,124 @@ describe("buildBookingQuery（筛选/分页 → 查询参数）", () => {
   });
   it("状态筛选闭集 == 后端 validStatusFilters（含 awaiting_payment/no_show/expired），且含「全部」", () => {
     expect(STATUS_TABS.map((t) => t.value).sort()).toEqual(["", "awaiting_payment", "cancelled", "completed", "confirmed", "expired", "no_show", "pending"]);
+  });
+});
+
+describe("⭐快捷日期：本地日历运算（跨月/跨年/闰年；不经 UTC）", () => {
+  // 注意：Date(y, m, d, h, mi) 是**本地时间**构造；不论测试机时区如何，本地日历日都按构造值推进
+  it("localDateOffset：今天/明天跨月、跨年、闰年 2 月 28→29→3-1、平年 2-28→3-1", () => {
+    expect(localDateOffset(new Date(2026, 0, 31, 12), 0)).toBe("2026-01-31");
+    expect(localDateOffset(new Date(2026, 0, 31, 12), 1)).toBe("2026-02-01"); // 跨月
+    expect(localDateOffset(new Date(2026, 11, 31, 12), 1)).toBe("2027-01-01"); // 跨年
+    expect(localDateOffset(new Date(2024, 1, 28, 12), 1)).toBe("2024-02-29"); // 闰年
+    expect(localDateOffset(new Date(2024, 1, 29, 12), 1)).toBe("2024-03-01");
+    expect(localDateOffset(new Date(2026, 1, 28, 12), 1)).toBe("2026-03-01"); // 平年
+    expect(localDateOffset(new Date(2026, 3, 30, 12), 1)).toBe("2026-05-01"); // 30 天月
+  });
+  it("⭐本地日期边界：23:30 的「今天」仍是当天、「明天」是次日；00:30 的「今天」已是新的一天（变异：改用 UTC 日期即红）", () => {
+    const late = new Date(2026, 10, 9, 23, 30); // 本地 11-09 23:30
+    const early = new Date(2026, 10, 10, 0, 30); // 本地 11-10 00:30
+    expect(localDateOffset(late, 0)).toBe("2026-11-09");
+    expect(localDateOffset(late, 1)).toBe("2026-11-10");
+    expect(localDateOffset(early, 0)).toBe("2026-11-10");
+    expect(localDateOffset(early, 1)).toBe("2026-11-11");
+  });
+  it("resolveFilterDate：快捷现算；具体日期原样；都无 ⇒ 空串；quick 优先于残留 date", () => {
+    const now = new Date(2026, 10, 9, 10);
+    expect(resolveFilterDate({ date: "", quick: "today" }, now)).toBe("2026-11-09");
+    expect(resolveFilterDate({ date: "", quick: "tomorrow" }, now)).toBe("2026-11-10");
+    expect(resolveFilterDate({ date: "2026-12-25" }, now)).toBe("2026-12-25");
+    expect(resolveFilterDate({ date: "" }, now)).toBe("");
+    expect(resolveFilterDate({ date: "2026-12-25", quick: "today" }, now)).toBe("2026-11-09");
+  });
+  it("⭐buildBookingQuery 带快捷：today/tomorrow ⇒ query.date；默认「全部」不带 date（行为与加快捷前一致）", () => {
+    const now = new Date(2026, 11, 31, 9);
+    expect(buildBookingQuery({ ...EMPTY_BOOKING_FILTER, quick: "today" }, 1, 20, now).date).toBe("2026-12-31");
+    expect(buildBookingQuery({ ...EMPTY_BOOKING_FILTER, quick: "tomorrow" }, 1, 20, now).date).toBe("2027-01-01");
+    expect(buildBookingQuery(EMPTY_BOOKING_FILTER, 1, 20, now)).toEqual({ page: "1", pageSize: "20" });
+  });
+  it("快捷胶囊顺序与文案：全部 / 今天 / 明天", () => {
+    expect(QUICK_DATE_TABS.map((t) => t.label)).toEqual(["全部", "今天", "明天"]);
+  });
+});
+
+describe("⭐快捷日期：选中态高亮 / 互斥 / 叠加", () => {
+  it("默认「全部」高亮；选今天/明天高亮对应项；选具体日期 ⇒ 三个都不高亮（null）（变异：具体日期仍高亮「全部」即红）", () => {
+    expect(activeQuickTab(EMPTY_BOOKING_FILTER)).toBe("");
+    expect(activeQuickTab({ date: "", quick: "today" })).toBe("today");
+    expect(activeQuickTab({ date: "", quick: "tomorrow" })).toBe("tomorrow");
+    expect(activeQuickTab({ date: "2026-12-25" })).toBeNull();
+  });
+  it("withQuickDate / withSpecificDate 互斥：点快捷清具体日期；选具体日期清快捷；点「全部」回到无日期", () => {
+    const base = { status: "pending" as const, date: "2026-12-25", channel: "wx" as const };
+    const q = withQuickDate(base, "today");
+    expect(q).toEqual({ status: "pending", date: "", channel: "wx", quick: "today" });
+    const d = withSpecificDate(q, "2026-12-26");
+    expect(d).toEqual({ status: "pending", date: "2026-12-26", channel: "wx" });
+    expect("quick" in d).toBe(false);
+    const all = withQuickDate(q, "");
+    expect(all).toEqual({ status: "pending", date: "", channel: "wx" });
+    expect("quick" in all).toBe(false);
+    expect(withSpecificDate(d, "")).toEqual({ status: "pending", date: "", channel: "wx" }); // 清除日期 ⇒ 回到「全部」
+  });
+  it("⭐叠加：快捷日期与状态、渠道同时生效（query 三者齐全）", () => {
+    const f = withQuickDate({ status: "confirmed", date: "", channel: "tt" }, "tomorrow");
+    expect(buildBookingQuery(f, 3, 20, new Date(2026, 1, 28, 12))).toEqual({ status: "confirmed", date: "2026-03-01", channel: "tt", page: "3", pageSize: "20" });
+  });
+});
+
+describe("⭐快捷日期 × 列表壳：切换回到第 1 页、迟到响应丢弃、刷新取新的今天", () => {
+  const rows = (n: number, start: number) => Array.from({ length: n }, (_, i) => ({ id: start + i }));
+  it("已翻到第 2 页后点「今天」⇒ 重置为第 1 页并带新筛选；筛选对象是意图（quick），不是缓存的日期串", async () => {
+    const calls: Array<{ filter: unknown; page: number }> = [];
+    const vm = createPagedListViewModel<{ id: number }, import("../../src/pkg-merchant/domain/merchant-booking").MerchantBookingFilter>(
+      { fetch: async (_c, a) => { calls.push({ filter: a.filter, page: a.page }); return { ok: true, value: { list: rows(2, a.page * 10), total: 10 } }; } },
+      { pageSize: 2, initialFilter: { ...EMPTY_BOOKING_FILTER } },
+    );
+    await vm.loadFirst(ctx);
+    await vm.loadMore(ctx);
+    expect(vm.page.value).toBe(2);
+    await vm.loadFirst(ctx, withQuickDate(vm.filter.value, "today"));
+    expect(vm.page.value).toBe(1);
+    expect(calls[calls.length - 1]).toEqual({ filter: { status: "", date: "", channel: "", quick: "today" }, page: 1 });
+    expect(vm.items.value.length).toBe(2); // 不是 4：列表被重置
+  });
+  it("迟到响应丢弃：点「今天」后立刻点「明天」，今天的晚到响应不覆盖明天", async () => {
+    let releaseToday!: () => void;
+    const gate = new Promise<void>((res) => { releaseToday = res; });
+    const vm = createPagedListViewModel<{ id: number }, import("../../src/pkg-merchant/domain/merchant-booking").MerchantBookingFilter>(
+      {
+        fetch: async (_c, a) => {
+          if (a.filter.quick === "today") { await gate; return { ok: true, value: { list: rows(3, 100), total: 3 } }; }
+          return { ok: true, value: { list: rows(1, 200), total: 1 } };
+        },
+      },
+      { initialFilter: { ...EMPTY_BOOKING_FILTER } },
+    );
+    const pToday = vm.loadFirst(ctx, withQuickDate(vm.filter.value, "today"));
+    await vm.loadFirst(ctx, withQuickDate(vm.filter.value, "tomorrow"));
+    releaseToday();
+    await pToday;
+    expect(vm.items.value).toEqual([{ id: 200 }]);
+    expect(vm.filter.value.quick).toBe("tomorrow");
+  });
+  it("⭐跨零点后刷新取新的今天：同一个 quick=today 筛选，两次请求时钟不同 ⇒ query.date 不同（仓储每次现取时钟）（变异：缓存首次日期即红）", async () => {
+    let clock = new Date(2026, 10, 9, 23, 59);
+    const f = fakeClient(() => ({ ok: true, value: { list: [], total: 0 } }));
+    const repo = createMerchantBookingRepository({ client: f.client, now: () => clock });
+    const filter = withQuickDate(EMPTY_BOOKING_FILTER, "today");
+    await repo.list(ctx, { filter, page: 1, pageSize: 20 });
+    clock = new Date(2026, 10, 10, 0, 1); // 跨零点后下拉刷新（沿用同一筛选对象）
+    await repo.list(ctx, { filter, page: 1, pageSize: 20 });
+    expect(f.seen.map((s) => s.query?.date)).toEqual(["2026-11-09", "2026-11-10"]);
+  });
+  it("页面接线：快捷胶囊走 withQuickDate/activeQuickTab，选具体日期走 withSpecificDate；默认筛选仍是 EMPTY（保持「全部」）", () => {
+    const code = page.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(code).toContain("v-for=\"q in QUICK_DATE_TABS\"");
+    expect(code).toContain("withQuickDate(vm.filter.value, q)");
+    expect(code).toContain("withSpecificDate(vm.filter.value");
+    expect(code).toContain("activeQuickTab(vm.filter.value)");
+    expect(code).toContain("initialFilter: { ...EMPTY_BOOKING_FILTER }");
   });
 });
 
@@ -213,7 +339,6 @@ describe("工作台入口 / 页面接线（源码级）", () => {
     expect(visibleEntries({ permissions: ["album"] })).toEqual([]);
     expect(visibleEntries(null)).toEqual([]);
   });
-  const page = readFileSync(resolve(root, "src/pkg-merchant/booking/list.vue"), "utf-8");
   it("页面：取消走 BaseDialog 确认、拨号走 platform dialer、不直调 uni.makePhoneCall / wx.*", () => {
     expect(page).toContain("dialogRef.value?.confirm");
     expect(page).toContain("createUniDialer");
