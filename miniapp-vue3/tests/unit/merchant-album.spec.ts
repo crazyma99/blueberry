@@ -276,7 +276,8 @@ describe("工作台入口 / 页面接线（源码级）", () => {
     expect(code).toContain("<BasePicker");
     expect(code).toContain("<BaseField");
     expect(code).not.toMatch(/\bwx\./);
-    expect(code).toContain("onUnmounted(() => cover.cancel())");
+    // 卸载：封面上传与「新建相册」创建流程都必须安全中止（2026-11 新建相册重做后，创建流程也会占网络/可能已建相册）
+    expect(code).toMatch(/onUnmounted\(\(\) => \{\s*cover\.cancel\(\);\s*creator\.cancel\(\);\s*\}\);/);
     expect(code).toContain("sliceVisible(");
   });
   it("页面注册：album/list 在商家分包内且启用下拉刷新；模板事件不含箭头/IIFE", () => {

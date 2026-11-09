@@ -29,6 +29,8 @@ import { createMerchantCategoryRepository } from "../infrastructure/merchant-cat
 import { createAlbumUseCases } from "../application/merchant-album-flow";
 import { createCategoryUseCases } from "../application/merchant-category-flow";
 import { createCoverUploader } from "../application/merchant-cover-uploader";
+import { createAlbumUploader } from "../application/merchant-album-uploader";
+import { PASS_THROUGH_COMPRESS, createAlbumCreator, type CreateProgress } from "../application/merchant-album-create-flow";
 import { createMerchantUploadDeps } from "../application/merchant-upload-deps";
 import { runStrongDelete } from "../application/merchant-strong-delete";
 import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
@@ -37,7 +39,8 @@ import { useMerchantShop } from "../composables/use-merchant-shop";
 import { ALBUM_PAGE_STEP, albumCoverThumb, describeAlbumDelete, describeAlbumFinalConfirm, nextVisibleCount, sliceVisible, type MerchantAlbum } from "../domain/merchant-album";
 import { cascadeFilterOptions, cascadePathOfSub, cascadeSubOptions, labelOfSub, subIdFromCascadeValue, type CategoryTreeNode } from "../domain/merchant-category-tree";
 import { hasPermission, PERM, type MerchantProfile } from "../domain/merchant-auth";
-import { PICK_FAIL_TEXT } from "../domain/merchant-upload";
+import { MERCHANT_PICK_MAX_COUNT, PICK_FAIL_TEXT } from "../domain/merchant-upload";
+import { CREATE_PHOTO_MAX, EMPTY_PHOTO_STATE, addPhotos, effectiveCoverKey, removePhoto, setCover } from "../domain/merchant-album-create";
 
 const rt = getMerchantRuntime();
 const footer = useMerchantFooter();
@@ -46,6 +49,34 @@ const upDeps = createMerchantUploadDeps();
 const albumUc = createAlbumUseCases({ albums: createMerchantAlbumRepository({ client: rt.client }), images: createMerchantImageRepository({ client: rt.client }) });
 const catUc = createCategoryUseCases({ categories: createMerchantCategoryRepository({ client: rt.client }), albums: createMerchantAlbumRepository({ client: rt.client }) });
 const cover = createCoverUploader({ upload: upDeps.newUpload(), compress: upDeps.compress, getToken: () => rt.getToken(), uploadUrl: upDeps.coverUploadUrl(), expireSession: (usedToken) => void rt.expireSessionByToken(usedToken) });
+
+// 新建相册（先选照片、可选封面、一次保存）：创建流程已在步骤0 严格压缩全部图片，封面/批量上传器用直通压缩（不再压第二遍）
+const createCover = createCoverUploader({ upload: upDeps.newUpload(), compress: PASS_THROUGH_COMPRESS, getToken: () => rt.getToken(), uploadUrl: upDeps.coverUploadUrl(), expireSession: (usedToken) => void rt.expireSessionByToken(usedToken) });
+const creator = createAlbumCreator({
+  compress: upDeps.compress,
+  uploadCover: (input, onProgress) => createCover.upload({ shopId: shop.shopId.value, path: input.path, size: input.size }, onProgress),
+  cancelCoverUpload: () => createCover.cancel(),
+  createAlbum: async (f) => {
+    const r = await albumUc.create(rt.nextContext(), profile.value, shop.shopId.value, { title: f.title, childId: f.childId, coverImageUrl: f.coverImageUrl, price: f.price, packageDesc: f.packageDesc, aiDesc: "", sortOrder: 0 });
+    return r.ok ? { ok: true, albumId: r.album.id } : { ok: false, kind: r.kind, message: r.message };
+  },
+  newUploader: (albumId, hooks) =>
+    createAlbumUploader({
+      upload: upDeps.newUpload(),
+      compress: PASS_THROUGH_COMPRESS,
+      getToken: () => rt.getToken(),
+      uploadUrl: upDeps.albumUploadUrl(),
+      shopId: shop.shopId.value,
+      albumId,
+      onChange: hooks.onChange,
+      onFinished: hooks.onFinished,
+      onAuthExpired: hooks.onAuthExpired,
+      expireSession: (usedToken) => void rt.expireSessionByToken(usedToken),
+    }),
+  onProgress: (pr) => {
+    createProgress.value = pr;
+  },
+});
 
 const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
 const dialogRef = ref<InstanceType<typeof BaseDialog> | null>(null);
@@ -150,7 +181,10 @@ onShow(() => {
   }
   void reload(); // 从图片网格返回：封面/数量可能变化
 });
-onUnmounted(() => cover.cancel());
+onUnmounted(() => {
+  cover.cancel();
+  creator.cancel();
+});
 const { refreshing, indicatorTop } = createPullRefresh({ label: "merchantAlbums", refresh: () => reload(), hasCustomNav: true });
 
 function onLoadMore(): void {
@@ -220,6 +254,12 @@ const fCover = ref("");
 const fCoverPercent = ref(0);
 const fCoverBusy = ref(false);
 const fError = ref("");
+// 新建：本地照片（封面可选，默认第一张）、进度、部分失败状态
+const photoState = ref(EMPTY_PHOTO_STATE);
+const coverKeyEff = computed(() => effectiveCoverKey(photoState.value));
+const createProgress = ref<CreateProgress | null>(null);
+const createBusy = ref(false);
+const partial = ref<{ albumId: number; title: string; message: string; failed: number; total: number } | null>(null);
 const childPickerShow = ref(false);
 const childOpts = computed(() => cascadeSubOptions(tree.value));
 const childPicked = computed(() => cascadePathOfSub(tree.value, fChildId.value));
@@ -246,6 +286,9 @@ function openCreate(): void {
   fChildId.value = filterSub.value > 0 ? filterSub.value : 0;
   fCover.value = "";
   fError.value = "";
+  photoState.value = EMPTY_PHOTO_STATE;
+  createProgress.value = null;
+  partial.value = null;
   formShow.value = true;
 }
 function onEditTap(a: MerchantAlbum): void {
@@ -263,7 +306,45 @@ function onEditTap(a: MerchantAlbum): void {
 }
 function closeForm(): void {
   if (fCoverBusy.value) cover.cancel();
+  if (creator.isRunning()) creator.cancel(); // 创建中关闭：安全中止（压缩/封面阶段零副作用；已建相册则保留失败项并提示补传）
   formShow.value = false;
+}
+function onCancelCreate(): void {
+  hapticTap();
+  creator.cancel();
+}
+
+// —— 新建：选照片 / 设封面 / 移除 ——
+async function onAddPhotos(): Promise<void> {
+  if (createBusy.value || working.value) return;
+  hapticTap();
+  const room = CREATE_PHOTO_MAX - photoState.value.photos.length;
+  if (room <= 0) {
+    toast("一次最多选 " + CREATE_PHOTO_MAX + " 张，更多图片可在相册创建后到图片管理里继续添加");
+    return;
+  }
+  const p = await upDeps.picker.pick(Math.min(MERCHANT_PICK_MAX_COUNT, room));
+  if (!p.ok) {
+    if (p.reason !== "cancel") toast(PICK_FAIL_TEXT);
+    return;
+  }
+  const r = addPhotos(photoState.value, p.files);
+  photoState.value = r.state;
+  if (r.dropped > 0) toast("一次最多选 " + CREATE_PHOTO_MAX + " 张，已忽略多出的 " + r.dropped + " 张");
+}
+/** 三列网格：每行第 3 个去右边距（用 class 而非 :nth-child——WXSS 官方只保证 class/id/element 选择器） */
+function photoClass(i: number, isCover: boolean): string {
+  return "photo" + (isCover ? " is-cover" : "") + ((i + 1) % 3 === 0 ? " is-end" : "");
+}
+function onSetCover(key: number): void {
+  if (createBusy.value) return;
+  hapticTap();
+  photoState.value = setCover(photoState.value, key);
+}
+function onRemovePhoto(key: number): void {
+  if (createBusy.value) return;
+  hapticTap();
+  photoState.value = removePhoto(photoState.value, key);
 }
 function openChildPicker(): void {
   hapticTap();
@@ -299,25 +380,112 @@ async function onPickCover(): Promise<void> {
   }
 }
 
+/** 新建：压缩全部 → 上传封面 → 创建相册 → 串行上传其余；失败/取消/部分失败见 merchant-album-create-flow */
+async function submitCreate(): Promise<void> {
+  createBusy.value = true;
+  createProgress.value = null;
+  try {
+    const out = await creator.run({ form: { title: fTitle.value, childId: fChildId.value, price: fPrice.value, packageDesc: fPackageDesc.value }, photos: photoState.value });
+    if (out.status === "created") {
+      toast("相册创建成功");
+      formShow.value = false;
+      await reload();
+      return;
+    }
+    if (out.status === "invalid" || out.status === "compress-failed") {
+      fError.value = out.message;
+      return;
+    }
+    if (out.status === "failed") {
+      if (out.authExpired) {
+        authExpired.value = true;
+        formShow.value = false;
+        return;
+      }
+      fError.value = out.message;
+      return;
+    }
+    if (out.status === "cancelled") {
+      toast("已取消，未创建相册");
+      return;
+    }
+    // partial：相册已创建（只创建一次），有图片未传成功
+    await reload();
+    if (out.authExpired) {
+      authExpired.value = true;
+      formShow.value = false;
+      toast(out.message);
+      return;
+    }
+    if (!formShow.value) {
+      toast(out.message);
+      return;
+    }
+    partial.value = { albumId: out.albumId, title: out.title, message: out.message, failed: out.failed, total: out.total };
+  } finally {
+    createBusy.value = false;
+    createProgress.value = null;
+  }
+}
+async function onRetryFailed(): Promise<void> {
+  if (createBusy.value || partial.value === null) return;
+  hapticTap();
+  createBusy.value = true;
+  working.value = true;
+  try {
+    const r = await creator.retryFailed();
+    if (r.authExpired) {
+      authExpired.value = true;
+      formShow.value = false;
+      return;
+    }
+    if (r.failed === 0) {
+      toast("图片已全部上传");
+      formShow.value = false;
+      partial.value = null;
+      await reload();
+      return;
+    }
+    partial.value = { ...partial.value, failed: r.failed, total: r.total, message: "相册「" + partial.value.title + "」仍有 " + r.failed + " / " + r.total + " 张图片未上传成功，可再次重试，或到该相册的图片管理中补传（请勿重复新建）。" };
+  } finally {
+    createBusy.value = false;
+    working.value = false;
+  }
+}
+function onGoSupplement(): void {
+  const pt = partial.value;
+  if (pt === null) return;
+  hapticTap();
+  formShow.value = false;
+  partial.value = null;
+  const q = "albumId=" + pt.albumId + "&shopId=" + shop.shopId.value + "&title=" + encodeURIComponent(pt.title);
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") uni.navigateTo({ url: "/pkg-merchant/album/detail?" + q });
+}
+function onPartialDone(): void {
+  hapticTap();
+  formShow.value = false;
+  partial.value = null;
+}
+
 async function submitForm(): Promise<void> {
-  if (working.value || fCoverBusy.value) return;
+  if (working.value || fCoverBusy.value || createBusy.value) return;
   hapticTap();
   fError.value = "";
   working.value = true;
   try {
+    if (formMode.value === "create") {
+      await submitCreate();
+      return;
+    }
     const r =
-      formMode.value === "create"
-        ? await albumUc.create(rt.nextContext(), profile.value, shop.shopId.value, {
-            title: fTitle.value, childId: fChildId.value, coverImageUrl: fCover.value, price: fPrice.value, packageDesc: fPackageDesc.value, aiDesc: "", sortOrder: 0,
+      editing.value != null
+        ? await albumUc.update(rt.nextContext(), profile.value, shop.shopId.value, editing.value, {
+            title: fTitle.value, childId: fChildId.value, coverImageUrl: fCover.value, price: fPrice.value, packageDesc: fPackageDesc.value,
           })
-        : editing.value != null
-          ? await albumUc.update(rt.nextContext(), profile.value, shop.shopId.value, editing.value, {
-              title: fTitle.value, childId: fChildId.value, coverImageUrl: fCover.value, price: fPrice.value, packageDesc: fPackageDesc.value,
-            })
-          : null;
+        : null;
     if (r == null) return;
     if (r.ok) {
-      toast(formMode.value === "create" ? "已新建相册" : "已保存");
+      toast("已保存");
       formShow.value = false;
       await reload();
       return;
@@ -447,7 +615,19 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
         </view>
         <BaseField v-model="fPrice" label="价格(元)" placeholder="0" type="digit" />
         <BaseField v-model="fPackageDesc" label="套餐说明" placeholder="选填" />
-        <view class="cover-row">
+        <view v-if="formMode === 'create'" class="photos">
+          <text class="pick-label">照片（选填）</text>
+          <view class="photo-grid">
+            <view v-for="(ph, i) in photoState.photos" :key="ph.key" :class="photoClass(i, ph.key === coverKeyEff)" @click="onSetCover(ph.key)">
+              <image class="photo-img" :src="ph.path" mode="aspectFill" />
+              <view v-if="ph.key === coverKeyEff" class="photo-badge"><text class="photo-badge-text">封面</text></view>
+              <view v-if="!createBusy" class="photo-remove" @click.stop="onRemovePhoto(ph.key)"><text class="photo-remove-text">×</text></view>
+            </view>
+            <view v-if="!createBusy && photoState.photos.length < CREATE_PHOTO_MAX" :class="photoClass(photoState.photos.length, false) + ' photo-add'" hover-class="press-dim" @click="onAddPhotos"><text class="photo-add-text">＋</text></view>
+          </view>
+          <text class="hint">不选封面时默认第一张作封面，点图片可更换；也可不选照片，先建空相册。已选 {{ photoState.photos.length }} / {{ CREATE_PHOTO_MAX }} 张</text>
+        </view>
+        <view v-else class="cover-row">
           <text class="pick-label">封面</text>
           <image v-if="fCover" class="cover-sm" :src="albumCoverThumb(fCover, 200)" mode="aspectFill" />
           <view :class="fCoverBusy ? 'cover-btn is-disabled' : 'cover-btn'" hover-class="press-dim" @click="onPickCover">
@@ -455,9 +635,22 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
           </view>
         </view>
         <view v-if="fCoverBusy" class="progress"><BaseProgress :percentage="fCoverPercent" /></view>
+        <view v-if="createProgress !== null" class="progress">
+          <text class="hint">{{ createProgress.text }}</text>
+          <BaseProgress :percentage="createProgress.percent" />
+        </view>
         <text v-if="fError" class="form-error">{{ fError }}</text>
-        <view :class="working || fCoverBusy ? 'sheet-btn is-disabled' : 'sheet-btn'" hover-class="press-dim" @click="submitForm">
-          <text class="sheet-btn-text">{{ working ? "提交中..." : "确定" }}</text>
+        <view v-if="partial !== null" class="partial">
+          <text class="partial-text">{{ partial.message }}</text>
+          <view class="partial-ops">
+            <view v-if="partial.failed > 0" :class="createBusy ? 'sheet-btn sheet-btn--half is-disabled' : 'sheet-btn sheet-btn--half'" hover-class="press-dim" @click="onRetryFailed"><text class="sheet-btn-text">重试失败项</text></view>
+            <view class="sheet-btn sheet-btn--half sheet-btn--ghost" hover-class="press-dim" @click="onGoSupplement"><text class="sheet-btn-text sheet-btn-text--ghost">去补传</text></view>
+          </view>
+          <view class="sheet-btn sheet-btn--ghost" hover-class="press-dim" @click="onPartialDone"><text class="sheet-btn-text sheet-btn-text--ghost">完成</text></view>
+        </view>
+        <view v-else-if="createBusy" class="sheet-btn sheet-btn--ghost" hover-class="press-dim" @click="onCancelCreate"><text class="sheet-btn-text sheet-btn-text--ghost">取消上传</text></view>
+        <view v-else :class="working || fCoverBusy ? 'sheet-btn is-disabled' : 'sheet-btn'" hover-class="press-dim" @click="submitForm">
+          <text class="sheet-btn-text">{{ working ? "提交中..." : formMode === "create" ? "创建相册" : "确定" }}</text>
         </view>
       </view>
     </BasePopup>
@@ -734,6 +927,94 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
 .progress {
   margin-bottom: $space-sm;
 }
+.hint {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: $font-size-caption;
+  color: $color-text-muted;
+}
+/* 新建：照片网格（固定三列，不用 space-between，避免末行撑开；边距靠 margin-right + 每行第 3 个清零） */
+.photos {
+  padding: 24rpx 0 0;
+}
+.photo-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-top: 12rpx;
+}
+.photo {
+  position: relative;
+  width: calc((100% - 32rpx) / 3);
+  height: 180rpx;
+  margin: 0 16rpx 16rpx 0;
+  border-radius: 12rpx;
+  overflow: hidden;
+  border: 4rpx solid transparent;
+  box-sizing: border-box;
+}
+.photo.is-end {
+  margin-right: 0;
+}
+.photo.is-cover {
+  border-color: $color-action;
+}
+.photo-img {
+  width: 100%;
+  height: 100%;
+}
+.photo-badge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(241, 205, 145, 0.9);
+  text-align: center;
+}
+.photo-badge-text {
+  font-size: 22rpx;
+  color: $color-action-text;
+}
+.photo-remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 0 0 0 12rpx;
+}
+.photo-remove-text {
+  font-size: $font-size-body;
+  color: #fff;
+}
+.photo-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx dashed $color-border;
+}
+.photo-add-text {
+  font-size: 64rpx;
+  color: $color-text-secondary;
+}
+.partial {
+  margin-top: $space-sm;
+}
+.partial-text {
+  display: block;
+  font-size: $font-size-caption;
+  color: #ff6b6b;
+}
+.partial-ops {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+}
+
 .form-error {
   margin-top: $space-sm;
   font-size: $font-size-caption;
@@ -751,5 +1032,16 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
 .sheet-btn-text {
   font-size: $font-size-body;
   color: $color-action-text;
+}
+/* 须放在 .sheet-btn / .sheet-btn-text 之后（同权重，后者覆盖前者） */
+.sheet-btn--half {
+  flex: 1;
+}
+.sheet-btn--ghost {
+  background: transparent;
+  border: 2rpx solid $color-border;
+}
+.sheet-btn-text--ghost {
+  color: $color-action;
 }
 </style>
