@@ -87,7 +87,7 @@ export function createImageUseCases(deps: { images: ImageRepo }) {
       });
     },
 
-    /** 单图试衣开关：PATCH 返回更新后的图；新图刚上传时异步打标，容忍（调用方用返回值更新本地项，失败只提示不回滚列表） */
+    /** 单图试衣开关：PUT 返回更新后的图；新图刚上传时异步打标，容忍（调用方用返回值更新本地项，失败只提示不回滚列表） */
     setTryon(context: RequestContext, perm: Perm, shopId: number, image: MerchantImage) {
       return lock.run<{ ok: true; image: MerchantImage }>(async () => {
         const d = denied(perm);

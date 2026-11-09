@@ -5,8 +5,6 @@
 import type { Result } from "../../ports/context";
 import type { HttpRequest, HttpResponse, HttpPort } from "../../ports/http";
 
-type UniRequestMethod = "OPTIONS" | "GET" | "HEAD" | "POST" | "PUT" | "DELETE" | "TRACE" | "CONNECT";
-
 interface UniEnvelope {
   code?: unknown;
   message?: string;
@@ -32,7 +30,7 @@ export function createUniTransport(deps: { baseUrl: string }): HttpPort {
         }
         uni.request({
           url: joinUrl(req.url),
-          method: req.method as UniRequestMethod, // PATCH 不在 uni.request 的类型联合内（见 ports/http.ts 说明）；运行时由容器决定是否放行
+          method: req.method,
           // uni.request 的 data 期望 string|AnyObject|ArrayBuffer；body 为 unknown，按对象契约收窄后传入
           data: (req.method === "GET" ? req.query : req.body) as Record<string, unknown> | undefined,
           header: req.headers,

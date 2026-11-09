@@ -1,9 +1,7 @@
 // 端口层：HTTP（纯 TS 接口；实现在 platform 层，业务域只依赖此合同）
 import type { RequestContext, Result } from "./context";
 
-// "PATCH"：商家端相册「单图 AI 试衣开关」后端只开放了 PATCH（issue #14 M2）。⚠️ uni.request / wx.request 的官方合法 method 不含 PATCH，
-// 真机是否放行**未验**（见 transport.ts 的说明与汇报风险项）；其余所有调用方仍只用前四种。
-export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface HttpRequest {
   /** P2-02（T5 端口演进）：传输层透传的请求头（Bearer/X-App-Code/X-Channel/可选 X-Brand-Id 由 client 注入） */

@@ -55,17 +55,37 @@ describe("⭐图片仓储：参数位置与 shopId 参数名（本组统一 shop
     expect(f.seen[0].body).toEqual([{ id: 2, sortOrder: 0 }, { id: 1, sortOrder: 1 }]);
     expect(f.seen[0].query).toBeUndefined();
   });
-  it("⭐删除 DELETE albums/delete/:id?shopId=；试衣 PATCH albums/:id/tryon-status?shopId= body {status}（变异：路径/参数名错即红）", async () => {
+  it("⭐删除 DELETE albums/delete/:id?shopId=；试衣 PUT albums/:id/tryon-status?shopId= body {status}（变异：路径/参数名错即红）", async () => {
     const f = fakeClient(() => okv(raw(5, 0, { aiTryonStatus: 1, aiTryonManual: 1 })));
     const repo = createMerchantImageRepository({ client: f.client });
     await repo.remove(ctx, 3, 5);
     const r = await repo.setTryon(ctx, 3, 5, 1);
     expect(f.seen[0]).toMatchObject({ method: "DELETE", url: "/photo-albums/albums/delete/5?shopId=3", replayPolicy: "never" });
-    expect(f.seen[1]).toMatchObject({ method: "PATCH", url: "/photo-albums/albums/5/tryon-status?shopId=3", body: { status: 1 }, replayPolicy: "never" });
+    expect(f.seen[1]).toMatchObject({ method: "PUT", url: "/photo-albums/albums/5/tryon-status?shopId=3", body: { status: 1 }, replayPolicy: "never" });
     expect(r.ok && r.value).toMatchObject({ id: 5, aiTryonStatus: 1, aiTryonManual: 1 });
   });
   it("仓储只暴露 list / sort / remove / setTryon（上传走编排，不经此处）", () => {
     expect(Object.keys(createMerchantImageRepository({ client: fakeClient(() => okv([])).client })).sort()).toEqual(["list", "remove", "setTryon", "sort"]);
+  });
+});
+
+describe("⭐试衣开关用 PUT（wx.request 官方 method 不含 PATCH）+ 共用端口零残留", () => {
+  it("请求 method 是 PUT、body 不变；不存在任何 PATCH 请求（变异：改回 PATCH 即红）", async () => {
+    const f = fakeClient(() => okv(raw(5, 0, { aiTryonStatus: 1 })));
+    await createMerchantImageRepository({ client: f.client }).setTryon(ctx, 3, 5, 0);
+    expect(f.seen[0]).toMatchObject({ method: "PUT", body: { status: 0 } });
+    expect(f.seen.some((s) => (s.method as string) === "PATCH")).toBe(false);
+  });
+  it("⭐共用代码零残留：ports/http.ts 的 HttpMethod 仍只有四种（无 PATCH）；transport.ts 无类型强转说明；商家端源码不再出现 method: \"PATCH\"（变异：加回 PATCH 即红）", () => {
+    const port = readFileSync(resolve(root, "src/ports/http.ts"), "utf-8");
+    expect(port).toMatch(/export type HttpMethod = "GET" \| "POST" \| "PUT" \| "DELETE";/);
+    expect(port).not.toContain("PATCH");
+    const tr = readFileSync(resolve(root, "src/platform/uni/transport.ts"), "utf-8");
+    expect(tr).not.toContain("PATCH");
+    expect(tr).not.toContain("UniRequestMethod");
+    expect(tr).toMatch(/method: req\.method,/);
+    const repo = readFileSync(resolve(root, "src/pkg-merchant/infrastructure/merchant-images.ts"), "utf-8");
+    expect(repo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "")).not.toMatch(/method:\s*"PATCH"/);
   });
 });
 

@@ -49,10 +49,15 @@ export function createMerchantImageRepository(deps: { client: ClientLike }) {
       return { ok: true, value: true };
     },
 
-    /** 单图试衣开关：PATCH …/:id/tryon-status?shopId=，body {status:0|1} */
+    /**
+     * 单图试衣开关：**PUT** …/:id/tryon-status?shopId=，body {status:0|1}。
+     * 为什么是 PUT 而不是后端原有的 PATCH：wx.request / uni.request 官方合法 method 不含 PATCH（真机大概率被拒）；
+     * 后端新增了 PUT 别名（复用同一 handler、同权限，原 PATCH 保留）。⚠️ 部署顺序依赖：别名未部署到目标环境前，开关会失败（预期），
+     * 不要回退到 PATCH。
+     */
     async setTryon(context: RequestContext, shopId: number, imageId: number, status: 0 | 1): Promise<RepoResult<MerchantImage>> {
       const res = await deps.client.request<unknown>({
-        method: "PATCH",
+        method: "PUT",
         url: withQuery("/photo-albums/albums/" + encodeURIComponent(String(imageId)) + "/tryon-status", { shopId }),
         body: { status },
         authRequired: true,

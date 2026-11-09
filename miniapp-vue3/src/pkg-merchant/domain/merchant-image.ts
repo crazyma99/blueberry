@@ -6,7 +6,7 @@
 //   · 排序 PUT /photo-albums/albums/sort?shopId= body 为数组 [{id,sortOrder}]：**无效项静默跳过**（id 不存在/不属于该 shop），始终返回成功 ⇒
 //     提交后以刷新结果为准；
 //   · 上传后异步打标（百度 V3），**新图 aiTryonStatus 初始 0** ⇒ 试衣开关 UI 必须容忍「刚上传显示隐藏、稍后变可展示」；
-//   · 试衣开关 PATCH /photo-albums/albums/:id/tryon-status?shopId= body {status:0|1}，人工覆盖后系统重判不覆盖。
+//   · 试衣开关 PUT /photo-albums/albums/:id/tryon-status?shopId= body {status:0|1}（后端原为 PATCH，另增 PUT 别名；小程序侧只发 PUT），人工覆盖后系统重判不覆盖。
 import { cosThumb } from "../../application/image";
 
 export interface MerchantImage {

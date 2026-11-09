@@ -10,7 +10,7 @@
 //     · 图片列表 GET /photo-albums/albums/get?albumId=&shopId=
 //     · 图片排序 PUT /photo-albums/albums/sort?shopId=  body 数组 [{id,sortOrder}]（无效项**静默跳过**）
 //     · 图片删除 DELETE /photo-albums/albums/delete/:id?shopId=              （对不存在/无权**静默返回成功**）
-//     · 试衣开关 PATCH /photo-albums/albums/:id/tryon-status?shopId=  body {status:0|1}
+//     · 试衣开关 PUT  /photo-albums/albums/:id/tryon-status?shopId=  body {status:0|1}（后端另有 PATCH 原路由；小程序只发 PUT）
 //   · 详情 GET /photo-albums/:id 恒返回 data:null（后端历史 bug）⇒ **不使用**，相册信息取自列表项；
 //   · 列表项：id、shopId、childId、title、coverImageUrl、price（decimal，JSON 为字符串）、packageDesc、aiDesc、sortOrder、
 //     tryonDisabled、tryonCount、childName、parentId、createTime、updateTime；
