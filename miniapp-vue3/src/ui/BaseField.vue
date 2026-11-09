@@ -6,9 +6,12 @@
 //  （wd-input 的白底直角来自 --wot-input-* 变量，抖音 TTSS 不吃 CSS 变量；原生 input 两端行为一致，软键盘由系统负责）。
 //  样式：圆角 18rpx、半透明金底、金色细边框、焦点态金色边框、placeholder 用 muted 金（placeholder-style，token 取值）、字号 $font-size-body；
 //  label：次要文字色、caption 字号、与输入框之间 12rpx 间距（深色 sheet 与浅色页均读 token，可读）。
+//  maxlength（2026-11 CR）：原生 <input> 的 maxlength 微信默认 140（旧 wd-input 默认不限）⇒ 必须显式传业务上限，否则长文本会在 140 字**静默截断**。
+//  默认 -1＝不限（保持旧行为）；传正数＝原生限制输入。showCount 打开后在输入框下方显示「n/max」，到达上限显示「已达上限」警示色——
+//  原生截断本身无反馈，所以限制 + 可见提示两件事一起做（二选一不够：只限制用户不知道为什么打不进字）。上限数值由调用方取业务常量（与 domain 校验同源）。
 //  行为：type（text/number/digit/idcard/tel 透传为原生键盘类型）、disabled（不可编辑 + 降透明度）、clearable（有值且非禁用时显示 ×，
 //  点击清空并发 clear + update:modelValue ""）均保留。
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { hapticTap } from "../application/haptics";
 import { INPUT_PLACEHOLDER_STYLE, valueFromInputEvent, type FieldType } from "./field-theme";
 
@@ -20,8 +23,12 @@ const props = withDefaults(
     disabled?: boolean;
     clearable?: boolean;
     type?: FieldType;
+    /** 最大输入长度；-1＝不限（默认，保持旧行为） */
+    maxlength?: number;
+    /** 显示「n/max」计数（仅 maxlength>0 时生效） */
+    showCount?: boolean;
   }>(),
-  { label: "", modelValue: "", placeholder: "请输入", disabled: false, clearable: false, type: "text" },
+  { label: "", modelValue: "", placeholder: "请输入", disabled: false, clearable: false, type: "text", maxlength: -1, showCount: false },
 );
 
 const emit = defineEmits<{
@@ -31,6 +38,10 @@ const emit = defineEmits<{
 }>();
 
 const focused = ref(false);
+/** 按码点计长（与 domain 校验 [...s].length 同口径；微信原生 maxlength 对 emoji 可能按 2 计，更保守，不会放过超限） */
+const count = computed(() => [...props.modelValue].length);
+const counting = computed(() => props.showCount && props.maxlength > 0);
+const atLimit = computed(() => props.maxlength > 0 && count.value >= props.maxlength);
 
 function onInput(e: unknown) {
   emit("update:modelValue", valueFromInputEvent(e));
@@ -61,6 +72,7 @@ function onClear() {
         :placeholder="placeholder"
         :placeholder-style="INPUT_PLACEHOLDER_STYLE"
         :disabled="disabled"
+        :maxlength="maxlength"
         @input="onInput"
         @focus="onFocus"
         @blur="onBlur"
@@ -69,6 +81,7 @@ function onClear() {
         <text class="base-field__clear-text">×</text>
       </view>
     </view>
+    <text v-if="counting" :class="atLimit ? 'base-field__count is-limit' : 'base-field__count'">{{ atLimit ? "已达上限 " : "" }}{{ count }}/{{ maxlength }}</text>
   </view>
 </template>
 
@@ -108,6 +121,16 @@ function onClear() {
   height: 100%;
   font-size: $font-size-body;
   color: $color-text-primary;
+}
+.base-field__count {
+  display: block;
+  margin-top: 8rpx;
+  text-align: right;
+  font-size: $font-size-caption;
+  color: $color-text-muted;
+}
+.base-field__count.is-limit {
+  color: $color-danger;
 }
 .base-field__clear {
   flex-shrink: 0;

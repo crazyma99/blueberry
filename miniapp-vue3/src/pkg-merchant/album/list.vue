@@ -36,7 +36,7 @@ import { runStrongDelete } from "../application/merchant-strong-delete";
 import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
 import { useMerchantShop } from "../composables/use-merchant-shop";
-import { ALBUM_PAGE_STEP, albumCoverThumb, describeAlbumDelete, describeAlbumFinalConfirm, nextVisibleCount, sliceVisible, type MerchantAlbum } from "../domain/merchant-album";
+import { ALBUM_DESC_MAX, ALBUM_PAGE_STEP, ALBUM_TITLE_MAX, albumCoverThumb, describeAlbumDelete, describeAlbumFinalConfirm, nextVisibleCount, sliceVisible, type MerchantAlbum } from "../domain/merchant-album";
 import { cascadeFilterOptions, cascadePathOfSub, cascadeSubOptions, labelOfSub, subIdFromCascadeValue, type CategoryTreeNode } from "../domain/merchant-category-tree";
 import { hasPermission, PERM, type MerchantProfile } from "../domain/merchant-auth";
 import { MERCHANT_PICK_MAX_COUNT, PICK_FAIL_TEXT } from "../domain/merchant-upload";
@@ -608,13 +608,13 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
     <BasePopup :show="formShow" position="bottom" :root-portal="false" :z-index="2000" @cancel="closeForm">
       <view class="sheet">
         <text class="sheet-title">{{ formMode === "create" ? "新建相册" : "编辑相册" }}</text>
-        <BaseField v-model="fTitle" label="相册名称" placeholder="请输入相册名称" />
+        <BaseField v-model="fTitle" label="相册名称" placeholder="请输入相册名称" :maxlength="ALBUM_TITLE_MAX" show-count />
         <view class="pick-row" hover-class="press-dim" @click="openChildPicker">
           <text class="pick-label">所属分类</text>
           <text :class="fChildId > 0 ? 'pick-value' : 'pick-value pick-value--ph'">{{ childLabel }}</text>
         </view>
         <BaseField v-model="fPrice" label="价格(元)" placeholder="0" type="digit" />
-        <BaseField v-model="fPackageDesc" label="套餐说明" placeholder="选填" />
+        <BaseField v-model="fPackageDesc" label="套餐说明" placeholder="选填" :maxlength="ALBUM_DESC_MAX" show-count />
         <view v-if="formMode === 'create'" class="photos">
           <text class="pick-label">照片（选填）</text>
           <view class="photo-grid">

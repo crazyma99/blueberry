@@ -27,8 +27,11 @@ import { runStrongDelete } from "../application/merchant-strong-delete";
 import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
 import { useMerchantShop } from "../composables/use-merchant-shop";
-import { describeDeleteImpact, describeFinalConfirm, type CascadeImpact, type MerchantCategory } from "../domain/merchant-category";
+import { CATEGORY_NAME_MAX, CATEGORY_SORT_MAX, describeDeleteImpact, describeFinalConfirm, type CascadeImpact, type MerchantCategory } from "../domain/merchant-category";
 import { hasPermission, PERM, type MerchantProfile } from "../domain/merchant-auth";
+
+/** 排序号最多位数（与 CATEGORY_SORT_MAX 同源） */
+const SORT_DIGITS = String(CATEGORY_SORT_MAX).length;
 
 const rt = getMerchantRuntime();
 const footer = useMerchantFooter();
@@ -314,8 +317,8 @@ async function onDeleteTap(c: MerchantCategory): Promise<void> {
     <BasePopup :show="formShow" position="bottom" :root-portal="false" :z-index="2000" @cancel="closeForm">
       <view class="sheet">
         <text class="sheet-title">{{ formMode === "create" ? (parent === null ? "新增一级分类" : "新增二级分类") : "编辑分类" }}</text>
-        <BaseField v-model="formName" label="名称" placeholder="请输入分类名称" />
-        <BaseField v-model="formSort" label="排序号" placeholder="0-9999，越小越靠前" type="number" />
+        <BaseField v-model="formName" label="名称" placeholder="请输入分类名称" :maxlength="CATEGORY_NAME_MAX" show-count />
+        <BaseField v-model="formSort" label="排序号" placeholder="0-9999，越小越靠前" type="number" :maxlength="SORT_DIGITS" />
         <text v-if="formError" class="form-error">{{ formError }}</text>
         <view :class="working ? 'sheet-btn is-disabled' : 'sheet-btn'" hover-class="press-dim" @click="submitForm">
           <text class="sheet-btn-text">{{ working ? "提交中..." : "确定" }}</text>
