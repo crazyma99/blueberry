@@ -14,7 +14,8 @@
 // 变异靶点：①回到 space-between ②列宽回到 32% ③去掉 is-end 清右边距 ④is-end 判定改成每行第 2 个。
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { flushPromises, mount } from "@vue/test-utils";
 
 const root = resolve(__dirname, "../..");
 const read = (p: string) => readFileSync(resolve(root, p), "utf-8");
@@ -54,33 +55,75 @@ describe("⭐图片网格：固定三列，末行靠左（不再 space-between +
   });
 });
 
-describe("⭐每行第 3 个带 is-end（按下标）", () => {
-  const fn = detail.match(/function gridCellClass\(idx: number\): string \{\s*return ([^;]+);/);
-  it("模板使用 gridCellClass(idx)", () => {
+// ⭐真实渲染断言（m2c CR：此前用例复算 (idx+1)%3 的算术恒等式，不依赖页面渲染；改为挂载真实详情页检查每个 cell 的 class）
+const hh = vi.hoisted(() => ({ onLoad: [] as Array<(o?: Record<string, unknown>) => void>, onShow: [] as Array<() => void>, store: new Map<string, string>(), n: 0 }));
+vi.mock("@dcloudio/uni-app", () => ({
+  onLoad: (fn: (o?: Record<string, unknown>) => void) => hh.onLoad.push(fn),
+  onShow: (fn: () => void) => hh.onShow.push(fn),
+  onHide: () => undefined,
+  onReachBottom: () => undefined,
+  onPullDownRefresh: () => undefined,
+}));
+vi.mock("../../src/platform/uni/transport", () => ({
+  createUniTransport: () => ({
+    request: async (req: { url: string }) => {
+      const ok = (data: unknown) => ({ ok: true, value: { status: 200, businessCode: 200, message: undefined, requestId: null, data } });
+      if (req.url === "/photo-albums/albums/get") return ok(Array.from({ length: hh.n }, (_, i) => ({ id: i + 1, albumId: 7, imageUrl: "https://c/" + i + ".jpg", sortOrder: i, aiTryonStatus: 1, aiTryonReason: "", aiTryonManual: 0 })));
+      return ok([]);
+    },
+    cancel: () => undefined,
+  }),
+}));
+import DetailPage from "../../src/pkg-merchant/album/detail.vue";
+import { __resetMerchantRuntime } from "../../src/pkg-merchant/application/merchant-runtime";
+import { MERCHANT_PROFILE_KEY, MERCHANT_SESSION_KEY } from "../../src/pkg-merchant/infrastructure/merchant-storage";
+
+async function mountGrid(n: number) {
+  hh.n = n;
+  hh.onLoad.length = 0;
+  hh.onShow.length = 0;
+  hh.store.clear();
+  __resetMerchantRuntime();
+  hh.store.set(MERCHANT_SESSION_KEY, JSON.stringify({ userId: "7", token: "m-token", platform: "mp-weixin", profileKey: "blueberry", authRevision: 1, kind: "full" }));
+  hh.store.set(MERCHANT_PROFILE_KEY, JSON.stringify({ adminId: 7, merchantId: 1, username: "a", role: "merchant", displayName: "A", roleName: "", permissions: ["album"], shopList: [] }));
+  (globalThis as { uni?: unknown }).uni = {
+    getStorageSync: (k: string) => hh.store.get(k) ?? "",
+    setStorageSync: (k: string, v: string) => hh.store.set(k, v),
+    removeStorageSync: (k: string) => hh.store.delete(k),
+    getSystemInfoSync: () => ({ statusBarHeight: 20, windowWidth: 375 }),
+    getMenuButtonBoundingClientRect: () => ({ left: 280, width: 87 }),
+    stopPullDownRefresh: () => undefined,
+    showToast: () => undefined,
+    upx2px: (x: number) => x / 2,
+  };
+  const w = mount(DetailPage, { global: { stubs: { PullRefreshIndicator: true, BaseFeedback: true, BaseDialog: true, PageFooter: true, CustomNavBar: true, MerchantNeedLogin: true, SkeletonBlock: true, BaseProgress: true } } });
+  hh.onLoad[hh.onLoad.length - 1]?.({ albumId: "7", shopId: "1", title: "x" });
+  await flushPromises();
+  await flushPromises();
+  return w;
+}
+
+describe("⭐每行第 3 个带 is-end（挂载真实详情页，逐格断言渲染出的 class）", () => {
+  it("模板使用 gridCellClass(idx)；源码表达式为 (idx + 1) % 3 === 0", () => {
     expect(detail).toContain(':class="gridCellClass(idx)"');
-    expect(fn).not.toBeNull();
-  });
-  // 用与页面同一表达式在测试里复算，覆盖 1/2/3/4/5/7 张
-  const cls = (idx: number) => ((idx + 1) % 3 === 0 ? "cell is-end" : "cell");
-  it("源码表达式与预期一致（变异：改成每行第 2 个即红）", () => {
+    const fn = detail.match(/function gridCellClass\(idx: number\): string \{\s*return ([^;]+);/);
     expect(fn?.[1]).toContain("(idx + 1) % 3 === 0");
-    expect(fn?.[1]).toContain('"cell is-end"');
   });
-  it.each([
-    [1, "A.. "],
-    [2, "AB. "],
-    [3, "ABC "],
-    [4, "ABC D.."],
-    [5, "ABC DE."],
-    [7, "ABC DEF G.."],
-  ])("%i 张：末行靠左，行内第 3 个无右边距", (n) => {
-    const ends = Array.from({ length: n }, (_, i) => cls(i) === "cell is-end");
-    // 第 3、6、9… 个是行尾
-    ends.forEach((e, i) => expect(e, `idx=${i}`).toBe((i + 1) % 3 === 0));
-    // 每行内的列位置 = idx % 3：末行 k 个元素占用第 0..k-1 列（靠左）
-    const lastRow = n % 3 === 0 ? 3 : n % 3;
-    const cols = Array.from({ length: lastRow }, (_, k) => (n - lastRow + k) % 3);
-    expect(cols).toEqual(Array.from({ length: lastRow }, (_, k) => k));
+  it.each([1, 2, 3, 4, 5, 6, 7, 9, 10])("%i 张：渲染 %i 个 .cell，仅第 3、6、9… 个带 is-end（变异：判定改成第 2 个/模板不用 gridCellClass 即红）", async (n) => {
+    const w = await mountGrid(n);
+    const cells = w.findAll(".grid > .cell");
+    expect(cells.length).toBe(n);
+    cells.forEach((c, i) => expect(c.classes().includes("is-end"), "n=" + n + " idx=" + i).toBe((i + 1) % 3 === 0));
+    // 末行靠左：末行元素在行内的列位置 = idx % 3，依次为 0..k-1
+    const last = n % 3 === 0 ? 3 : n % 3;
+    const cols = Array.from({ length: last }, (_, k) => (n - last + k) % 3);
+    expect(cols).toEqual(Array.from({ length: last }, (_, k) => k));
+  });
+  it("5 张（主人报告的场景）：第二行恰好 D、E 两格，E 不带 is-end，都不在第 3 列", async () => {
+    const w = await mountGrid(5);
+    const cells = w.findAll(".grid > .cell");
+    expect(cells.slice(3).map((c) => c.classes().includes("is-end"))).toEqual([false, false]);
+    expect(cells[2].classes()).toContain("is-end");
   });
 });
 
