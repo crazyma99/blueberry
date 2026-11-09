@@ -365,7 +365,7 @@ describe("⭐取消：安全中止", () => {
       return res;
     };
     const out = await creator.run({ form, photos: photos(3) });
-    expect(out).toEqual({ status: "cancelled", albumId: null });
+    expect(out).toEqual({ status: "cancelled", albumId: null, coverOrphan: true });
     expect(r.creates()).toBe(0);
     expect(r.uploads.length).toBe(0);
     expect(r.log).toContain("cover-cancel");
@@ -378,7 +378,7 @@ describe("⭐取消：安全中止", () => {
     const r2 = rig();
     const c2 = createAlbumCreator(r2.deps);
     r2.deps.uploadCover = async () => { c2.cancel(); return { ok: false, kind: "network", message: "已取消" }; };
-    expect(await c2.run({ form, photos: photos(2) })).toEqual({ status: "cancelled", albumId: null });
+    expect(await c2.run({ form, photos: photos(2) })).toEqual({ status: "cancelled", albumId: null, coverOrphan: false });
     expect(r2.creates()).toBe(0);
   });
   it("创建请求在途时取消 ⇒ 相册已存在，不再上传其余图片，返回 partial 引导补传（不重复创建）", async () => {
@@ -420,5 +420,47 @@ describe("⭐取消：安全中止", () => {
 describe("PASS_THROUGH_COMPRESS：直通（创建流程已压缩，上传器不得再压）", () => {
   it("原样返回路径与体积", async () => {
     expect(await PASS_THROUGH_COMPRESS.compress("c-a.jpg", 123)).toMatchObject({ path: "c-a.jpg", size: 123, reused: true });
+  });
+});
+
+describe("⭐封面孤儿文件提示（m2c CR）：封面已上传但相册未建 ⇒ coverOrphan=true", () => {
+  it("创建相册失败 ⇒ failed(stage=create, coverOrphan=true)；封面上传前就失败 ⇒ 无该标记（变异：不标记即红）", async () => {
+    const r = rig();
+    r.setCreateResult({ ok: false, kind: "failed", message: "相册名称已存在" });
+    const out = await createAlbumCreator(r.deps).run({ form, photos: photos(2) });
+    expect(out).toMatchObject({ status: "failed", stage: "create", coverOrphan: true });
+    const r2 = rig();
+    r2.setCoverResult({ ok: false, kind: "network", message: "x" });
+    const out2 = await createAlbumCreator(r2.deps).run({ form, photos: photos(2) });
+    expect((out2 as { coverOrphan?: boolean }).coverOrphan).toBeUndefined();
+  });
+  it("没选照片（无封面）创建失败 ⇒ coverOrphan=false（没有上传过封面）", async () => {
+    const r = rig();
+    r.setCreateResult({ ok: false, kind: "failed", message: "x" });
+    const out = await createAlbumCreator(r.deps).run({ form, photos: EMPTY_PHOTO_STATE });
+    expect(out).toMatchObject({ status: "failed", stage: "create", coverOrphan: false });
+  });
+  it("封面传完后被取消 ⇒ cancelled(coverOrphan=true)；封面失败时取消 ⇒ coverOrphan=false", async () => {
+    const r = rig();
+    const creator = createAlbumCreator(r.deps);
+    const origCover = r.deps.uploadCover;
+    r.deps.uploadCover = async (i, o) => {
+      const res = await origCover(i, o);
+      creator.cancel();
+      return res;
+    };
+    // 封面返回后立即取消：run 在「封面后检查」处返回 cancelled，此时封面已传成功 ⇒ 孤儿封面
+    const out = await creator.run({ form, photos: photos(3) });
+    expect(out).toEqual({ status: "cancelled", albumId: null, coverOrphan: true });
+    expect(r.creates()).toBe(0);
+    // 封面上传本身失败/被取消（r.ok=false）⇒ 没有孤儿
+    const r2 = rig();
+    const c2 = createAlbumCreator(r2.deps);
+    r2.deps.uploadCover = async () => { c2.cancel(); return { ok: false, kind: "network", message: "已取消" }; };
+    expect(await c2.run({ form, photos: photos(3) })).toEqual({ status: "cancelled", albumId: null, coverOrphan: false });
+  });
+  it("文案常量：明示「封面未使用，不影响使用」", async () => {
+    const { COVER_ORPHAN_NOTE } = await import("../../src/pkg-merchant/domain/merchant-album-create");
+    expect(COVER_ORPHAN_NOTE).toBe("已上传的封面未使用，不影响使用。");
   });
 });

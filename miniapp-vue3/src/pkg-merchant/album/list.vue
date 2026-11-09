@@ -40,7 +40,7 @@ import { ALBUM_DESC_MAX, ALBUM_PAGE_STEP, ALBUM_TITLE_MAX, albumCoverThumb, desc
 import { cascadeFilterOptions, cascadePathOfSub, cascadeSubOptions, labelOfSub, subIdFromCascadeValue, type CategoryTreeNode } from "../domain/merchant-category-tree";
 import { hasPermission, PERM, type MerchantProfile } from "../domain/merchant-auth";
 import { MERCHANT_PICK_MAX_COUNT, PICK_FAIL_TEXT } from "../domain/merchant-upload";
-import { CREATE_PHOTO_MAX, EMPTY_PHOTO_STATE, addPhotos, effectiveCoverKey, removePhoto, setCover } from "../domain/merchant-album-create";
+import { COVER_ORPHAN_NOTE, CREATE_PHOTO_MAX, EMPTY_PHOTO_STATE, addPhotos, effectiveCoverKey, removePhoto, setCover } from "../domain/merchant-album-create";
 
 const rt = getMerchantRuntime();
 const footer = useMerchantFooter();
@@ -402,11 +402,11 @@ async function submitCreate(): Promise<void> {
         formShow.value = false;
         return;
       }
-      fError.value = out.message;
+      fError.value = out.coverOrphan === true ? out.message + COVER_ORPHAN_NOTE : out.message;
       return;
     }
     if (out.status === "cancelled") {
-      toast("已取消，未创建相册");
+      toast("已取消，未创建相册" + (out.coverOrphan === true ? "。" + COVER_ORPHAN_NOTE : ""));
       return;
     }
     // partial：相册已创建（只创建一次），有图片未传成功
@@ -608,6 +608,8 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
     <BasePopup :show="formShow" position="bottom" :root-portal="false" :z-index="2000" @cancel="closeForm">
       <view class="sheet">
         <text class="sheet-title">{{ formMode === "create" ? "新建相册" : "编辑相册" }}</text>
+        <!-- 表单内容区独立滚动（照片最多 30 张约 10 行，整页撑高会把「创建相册」按钮推出屏外）；标题与底部操作区固定可见 -->
+        <scroll-view scroll-y class="sheet-body" :show-scrollbar="false">
         <BaseField v-model="fTitle" label="相册名称" placeholder="请输入相册名称" :maxlength="ALBUM_TITLE_MAX" show-count />
         <view class="pick-row" hover-class="press-dim" @click="openChildPicker">
           <text class="pick-label">所属分类</text>
@@ -639,6 +641,7 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
           <text class="hint">{{ createProgress.text }}</text>
           <BaseProgress :percentage="createProgress.percent" />
         </view>
+        </scroll-view>
         <text v-if="fError" class="form-error">{{ fError }}</text>
         <view v-if="partial !== null" class="partial">
           <text class="partial-text">{{ partial.message }}</text>
@@ -876,6 +879,10 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
   padding-bottom: calc(#{$space-lg} + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
+}
+/* 内容区最大高度：留出标题 + 底部按钮区 + 顶部空间（真机需验证不同机型） */
+.sheet-body {
+  max-height: 60vh;
 }
 .sheet-title {
   font-size: $font-size-sub-title;

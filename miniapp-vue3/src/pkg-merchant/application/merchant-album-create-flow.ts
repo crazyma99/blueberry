@@ -39,9 +39,9 @@ export type CreateOutcome =
   /** 压缩失败（没有任何副作用：未上传、未创建） */
   | { status: "compress-failed"; index: number; message: string }
   /** 封面上传/创建相册失败（相册**未**创建；封面若已传成功会成为云端孤儿文件，同后台行为） */
-  | { status: "failed"; stage: "cover" | "create"; message: string; authExpired: boolean }
-  /** 用户在创建相册之前取消（零副作用或仅有孤儿封面） */
-  | { status: "cancelled"; albumId: null }
+  | { status: "failed"; stage: "cover" | "create"; message: string; authExpired: boolean; coverOrphan?: boolean }
+  /** 用户在创建相册之前取消（零副作用或仅有孤儿封面；coverOrphan＝封面已上传但相册未建，云端留有未使用的封面文件，与后台行为一致） */
+  | { status: "cancelled"; albumId: null; coverOrphan?: boolean }
   /** 相册已创建，但有图片未传成功（含创建后被取消 / 登录失效）：失败项保留供重试 */
   | { status: "partial"; albumId: number; title: string; failed: number; total: number; authExpired: boolean; message: string };
 
@@ -147,20 +147,23 @@ export function createAlbumCreator(deps: AlbumCreatorDeps): AlbumCreator {
 
         // 步骤1：上传封面（可选）
         let coverUrl = "";
+        let coverUploaded = false;
         if (cover != null) {
           if (cancelled) return { status: "cancelled", albumId: null };
           progress("cover", 1, total, total, units);
           const r = await deps.uploadCover(compressed[0], (p) => progress("cover", 1, total, total + Math.round(p / 100), units));
-          if (cancelled) return { status: "cancelled", albumId: null };
+          // 封面若已上传成功（r.ok）而此刻被取消：云端留有未使用的封面文件 ⇒ 标记 coverOrphan 供页面提示
+          if (cancelled) return { status: "cancelled", albumId: null, coverOrphan: r.ok };
           if (!r.ok) return { status: "failed", stage: "cover", message: "封面上传失败：" + r.message, authExpired: r.kind === "auth-expired" };
           coverUrl = r.url;
+          coverUploaded = true;
         }
 
         // 步骤2：创建相册（只发生一次）
-        if (cancelled) return { status: "cancelled", albumId: null };
+        if (cancelled) return { status: "cancelled", albumId: null, coverOrphan: coverUploaded };
         progress("create", 0, total, cover != null ? total + 1 : total, units);
         const created = await deps.createAlbum({ title: v.form.title, childId: v.form.childId, price: v.form.price, packageDesc: v.form.packageDesc, coverImageUrl: coverUrl });
-        if (!created.ok) return { status: "failed", stage: "create", message: created.message, authExpired: created.kind === "auth-expired" };
+        if (!created.ok) return { status: "failed", stage: "create", message: created.message, authExpired: created.kind === "auth-expired", coverOrphan: coverUploaded };
         createdId = created.albumId;
         createdTitle = v.form.title;
         const rest = compressed.slice(cover != null ? 1 : 0);

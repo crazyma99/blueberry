@@ -73,3 +73,6 @@ export function describeCreateProgress(phase: CreatePhase, index: number, total:
 export function describePartialFailure(title: string, failed: number, total: number): string {
   return `相册「${title}」已创建，但 ${failed} / ${total} 张图片上传失败。可点「重试失败项」，或稍后在该相册的图片管理中补传（请勿重复新建）。`;
 }
+
+/** 封面已上传但相册未创建（取消/创建失败）时追加的说明：云端有一张未使用的封面文件，不影响使用（与后台行为一致） */
+export const COVER_ORPHAN_NOTE = "已上传的封面未使用，不影响使用。";

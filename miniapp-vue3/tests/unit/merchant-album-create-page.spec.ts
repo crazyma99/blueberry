@@ -2,6 +2,8 @@
 // 仅替换平台端口（选图/压缩/上传，经 merchant-upload-deps 注入）与传输层。覆盖：不再要求「先传封面才能建」、选多张→默认第一张封面→设封面→移除、
 // 一次保存按后台顺序执行、压缩失败零副作用、部分失败提示且不重复创建、编辑模式不含照片区。
 // 变异靶点：①新建仍强制先传封面 ②默认封面不是第一张 ③点图不能改封面 ④压缩失败仍建相册 ⑤部分失败后「创建相册」按钮仍可再次创建 ⑥编辑模式出现照片区。
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
@@ -16,6 +18,10 @@ const hh = vi.hoisted(() => ({
   compressN: 0,
   uploads: [] as Array<{ url: string; name: string; filePath: string }>,
   withAlbum: false,
+  failAdd: "" as string,
+  cancelAfterCover: false,
+  cancelHook: null as null | (() => void),
+  toasts: [] as string[],
   hold: null as null | Promise<void>,
   uploadResult: ((_req: { filePath: string; url: string }) => ({ ok: true, value: { statusCode: 200, data: JSON.stringify({ code: 200, data: [{ id: 1 }] }) } })) as (req: { filePath: string; url: string }) => unknown,
 }));
@@ -34,7 +40,7 @@ vi.mock("../../src/platform/uni/transport", () => ({
       const ok = (data: unknown) => ({ ok: true, value: { status: 200, businessCode: 200, message: undefined, requestId: null, data } });
       if (req.url === "/shop/parent/list") return ok([cat(5, "外景")]);
       if (req.url === "/shop/sub/get-by-parent") return ok([cat(9, "海边", 5)]);
-      if (req.url.startsWith("/photo-albums/add-photo")) return ok({ id: 88, title: "x" });
+      if (req.url.startsWith("/photo-albums/add-photo")) return hh.failAdd !== "" ? { ok: true, value: { status: 200, businessCode: 500, message: hh.failAdd, requestId: null, data: null } } : ok({ id: 88, title: "x" });
       if (req.url === "/photo-albums/photo" && hh.withAlbum) return ok([{ id: 1, shopId: 1, childId: 9, parentId: 5, childName: "海边", title: "旧相册", coverImageUrl: "https://c/x.jpg", price: 10, packageDesc: "", aiDesc: "", sortOrder: 0, tryonCount: 0 }]);
       return ok([]);
     },
@@ -55,7 +61,10 @@ vi.mock("../../src/pkg-merchant/application/merchant-upload-deps", () => ({
       upload: async (req: { url: string; name: string; filePath: string }) => {
         hh.uploads.push({ url: req.url, name: req.name, filePath: req.filePath });
         if (hh.hold != null && !req.url.endsWith("/upload-cover")) await hh.hold;
-        if (req.url.endsWith("/upload-cover")) return { ok: true, value: { statusCode: 200, data: JSON.stringify({ code: 200, data: { image_url: "https://cdn/c.jpg" } }) } };
+        if (req.url.endsWith("/upload-cover")) {
+          if (hh.cancelAfterCover) hh.cancelHook?.(); // 封面请求成功返回的同一时刻用户点「取消上传」
+          return { ok: true, value: { statusCode: 200, data: JSON.stringify({ code: 200, data: { image_url: "https://cdn/c.jpg" } }) } };
+        }
         return hh.uploadResult(req);
       },
       cancel: () => undefined,
@@ -75,7 +84,7 @@ const PopupSpy = defineComponent({ name: "BasePopup", props: ["show", "position"
 const PV = defineComponent({ name: "picker-view", emits: ["change", "pickstart", "pickend"], setup: (_p, { slots }) => () => h("div", { class: "native-picker-view" }, slots.default?.()) });
 const PVC = defineComponent({ name: "picker-view-column", setup: (_p, { slots }) => () => h("div", { class: "native-picker-view-column" }, slots.default?.()) });
 const Block = defineComponent({ name: "block", setup: (_p, { slots }) => () => slots.default?.() });
-const FeedbackStub = defineComponent({ setup(_p, { expose }) { expose({ show: () => undefined }); return () => null; } });
+const FeedbackStub = defineComponent({ setup(_p, { expose }) { expose({ show: (t: string) => void hh.toasts.push(t) }); return () => null; } });
 const GLOBAL = {
   components: { "wd-picker-view": WdPickerView, "picker-view": PV, "picker-view-column": PVC, block: Block },
   stubs: { PullRefreshIndicator: true, BaseFeedback: FeedbackStub, BaseDialog: true, PageFooter: true, CustomNavBar: true, MerchantNeedLogin: true, BasePopup: PopupSpy, BaseProgress: true, SkeletonBlock: true },
@@ -91,6 +100,10 @@ beforeEach(() => {
   hh.compressFailAt = -1;
   hh.compressN = 0;
   hh.withAlbum = false;
+  hh.failAdd = "";
+  hh.cancelAfterCover = false;
+  hh.cancelHook = null;
+  hh.toasts.length = 0;
   hh.hold = null;
   hh.uploadResult = () => ({ ok: true, value: { statusCode: 200, data: JSON.stringify({ code: 200, data: [{ id: 1 }] }) } });
   __resetMerchantRuntime();
@@ -300,5 +313,76 @@ describe("⭐一次保存：后台同款顺序", () => {
     for (let i = 0; i < 6; i++) await flushPromises();
     expect(hh.reqs.filter((r) => r.url.startsWith("/photo-albums/add-photo")).length).toBe(1);
     expect(w.find(".popup-spy").exists()).toBe(false);
+  });
+});
+
+describe("⭐新建表单内部滚动：30 张照片时「创建相册」按钮不被推出屏外（m2c CR）", () => {
+  it("字段/照片网格/进度在 scroll-view 内；标题与底部操作区（创建/取消/补传按钮、错误提示）在 scroll-view 之外（固定可见）（变异：按钮被包进滚动区即红）", async () => {
+    const w = await mountPage();
+    await w.find(".add").trigger("click");
+    await flushPromises();
+    const body = w.find(".sheet-body");
+    expect(body.exists()).toBe(true);
+    expect(body.find(".photos").exists()).toBe(true);
+    expect(body.find(".base-field__input").exists()).toBe(true);
+    expect(body.find(".sheet-btn").exists()).toBe(false); // 主按钮在滚动区外
+    expect(w.find(".sheet > .sheet-btn").exists()).toBe(true);
+    expect(w.find(".sheet > .sheet-title").exists()).toBe(true);
+  });
+  it("滚动区限高（60vh）且纵向滚动；选满 30 张后按钮仍在滚动区外", async () => {
+    const w = await mountPage();
+    await w.find(".add").trigger("click");
+    await flushPromises();
+    for (let k = 0; k < 4; k++) {
+      hh.picks.push(pickN(9, k * 100));
+      await w.find(".photo-add").trigger("click");
+      await flushPromises();
+    }
+    expect(w.findAll(".photo:not(.photo-add)").length).toBe(30);
+    expect(w.find(".sheet-body").find(".sheet-btn").exists()).toBe(false);
+    expect(w.find(".sheet-body").attributes("scroll-y")).toBeDefined();
+    const src = readFileSync(resolve(__dirname, "../../src/pkg-merchant/album/list.vue"), "utf-8");
+    expect(src).toMatch(/\.sheet-body \{\s*max-height: 60vh;/);
+  });
+});
+
+describe("⭐封面孤儿提示（m2c CR）：创建失败时表单错误里提示「已上传的封面未使用，不影响使用」", () => {
+  it("选了封面、封面上传成功、创建相册失败 ⇒ 错误文案含孤儿提示；没选照片的创建失败 ⇒ 不含（变异：不追加即红）", async () => {
+    const w = await mountPage();
+    await openCreateAndFill(w);
+    hh.picks.push(pickN(2));
+    await w.find(".photo-add").trigger("click");
+    await flushPromises();
+    hh.failAdd = "相册名称已存在";
+    await w.find(".sheet-btn").trigger("click");
+    for (let i = 0; i < 6; i++) await flushPromises();
+    expect(w.find(".form-error").text()).toContain("相册名称已存在");
+    expect(w.find(".form-error").text()).toContain("已上传的封面未使用，不影响使用");
+    // 清掉照片后（无封面）再失败：不应出现该提示
+    for (const rm of w.findAll(".photo-remove")) await rm.trigger("click");
+    await flushPromises();
+    await w.find(".sheet-btn").trigger("click");
+    for (let i = 0; i < 6; i++) await flushPromises();
+    expect(w.find(".form-error").text()).toContain("相册名称已存在");
+    expect(w.find(".form-error").text()).not.toContain("封面未使用");
+  });
+});
+
+describe("⭐取消时封面已上传：提示里说明封面未使用（m2c CR）", () => {
+  it("封面上传在途/完成后点「取消上传」⇒ 提示「已取消，未创建相册。已上传的封面未使用，不影响使用。」（变异：取消不标记孤儿即红）", async () => {
+    const w = await mountPage();
+    await openCreateAndFill(w);
+    hh.picks.push(pickN(3));
+    await w.find(".photo-add").trigger("click");
+    await flushPromises();
+    // 让「创建相册」请求挂起：此时封面已上传成功；点取消 ⇒ 创建返回后 cancelled 之前仍可能已建 ⇒ 这里改为在封面后立即取消
+    hh.cancelAfterCover = true;
+    hh.cancelHook = () => {
+      void w.findAll(".sheet-btn").find((b) => b.text() === "取消上传")?.trigger("click");
+    };
+    await w.find(".sheet-btn").trigger("click");
+    for (let i = 0; i < 8; i++) await flushPromises();
+    expect(hh.toasts.some((t) => t.includes("已取消，未创建相册") && t.includes("已上传的封面未使用，不影响使用"))).toBe(true);
+    expect(hh.reqs.some((r) => r.url.startsWith("/photo-albums/add-photo"))).toBe(false);
   });
 });
