@@ -62,6 +62,9 @@ const needLogin = computed(() => !loggedIn.value || authExpired.value);
 
 const albums = ref<MerchantAlbum[]>([]);
 const tree = ref<CategoryTreeNode[]>([]);
+/** 分类树是否「当前系列已成功加载」；失败时 treeError 有值（可见 + 可重试），此时不得当作「没有分类」 */
+const treeOk = ref(false);
+const treeError = ref<string | null>(null);
 const attempted = ref(false);
 const loading = ref(false);
 const loadError = ref<string | null>(null);
@@ -105,9 +108,18 @@ async function reload(): Promise<void> {
     if (mySeq !== reloadSeq) return;
     if (!g.ok) {
       loadError.value = g.message;
+      if (!treeOk.value) treeError.value = g.message;
       return;
     }
-    if (g.value.t.ok) tree.value = g.value.t.tree;
+    if (g.value.t.ok) {
+      tree.value = g.value.t.tree;
+      treeOk.value = true;
+      treeError.value = null;
+    } else {
+      treeOk.value = false;
+      treeError.value = g.value.t.message;
+      if (g.value.t.kind === "auth-expired") authExpired.value = true;
+    }
     const r = g.value.a;
     if (!r.ok) {
       if (r.kind === "auth-expired") authExpired.value = true;
@@ -159,7 +171,13 @@ function onShopConfirm(v: (string | number)[]): void {
   keyword.value = "";
   albums.value = [];
   tree.value = [];
+  treeOk.value = false;
+  treeError.value = null;
   attempted.value = false;
+  void reload();
+}
+function onRetryTree(): void {
+  hapticTap();
   void reload();
 }
 function openFilterPicker(): void {
@@ -207,6 +225,12 @@ const childLabel = computed(() => labelOfSub(tree.value, fChildId.value) || "请
 function openCreate(): void {
   if (working.value) return;
   hapticTap();
+  if (!treeOk.value) {
+    // 分类没加载成功 ⇒ 不能断言「没有分类」；提示失败并顺手重试
+    toast(treeError.value ?? "分类还没加载完成，请稍后再试");
+    if (treeError.value !== null) void reload();
+    return;
+  }
   if (childOpts.value.length === 0) {
     toast("请先在「分类管理」里创建二级分类");
     return;
@@ -369,6 +393,11 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
         <view :class="working ? 'add is-disabled' : 'add'" hover-class="press-dim" @click="openCreate"><text class="add-text">新建</text></view>
       </view>
 
+      <view v-if="treeError !== null" class="tree-error">
+        <text class="tree-error-text">分类加载失败：{{ treeError }}</text>
+        <view class="tree-error-retry" hover-class="press-dim" @click="onRetryTree"><text class="tree-error-retry-text">重试</text></view>
+      </view>
+
       <view v-if="showSkeleton" class="sk-wrap">
         <SkeletonBlock v-for="i in 3" :key="i" width="100%" height="180rpx" radius="16rpx" />
       </view>
@@ -504,6 +533,30 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
 }
 .is-disabled {
   opacity: 0.4;
+}
+.tree-error {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 0 $space-md $space-sm;
+  padding: 16rpx 24rpx;
+  border-radius: 16rpx;
+  border: 2rpx solid rgba(255, 107, 107, 0.5);
+}
+.tree-error-text {
+  flex: 1;
+  font-size: $font-size-caption;
+  color: #ff6b6b;
+}
+.tree-error-retry {
+  margin-left: 16rpx;
+  padding: 8rpx 28rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid $color-border;
+}
+.tree-error-retry-text {
+  font-size: $font-size-caption;
+  color: $color-action;
 }
 .sk-wrap {
   padding: 0 $space-md;
