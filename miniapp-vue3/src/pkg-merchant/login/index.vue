@@ -7,6 +7,8 @@
 import { ref } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
+import { useMerchantFooter } from "../composables/use-merchant-footer";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import { toast as nativeToast } from "../../platform/uni/feedback";
 import { getMerchantRuntime } from "../application/merchant-runtime";
@@ -14,6 +16,7 @@ import { hapticTap } from "../../application/haptics";
 import { MERCHANT_HOME_URL } from "../../domain/merchant-entry";
 
 const rt = getMerchantRuntime();
+const footer = useMerchantFooter();
 const username = ref("");
 const password = ref("");
 const busy = ref(false);
@@ -73,6 +76,7 @@ async function onSubmit(): Promise<void> {
         <text class="submit-text">{{ busy ? "登录中..." : "登录" }}</text>
       </view>
     </view>
+    <PageFooter main-line="" :support-line="footer.supportLine.value" variant="bottomdesc" />
     <BaseFeedback ref="feedbackRef" />
   </view>
 </template>

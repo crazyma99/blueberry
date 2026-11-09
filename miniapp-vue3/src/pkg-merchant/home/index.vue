@@ -5,6 +5,8 @@
 import { computed, ref } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
+import { useMerchantFooter } from "../composables/use-merchant-footer";
 import MerchantNeedLogin from "../components/MerchantNeedLogin.vue";
 import { getMerchantRuntime } from "../application/merchant-runtime";
 import { hapticTap } from "../../application/haptics";
@@ -12,6 +14,7 @@ import { visibleEntries, type MerchantEntry, type MerchantProfile } from "../dom
 import { MERCHANT_LOGIN_URL } from "../../domain/merchant-entry";
 
 const rt = getMerchantRuntime();
+const footer = useMerchantFooter();
 const profile = ref<MerchantProfile | null>(null);
 const loggedIn = ref(false);
 
@@ -65,6 +68,7 @@ function onLogout(): void {
         <text class="logout-text">退出登录</text>
       </view>
     </view>
+    <PageFooter main-line="" :support-line="footer.supportLine.value" variant="bottomdesc" />
   </view>
 </template>
 

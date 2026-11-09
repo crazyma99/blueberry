@@ -7,6 +7,8 @@
 import { computed, ref } from "vue";
 import { onLoad, onReachBottom, onShow } from "@dcloudio/uni-app";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
+import PageFooter from "../../components/PageFooter/PageFooter.vue";
+import { useMerchantFooter } from "../composables/use-merchant-footer";
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseDialog from "../../ui/BaseDialog.vue";
@@ -42,6 +44,7 @@ import {
 import { hasPermission, PERM } from "../domain/merchant-auth";
 
 const rt = getMerchantRuntime();
+const footer = useMerchantFooter();
 const repo = createMerchantBookingRepository({ client: rt.client });
 const vm = createPagedListViewModel<MerchantBookingView, MerchantBookingFilter>(
   { fetch: createBookingListFetch({ bookings: repo }) },
@@ -277,6 +280,7 @@ function actionBtnClass(a: MerchantBookingAction): string {
       </view>
     </template>
 
+    <PageFooter main-line="" :support-line="footer.supportLine.value" variant="bottomdesc" />
     <BaseFeedback ref="feedbackRef" />
     <BaseDialog ref="dialogRef" />
   </view>
