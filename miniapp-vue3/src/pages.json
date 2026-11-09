@@ -213,6 +213,33 @@
 			}
 		}
 	],
+	// 商家端普通分包（issue #14 · M1）：**仅微信端注册**（主人拍板：抖音/小红书不做商家端 ⇒ 产物零残留）。
+	// 要点：普通分包（非独立分包：需复用主包请求层/组件）；TabBar 页不能进分包 ⇒ 商家端不做 tab，用 CustomNavBar 自定义导航；
+	// 跳转一律写全路径 `/pkg-merchant/...`；**不配 preloadRule**（商家不逛 C 端，预下载无收益）。
+	// 入口：商家专属小程序码直接落地 `pkg-merchant/login/index`（page 参数由后端生成码时指定）。
+	// #ifdef MP-WEIXIN
+	"subPackages": [
+		{
+			"root": "pkg-merchant",
+			"pages": [
+				{
+					"path": "login/index",
+					"style": {
+						"navigationStyle": "custom",
+						"navigationBarTitleText": "商家登录"
+					}
+				},
+				{
+					"path": "home/index",
+					"style": {
+						"navigationStyle": "custom",
+						"navigationBarTitleText": "商家工作台"
+					}
+				}
+			]
+		}
+	],
+	// #endif
 	"tabBar": {
 		// #ifdef MP-WEIXIN
 		"custom": true,

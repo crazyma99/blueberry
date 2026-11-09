@@ -10,6 +10,7 @@
 //   · 生效值确实变了才 `bumpScope()`（作废在飞旧品牌响应 P2-07）并回调 `onChanged`（页面据此骨架重现 + 重载）。
 import { resolveEnterBrand, type EnterBrandSource } from "../domain/enter-brand";
 import { isKnownBrandCode } from "../domain/brand-code";
+import { isMerchantLandingPath } from "../domain/merchant-entry";
 import { refreshKnownBrandCodesOnce, type BrandAllowlistRefreshDeps } from "./brand-allowlist";
 
 export interface EnterBrandSyncDeps {
@@ -17,6 +18,12 @@ export interface EnterBrandSyncDeps {
   refreshBrandCodes?: BrandAllowlistRefreshDeps;
   /** 平台层读取本次进入参数（platform/uni/enter-options.ts） */
   readEnterOptions(): { scene: string; queryBrandId: string };
+  /**
+   * 平台层读取本次进入的**落地页路径**（可选；platform/uni/enter-options.ts `readEnterPath`）。
+   * 落地页属商家分包（`pkg-merchant/…`）⇒ **整次进入都不做品牌同步**：商家小程序码的 scene 不得被当成 C 端品牌写入上下文。
+   * 不传（页面级调用方）⇒ 不分流，行为与此前完全一致。
+   */
+  readEnterPath?(): string;
   loadBrandId(): string | null;
   /** 内部含「已知商家编码」白名单校验：脏值不写入 */
   saveBrandId(id: string): void;
@@ -41,6 +48,8 @@ export interface EnterBrandSyncResult {
  * 目的：干净环境（`lm.brands.v1` 为空、未进过品牌馆）扫「线上存在但种子没有」的商户也能切过去。
  */
 export async function syncBrandFromEnterOptionsAsync(deps: EnterBrandSyncDeps): Promise<EnterBrandSyncResult> {
+  // 商家分包落地页：直接跳过（不消费进参、不补拉品牌列表）
+  if (isMerchantEntry(deps)) return skippedForMerchant(deps);
   // ⭐**不阻塞**：先按「已知 ∪ 形态合法」立即判定并写入/切换（放宽后无需等网络，见 domain/brand-code.ts）；
   // 随后**后台**补齐一次已知列表（一次/会话、超时、失败静默）——只为让后续会话「已知」，不参与本次判定。
   const result = syncBrandFromEnterOptions(deps);
@@ -77,7 +86,23 @@ function digestOfEnter(enter: { scene: string; queryBrandId: string }): string {
   return scene === "" && query === "" ? "" : scene + "|" + query;
 }
 
+/** 本次进入是否落在商家分包（readEnterPath 缺省/异常 ⇒ false，fail-open 回到原有品牌同步） */
+function isMerchantEntry(deps: EnterBrandSyncDeps): boolean {
+  if (deps.readEnterPath == null) return false;
+  try {
+    return isMerchantLandingPath(deps.readEnterPath());
+  } catch {
+    return false;
+  }
+}
+
+function skippedForMerchant(deps: EnterBrandSyncDeps): EnterBrandSyncResult {
+  return { changed: false, brandId: deps.loadBrandId() ?? "", source: "none" };
+}
+
 export function syncBrandFromEnterOptions(deps: EnterBrandSyncDeps): EnterBrandSyncResult {
+  // ⭐商家入口分流（issue #14）：落地页以 `pkg-merchant/` 开头 ⇒ 零动作（**不读 scene、不写摘要、不改品牌**）
+  if (isMerchantEntry(deps)) return skippedForMerchant(deps);
   const enter = deps.readEnterOptions();
   const current = deps.loadBrandId() ?? "";
   const digest = digestOfEnter(enter);

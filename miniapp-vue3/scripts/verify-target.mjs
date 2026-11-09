@@ -93,7 +93,9 @@ export function verifyTarget({ manifest, artifactDir }) {
   //    2026-09-17 CR 🟡：**含 subPackages**（若 AI 页改挂分包，只看 pages 会漏判）
   const allPages = [
     ...(appJson.pages ?? []),
-    ...((appJson.subPackages ?? []).flatMap((sp) => (sp.pages ?? []).map((p) => (sp.root ?? "") + p))),
+    // root 与 page 之间必须补 `/`（微信 app.json 的 root 无尾斜杠，如 `pkg-merchant`；曾直接相加得到 `pkg-merchantlogin/index`，
+    // 使 `pkg-merchant/` 形态的前缀规则漏判且报错文案失真）；root 已带尾斜杠的先归一，不产生双斜杠
+    ...((appJson.subPackages ?? []).flatMap((sp) => (sp.pages ?? []).map((p) => String(sp.root ?? "").replace(/\/+$/, "") + "/" + p))),
   ];
   checked.push("subPackages:" + String((appJson.subPackages ?? []).length));
   for (const forbidden of manifest.forbiddenRoutes ?? []) {

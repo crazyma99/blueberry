@@ -13,7 +13,7 @@ export interface EnterOptions {
 }
 
 interface UniApiLike {
-  getEnterOptionsSync?: () => { scene?: unknown; query?: Record<string, unknown> } | null;
+  getEnterOptionsSync?: () => { scene?: unknown; path?: unknown; query?: Record<string, unknown> } | null;
 }
 
 function uniApi(): UniApiLike | undefined {
@@ -46,5 +46,23 @@ export function readEnterOptions(): EnterOptions {
   } catch (err) {
     console.warn("[enter-options] getEnterOptionsSync 读取失败（fail-soft）:", err);
     return empty;
+  }
+}
+
+/**
+ * 读取本次进入的**落地页路径**（`enterOptions.path`，如 `pkg-merchant/login/index`；无前导斜杠）。
+ * 商家端入口分流用（2026-11 · issue #14）：落地页属商家分包时，App 级品牌同步整体跳过（见 domain/merchant-entry.ts）。
+ * 与 `readEnterOptions` 同口径：容器不支持或异常 ⇒ 空串（fail-soft，绝不抛）。
+ */
+export function readEnterPath(): string {
+  try {
+    const api = uniApi();
+    if (typeof api?.getEnterOptionsSync !== "function") return "";
+    const enter = api.getEnterOptionsSync();
+    if (enter == null) return "";
+    return typeof enter.path === "string" ? enter.path : "";
+  } catch (err) {
+    console.warn("[enter-options] readEnterPath 读取失败（fail-soft）:", err);
+    return "";
   }
 }
