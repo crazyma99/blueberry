@@ -2,8 +2,7 @@
 // 变异靶点（见汇报「证据」）：①merchantKeyOf 去掉会话键重映射 ②去掉登录前角色闸 ③去掉 loginInFlight 防重 ④去掉 transport 状态补全。
 import { describe, expect, it } from "vitest";
 import { createMerchantSession } from "../../src/pkg-merchant/application/merchant-session";
-import { createAuthCoordinator } from "../../src/application/auth-coordinator";
-import { createHttpClient, type Session } from "../../src/infrastructure/http/client";
+import type { Session } from "../../src/infrastructure/http/client";
 import { createMerchantTransport } from "../../src/pkg-merchant/infrastructure/merchant-transport";
 import { createMerchantStorage, merchantKeyOf, MERCHANT_PROFILE_KEY, MERCHANT_SESSION_KEY } from "../../src/pkg-merchant/infrastructure/merchant-storage";
 import { evaluateMerchantRole, canApplySlotTemplate, hasPermission, ROLE_DENIED_MESSAGE } from "../../src/pkg-merchant/domain/merchant-auth";
@@ -100,36 +99,41 @@ describe("⭐会话隔离：两套会话互不覆盖", () => {
     expect(backend.data.get("token")).toBe("C-LEGACY-TOKEN");
   });
 
-  it("⭐商家 401 只作废商家会话，不触发 C 端 expireSession、不清 C 端键（含 legacy token 同值场景）", async () => {
-    const backend = memStorage();
-    // 构造最坏情形：C 端 legacy token 与商家 token 同值（旧协调器 401 自愈会按同 token 清 legacy 键）
-    backend.set("token", "m-token-1");
-    backend.set("lm.session.v1", JSON.stringify(cSession));
+  it("⭐商家 401 只作废商家会话：对 C 端键（含与商家 token 同值的 legacy token）**零写入、零删除**（真实写入监听，非空断言）", async () => {
+    const inner = memStorage();
+    // 构造最坏情形：C 端 legacy token 与商家 token 同值（共用协调器的 401 自愈会按同 token 清 legacy 键）
+    inner.set("token", "m-token-1");
+    inner.set("lm.session.v1", JSON.stringify(cSession));
+    // 监听**登录之后**对后端的所有写/删：任何落在 lm.merchant. 命名空间之外的操作都算污染 C 端
+    const ops: string[] = [];
+    let spying = false;
+    const backend: StoragePort = {
+      get: (k) => inner.get(k),
+      set: (k, v) => { if (spying) ops.push("set:" + k); inner.set(k, v); },
+      remove: (k) => { if (spying) ops.push("remove:" + k); inner.remove(k); },
+    };
     let respondWith401 = false;
     const t = fakeTransport((req) => {
       if (req.url === "/auth/login") return { data: loginData() };
       return respondWith401 ? { status: 401, code: 401, message: "Token 已过期或无效，请重新登录" } : { data: { list: [], total: 0 } };
     });
     const m = mkSession(backend, t.port);
+    spying = true;
     await m.login("shopA", "pw");
-
-    // 同进程另建一个 C 端协调器，用来观察其 expireSession 是否被触发
-    let cExpireCalls = 0;
-    const cCoordinator = createAuthCoordinator({ exchangeIdentity: async () => ({ ok: false, reason: "x" }), storage: backend });
-    const cWrapped = { ...cCoordinator, expireSession: (s: Session) => { cExpireCalls++; cCoordinator.expireSession(s); } };
-    const cClient = createHttpClient({ transport: t.port, authCoordinator: cWrapped });
-
     respondWith401 = true;
     const res = await m.client.request({ method: "GET", url: "/booking/bookings", authRequired: true, context: m.nextContext() });
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error.kind).toBe("AUTH_EXPIRED");
 
-    expect(cExpireCalls).toBe(0);
-    expect(JSON.parse(backend.data.get("lm.session.v1")!).token).toBe("C-TOKEN"); // C 端会话未动
-    expect(backend.data.get("token")).toBe("m-token-1"); // C 端 legacy 键未被商家 401 清掉
-    expect(backend.data.has(MERCHANT_SESSION_KEY)).toBe(false); // 商家会话被作废
+    // 监听必须真的看见了商家侧的写与删（否则下面「零污染」可能是监听失效造成的假绿）
+    expect(ops).toContain("set:" + MERCHANT_SESSION_KEY);
+    expect(ops).toContain("remove:" + MERCHANT_SESSION_KEY);
+    const pollution = ops.filter((o) => !o.slice(o.indexOf(":") + 1).startsWith("lm.merchant."));
+    expect(pollution, "污染 C 端键的操作：" + pollution.join(",")).toEqual([]);
+    expect(JSON.parse(inner.data.get("lm.session.v1")!).token).toBe("C-TOKEN");
+    expect(inner.data.get("token")).toBe("m-token-1");
+    expect(inner.data.has(MERCHANT_SESSION_KEY)).toBe(false);
     expect(m.getState().loggedIn).toBe(false);
-    void cClient;
   });
 
   it("商家请求带商家 Bearer、不带 X-Brand-Id（brandId 恒 null）；C 端上下文的 brandId 不会泄漏进来", async () => {

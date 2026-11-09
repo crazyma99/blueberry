@@ -18,6 +18,17 @@ export const MERCHANT_RATE_LIMITED_TEXT = "操作过于频繁，请稍后再试"
 export const MERCHANT_LOGIN_RATE_LIMITED_TEXT = "登录尝试过于频繁，请 1 分钟后再试";
 export const MERCHANT_NETWORK_TEXT = "网络异常，请检查网络后重试";
 export const MERCHANT_GENERIC_FAIL_TEXT = "服务繁忙，请稍后重试";
+/**
+ * 资金类状态变更（接单/核销/取消）遇网络/超时的文案：请求可能已在服务端生效（有保证金的取消会**同步发起微信全额退款**，
+ * 10s 超时后结果未知），所以**不能**提示「请重试」——重复提交只会得到「状态已变化」类业务错误，且会让商家误判。
+ * 参照 application/booking-flow.ts 的 BOOKING_CREATE_NETWORK_TEXT 口径：先刷新核对结果。
+ */
+export const MERCHANT_ACTION_UNKNOWN_TEXT = "网络不太稳定，操作结果未知。请下拉刷新核对该预约的最新状态，确认未生效后再操作";
+
+/** 网络/超时类失败（请求可能已到达服务端，结果未知） */
+export function isMerchantNetworkFailure(err: MerchantErrorLike): boolean {
+  return err.kind === "NETWORK" || err.kind === "TIMEOUT";
+}
 
 /** 登录失效（HTTP 401 → AUTH_EXPIRED；容错：body.code=401 亦视为失效） */
 export function isMerchantAuthExpired(err: MerchantErrorLike): boolean {

@@ -19,6 +19,7 @@ import {
 import { createMerchantBookingRepository } from "../../src/pkg-merchant/infrastructure/merchant-bookings";
 import { createBookingActionRunner, createBookingListFetch } from "../../src/pkg-merchant/application/merchant-booking-flow";
 import { MERCHANT_ENTRIES, visibleEntries } from "../../src/pkg-merchant/domain/merchant-auth";
+import { MERCHANT_ACTION_UNKNOWN_TEXT } from "../../src/pkg-merchant/domain/merchant-error";
 import type { ClientRequestInput, ClientResult } from "../../src/infrastructure/http/client";
 import type { AppError } from "../../src/infrastructure/http/errors";
 import type { RequestContext } from "../../src/ports/context";
@@ -173,6 +174,27 @@ describe("⭐状态变更执行器：防重 + 失败文案", () => {
     expect(r).toEqual({ ok: false, kind: "failed", message: "当前状态（已确认）不可执行该操作" });
     expect(runner.busyId()).toBeNull();
   });
+  it("⭐资金类动作遇网络/超时 ⇒ unknown +「结果未知，请刷新核对」，**不得**提示重试（有保证金取消会同步发起微信退款；变异：改回通用文案即红）", async () => {
+    for (const kind of ["NETWORK", "TIMEOUT"] as const) {
+      for (const action of ["confirm", "complete", "cancel"] as const) {
+        const f = fakeClient(() => ({ ok: false, error: err(kind, "transport failure: " + kind.toLowerCase()) }));
+        const runner = createBookingActionRunner({ bookings: createMerchantBookingRunnerRepo(f) });
+        const r = await runner.run(ctx, 1, action);
+        expect(r, kind + action).toMatchObject({ ok: false, kind: "unknown", message: MERCHANT_ACTION_UNKNOWN_TEXT });
+        if (!r.ok) {
+          expect(r.message).toContain("结果未知");
+          expect(r.message).toContain("刷新核对");
+          expect(r.message).not.toMatch(/请重试|稍后重试/);
+        }
+        expect(f.seen.length).toBe(1); // 绝不自动重发
+        expect(runner.busyId()).toBeNull(); // 失败后释放占位
+      }
+    }
+  });
+  it("网络/超时以外的失败不受影响：业务错误原样、403 固定文案", async () => {
+    const f = fakeClient(() => ({ ok: false, error: err("BUSINESS", "预约状态已变化，请刷新后重试", 500) }));
+    expect(await createBookingActionRunner({ bookings: createMerchantBookingRunnerRepo(f) }).run(ctx, 1, "cancel")).toEqual({ ok: false, kind: "failed", message: "预约状态已变化，请刷新后重试" });
+  });
   it("401 ⇒ auth-expired；403 ⇒ 固定「无权限」文案", async () => {
     const mk = (e: AppError) => createBookingActionRunner({ bookings: createMerchantBookingRunnerRepo(fakeClient(() => ({ ok: false, error: e }))) });
     expect(await mk(err("AUTH_EXPIRED"))
@@ -201,6 +223,14 @@ describe("工作台入口 / 页面接线（源码级）", () => {
     // 去掉 JS 行/块注释与 HTML 注释：头注释会解释「不做什么」，守卫只看真实代码与模板
     const code = page.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     for (const bad of ["no-show", "noShow", "deposit/refund", "deposit/preview", "deposit/retry", "markNoShow"]) expect(code, bad).not.toContain(bad);
+  });
+  it("⭐页面：只有 auth-expired 提前返回；其它失败（含 unknown 结果未知）也要走 reload() 刷新列表核对；不含死代码 disposed", () => {
+    const fn = page.slice(page.indexOf("async function onActionTap"), page.indexOf("async function onCallTap"));
+    expect(fn.match(/return;/g)?.length).toBe(3); // 防重 / 取消确认 / auth-expired；unknown 与 failed 不得 return
+    const afterRun = fn.slice(fn.indexOf("runner.run("));
+    expect(afterRun.slice(afterRun.indexOf("auth-expired"), afterRun.indexOf("await reload()"))).not.toContain("unknown");
+    expect(afterRun).toContain("await reload()");
+    expect(page).not.toContain("disposed");
   });
   it("页面注册：booking/list 启用下拉刷新与触底距离，且位于商家分包内", () => {
     const pj = readFileSync(resolve(root, "src/pages.json"), "utf-8");

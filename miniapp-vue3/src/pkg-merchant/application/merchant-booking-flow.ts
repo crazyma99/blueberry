@@ -4,7 +4,7 @@ import type { RequestContext } from "../../ports/context";
 import type { createMerchantBookingRepository, MerchantBookingPage } from "../infrastructure/merchant-bookings";
 import type { PagedFetchArgs, PagedFetchResult } from "../composables/use-merchant-list";
 import type { MerchantBookingAction, MerchantBookingFilter, MerchantBookingView } from "../domain/merchant-booking";
-import { isMerchantAuthExpired, merchantErrorMessage } from "../domain/merchant-error";
+import { isMerchantAuthExpired, isMerchantNetworkFailure, merchantErrorMessage, MERCHANT_ACTION_UNKNOWN_TEXT } from "../domain/merchant-error";
 
 type Repo = ReturnType<typeof createMerchantBookingRepository>;
 
@@ -25,7 +25,8 @@ export function createBookingListFetch(deps: { bookings: Repo }) {
 
 export type BookingActionOutcome =
   | { ok: true; booking: MerchantBookingView }
-  | { ok: false; kind: "busy" | "failed" | "auth-expired"; message: string };
+  /** unknown＝网络/超时，**结果未知**（可能已生效）：页面必须刷新列表核对，且不得提示「请重试」 */
+  | { ok: false; kind: "busy" | "failed" | "auth-expired" | "unknown"; message: string };
 
 /**
  * 状态变更执行器。**防重**：任一变更进行中（busyId≠null）再点任何预约的任何操作一律拒绝——
@@ -43,8 +44,10 @@ export function createBookingActionRunner(deps: { bookings: Repo }) {
       try {
         const r = await deps.bookings.act(context, bookingId, action);
         if (!r.ok) {
-          const expired = isMerchantAuthExpired(r.error);
-          return { ok: false, kind: expired ? "auth-expired" : "failed", message: merchantErrorMessage(r.error, "操作失败，请重试") };
+          if (isMerchantAuthExpired(r.error)) return { ok: false, kind: "auth-expired", message: merchantErrorMessage(r.error) };
+          // 资金类动作遇网络/超时：结果未知（见 MERCHANT_ACTION_UNKNOWN_TEXT）；业务失败/403 等仍原样后端文案
+          if (isMerchantNetworkFailure(r.error)) return { ok: false, kind: "unknown", message: MERCHANT_ACTION_UNKNOWN_TEXT };
+          return { ok: false, kind: "failed", message: merchantErrorMessage(r.error, "操作失败，请重试") };
         }
         return { ok: true, booking: r.value };
       } finally {

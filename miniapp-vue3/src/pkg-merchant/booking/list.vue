@@ -59,7 +59,6 @@ const canManage = ref(false);
 const ready = ref(false);
 /** 处理中的预约 id（响应式镜像 runner.busyId，供模板置灰/「处理中...」） */
 const busyId = ref<number | null>(null);
-let disposed = false;
 
 function refreshLoginState(): void {
   const s = rt.getState();
@@ -70,7 +69,6 @@ function refreshLoginState(): void {
 const needLogin = computed(() => !loggedIn.value || vm.authExpired.value);
 
 async function reload(): Promise<void> {
-  if (disposed) return;
   refreshLoginState();
   if (!loggedIn.value || !canManage.value) return;
   const r = await vm.loadFirst(rt.nextContext());
