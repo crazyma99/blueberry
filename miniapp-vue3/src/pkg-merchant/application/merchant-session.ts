@@ -155,6 +155,18 @@ export function createMerchantSession(deps: {
     /** 每次请求取新上下文（brandId 恒 null） */
     nextContext: (): RequestContext => ctxFactory.next(),
     getState,
+    /**
+     * 401 精确作废（multipart 上传不经 http client，client 的 401 自愈覆盖不到它们，需调用方显式作废）：
+     * 仅当「在飞请求所用 token」仍等于**当前会话 token** 才作废——旧 token 的迟到 401 不会误杀刚重新登录的新会话
+     * （与 http client 401 自愈同口径，直接复用协调器的 expireSession 比对）。返回是否真的作废了。
+     * 作废后 getState().loggedIn 为 false，登录页 onShow 不会再把人弹回工作台。
+     */
+    expireSessionByToken: (usedToken: string): boolean => {
+      const cur = readSession();
+      if (cur == null || usedToken === "" || cur.token !== usedToken) return false;
+      coordinator.expireSession(cur);
+      return readSession() == null;
+    },
     /** 当前商家会话 token（上传等 multipart 请求手工带 Authorization 用）；未登录/会话缺失 ⇒ ""。只读商家命名空间，不碰 C 端会话 */
     getToken: (): string => readSession()?.token ?? "",
     login,

@@ -40,6 +40,11 @@ export interface AlbumUploaderDeps {
   onFinished?: () => void;
   /** 登录失效（HTTP401 / code=401）：停止后续上传，页面回登录页 */
   onAuthExpired?: () => void;
+  /**
+   * 收到 401（HTTP 或 code）时，用**本次请求所用 token** 精确作废商家会话（multipart 不经 http client，其 401 自愈覆盖不到）。
+   * 缺省不作废（兼容旧调用方）；页面应传 `(t) => rt.expireSessionByToken(t)`。
+   */
+  expireSession?: (usedToken: string) => void;
 }
 
 export interface AlbumUploader {
@@ -117,7 +122,14 @@ export function createAlbumUploader(deps: AlbumUploaderDeps): AlbumUploader {
     }
     const parsed = parseUploadResponse(res.value.statusCode, res.value.data);
     if (!parsed.ok) {
-      if (parsed.message.includes("登录已失效")) authExpired = true;
+      if (parsed.message.includes("登录已失效")) {
+        authExpired = true;
+        try {
+          deps.expireSession?.(token); // 精确作废：只作废「本次请求所用 token」对应的会话
+        } catch {
+          /* 静默 */
+        }
+      }
       patch(item.key, { status: "failed", error: parsed.message, failedAt: "upload" });
       return;
     }

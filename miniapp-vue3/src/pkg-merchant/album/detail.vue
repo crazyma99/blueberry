@@ -166,6 +166,10 @@ function ensureUploader(): AlbumUploader {
     onAuthExpired: () => {
       authExpired.value = true;
     },
+    // 401 精确作废商家会话：否则「前往登录」页 onShow 看到会话还在会直接弹回工作台（循环）
+    expireSession: (usedToken) => {
+      rt.expireSessionByToken(usedToken);
+    },
   });
   return uploader;
 }

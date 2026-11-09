@@ -44,7 +44,7 @@ const shop = useMerchantShop();
 const upDeps = createMerchantUploadDeps();
 const albumUc = createAlbumUseCases({ albums: createMerchantAlbumRepository({ client: rt.client }), images: createMerchantImageRepository({ client: rt.client }) });
 const catUc = createCategoryUseCases({ categories: createMerchantCategoryRepository({ client: rt.client }), albums: createMerchantAlbumRepository({ client: rt.client }) });
-const cover = createCoverUploader({ upload: upDeps.newUpload(), compress: upDeps.compress, getToken: () => rt.getToken(), uploadUrl: upDeps.coverUploadUrl() });
+const cover = createCoverUploader({ upload: upDeps.newUpload(), compress: upDeps.compress, getToken: () => rt.getToken(), uploadUrl: upDeps.coverUploadUrl(), expireSession: (usedToken) => void rt.expireSessionByToken(usedToken) });
 
 const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
 const dialogRef = ref<InstanceType<typeof BaseDialog> | null>(null);

@@ -41,6 +41,8 @@ export function createCoverUploader(deps: {
   getToken: () => string;
   /** 绝对地址：`<apiBase>/photo-albums/upload-cover` */
   uploadUrl: string;
+  /** 收到 401 时用本次请求所用 token 精确作废商家会话（multipart 不经 http client）；缺省不作废 */
+  expireSession?: (usedToken: string) => void;
 }) {
   return {
     async upload(input: { shopId: number; path: string; size: number }, onProgress?: (percent: number) => void): Promise<CoverUploadResult> {
@@ -60,7 +62,16 @@ export function createCoverUploader(deps: {
       });
       if (!res.ok) return { ok: false, kind: "network", message: res.reason === "timeout" ? UPLOAD_TIMEOUT_TEXT : UPLOAD_NETWORK_TEXT };
       const p = parseCoverResponse(res.value.statusCode, res.value.data);
-      if (!p.ok) return { ok: false, kind: p.authExpired ? "auth-expired" : "server", message: p.message };
+      if (!p.ok) {
+        if (p.authExpired) {
+          try {
+            deps.expireSession?.(token);
+          } catch {
+            /* 静默 */
+          }
+        }
+        return { ok: false, kind: p.authExpired ? "auth-expired" : "server", message: p.message };
+      }
       return { ok: true, url: p.url };
     },
     cancel(): void {
