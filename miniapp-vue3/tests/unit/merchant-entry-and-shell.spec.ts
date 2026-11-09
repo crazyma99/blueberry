@@ -84,6 +84,17 @@ describe("⭐入口分流：商家分包落地页不做品牌同步", () => {
     expect(refreshed).toBe(0);
   });
 
+  it("⭐页面级品牌同步也接线 readEnterPath：index / priceHomePage（粘滞进参下页面级同样不得把商家码 scene 当品牌；变异：去掉任一处即红）", () => {
+    for (const f of ["src/pages/index/index.vue", "src/pages/priceHomePage/index.vue"]) {
+      const src = readFileSync(resolve(root, f), "utf-8");
+      expect(src, f + " 须 import readEnterPath").toMatch(/import \{[^}]*\breadEnterPath\b[^}]*\} from "..\/..\/platform\/uni\/enter-options"/);
+      // 每一处 syncBrandFromEnterOptionsAsync({...}) 调用体内都必须带 readEnterPath
+      const calls = [...src.matchAll(/syncBrandFromEnterOptionsAsync\(\{([\s\S]*?)\n  \}\)/g)];
+      expect(calls.length, f + " 找不到同步调用").toBeGreaterThan(0);
+      for (const c of calls) expect(c[1], f + " 的同步调用缺 readEnterPath").toMatch(/\breadEnterPath\b/);
+    }
+  });
+
   it("App.vue 接线：App 级品牌同步注入了 readEnterPath", () => {
     const app = readFileSync(resolve(root, "src/App.vue"), "utf-8");
     expect(app).toContain("readEnterPath");

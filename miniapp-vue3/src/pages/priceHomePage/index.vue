@@ -13,7 +13,7 @@ import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
 import { syncBrandFromEnterOptionsAsync } from "../../application/enter-brand-sync";
-import { readEnterOptions } from "../../platform/uni/enter-options";
+import { readEnterOptions, readEnterPath } from "../../platform/uni/enter-options";
 import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
 import { detectUiPlatform } from "../../ui/ui-platform";
 import BaseFeedback from "../../ui/BaseFeedback.vue"; // 轻提示宿主（platform/uni/feedback.toast 经 ui/toast-host 投递到此）
@@ -161,6 +161,8 @@ onShow(() => {
   // ③⭐task-74：本页也消费一次进参（幂等、与 App 级共用同一编排器）——避免 App.onShow 晚于页面 onShow 时漏刷一帧
   void syncBrandFromEnterOptionsAsync({
     readEnterOptions,
+    // 商家分包落地页（pkg-merchant/…）不参与品牌同步（issue #14；与 App 级同口径）
+    readEnterPath,
     loadBrandId: () => versioned.loadBrandId(),
     saveBrandId: (id) => versioned.saveBrandId(id),
     bumpScope: () => ctxFactory.bumpScope(),

@@ -117,6 +117,9 @@ describe("首页下拉刷新 · 配置（pages.json）", () => {
     }
     const cEndPart = pagesJson.slice(0, pagesJson.indexOf('"subPackages"'));
     expect((cEndPart.match(/"enablePullDownRefresh"/g) ?? []).length).toBe(6);
+    // 恢复对 subPackages 之后（tabBar / globalStyle）的覆盖：原断言按整个文件计数，会覆盖这一段；拆段后须显式补回
+    const afterPart = pagesJson.slice(pagesJson.indexOf('"tabBar"'));
+    expect((afterPart.match(/"enablePullDownRefresh"/g) ?? []).length).toBe(0);
     for (const p of [
       "pages/index/index",
       "pages/demoDetail/index",
