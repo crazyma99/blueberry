@@ -194,9 +194,13 @@ describe("⭐用例：删除（单张/批量）—— 静默成功陷阱以刷�
     await p1;
   });
   it("文案：单张/多张", () => {
-    expect(describeImageDelete(1).msg).toContain("这张图片");
-    expect(describeImageDelete(5).msg).toContain("5 张");
-    expect(describeImageDelete(5).msg).toContain("无法恢复");
+    // 删除图片保持「单次确认」（不改交互）；文案必须明示「删除后不可恢复」，批量必须写明张数
+    expect(describeImageDelete(1).msg).toBe("确认删除这张图片吗？删除后不可恢复。");
+    expect(describeImageDelete(5).msg).toBe("确认删除选中的 5 张图片吗？删除后不可恢复。");
+    expect(describeImageDelete(12).msg).toContain("12 张");
+    for (const n of [1, 2, 5, 12]) expect(describeImageDelete(n).msg, "n=" + n).toContain("删除后不可恢复");
+    expect(describeImageDelete(1).title).toBe("删除图片");
+    expect(describeImageDelete(2).title).toBe("批量删除图片");
   });
 });
 

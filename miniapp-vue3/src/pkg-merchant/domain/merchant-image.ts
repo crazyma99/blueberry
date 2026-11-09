@@ -105,6 +105,6 @@ export function pruneSelected(selected: readonly number[], list: readonly Pick<M
 /** 批量删除的确认文案（单张/多张） */
 export function describeImageDelete(count: number): { title: string; msg: string } {
   return count <= 1
-    ? { title: "删除图片", msg: "确认删除这张图片吗？删除后无法恢复。" }
-    : { title: "批量删除图片", msg: `确认删除选中的 ${count} 张图片吗？删除后无法恢复。` };
+    ? { title: "删除图片", msg: "确认删除这张图片吗？删除后不可恢复。" }
+    : { title: "批量删除图片", msg: `确认删除选中的 ${count} 张图片吗？删除后不可恢复。` };
 }
