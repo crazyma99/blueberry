@@ -13,6 +13,8 @@ export const COORDINATOR_SESSION_KEY = "lm.session.v1";
 export const MERCHANT_SESSION_KEY = "lm.merchant.session.v1";
 /** 商家资料（权限/商家 ID/展示名）落盘键 */
 export const MERCHANT_PROFILE_KEY = "lm.merchant.profile.v1";
+/** 上次选择的系列（shopId）：落在商家命名空间之内（lm.merchant.*），与 C 端键空间零交集 */
+export const MERCHANT_LAST_SHOP_KEY = "lm.merchant.lastShop.v1";
 const MERCHANT_PREFIX = "lm.merchant.";
 const OTHER_PREFIX = "lm.merchant.x.";
 

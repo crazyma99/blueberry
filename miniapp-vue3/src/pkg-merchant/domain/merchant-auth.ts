@@ -17,6 +17,19 @@ export interface MerchantProfile {
   roleName: string;
   /** 权限键数组（来自登录响应；按钮显隐用，非安全边界） */
   permissions: string[];
+  /** 登录响应里的可见系列（店铺）列表；分类/相册都挂在 shopId（系列）下，用于选 shop。缺失/畸形 ⇒ [] */
+  shopList: MerchantShop[];
+}
+
+/** 系列（shop）：后端把「系列」叫 shop；分类、相册都归属于某个 shopId */
+export interface MerchantShop {
+  id: number;
+  /** 展示名：displayName 优先，其次 shopName */
+  name: string;
+  /** 所属商户名（登录响应附带，可能为空） */
+  merchantName: string;
+  /** 1 启用 / 0 停用（缺失当启用） */
+  status: number;
 }
 
 /** 商家端用到的权限键 */

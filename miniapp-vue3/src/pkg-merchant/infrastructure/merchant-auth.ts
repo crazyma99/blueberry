@@ -8,7 +8,7 @@
 // 纪律：登录是**状态敏感**写请求 ⇒ `replayPolicy:"never"`；本层不吞错误、不记录密码。
 import type { RequestContext } from "../../ports/context";
 import type { ClientLike, RepoResult } from "../../infrastructure/repositories/carousels";
-import type { MerchantProfile } from "../domain/merchant-auth";
+import type { MerchantProfile, MerchantShop } from "../domain/merchant-auth";
 
 export interface MerchantLoginResult {
   token: string;
@@ -20,6 +20,21 @@ function toInt(v: unknown): number {
 }
 function toStr(v: unknown): string {
   return typeof v === "string" ? v : "";
+}
+
+/** 规整 shopList：只保留 id>0 的项；展示名 displayName 优先、其次 shopName；畸形项丢弃 */
+export function normalizeShopList(raw: unknown): MerchantShop[] {
+  if (!Array.isArray(raw)) return [];
+  const out: MerchantShop[] = [];
+  for (const item of raw) {
+    const s = (item ?? {}) as Record<string, unknown>;
+    const id = toInt(s.id);
+    if (id <= 0) continue;
+    const display = toStr(s.displayName).trim();
+    const name = display !== "" ? display : toStr(s.shopName).trim();
+    out.push({ id, name: name !== "" ? name : "系列 " + id, merchantName: toStr(s.merchantName), status: s.status === undefined ? 1 : toInt(s.status) });
+  }
+  return out;
 }
 
 /** 规整登录响应：缺字段给安全默认（merchantId 缺失/null ⇒ 0，随后被角色闸拒绝）；permissions 非数组 ⇒ [] */
@@ -38,6 +53,7 @@ export function normalizeMerchantLogin(raw: unknown): MerchantLoginResult | null
       displayName: toStr(d.displayName),
       roleName: toStr(d.roleName),
       permissions,
+      shopList: normalizeShopList(d.shopList),
     },
   };
 }
