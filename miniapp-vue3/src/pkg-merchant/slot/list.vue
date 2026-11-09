@@ -13,6 +13,7 @@ import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefr
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseDialog from "../../ui/BaseDialog.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
+import BasePicker from "../../ui/BasePicker.vue";
 import BasePopup from "../../ui/BasePopup.vue";
 import MerchantNeedLogin from "../components/MerchantNeedLogin.vue";
 import { createPullRefresh } from "../../composables/use-pull-refresh";

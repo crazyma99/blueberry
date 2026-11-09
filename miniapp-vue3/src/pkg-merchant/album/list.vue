@@ -34,7 +34,7 @@ import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
 import { useMerchantShop } from "../composables/use-merchant-shop";
 import { ALBUM_PAGE_STEP, albumCoverThumb, describeAlbumDelete, describeAlbumFinalConfirm, nextVisibleCount, sliceVisible, type MerchantAlbum } from "../domain/merchant-album";
-import { filterOptions, labelOfSub, subCategoryOptions, type CategoryTreeNode } from "../domain/merchant-category-tree";
+import { cascadeFilterOptions, cascadePathOfSub, cascadeSubOptions, labelOfSub, subIdFromCascadeValue, type CategoryTreeNode } from "../domain/merchant-category-tree";
 import { hasPermission, PERM, type MerchantProfile } from "../domain/merchant-auth";
 import { PICK_FAIL_TEXT } from "../domain/merchant-upload";
 
@@ -80,7 +80,8 @@ const visible = computed(() => sliceVisible(albums.value, visibleCount.value));
 const filterSub = ref(0); // 0=全部
 const keyword = ref("");
 const filterPickerShow = ref(false);
-const filterOpts = computed(() => filterOptions(tree.value));
+const filterOpts = computed(() => cascadeFilterOptions(tree.value));
+const filterPicked = computed(() => (filterSub.value === 0 ? [0] : cascadePathOfSub(tree.value, filterSub.value)));
 const filterLabel = computed(() => (filterSub.value === 0 ? "全部分类" : labelOfSub(tree.value, filterSub.value) || "全部分类"));
 
 function refreshLoginState(): void {
@@ -186,8 +187,9 @@ function openFilterPicker(): void {
   filterPickerShow.value = true;
 }
 function onFilterConfirm(v: (string | number)[]): void {
-  const id = Number(v[0]);
-  filterSub.value = Number.isFinite(id) && id > 0 ? id : 0;
+  const id = subIdFromCascadeValue(v);
+  if (id === null) return;
+  filterSub.value = id;
   visibleCount.value = ALBUM_PAGE_STEP;
   void reload();
 }
@@ -218,8 +220,8 @@ const fCoverPercent = ref(0);
 const fCoverBusy = ref(false);
 const fError = ref("");
 const childPickerShow = ref(false);
-const childOpts = computed(() => subCategoryOptions(tree.value));
-const childPicked = computed(() => [fChildId.value]);
+const childOpts = computed(() => cascadeSubOptions(tree.value));
+const childPicked = computed(() => cascadePathOfSub(tree.value, fChildId.value));
 const childLabel = computed(() => labelOfSub(tree.value, fChildId.value) || "请选择");
 
 function openCreate(): void {
@@ -267,8 +269,8 @@ function openChildPicker(): void {
   childPickerShow.value = true;
 }
 function onChildConfirm(v: (string | number)[]): void {
-  const id = Number(v[0]);
-  if (Number.isFinite(id) && id > 0) fChildId.value = id;
+  const id = subIdFromCascadeValue(v);
+  if (id !== null && id > 0) fChildId.value = id;
 }
 
 async function onPickCover(): Promise<void> {
@@ -431,8 +433,8 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
     </template>
 
     <BasePicker v-model:show="shopPickerShow" :model-value="shopPicked" title="选择系列" :options="shop.options.value" @confirm="onShopConfirm" />
-    <BasePicker v-model:show="filterPickerShow" :model-value="[filterSub]" title="按分类筛选" :options="filterOpts" @confirm="onFilterConfirm" />
-    <BasePicker v-model:show="childPickerShow" :model-value="childPicked" title="所属分类" :options="childOpts" @confirm="onChildConfirm" />
+    <BasePicker v-model:show="filterPickerShow" :model-value="filterPicked" title="按分类筛选" cascade :options="filterOpts" @confirm="onFilterConfirm" />
+    <BasePicker v-model:show="childPickerShow" :model-value="childPicked" title="所属分类" cascade :options="childOpts" @confirm="onChildConfirm" />
 
     <BasePopup :show="formShow" position="bottom" :root-portal="false" :z-index="2000" @cancel="closeForm">
       <view class="sheet">
