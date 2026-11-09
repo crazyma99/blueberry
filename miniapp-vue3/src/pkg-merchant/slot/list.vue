@@ -11,6 +11,7 @@ import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
+import { INPUT_PLACEHOLDER_STYLE } from "../../ui/field-theme";
 import BaseDialog from "../../ui/BaseDialog.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import BasePicker from "../../ui/BasePicker.vue";
@@ -407,7 +408,7 @@ function statusMeta(status: number) {
         </view>
         <view class="form-row">
           <text class="form-label">容量</text>
-          <input class="form-input" v-model="formCapacity" type="number" maxlength="3" :placeholder="SLOT_CAPACITY_MIN + '-' + SLOT_CAPACITY_MAX" />
+          <input class="form-input" v-model="formCapacity" type="number" maxlength="3" :placeholder="SLOT_CAPACITY_MIN + '-' + SLOT_CAPACITY_MAX" :placeholder-style="INPUT_PLACEHOLDER_STYLE" />
         </view>
         <text v-if="formMode === 'create'" class="hint">时间创建后不可修改；启用档期之间时间不能重叠</text>
         <text v-if="formError" class="form-error">{{ formError }}</text>

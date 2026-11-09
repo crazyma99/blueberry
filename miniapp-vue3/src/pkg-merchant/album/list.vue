@@ -13,6 +13,7 @@ import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefr
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseDialog from "../../ui/BaseDialog.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
+import { INPUT_PLACEHOLDER_STYLE } from "../../ui/field-theme";
 import BaseField from "../../ui/BaseField.vue";
 import BasePicker from "../../ui/BasePicker.vue";
 import BasePopup from "../../ui/BasePopup.vue";
@@ -391,7 +392,7 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
 
       <view class="tool-row">
         <view class="filter" hover-class="press-dim" @click="openFilterPicker"><text class="filter-text">{{ filterLabel }} ▾</text></view>
-        <input class="search" v-model="keyword" placeholder="搜索相册名称" confirm-type="search" @confirm="onSearch" />
+        <input class="search" v-model="keyword" placeholder="搜索相册名称" :placeholder-style="INPUT_PLACEHOLDER_STYLE" confirm-type="search" @confirm="onSearch" />
         <view :class="working ? 'add is-disabled' : 'add'" hover-class="press-dim" @click="openCreate"><text class="add-text">新建</text></view>
       </view>
 

@@ -68,22 +68,8 @@ describe("BaseButton（P1-24 禁用/忙态不重复提交）", () => {
   });
 });
 
-describe("BaseField（value 流与标准事件）", () => {
-  it("输入透传 update:modelValue（字符串化）", async () => {
-    const w = mount(BaseField, { props: { modelValue: "", placeholder: "请输入手机号" }, global: globalWith });
-    const input = w.findComponent(StubInput).find("input");
-    await input.setValue("13800000000");
-    expect(w.emitted("update:modelValue")?.[0]).toEqual(["13800000000"]);
-  });
-  it("blur/clear 事件转发", async () => {
-    const w = mount(BaseField, { props: { modelValue: "x" }, global: globalWith });
-    const stub = w.findComponent(StubInput);
-    await stub.find("input").trigger("blur");
-    expect(w.emitted("blur")?.length).toBe(1);
-    await stub.vm.$emit("clear");
-    expect(w.emitted("clear")?.length).toBe(1);
-  });
-});
+// BaseField（2026-11 起内部为原生 <input>，不再是 wd-input）：原「用 wd-input 桩 emit」两条已替换为
+// tests/unit/base-field-native.spec.ts（原生 input 的真实事件载荷 { detail: { value } }、type/disabled/clearable/焦点、token 样式守卫）。
 
 describe("BasePopup（取消语义单一出口）", () => {
   it("关闭动作 → cancel ＋ update:show false，且只发一次", async () => {

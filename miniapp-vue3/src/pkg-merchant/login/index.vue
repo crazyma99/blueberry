@@ -6,6 +6,7 @@
 // 密码只存在于本页内存：不入存储、不打印、不进错误文案。
 import { ref } from "vue";
 import { onShow } from "@dcloudio/uni-app";
+import { INPUT_PLACEHOLDER_STYLE } from "../../ui/field-theme";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
@@ -65,11 +66,11 @@ async function onSubmit(): Promise<void> {
       <text class="sub">请使用商家后台账号登录</text>
       <view class="form-row">
         <text class="form-label">账号</text>
-        <input class="form-input" v-model="username" placeholder="请输入用户名" maxlength="64" :disabled="busy" />
+        <input class="form-input" v-model="username" placeholder="请输入用户名" :placeholder-style="INPUT_PLACEHOLDER_STYLE" maxlength="64" :disabled="busy" />
       </view>
       <view class="form-row">
         <text class="form-label">密码</text>
-        <input class="form-input" v-model="password" password placeholder="请输入密码" maxlength="64" :disabled="busy" confirm-type="done" @confirm="onSubmit" />
+        <input class="form-input" v-model="password" password placeholder="请输入密码" :placeholder-style="INPUT_PLACEHOLDER_STYLE" maxlength="64" :disabled="busy" confirm-type="done" @confirm="onSubmit" />
       </view>
       <text v-if="errorText" class="error">{{ errorText }}</text>
       <view :class="busy ? 'submit is-busy' : 'submit'" hover-class="press-dim" @click="onSubmit">
