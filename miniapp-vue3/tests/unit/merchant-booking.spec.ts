@@ -168,12 +168,13 @@ describe("⭐快捷日期 × 列表壳：切换回到第 1 页、迟到响应丢
     await repo.list(ctx, { filter, page: 1, pageSize: 20 });
     expect(f.seen.map((s) => s.query?.date)).toEqual(["2026-11-09", "2026-11-10"]);
   });
-  it("页面接线：快捷胶囊走 withQuickDate/activeQuickTab，选具体日期走 withSpecificDate；默认筛选仍是 EMPTY（保持「全部」）", () => {
+  it("页面接线：快捷项（日期弹层内）走 withQuickDate、具体日期走 withSpecificDate、状态/渠道/重置走 submitFilter→loadFirst；默认筛选仍是 EMPTY（保持「全部」）", () => {
     const code = page.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-    expect(code).toContain("v-for=\"q in QUICK_DATE_TABS\"");
-    expect(code).toContain("withQuickDate(vm.filter.value, q)");
+    expect(code).toContain('v-for="q in QUICK_DATE_TABS"');
+    expect(code).toContain("withQuickDate(vm.filter.value, value)");
     expect(code).toContain("withSpecificDate(vm.filter.value");
     expect(code).toContain("activeQuickTab(vm.filter.value)");
+    expect(code).toContain("vm.loadFirst(rt.nextContext(), next)");
     expect(code).toContain("initialFilter: { ...EMPTY_BOOKING_FILTER }");
   });
 });

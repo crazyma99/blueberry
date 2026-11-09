@@ -156,9 +156,9 @@ describe("复现：真机描述的「点 chip 也没画面变化」", () => {
   it("⭐首屏失败/挂起后点筛选 chip 取到数据 ⇒ 页面必须展示列表（旧写法：ready 仍 false，骨架屏继续遮挡）", async () => {
     seq("throw", { data: { list: [row(9)], total: 1 } });
     const w = await mountBooking();
-    // 点「待确认」chip：applyFilter ⇒ vm.loadFirst（与点击处理函数同路径）
-    const chips = w.findAll(".filter-row .chip");
-    await chips[1].trigger("click");
+    // 点状态分段「待确认」：onStatusChange ⇒ vm.loadFirst（与点击处理函数同路径；筛选区 2026-11 重设计后状态是横滑分段）
+    const segs = w.findAll(".seg-item");
+    await segs[1].trigger("click");
     await flushPromises();
     expect(w.findAll(".card").length, "chip 请求已成功但画面仍无列表 ＝ 真机现象").toBe(1);
     expect(has(w, SK)).toBe(false);
@@ -168,7 +168,7 @@ describe("复现：真机描述的「点 chip 也没画面变化」", () => {
     const w = mount(BookingPage, { global: GLOBAL });
     h.onLoad[h.onLoad.length - 1]?.();
     await flushPromises();
-    await w.findAll(".filter-row .chip")[2].trigger("click");
+    await w.findAll(".seg-item")[2].trigger("click");
     await flushPromises();
     expect(w.findAll(".card").length).toBe(1);
     expect(has(w, SK)).toBe(false);

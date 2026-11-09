@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 商家预约管理（issue #14 · M1）：卡片列表（PC 表格改造）+ 状态/日期/渠道筛选 + 触底加载 + 下拉刷新 +
+// 商家预约管理（issue #14 · M1）：卡片列表（PC 表格改造）+ 筛选（状态横滑分段 + 日期/渠道/重置筛选条 + 结果摘要）+ 触底加载 + 下拉刷新 +
 // 接单 / 核销完成 / 取消（均二次确认；取消确认框**明示**「有保证金的预约取消后将全额退还客人保证金」）。
 // 不做：no-show（未到店仅作筛选/展示、无任何操作入口）、deposit/refund/preview/retry、保证金规则（资金权限）。
 // 防重：任一变更进行中全部按钮置灰；失败（含后端「状态已变化」类业务错误，HTTP200+code=500 非幂等）⇒ 展示后端 message 并刷新列表。
@@ -10,6 +10,9 @@ import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
+import ScrollSegment from "../components/ScrollSegment.vue";
+import BasePicker from "../../ui/BasePicker.vue";
+import BasePopup from "../../ui/BasePopup.vue";
 import SkeletonBlock from "../../components/SkeletonBlock/SkeletonBlock.vue";
 import BaseDialog from "../../ui/BaseDialog.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
@@ -30,10 +33,8 @@ import {
   CHANNEL_TABS,
   EMPTY_BOOKING_FILTER,
   QUICK_DATE_TABS,
-  activeQuickTab,
   withQuickDate,
   withSpecificDate,
-  STATUS_TABS,
   actionConfirmCopy,
   availableActions,
   depositLineOf,
@@ -43,6 +44,18 @@ import {
   type MerchantBookingView,
 } from "../domain/merchant-booking";
 import { hasPermission, PERM } from "../domain/merchant-auth";
+import {
+  activeQuickTab,
+  channelButtonLabel,
+  dateButtonLabel,
+  filterSummary,
+  hasActiveFilter,
+  isChannelFiltered,
+  isDateFiltered,
+  orderedStatusTabs,
+  resetFilter,
+  statusIndexOf,
+} from "../domain/merchant-booking-filter-ui";
 
 const rt = getMerchantRuntime();
 const footer = useMerchantFooter();
@@ -112,37 +125,77 @@ onShow(() => {
   }
   void reload();
 });
+function onRetryLoadMore(): void {
+  if (needLogin.value || !canManage.value) return;
+  void vm.loadMore(rt.nextContext());
+}
 onReachBottom(() => {
   if (needLogin.value || !canManage.value) return;
   void vm.loadMore(rt.nextContext());
 });
 const { refreshing, indicatorTop } = createPullRefresh({ label: "merchantBookings", refresh: () => reload(), hasCustomNav: true });
 
-// —— 筛选 ——
-const statusFilter = computed(() => vm.filter.value.status);
-const channelFilter = computed(() => vm.filter.value.channel);
+// —— 筛选（分层：状态分段 → 日期/渠道/重置筛选条 → 结果摘要）——
+// 数据结构与查询参数不变（MerchantBookingFilter / buildBookingQuery）；这里只改交互：所有处理函数都是具名方法，不在模板里写带参内联表达式。
+const statusTabs = orderedStatusTabs();
+const statusLabels = statusTabs.map((t) => t.label);
+const statusIndex = computed(() => statusIndexOf(vm.filter.value.status));
 const dateFilter = computed(() => vm.filter.value.date);
 const quickActive = computed(() => activeQuickTab(vm.filter.value));
-function applyFilter(next: Partial<MerchantBookingFilter>): void {
+const dateLabel = computed(() => dateButtonLabel(vm.filter.value));
+const channelLabel = computed(() => channelButtonLabel(vm.filter.value));
+const dateOn = computed(() => isDateFiltered(vm.filter.value));
+const channelOn = computed(() => isChannelFiltered(vm.filter.value));
+const showReset = computed(() => hasActiveFilter(vm.filter.value));
+/** 结果摘要：加载成功后才有真实 total；加载中/失败不显示假数字 */
+const summary = computed(() => (attempted.value && loadFailure.value === null ? filterSummary(vm.filter.value, vm.total.value) : ""));
+
+function submitFilter(next: MerchantBookingFilter): void {
   if (needLogin.value) return;
   hapticTap();
-  void vm.loadFirst(rt.nextContext(), { ...vm.filter.value, ...next });
+  void vm.loadFirst(rt.nextContext(), next); // 回到第 1 页；迟到响应由列表壳丢弃
 }
-// 快捷日期（全部/今天/明天）：filter 只记意图，真实日期在每次请求时按设备本地时间现算（见 domain 的 resolveFilterDate）
-function applyQuick(q: "" | "today" | "tomorrow"): void {
-  if (needLogin.value) return;
+function onStatusChange(index: number): void {
+  const t = statusTabs[index];
+  if (t == null || t.value === vm.filter.value.status) return;
+  submitFilter({ ...vm.filter.value, status: t.value });
+}
+
+// 日期弹层：快捷项（全部/今天/明天）+ 具体日期；快捷与具体日期互斥（点一个清另一个）
+const datePopupShow = ref(false);
+function openDatePopup(): void {
   hapticTap();
-  void vm.loadFirst(rt.nextContext(), withQuickDate(vm.filter.value, q));
+  datePopupShow.value = true;
+}
+function closeDatePopup(): void {
+  datePopupShow.value = false;
+}
+function onQuickTap(value: "" | "today" | "tomorrow"): void {
+  datePopupShow.value = false;
+  submitFilter(withQuickDate(vm.filter.value, value));
 }
 function onDateChange(e: { detail?: { value?: string } }): void {
-  if (needLogin.value) return;
-  hapticTap();
-  void vm.loadFirst(rt.nextContext(), withSpecificDate(vm.filter.value, e?.detail?.value ?? ""));
+  datePopupShow.value = false;
+  submitFilter(withSpecificDate(vm.filter.value, e?.detail?.value ?? ""));
 }
-function clearDate(): void {
-  if (needLogin.value) return;
+
+// 渠道选择器
+const channelPickerShow = ref(false);
+const channelOptions = CHANNEL_TABS.map((c) => ({ label: c.label, value: c.value }));
+const channelPicked = computed(() => [vm.filter.value.channel]);
+function openChannelPicker(): void {
   hapticTap();
-  void vm.loadFirst(rt.nextContext(), withSpecificDate(vm.filter.value, ""));
+  channelPickerShow.value = true;
+}
+function onChannelConfirm(v: (string | number)[]): void {
+  const picked = String(v[0] ?? "");
+  const hit = CHANNEL_TABS.find((c) => c.value === picked);
+  if (hit == null || hit.value === vm.filter.value.channel) return;
+  submitFilter({ ...vm.filter.value, channel: hit.value });
+}
+
+function onResetFilter(): void {
+  submitFilter(resetFilter());
 }
 
 // —— 操作 ——
@@ -198,45 +251,21 @@ function actionBtnClass(a: MerchantBookingAction): string {
       <text class="empty-desc">当前账号没有预约管理权限，请联系管理员</text>
     </view>
     <template v-else>
-      <view class="filter-row">
-        <view
-          v-for="t in STATUS_TABS"
-          :key="t.value"
-          :class="t.value === statusFilter ? 'chip is-active' : 'chip'"
-          hover-class="press-dim"
-          @click="applyFilter({ status: t.value })"
-        >
-          <text class="chip-text">{{ t.label }}</text>
+      <view class="status-wrap">
+        <ScrollSegment :options="statusLabels" :current-index="statusIndex" @change="onStatusChange" />
+      </view>
+      <view class="filter-bar">
+        <view :class="dateOn ? 'fb-item is-on' : 'fb-item'" hover-class="press-dim" @click="openDatePopup">
+          <text class="fb-text">{{ dateLabel }} ▾</text>
+        </view>
+        <view :class="channelOn ? 'fb-item is-on' : 'fb-item'" hover-class="press-dim" @click="openChannelPicker">
+          <text class="fb-text">{{ channelLabel }} ▾</text>
+        </view>
+        <view v-if="showReset" class="fb-reset" hover-class="press-dim" @click="onResetFilter">
+          <text class="fb-reset-text">重置</text>
         </view>
       </view>
-      <view class="filter-row filter-row--sub">
-        <view
-          v-for="q in QUICK_DATE_TABS"
-          :key="'q' + q.value"
-          :class="q.value === quickActive ? 'chip is-active' : 'chip'"
-          hover-class="press-dim"
-          @click="applyQuick(q.value)"
-        >
-          <text class="chip-text">{{ q.label }}</text>
-        </view>
-        <picker mode="date" :value="dateFilter" @change="onDateChange">
-          <view :class="dateFilter !== '' ? 'chip is-active' : 'chip'" hover-class="press-dim">
-            <text class="chip-text">{{ dateFilter !== "" ? "日期 " + dateFilter : "选择日期" }}</text>
-          </view>
-        </picker>
-        <view v-if="dateFilter !== ''" class="chip" hover-class="press-dim" @click="clearDate">
-          <text class="chip-text">清除日期</text>
-        </view>
-        <view
-          v-for="c in CHANNEL_TABS"
-          :key="'c' + c.value"
-          :class="c.value === channelFilter ? 'chip is-active' : 'chip'"
-          hover-class="press-dim"
-          @click="applyFilter({ channel: c.value })"
-        >
-          <text class="chip-text">{{ c.label }}</text>
-        </view>
-      </view>
+      <view v-if="summary !== ''" class="summary"><text class="summary-text">{{ summary }}</text></view>
 
       <view v-if="showSkeleton" class="sk-wrap">
         <SkeletonBlock v-for="i in 3" :key="i" width="100%" height="200rpx" radius="16rpx" />
@@ -290,12 +319,35 @@ function actionBtnClass(a: MerchantBookingAction): string {
         </view>
 
         <view v-if="vm.loadingMore.value" class="load-more"><text class="load-more-text">加载中...</text></view>
-        <view v-else-if="vm.loadMoreError.value !== null" class="load-more" hover-class="press-dim" @click="vm.loadMore(rt.nextContext())">
+        <view v-else-if="vm.loadMoreError.value !== null" class="load-more" hover-class="press-dim" @click="onRetryLoadMore">
           <text class="load-more-text">加载失败，点击重试</text>
         </view>
         <view v-else-if="vm.noMore.value" class="load-more"><text class="load-more-text">已经到底了</text></view>
       </view>
     </template>
+
+    <BasePopup :show="datePopupShow" position="bottom" :root-portal="false" :z-index="2000" @cancel="closeDatePopup">
+      <view class="sheet">
+        <text class="sheet-title">按日期筛选</text>
+        <view class="sheet-row">
+          <view
+            v-for="q in QUICK_DATE_TABS"
+            :key="'q' + q.value"
+            :class="q.value === quickActive ? 'sheet-chip is-active' : 'sheet-chip'"
+            hover-class="press-dim"
+            @click="onQuickTap(q.value)"
+          >
+            <text :class="q.value === quickActive ? 'sheet-chip-text is-active' : 'sheet-chip-text'">{{ q.label }}</text>
+          </view>
+        </view>
+        <picker mode="date" :value="dateFilter" @change="onDateChange">
+          <view :class="dateFilter !== '' ? 'sheet-date is-active' : 'sheet-date'" hover-class="press-dim">
+            <text class="sheet-date-text">{{ dateFilter !== "" ? "已选日期 " + dateFilter + "（点击更换）" : "选择具体日期" }}</text>
+          </view>
+        </picker>
+      </view>
+    </BasePopup>
+    <BasePicker v-model:show="channelPickerShow" :model-value="channelPicked" title="按渠道筛选" :options="channelOptions" @confirm="onChannelConfirm" />
 
     <PageFooter main-line="" :support-line="footer.supportLine.value" variant="bottomdesc" />
     <BaseFeedback ref="feedbackRef" />
@@ -310,32 +362,105 @@ function actionBtnClass(a: MerchantBookingAction): string {
   flex-direction: column;
   background: $color-page;
 }
-.filter-row {
+.status-wrap {
+  padding: $space-md $space-md $space-sm;
+}
+.filter-bar {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  padding: $space-sm $space-md 0;
+  align-items: center;
+  gap: 16rpx;
+  padding: 0 $space-md $space-sm;
 }
-.filter-row--sub {
-  padding-bottom: $space-sm;
+.fb-item {
+  padding: 12rpx 28rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid $color-border;
+  background: rgba(241, 205, 145, 0.04);
 }
-.chip {
-  padding: 10rpx 24rpx;
-  border-radius: 999rpx;
-  background: rgba(241, 205, 145, 0.06);
-  border: 2rpx solid rgba(241, 205, 145, 0.12);
-}
-.chip.is-active {
-  background: rgba(241, 205, 145, 0.18);
+.fb-item.is-on {
   border-color: $color-action;
+  background: rgba(241, 205, 145, 0.14);
 }
-.chip-text {
+.fb-text {
   font-size: $font-size-caption;
   color: $color-text-secondary;
 }
-.chip.is-active .chip-text {
+.fb-item.is-on .fb-text {
   color: $color-action;
+}
+.fb-reset {
+  margin-left: auto;
+  padding: 12rpx 12rpx;
+}
+.fb-reset-text {
+  font-size: $font-size-caption;
+  color: $color-action;
+}
+.summary {
+  padding: 0 $space-md $space-sm;
+}
+.summary-text {
+  font-size: 24rpx;
+  color: $color-text-muted;
+}
+.sheet {
+  box-sizing: border-box;
+  width: 100%;
+  background: $color-popup-card;
+  border-radius: #{$popup-radius-rpx * 2}rpx #{$popup-radius-rpx * 2}rpx 0 0;
+  padding: $space-lg;
+  padding-bottom: calc(#{$space-lg} + constant(safe-area-inset-bottom));
+  padding-bottom: calc(#{$space-lg} + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+}
+.sheet-title {
+  font-size: $font-size-sub-title;
+  color: $color-action;
+  margin-bottom: $space-md;
+}
+.sheet-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+  margin-bottom: $space-md;
+}
+.sheet-chip {
+  flex: 1;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  border: 2rpx solid $color-border;
+}
+.sheet-chip.is-active {
+  border: 0;
+  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);
+}
+.sheet-chip-text {
+  font-size: $font-size-body;
+  color: $color-action;
+}
+.sheet-chip-text.is-active {
+  color: $color-action-text;
+}
+.sheet-date {
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  border: 2rpx dashed $color-border;
+}
+.sheet-date.is-active {
+  border-style: solid;
+  border-color: $color-action;
+}
+.sheet-date-text {
+  font-size: $font-size-body;
+  color: $color-text-primary;
 }
 .sk-wrap {
   padding: 0 $space-md;
