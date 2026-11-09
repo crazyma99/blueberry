@@ -1,8 +1,10 @@
 // 商家端档期管理：纯逻辑（校验/排序/载荷/模板预览文案）· issue #14 M1。**纯函数**，无平台依赖。
 //
 // 后端契约（只读核对 lanmei-backend-golang `internal/admin/handler/booking.go`、`internal/service/booking.go`、`booking_slot_template.go`）：
-//   · GET  /booking/slots → SlotView[]（id/merchantId/shopId/startTime/endTime/capacity/status/createTime/updateTime；status 1 启用 0 停用）。
-//     **M1 暂不显示「已占」**：后端正在给该接口加可选 date 参数并返回 bookedGuests，契约确定前本端**不假设该字段存在**；
+//   · GET  /booking/slots[?date=YYYY-MM-DD] → SlotView[]（id/merchantId/shopId/startTime/endTime/capacity/status/createTime/updateTime；status 1 启用 0 停用）。
+//     后端 PR #43：**传了 date 才**在每个档期多返回整数 `bookedGuests`（无预约显式为 0；待确认/已确认/保留期内待支付按 guest_count 求和，
+//     已取消/已完成/爽约不计；停用档期也返回）；不传 date 则无该字段；非法 date 返回 HTTP200+code=500「日期格式应为 YYYY-MM-DD」。
+//     ⇒ 本端：**只有请求带了合法 date 且响应里真有该整数字段才显示「已占」**；字段缺失（后端未部署/旧版）一律不显示（绝不显示 0 误导）；
 //   · POST /booking/slots {startTime,endTime,capacity,status?}：HH:mm 且 start<end；容量 1..500；同商家同起止时间唯一；
 //     **启用档期之间时间不得重叠**（半开区间，首尾相接不算；冲突文案「与已有启用档期 HH:mm-HH:mm 时间重叠」由后端给，原样展示）；
 //   · PUT  /booking/slots/:id {capacity?, status?}：**至少传一个**；时间创建后不可改；改小容量/停用允许、不影响已有预约；
@@ -24,6 +26,8 @@ export interface MerchantSlotView {
   capacity: number;
   /** 1 启用 / 0 停用 */
   status: number;
+  /** 所选日期该档期已占人数（guest_count 之和）；**null＝响应里没有该字段 ⇒ 页面不显示「已占」**（不得当 0） */
+  bookedGuests: number | null;
 }
 
 const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -118,10 +122,61 @@ function toStr(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-/** 规整服务端 SlotView（只取 M1 用到的字段；**不读 bookedGuests**——契约未定） */
+/**
+ * 规整服务端 SlotView。`bookedGuests` 只接受**非负整数**（number）；缺失/null/字符串/小数/负数/NaN 一律视为「没有该字段」⇒ null，
+ * 页面据此不显示「已占」（而不是显示 0）。
+ */
 export function normalizeSlot(raw: unknown): MerchantSlotView {
   const s = (raw ?? {}) as Record<string, unknown>;
-  return { id: toInt(s.id), startTime: toStr(s.startTime), endTime: toStr(s.endTime), capacity: toInt(s.capacity), status: toInt(s.status) };
+  const bg = s.bookedGuests;
+  const bookedGuests = typeof bg === "number" && Number.isInteger(bg) && bg >= 0 ? bg : null;
+  return { id: toInt(s.id), startTime: toStr(s.startTime), endTime: toStr(s.endTime), capacity: toInt(s.capacity), status: toInt(s.status), bookedGuests };
+}
+
+/** 「已占 X / 容量 Y」文案；bookedGuests 为 null ⇒ 返回 ""（不显示） */
+export function describeBooked(slot: Pick<MerchantSlotView, "bookedGuests" | "capacity">): string {
+  return slot.bookedGuests == null ? "" : `已占 ${slot.bookedGuests} / 容量 ${slot.capacity}`;
+}
+
+// ——— 日期（严格 YYYY-MM-DD，且必须是真实存在的日历日）———
+const DATE_STRICT_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+export function isValidDateStr(v: unknown): v is string {
+  if (typeof v !== "string") return false;
+  const m = DATE_STRICT_RE.exec(v);
+  if (m == null) return false;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (mo < 1 || mo > 12 || d < 1) return false;
+  const dim = new Date(Date.UTC(y, mo, 0)).getUTCDate(); // 当月天数（含闰年）
+  return d <= dim;
+}
+
+export interface SlotDateOption {
+  label: string;
+  /** YYYY-MM-DD */
+  value: string;
+}
+
+const WEEKS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+function p2(n: number): string {
+  return n < 10 ? "0" + n : String(n);
+}
+/** 本地日期 → YYYY-MM-DD（不经 UTC，按「自然日」） */
+export function toDateStr(d: Date): string {
+  return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+}
+
+/** 档期日期选项：今天前 `past` 天 ～ 今天后 `ahead` 天（含今天），可注入 now；value 严格 YYYY-MM-DD */
+export function buildSlotDateOptions(now: Date = new Date(), past = 7, ahead = 30): SlotDateOption[] {
+  const out: SlotDateOption[] = [];
+  for (let i = -past; i <= ahead; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    const tag = i === 0 ? "今天" : i === 1 ? "明天" : WEEKS[d.getDay()];
+    out.push({ label: `${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${tag}`, value: toDateStr(d) });
+  }
+  return out;
 }
 
 // ——— 档期模板 ———

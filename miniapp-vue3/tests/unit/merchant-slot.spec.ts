@@ -11,6 +11,9 @@ import {
   canConfirmApply,
   describeApplyDone,
   describeApplyPreview,
+  buildSlotDateOptions,
+  describeBooked,
+  isValidDateStr,
   isValidHHmm,
   normalizeApplyResult,
   normalizeSlot,
@@ -35,7 +38,7 @@ function fakeClient(responder: (i: ClientRequestInput) => ClientResult<unknown> 
   const seen: ClientRequestInput[] = [];
   return { seen, client: { request: async <T,>(i: ClientRequestInput) => { seen.push(i); return (await responder(i)) as ClientResult<T>; } } };
 }
-const slot = { id: 1, startTime: "10:00", endTime: "11:00", capacity: 10, status: 1 };
+const slot = { id: 1, startTime: "10:00", endTime: "11:00", capacity: 10, status: 1, bookedGuests: null as number | null };
 
 describe("时间/容量校验（与后端同口径）", () => {
   it("HH:mm：00:00-23:59 合法，24:00/9:00/10:60 非法", () => {
@@ -94,10 +97,18 @@ describe("排序 / 规整", () => {
     expect(sortSlots(list).map((s) => s.id)).toEqual([2, 1, 3]);
     expect(list).toEqual(copy);
   });
-  it("⭐规整只取 M1 字段，**不假设 bookedGuests 存在**（后端契约未定；变异：读取该字段即红）", () => {
-    const v = normalizeSlot({ id: 1, startTime: "10:00", endTime: "11:00", capacity: 8, status: 1, bookedGuests: 99, merchantId: 3 });
-    expect(Object.keys(v).sort()).toEqual(["capacity", "endTime", "id", "startTime", "status"]);
-    expect(normalizeSlot(null)).toEqual({ id: 0, startTime: "", endTime: "", capacity: 0, status: 0 });
+  it("⭐bookedGuests 规整：只接受非负整数；缺失/null/字符串/小数/负数/NaN ⇒ null（页面据此**不显示**，绝不当 0）", () => {
+    const base = { id: 1, startTime: "10:00", endTime: "11:00", capacity: 8, status: 1 };
+    expect(normalizeSlot({ ...base, bookedGuests: 7 }).bookedGuests).toBe(7);
+    expect(normalizeSlot({ ...base, bookedGuests: 0 }).bookedGuests).toBe(0); // 显式 0 ＝「已占 0」，与缺失不同
+    for (const bad of [undefined, null, "7", 1.5, -1, Number.NaN, {}, []]) expect(normalizeSlot({ ...base, bookedGuests: bad }).bookedGuests, String(bad)).toBeNull();
+    expect(normalizeSlot({ ...base }).bookedGuests).toBeNull();
+    expect(normalizeSlot(null)).toEqual({ id: 0, startTime: "", endTime: "", capacity: 0, status: 0, bookedGuests: null });
+  });
+  it("⭐describeBooked：有字段 ⇒「已占 X / 容量 Y」（含 0）；无字段 ⇒ 空串（变异：缺失时显示 0 即红）", () => {
+    expect(describeBooked({ bookedGuests: 7, capacity: 10 })).toBe("已占 7 / 容量 10");
+    expect(describeBooked({ bookedGuests: 0, capacity: 10 })).toBe("已占 0 / 容量 10");
+    expect(describeBooked({ bookedGuests: null, capacity: 10 })).toBe("");
   });
   it("模板规整：ID 是字符串；items 非数组当 []", () => {
     expect(normalizeTemplate({ id: "builtin-default", name: "全天", builtin: true, items: [{ startTime: "09:00", endTime: "10:00", capacity: 10 }] })).toMatchObject({ id: "builtin-default", builtin: true });
@@ -130,7 +141,7 @@ describe("模板套用结果映射", () => {
 });
 
 describe("档期仓储契约", () => {
-  it("list：GET /booking/slots，authRequired，幂等，**不传 merchantId / date**", async () => {
+  it("list：GET /booking/slots，authRequired，幂等，**不传 merchantId**；不传 date 则无 query", async () => {
     const f = fakeClient(() => ({ ok: true, value: [{ id: 1, startTime: "10:00", endTime: "11:00", capacity: 5, status: 1 }] }));
     const r = await createMerchantSlotRepository({ client: f.client }).list(ctx);
     expect(f.seen[0]).toMatchObject({ method: "GET", url: "/booking/slots", authRequired: true, replayPolicy: "idempotent" });
@@ -138,6 +149,32 @@ describe("档期仓储契约", () => {
     expect(r.ok && r.value.length).toBe(1);
     const bad = await createMerchantSlotRepository({ client: fakeClient(() => ({ ok: true, value: { not: "array" } })).client }).list(ctx);
     expect(bad.ok && bad.value).toEqual([]);
+  });
+  it("⭐list 带 date：query={date}；响应有 bookedGuests ⇒ 保留（含 0）；无字段 ⇒ null（变异：去掉 date 参数/丢弃字段即红）", async () => {
+    const f = fakeClient(() => ({ ok: true, value: [
+      { id: 1, startTime: "10:00", endTime: "11:00", capacity: 10, status: 1, bookedGuests: 7 },
+      { id: 2, startTime: "11:00", endTime: "12:00", capacity: 10, status: 0, bookedGuests: 0 },
+    ] }));
+    const r = await createMerchantSlotRepository({ client: f.client }).list(ctx, { date: "2026-11-09" });
+    expect(f.seen[0].query).toEqual({ date: "2026-11-09" });
+    expect(r.ok && r.value.map((s) => s.bookedGuests)).toEqual([7, 0]);
+    // 兼容后端未部署：带了 date 但响应没有该字段 ⇒ null（不显示，不是 0）
+    const old = fakeClient(() => ({ ok: true, value: [{ id: 1, startTime: "10:00", endTime: "11:00", capacity: 10, status: 1 }] }));
+    const r2 = await createMerchantSlotRepository({ client: old.client }).list(ctx, { date: "2026-11-09" });
+    expect(r2.ok && r2.value[0].bookedGuests).toBeNull();
+  });
+  it("⭐list 不带 date：即使响应里有 bookedGuests 也丢弃（已占只对应所选日期）", async () => {
+    const f = fakeClient(() => ({ ok: true, value: [{ id: 1, startTime: "10:00", endTime: "11:00", capacity: 10, status: 1, bookedGuests: 7 }] }));
+    const r = await createMerchantSlotRepository({ client: f.client }).list(ctx);
+    expect(r.ok && r.value[0].bookedGuests).toBeNull();
+  });
+  it("⭐非法 date：仓储兜底拦截，**不发请求**（变异：去掉校验即红）", async () => {
+    for (const bad of ["2026-13-01", "2026-02-30", "2026/11/09", "11-09", "", "2026-11-9", " 2026-11-09"]) {
+      const f = fakeClient(() => ({ ok: true, value: [] }));
+      const r = await createMerchantSlotRepository({ client: f.client }).list(ctx, { date: bad });
+      expect(r.ok, bad).toBe(false);
+      expect(f.seen, bad).toEqual([]);
+    }
   });
   it("create：POST /booking/slots，body 仅 startTime/endTime/capacity，never 重放", async () => {
     const f = fakeClient(() => ({ ok: true, value: { id: 9, startTime: "10:00", endTime: "11:00", capacity: 5, status: 1 } }));
@@ -244,6 +281,37 @@ describe("用例：权限 / 两步套用 / 串行化 / 错误映射", () => {
   });
 });
 
+describe("⭐已占日期：校验 / 用例 / 选项", () => {
+  it("isValidDateStr：严格 YYYY-MM-DD 且为真实日历日（含闰年）", () => {
+    for (const ok of ["2026-11-09", "2024-02-29", "2026-12-31"]) expect(isValidDateStr(ok), ok).toBe(true);
+    for (const bad of ["2026-02-29", "2026-00-10", "2026-13-01", "2026-04-31", "2026-1-01", "20261109", "2026-11-09 ", "", null, undefined, 20261109]) expect(isValidDateStr(bad), String(bad)).toBe(false);
+  });
+  it("用例 load：合法 date ⇒ 带 date 请求；缺省 ⇒ 不带；非法 date ⇒ validation 且不发请求", async () => {
+    const f = fakeClient(() => ({ ok: true, value: [{ id: 1, startTime: "10:00", endTime: "11:00", capacity: 10, status: 1, bookedGuests: 3 }] }));
+    const uc = createSlotUseCases({ slots: createMerchantSlotRepository({ client: f.client }) });
+    const withDate = await uc.load(ctx, "2026-11-09");
+    expect(f.seen[0].query).toEqual({ date: "2026-11-09" });
+    expect(withDate.ok && withDate.slots[0].bookedGuests).toBe(3);
+    await uc.load(ctx);
+    expect(f.seen[1].query).toBeUndefined();
+    const n = f.seen.length;
+    expect(await uc.load(ctx, "2026-02-30")).toMatchObject({ ok: false, kind: "validation" });
+    expect(f.seen.length).toBe(n);
+  });
+  it("后端对非法日期的业务错误（HTTP200+code=500）原样展示", async () => {
+    const f = fakeClient(() => ({ ok: false, error: err("BUSINESS", "日期格式应为 YYYY-MM-DD", 500) }));
+    const r = await createSlotUseCases({ slots: createMerchantSlotRepository({ client: f.client }) }).load(ctx, "2026-11-09");
+    expect(r).toEqual({ ok: false, kind: "failed", message: "日期格式应为 YYYY-MM-DD" });
+  });
+  it("日期选项：今天在内、value 严格 YYYY-MM-DD、跨月跨年正确、可注入 now", () => {
+    const opts = buildSlotDateOptions(new Date(2026, 11, 28), 1, 5);
+    expect(opts.map((o) => o.value)).toEqual(["2026-12-27", "2026-12-28", "2026-12-29", "2026-12-30", "2026-12-31", "2027-01-01", "2027-01-02"]);
+    expect(opts[1].label).toContain("今天");
+    expect(opts[2].label).toContain("明天");
+    for (const o of buildSlotDateOptions()) expect(isValidDateStr(o.value)).toBe(true);
+  });
+});
+
 describe("权限闸 / 入口 / 页面接线（源码级）", () => {
   it("slotPageGates：管理需 booking_slot；模板需两权限；缺失 fail-closed", () => {
     expect(slotPageGates({ permissions: ["booking_slot"] })).toEqual({ canManage: true, canTemplate: false });
@@ -257,11 +325,15 @@ describe("权限闸 / 入口 / 页面接线（源码级）", () => {
   });
   const page = readFileSync(resolve(root, "src/pkg-merchant/slot/list.vue"), "utf-8");
   const code = page.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  it("页面：时间选择/确认框走既有门面；不直调 wx/uni 平台 API；**不显示/不读取 bookedGuests、不做已占**", () => {
+  it("页面：确认框/日期选择走既有门面（BaseDialog/BasePicker）；不直调 wx/uni 平台 API；已占经 describeBooked（缺字段不显示）；reload 带 date 且有 seq 防迟到", () => {
     expect(code).toContain("dialogRef.value?.confirm");
+    expect(code).toContain("<BasePicker");
     expect(code).not.toMatch(/\bwx\./);
-    expect(code).not.toContain("bookedGuests");
-    expect(code).not.toContain("已占");
+    expect(code).toContain("describeBooked(s)");
+    expect(code).toContain("uc.load(rt.nextContext(), dateStr.value)");
+    expect(code).toContain("mySeq !== reloadSeq");
+    expect(code).not.toContain("disposed"); // 从不置位的死代码已删
+    expect(code).not.toMatch(/已占\s*0/); // 不得硬编码「已占 0」
   });
   it("页面注册：slot/list 位于商家分包内且启用下拉刷新", () => {
     const pj = readFileSync(resolve(root, "src/pages.json"), "utf-8");

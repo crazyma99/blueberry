@@ -6,6 +6,7 @@ import type { createMerchantSlotRepository } from "../infrastructure/merchant-sl
 import {
   buildSlotPatch,
   canConfirmApply,
+  isValidDateStr,
   sortSlots,
   validateCapacity,
   validateNewSlot,
@@ -41,8 +42,10 @@ export function createSlotUseCases(deps: { slots: Repo }) {
   return {
     isBusy: (): boolean => busy,
 
-    async load(context: RequestContext): Promise<{ ok: true; slots: MerchantSlotView[] } | Fail> {
-      const r = await deps.slots.list(context);
+    /** 加载档期；`date` 缺省＝不带日期（不显示已占）；传了必须是合法 YYYY-MM-DD，**非法 ⇒ validation 且不发请求** */
+    async load(context: RequestContext, date?: string): Promise<{ ok: true; slots: MerchantSlotView[] } | Fail> {
+      if (date !== undefined && !isValidDateStr(date)) return { ok: false, kind: "validation", message: "日期格式应为 YYYY-MM-DD" };
+      const r = await deps.slots.list(context, date !== undefined ? { date } : undefined);
       if (!r.ok) return failFrom(r.error, "档期加载失败，请重试");
       return { ok: true, slots: sortSlots(r.value) };
     },

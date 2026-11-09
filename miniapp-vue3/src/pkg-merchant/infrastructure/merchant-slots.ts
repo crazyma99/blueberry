@@ -5,6 +5,7 @@
 import type { RequestContext } from "../../ports/context";
 import type { ClientLike, RepoResult } from "../../infrastructure/repositories/carousels";
 import {
+  isValidDateStr,
   normalizeApplyResult,
   normalizeSlot,
   normalizeTemplate,
@@ -16,11 +17,26 @@ import {
 
 export function createMerchantSlotRepository(deps: { client: ClientLike }) {
   return {
-    /** 全部档期（含停用；幂等读） */
-    async list(context: RequestContext): Promise<RepoResult<MerchantSlotView[]>> {
-      const res = await deps.client.request<unknown>({ method: "GET", url: "/booking/slots", authRequired: true, replayPolicy: "idempotent", context });
+    /**
+     * 全部档期（含停用；幂等读）。传 `date`（**必须是合法 YYYY-MM-DD**，否则调用方先拦、本层兜底再拦——绝不把非法值发给后端）
+     * 才会带 `?date=`，此时后端才返回 `bookedGuests`；不传 date 时即使响应里有该字段也一律丢弃（口径：已占只对应所选日期）。
+     */
+    async list(context: RequestContext, args?: { date?: string }): Promise<RepoResult<MerchantSlotView[]>> {
+      const date = args?.date;
+      if (date !== undefined && !isValidDateStr(date)) {
+        return { ok: false, error: { kind: "BUSINESS", businessCode: null, message: "日期格式应为 YYYY-MM-DD", requestId: context.requestId, retryable: false } };
+      }
+      const res = await deps.client.request<unknown>({
+        method: "GET",
+        url: "/booking/slots",
+        query: date !== undefined ? { date } : undefined,
+        authRequired: true,
+        replayPolicy: "idempotent",
+        context,
+      });
       if (!res.ok) return res;
-      return { ok: true, value: Array.isArray(res.value) ? res.value.map((s) => normalizeSlot(s)) : [] };
+      const list = Array.isArray(res.value) ? res.value.map((s) => normalizeSlot(s)) : [];
+      return { ok: true, value: date !== undefined ? list : list.map((s) => ({ ...s, bookedGuests: null })) };
     },
 
     async create(

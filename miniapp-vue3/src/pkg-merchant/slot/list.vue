@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 商家档期管理（issue #14 · M1）：档期列表（时间段/容量/状态；**暂不显示「已占」**——后端 bookedGuests 契约未定）+
+// 商家档期管理（issue #14 · M1）：档期列表（时间段/容量/状态 + 所选日期的「已占 X / 容量 Y」；响应无 bookedGuests 时**不显示已占**）+
 // 新增（时间段 + 容量）+ 改容量 / 启停 + 套用档期模板（先 dryRun 预览，再确认真实套用）。
 // 后端口径：容量 1..500；同商家同起止唯一；启用档期之间时间不得重叠（冲突文案原样展示）；PUT 仅 capacity/status；
 // 改小容量或停用允许、不影响已有预约（确认框明示）。模板需 booking_slot_template 且需 booking_slot。
@@ -24,8 +24,11 @@ import {
   SLOT_CAPACITY_MIN,
   SLOT_STATUS_DISABLED,
   SLOT_STATUS_ENABLED,
+  buildSlotDateOptions,
   canConfirmApply,
   describeApplyDone,
+  describeBooked,
+  toDateStr,
   describeApplyPreview,
   describeSlotStatus,
   slotChangeConfirmCopy,
@@ -51,11 +54,23 @@ const authExpired = ref(false);
 const profile = ref<MerchantProfile | null>(null);
 const gates = computed(() => slotPageGates(profile.value));
 const slots = ref<MerchantSlotView[]>([]);
+// 日期选择（默认今天）：选中日期带 `?date=` 请求，后端据此返回每个档期的 bookedGuests
+const dateOptions = ref(buildSlotDateOptions());
+const selectedDate = ref<string[]>([toDateStr(new Date())]);
+const datePickerShow = ref(false);
+const dateStr = computed(() => String(selectedDate.value[0] ?? ""));
+const dateLabel = computed(() => dateOptions.value.find((o) => o.value === dateStr.value)?.label ?? dateStr.value);
+function onDateConfirm(v: (string | number)[]): void {
+  if (v.length === 0) return;
+  selectedDate.value = [String(v[0])];
+  void reload();
+}
 const ready = ref(false);
 const loadError = ref<string | null>(null);
 /** 写操作进行中（响应式镜像 uc.isBusy，供模板置灰） */
 const working = ref(false);
-let disposed = false;
+/** reload 代次：连续触发（onShow/下拉/写后刷新）时迟到的旧响应不得覆盖新结果 */
+let reloadSeq = 0;
 
 function refreshLoginState(): void {
   const s = rt.getState();
@@ -65,10 +80,11 @@ function refreshLoginState(): void {
 const needLogin = computed(() => !loggedIn.value || authExpired.value);
 
 async function reload(): Promise<void> {
-  if (disposed) return;
   refreshLoginState();
   if (!loggedIn.value || !gates.value.canManage) return;
-  const r = await uc.load(rt.nextContext());
+  const mySeq = ++reloadSeq;
+  const r = await uc.load(rt.nextContext(), dateStr.value);
+  if (mySeq !== reloadSeq) return; // 迟到响应：已被更新的一次 reload 取代
   if (!r.ok) {
     if (r.kind === "auth-expired") authExpired.value = true;
     loadError.value = r.message;
@@ -291,6 +307,11 @@ function statusMeta(status: number) {
       <text class="empty-desc">当前账号没有档期管理权限，请联系管理员</text>
     </view>
     <template v-else>
+      <view class="date-row" hover-class="press-dim" @click="datePickerShow = true">
+        <text class="date-label">日期</text>
+        <text class="date-value">{{ dateLabel }}</text>
+        <text class="date-arrow">›</text>
+      </view>
       <view class="toolbar">
         <view :class="working ? 'tool-btn tool-btn--primary is-disabled' : 'tool-btn tool-btn--primary'" hover-class="press-dim" @click="openCreate">
           <text class="tool-text tool-text--primary">新增档期</text>
@@ -321,7 +342,7 @@ function statusMeta(status: number) {
         <view v-for="s in slots" :key="s.id" class="card">
           <view class="card-main">
             <text class="card-time">{{ s.startTime }} - {{ s.endTime }}</text>
-            <text class="card-cap">容量 {{ s.capacity }}</text>
+            <text class="card-cap">{{ describeBooked(s) || "容量 " + s.capacity }}</text>
           </view>
           <view class="card-side">
             <text :class="'card-status card-status-' + statusMeta(s.status).tone">{{ statusMeta(s.status).label }}</text>
@@ -335,6 +356,8 @@ function statusMeta(status: number) {
         </view>
       </view>
     </template>
+
+    <BasePicker v-model:show="datePickerShow" :model-value="selectedDate" title="选择日期" :options="dateOptions" @confirm="onDateConfirm" />
 
     <!-- 新增 / 改容量 -->
     <BasePopup :show="formShow" position="bottom" :root-portal="false" :z-index="2000" @cancel="closeForm">
@@ -398,6 +421,30 @@ function statusMeta(status: number) {
   display: flex;
   flex-direction: column;
   background: $color-page;
+}
+.date-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: $space-md $space-md 0;
+  padding: 20rpx $space-md;
+  border-radius: 20rpx;
+  border: 2rpx solid rgba(241, 205, 145, 0.12);
+  background: rgba(241, 205, 145, 0.06);
+}
+.date-label {
+  font-size: $font-size-caption;
+  color: $color-text-secondary;
+  margin-right: $space-md;
+}
+.date-value {
+  flex: 1;
+  font-size: $font-size-body;
+  color: $color-action;
+}
+.date-arrow {
+  font-size: $font-size-title;
+  color: $color-text-secondary;
 }
 .toolbar {
   display: flex;
