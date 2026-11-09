@@ -8,6 +8,7 @@
 // - authExpired：任一请求遇登录失效置位，页面据此回到「请从商家专属入口登录」态。
 import { ref } from "vue";
 import type { RequestContext } from "../../ports/context";
+import { LOAD_ERROR_TEXT, LOAD_TIMEOUT_TEXT, getLoadTimeoutMs } from "./load-guard";
 
 export type PagedFetchResult<T> =
   | { ok: true; value: { list: T[]; total: number } }
@@ -17,6 +18,35 @@ export interface PagedFetchArgs<F> {
   filter: F;
   page: number;
   pageSize: number;
+}
+
+/**
+ * 单次 fetch 的兜底：抛异常（含同步抛）⇒ 失败结果；超过超时仍未 settle ⇒ 超时失败结果（迟到的旧结果不再被观察）。
+ * ⭐真机缺陷教训（issue #14 M1）：fetch 一旦抛出/挂起，loadFirst 的 await 不返回，页面的 loading/骨架屏永不收口。
+ * 本函数保证 loadFirst/loadMore **一定会 settle**。
+ */
+async function safeFetch<T, F>(
+  fetch: (context: RequestContext, args: PagedFetchArgs<F>) => Promise<PagedFetchResult<T>>,
+  context: RequestContext,
+  args: PagedFetchArgs<F>,
+): Promise<PagedFetchResult<T>> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<PagedFetchResult<T>>((resolve) => {
+    timer = setTimeout(() => resolve({ ok: false, message: LOAD_TIMEOUT_TEXT }), getLoadTimeoutMs());
+  });
+  const work = (async (): Promise<PagedFetchResult<T>> => {
+    try {
+      return await fetch(context, args);
+    } catch (e) {
+      console.error("[merchant-list] fetch 抛异常（已收口为失败态）:", e);
+      return { ok: false, message: LOAD_ERROR_TEXT };
+    }
+  })();
+  try {
+    return await Promise.race([work, timeout]);
+  } finally {
+    if (timer != null) clearTimeout(timer);
+  }
 }
 
 export function createPagedListViewModel<T, F>(
@@ -48,7 +78,7 @@ export function createPagedListViewModel<T, F>(
     error.value = null;
     loadMoreError.value = null;
     try {
-      const r = await deps.fetch(context, { filter: filter.value, page: 1, pageSize });
+      const r = await safeFetch(deps.fetch, context, { filter: filter.value, page: 1, pageSize });
       if (mySeq !== seq) return { ok: true }; // 迟到响应：已被更新的一次请求取代
       if (!r.ok) {
         error.value = r.message;
@@ -79,7 +109,7 @@ export function createPagedListViewModel<T, F>(
     loadMoreError.value = null;
     try {
       const nextPage = page.value + 1;
-      const r = await deps.fetch(context, { filter: filter.value, page: nextPage, pageSize });
+      const r = await safeFetch(deps.fetch, context, { filter: filter.value, page: nextPage, pageSize });
       if (mySeq !== seq) return;
       if (!r.ok) {
         loadMoreError.value = r.message;

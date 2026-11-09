@@ -22,6 +22,7 @@ import { getMerchantRuntime } from "../application/merchant-runtime";
 import { createMerchantBookingRepository } from "../infrastructure/merchant-bookings";
 import { createBookingActionRunner, createBookingListFetch } from "../application/merchant-booking-flow";
 import { createPagedListViewModel } from "../composables/use-merchant-list";
+import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
 import {
   ACTION_DONE_TEXT,
   ACTION_LABEL,
@@ -63,7 +64,15 @@ function toast(text: string): void {
 
 const loggedIn = ref(false);
 const canManage = ref(false);
-const ready = ref(false);
+/** 是否已**尝试过**首次加载（成功/失败/超时/异常都置位；只用于「还没开始」时的骨架屏判定）。
+ *  ⚠️ 经验（issue #14 M1 真机缺陷）：任何「首屏骨架屏」都必须有失败/超时出口——不得再写成 `onLoad(() => reload().then(() => ready = true))` */
+const attempted = ref(false);
+/** 整次加载被页面级兜底收口的失败文案（抛异常/超时）；与 vm.error（接口失败）并列，任一非空即展示失败态 */
+const loadFault = ref<string | null>(null);
+const loadFailure = computed(() => vm.error.value ?? loadFault.value);
+const showSkeleton = computed(() =>
+  shouldShowSkeleton({ itemCount: vm.items.value.length, hasError: loadFailure.value !== null, loading: vm.loading.value, attempted: attempted.value }),
+);
 /** 处理中的预约 id（响应式镜像 runner.busyId，供模板置灰/「处理中...」） */
 const busyId = ref<number | null>(null);
 
@@ -76,16 +85,24 @@ function refreshLoginState(): void {
 const needLogin = computed(() => !loggedIn.value || vm.authExpired.value);
 
 async function reload(): Promise<void> {
-  refreshLoginState();
-  if (!loggedIn.value || !canManage.value) return;
-  const r = await vm.loadFirst(rt.nextContext());
-  if (!r.ok && vm.items.value.length > 0 && !vm.authExpired.value) toast(r.message); // 列表非空时失败只保留旧列表 ⇒ 另行提示
+  try {
+    refreshLoginState();
+    if (!loggedIn.value || !canManage.value) return;
+    const g = await guardedLoad(() => vm.loadFirst(rt.nextContext()));
+    if (!g.ok) {
+      loadFault.value = g.message; // 抛异常/超时：失败态可见、可重试
+      return;
+    }
+    loadFault.value = null;
+    const r = g.value;
+    if (!r.ok && vm.items.value.length > 0 && !vm.authExpired.value) toast(r.message); // 列表非空时失败只保留旧列表 ⇒ 另行提示
+  } finally {
+    attempted.value = true; // 无论成功/失败/抛异常都置位——不会再有无限骨架屏
+  }
 }
 
 onLoad(() => {
-  void reload().then(() => {
-    ready.value = true;
-  });
+  void reload(); // reload 自身永不 reject（内部全收口），这里无需 .then
 });
 let firstShow = true;
 onShow(() => {
@@ -221,12 +238,12 @@ function actionBtnClass(a: MerchantBookingAction): string {
         </view>
       </view>
 
-      <view v-if="!ready" class="sk-wrap">
+      <view v-if="showSkeleton" class="sk-wrap">
         <SkeletonBlock v-for="i in 3" :key="i" width="100%" height="200rpx" radius="16rpx" />
       </view>
-      <view v-else-if="vm.error.value !== null && vm.items.value.length === 0" class="empty-state">
+      <view v-else-if="loadFailure !== null && vm.items.value.length === 0" class="empty-state">
         <text class="empty-title">加载失败</text>
-        <text class="empty-desc">{{ vm.error.value }}</text>
+        <text class="empty-desc">{{ loadFailure }}</text>
         <view class="retry" hover-class="press-dim" @click="reload"><text class="retry-text">重试</text></view>
       </view>
       <view v-else-if="vm.items.value.length === 0" class="empty-state">

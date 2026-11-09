@@ -21,6 +21,7 @@ import { hapticTap } from "../../application/haptics";
 import { getMerchantRuntime } from "../application/merchant-runtime";
 import { createMerchantSlotRepository } from "../infrastructure/merchant-slots";
 import { createSlotUseCases, slotPageGates } from "../application/merchant-slot-flow";
+import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
 import {
   SLOT_CAPACITY_MAX,
   SLOT_CAPACITY_MIN,
@@ -68,7 +69,13 @@ function onDateConfirm(v: (string | number)[]): void {
   selectedDate.value = [String(v[0])];
   void reload();
 }
-const ready = ref(false);
+/** 是否已**尝试过**首次加载（成功/失败/超时/异常都置位）。⚠️ 任何「首屏骨架屏」都必须有失败/超时出口（issue #14 M1 真机缺陷） */
+const attempted = ref(false);
+/** 一次 reload 进行中 */
+const loading = ref(false);
+const showSkeleton = computed(() =>
+  shouldShowSkeleton({ itemCount: slots.value.length, hasError: loadError.value !== null, loading: loading.value, attempted: attempted.value }),
+);
 const loadError = ref<string | null>(null);
 /** 写操作进行中（响应式镜像 uc.isBusy，供模板置灰） */
 const working = ref(false);
@@ -84,25 +91,38 @@ const needLogin = computed(() => !loggedIn.value || authExpired.value);
 
 async function reload(): Promise<void> {
   refreshLoginState();
-  if (!loggedIn.value || !gates.value.canManage) return;
-  const mySeq = ++reloadSeq;
-  const r = await uc.load(rt.nextContext(), dateStr.value);
-  if (mySeq !== reloadSeq) return; // 迟到响应：已被更新的一次 reload 取代
-  if (!r.ok) {
-    if (r.kind === "auth-expired") authExpired.value = true;
-    loadError.value = r.message;
-    if (slots.value.length > 0 && r.kind !== "auth-expired") toast(r.message); // 保留旧列表，另行提示
+  if (!loggedIn.value || !gates.value.canManage) {
+    attempted.value = true;
     return;
   }
-  authExpired.value = false;
-  loadError.value = null;
-  slots.value = r.slots;
+  const mySeq = ++reloadSeq;
+  loading.value = true;
+  try {
+    const g = await guardedLoad(() => uc.load(rt.nextContext(), dateStr.value)); // 抛异常/挂起一律收口
+    if (mySeq !== reloadSeq) return; // 迟到响应：已被更新的一次 reload 取代（由取代者负责收口）
+    if (!g.ok) {
+      loadError.value = g.message;
+      if (slots.value.length > 0) toast(g.message);
+      return;
+    }
+    const r = g.value;
+    if (!r.ok) {
+      if (r.kind === "auth-expired") authExpired.value = true;
+      loadError.value = r.message;
+      if (slots.value.length > 0 && r.kind !== "auth-expired") toast(r.message); // 保留旧列表，另行提示
+      return;
+    }
+    authExpired.value = false;
+    loadError.value = null;
+    slots.value = r.slots;
+  } finally {
+    if (mySeq === reloadSeq) loading.value = false;
+    attempted.value = true; // 无论成功/失败/抛异常/被取代都置位——不会再有无限骨架屏
+  }
 }
 
 onLoad(() => {
-  void reload().then(() => {
-    ready.value = true;
-  });
+  void reload(); // reload 自身永不 reject（内部全收口）
 });
 let firstShow = true;
 onShow(() => {
@@ -329,7 +349,7 @@ function statusMeta(status: number) {
         </view>
       </view>
 
-      <view v-if="!ready" class="sk-wrap">
+      <view v-if="showSkeleton" class="sk-wrap">
         <SkeletonBlock v-for="i in 3" :key="i" width="100%" height="140rpx" radius="16rpx" />
       </view>
       <view v-else-if="loadError !== null && slots.length === 0" class="empty-state">
