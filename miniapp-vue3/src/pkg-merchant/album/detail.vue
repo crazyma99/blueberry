@@ -221,6 +221,11 @@ async function onMove(img: MerchantImage, dir: "up" | "down"): Promise<void> {
   }
 }
 
+/** 三列网格：每行第 3 个去右边距（idx 从 0 起） */
+function gridCellClass(idx: number): string {
+  return (idx + 1) % 3 === 0 ? "cell is-end" : "cell";
+}
+
 // —— 试衣开关 ——
 async function onToggleTryon(img: MerchantImage): Promise<void> {
   if (working.value) return;
@@ -348,7 +353,7 @@ function statusText(it: UploadQueueItem): string {
       </view>
       <view v-else class="grid-wrap">
         <view class="grid">
-          <view v-for="(img, idx) in visible.items" :key="img.id" class="cell">
+          <view v-for="(img, idx) in visible.items" :key="img.id" :class="gridCellClass(idx)">
             <view class="thumb-box" hover-class="press-dim" @click="onTapImage(img)">
               <image class="thumb" :src="imageThumb(img.imageUrl)" mode="aspectFill" lazy-load />
               <view v-if="selectMode" :class="isSelected(img.id) ? 'check is-on' : 'check'"><text class="check-text">{{ isSelected(img.id) ? "✓" : "" }}</text></view>
@@ -506,17 +511,24 @@ function statusText(it: UploadQueueItem): string {
 .grid-wrap {
   padding: 0 $space-md $space-lg;
 }
+/* 固定三列（不用 space-between：末行不足 3 个时会被撑到左右两端、中间留空——5 张图第二行 2 张左右分居即此缺陷）。
+   列宽 = (100% - 2×列间距) / 3；列间距靠 margin-right，每行第 3 个（class is-end，不用 :nth-child——WXSS 只保证 class 选择器）清零；不足一行靠左。 */
 .grid {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 .cell {
-  width: 32%;
+  box-sizing: border-box;
+  width: calc((100% - 32rpx) / 3);
+  margin-right: 16rpx;
   margin-bottom: 20rpx;
   display: flex;
   flex-direction: column;
+}
+.cell.is-end {
+  margin-right: 0;
 }
 .thumb-box {
   position: relative;
