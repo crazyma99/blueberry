@@ -59,7 +59,9 @@ export interface MerchantEntry {
 }
 
 /** 工作台功能入口（M1 只有预约 + 档期；相册/分类留 M2，**不做**首页概览）。各入口随对应页面落地的提交追加。 */
-export const MERCHANT_ENTRIES: readonly MerchantEntry[] = [];
+export const MERCHANT_ENTRIES: readonly MerchantEntry[] = [
+  { key: "booking", title: "预约管理", desc: "接单、核销、取消客人预约", url: "/pkg-merchant/booking/list", perm: PERM.booking },
+];
 
 /** 按权限过滤后的功能入口 */
 export function visibleEntries(profile: Pick<MerchantProfile, "permissions"> | null): MerchantEntry[] {

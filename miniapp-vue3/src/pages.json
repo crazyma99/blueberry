@@ -235,6 +235,16 @@
 						"navigationStyle": "custom",
 						"navigationBarTitleText": "商家工作台"
 					}
+				},
+				{
+					"path": "booking/list",
+					"style": {
+						"navigationStyle": "custom",
+						"navigationBarTitleText": "预约管理",
+						"enablePullDownRefresh": true,
+						"backgroundTextStyle": "light",
+						"onReachBottomDistance": 80
+					}
 				}
 			]
 		}
