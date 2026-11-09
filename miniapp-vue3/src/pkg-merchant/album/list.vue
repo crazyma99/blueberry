@@ -179,6 +179,14 @@ function onSearch(): void {
   void reload();
 }
 
+// —— 进图片网格 ——
+function onOpenAlbum(a: MerchantAlbum): void {
+  if (working.value) return;
+  hapticTap();
+  const q = "albumId=" + a.id + "&shopId=" + shop.shopId.value + "&title=" + encodeURIComponent(a.title);
+  if (typeof uni !== "undefined" && typeof uni.navigateTo === "function") uni.navigateTo({ url: "/pkg-merchant/album/detail?" + q });
+}
+
 // —— 新建 / 编辑 ——
 const formShow = ref(false);
 const formMode = ref<"create" | "edit">("create");
@@ -375,7 +383,7 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
       </view>
       <view v-else class="list">
         <view v-for="a in visible.items" :key="a.id" class="card">
-          <view class="card-main">
+          <view class="card-main" hover-class="press-dim" @click="onOpenAlbum(a)">
             <image v-if="a.coverImageUrl" class="cover" :src="albumCoverThumb(a.coverImageUrl)" mode="aspectFill" lazy-load />
             <view v-else class="cover cover--empty"><text class="cover-empty-text">无封面</text></view>
             <view class="info">
