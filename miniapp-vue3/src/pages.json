@@ -245,6 +245,15 @@
 						"backgroundTextStyle": "light",
 						"onReachBottomDistance": 80
 					}
+				},
+				{
+					"path": "slot/list",
+					"style": {
+						"navigationStyle": "custom",
+						"navigationBarTitleText": "档期管理",
+						"enablePullDownRefresh": true,
+						"backgroundTextStyle": "light"
+					}
 				}
 			]
 		}
