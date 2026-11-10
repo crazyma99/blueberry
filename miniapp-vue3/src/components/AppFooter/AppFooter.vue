@@ -5,13 +5,18 @@
 // Profile 注入（copyrightText）→ 本地兜底，保留在用例内（AppFooter.uvue 的注入锚点字段名不变量）。
 // 有意偏差（已声明）：①主题暗→亮——旧端浅底文字用 --color-primary-50（金 50%），白底≈1.3:1，
 // 新端取 colorTextSecondary（CR 🟡3 同口径）；文字使用平台系统默认字体。
-withDefaults(defineProps<{ mainLine?: string; supportLine?: string }>(), { mainLine: "", supportLine: "" });
+// 2026-11 商家端 footer（issue #14 M2）：商家页只展示第二行（supportLine），主行传空。
+// 主行空且副行非空时挂 `solo` 修饰类，去掉副行的 margin-top（否则空主行之上会多出 8rpx 间距）。
+// ⚠️ C 端零变化：C 端 9 页主行恒非空（兜底链终点是 Profile.copyrightText）；两行都空（loading 期）不算 solo。
+import { computed } from "vue";
+const props = withDefaults(defineProps<{ mainLine?: string; supportLine?: string }>(), { mainLine: "", supportLine: "" });
+const solo = computed(() => props.mainLine === "" && props.supportLine !== "");
 </script>
 
 <template>
   <view class="app-footer">
     <text class="footer-main">{{ mainLine }}</text>
-    <text class="footer-support">{{ supportLine }}</text>
+    <text :class="solo ? 'footer-support footer-support--solo' : 'footer-support'">{{ supportLine }}</text>
   </view>
 </template>
 
@@ -24,6 +29,9 @@ withDefaults(defineProps<{ mainLine?: string; supportLine?: string }>(), { mainL
 }
 .footer-main {
   /* 旧端组件无 font-size 规则：主行**继承页面包裹类**字号（.beian/.copyright/.bottomdesc） */
+}
+.footer-support.footer-support--solo {
+  margin-top: 0;
 }
 .footer-support {
   margin-top: 8rpx;

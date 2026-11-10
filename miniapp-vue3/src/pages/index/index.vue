@@ -9,7 +9,7 @@
 import { computed, onMounted, ref } from "vue";
 import { onLoad, onShareAppMessage, onShareTimeline, onShow } from "@dcloudio/uni-app";
 import { PROFILE } from "../../generated/profile.config";
-import { readEnterOptions } from "../../platform/uni/enter-options";
+import { readEnterOptions, readEnterPath } from "../../platform/uni/enter-options";
 import { syncBrandFromEnterOptionsAsync } from "../../application/enter-brand-sync";
 import { normalizeScene } from "../../domain/enter-brand";
 import { resolveRuntimeEnvironment } from "../../platform/uni/runtime-env";
@@ -288,6 +288,8 @@ async function applyEnterBrand(incoming: { scene: string; queryBrandId: string }
   // 先补拉一次 `GET /api/brands`（一次/会话、超时、失败静默）——不补齐则新商户会被拒写、冷热启动都切不过去。
   const result = await syncBrandFromEnterOptionsAsync({
     readEnterOptions: () => incoming,
+    // 商家分包落地页（pkg-merchant/…）不参与品牌同步（issue #14；与 App 级同口径，进参粘滞时页面级同样不得消费商家码 scene）
+    readEnterPath,
     loadBrandId: () => versioned.loadBrandId(),
     saveBrandId: (id) => versioned.saveBrandId(id),
     bumpScope: () => ctxFactory.bumpScope(),

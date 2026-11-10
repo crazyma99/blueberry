@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onLaunch, onShow, onHide } from "@dcloudio/uni-app";
 import { syncBrandFromEnterOptions } from "./application/enter-brand-sync";
-import { readEnterOptions } from "./platform/uni/enter-options";
+import { readEnterOptions, readEnterPath } from "./platform/uni/enter-options";
 import { createVersionedStorage } from "./infrastructure/storage/versioned";
 import { createUniStorage } from "./platform/uni/storage";
 import { PROFILE } from "./generated/profile.config";
@@ -25,6 +25,8 @@ function syncBrandOnAppShow(): void {
   try {
     const result = syncBrandFromEnterOptions({
       readEnterOptions,
+      // 商家分包落地页（pkg-merchant/…）不参与品牌同步（issue #14；判定见 domain/merchant-entry.ts）
+      readEnterPath,
       loadBrandId: () => versioned.loadBrandId(),
       saveBrandId: (id) => versioned.saveBrandId(id),
     });

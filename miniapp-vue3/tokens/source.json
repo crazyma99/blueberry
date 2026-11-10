@@ -60,6 +60,7 @@
     "sectionGapRpx": 32,
     "pullRefreshLoadingSizeRpx": 48,
     "progressCircleSizeRpx": 200,
-    "progressCircleStrokeRpx": 12
+    "progressCircleStrokeRpx": 12,
+    "progressBarHeightRpx": 16
   }
 }

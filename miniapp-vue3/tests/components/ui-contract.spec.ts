@@ -68,22 +68,8 @@ describe("BaseButton（P1-24 禁用/忙态不重复提交）", () => {
   });
 });
 
-describe("BaseField（value 流与标准事件）", () => {
-  it("输入透传 update:modelValue（字符串化）", async () => {
-    const w = mount(BaseField, { props: { modelValue: "", placeholder: "请输入手机号" }, global: globalWith });
-    const input = w.findComponent(StubInput).find("input");
-    await input.setValue("13800000000");
-    expect(w.emitted("update:modelValue")?.[0]).toEqual(["13800000000"]);
-  });
-  it("blur/clear 事件转发", async () => {
-    const w = mount(BaseField, { props: { modelValue: "x" }, global: globalWith });
-    const stub = w.findComponent(StubInput);
-    await stub.find("input").trigger("blur");
-    expect(w.emitted("blur")?.length).toBe(1);
-    await stub.vm.$emit("clear");
-    expect(w.emitted("clear")?.length).toBe(1);
-  });
-});
+// BaseField（2026-11 起内部为原生 <input>，不再是 wd-input）：原「用 wd-input 桩 emit」两条已替换为
+// tests/unit/base-field-native.spec.ts（原生 input 的真实事件载荷 { detail: { value } }、type/disabled/clearable/焦点、token 样式守卫）。
 
 describe("BasePopup（取消语义单一出口）", () => {
   it("关闭动作 → cancel ＋ update:show false，且只发一次", async () => {
@@ -104,18 +90,9 @@ describe("BasePicker（选中/取消/清空）", () => {
     { label: "红河水乡店", value: 1 },
     { label: "昆明店", value: 2 },
   ];
-  it("confirm 回传纯值数组并收起（不透传 Wot 内部对象）", async () => {
-    const w = mount(BasePicker, { props: { show: true, options, modelValue: [] }, global: globalWith });
-    await w.findComponent(StubPicker).find(".stub-confirm").trigger("click");
-    expect(w.emitted("confirm")?.[0]).toEqual([["stub-value"]]);
-    expect(w.emitted("update:show")?.[0]).toEqual([false]);
-  });
-  it("cancel 回传并收起", async () => {
-    const w = mount(BasePicker, { props: { show: true, options, modelValue: [1] }, global: globalWith });
-    await w.findComponent(StubPicker).find(".stub-cancel").trigger("click");
-    expect(w.emitted("cancel")?.length).toBe(1);
-    expect(w.emitted("update:show")?.[0]).toEqual([false]);
-  });
+  // 2026-11：原「confirm/cancel 用 wd-picker 自造桩」两条已删除——桩的 confirm 载荷是数组 ['stub-value']，而真实 wd-picker 是对象
+  // { value, selectedItems }，正是它掩盖了「确认不生效」缺陷。门面已改用 wd-picker-view，选中/确认/取消/级联/层级/主题的
+  // 回归见 tests/unit/base-picker-real-payload.spec.ts（真实 wot 组件 + 真实事件载荷 + 源码契约守卫）。
   it("clearable 且有值时出现清空；点击 → clear ＋ update:modelValue []", async () => {
     const w = mount(BasePicker, { props: { show: true, options, modelValue: [1], clearable: true }, global: globalWith });
     const clearBtn = w.find(".base-picker__clear");
@@ -219,7 +196,7 @@ describe("抖音分支：BasePicker 门面自绘底部面板", () => {
     await items[1].trigger("click");
     expect(w.findAll(".base-picker-native__item")[1].classes()).toContain("base-picker-native__item--active");
     await w.find(".base-picker-native__btn--ok").trigger("click");
-    expect(w.emitted("confirm")?.[0]).toEqual([[2]]);
+    expect(w.emitted("confirm")?.[0]).toEqual([[2], ["昆明店"]]);
     expect(w.emitted("update:show")?.[0]).toEqual([false]);
   });
   it("点击取消 → cancel ＋ update:show false", async () => {

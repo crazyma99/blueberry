@@ -91,6 +91,15 @@ export function evaluateIfdefs(rawText, platform) {
   return out.join("\n");
 }
 
+/**
+ * 平台作用域「不应注册」的路由前缀（verify 对**产物**命中判定，含 subPackages）：
+ * 微信端无禁用项；抖音/小红书＝AI 六页 ＋ 商家端分包 `pkg-merchant`（issue #14：商家端只做微信，tt/xhs 产物零残留）。
+ */
+export function forbiddenRoutesForPlatform(platform) {
+  if (platform === "mp-weixin") return [];
+  return ["pages/aiTryOn", "pages/aiTryOnResult", "pages/aiTryOnHistory", "pages/aiRecommend", "pkg-merchant"];
+}
+
 /** 平台作用域下的源码路由集合（供 verify 的「阶段期望集合」使用；**不再恒等**） */
 export function expectedRoutesForPlatform(rawPagesJsonText, platform) {
   const parsed = JSON.parse(stripJsonc(evaluateIfdefs(rawPagesJsonText, platform)));
@@ -277,7 +286,7 @@ export function runBuild(req, { repoRoot, pnpmCmd = "pnpm", skipInstall = false 
     profileKey: req.profileKey,
     platform: req.platform,
     // P4-07/P4-13：平台作用域「不应注册」的路由前缀（抖音＝客片展示版 ⇒ AI 六页不得出现）
-    forbiddenRoutes: req.platform === "mp-weixin" ? [] : ["pages/aiTryOn", "pages/aiTryOnResult", "pages/aiTryOnHistory", "pages/aiRecommend"],
+    forbiddenRoutes: forbiddenRoutesForPlatform(req.platform),
     environment: req.environment,
     appid: v.profile.appid,
     appCode: v.profile.appCode,
