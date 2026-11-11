@@ -329,7 +329,7 @@ function statusText(it: UploadQueueItem): string {
 <template>
   <view class="container">
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
-    <CustomNavBar :title="albumTitle" transparent />
+    <CustomNavBar :title="albumTitle" />
 
     <MerchantNeedLogin v-if="needLogin" :expired="loggedIn" />
     <view v-else-if="!canManage" class="empty-state">

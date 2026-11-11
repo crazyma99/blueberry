@@ -345,7 +345,7 @@ function statusMeta(status: number) {
 <template>
   <view class="container">
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
-    <CustomNavBar title="档期管理" transparent />
+    <CustomNavBar title="档期管理" />
 
     <MerchantNeedLogin v-if="needLogin" :expired="loggedIn" />
     <view v-else-if="!gates.canManage" class="empty-state">

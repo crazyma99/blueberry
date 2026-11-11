@@ -31,6 +31,8 @@ vi.mock("../../src/platform/uni/transport", () => ({
       const ok = (data: unknown) => ({ ok: true, value: { status: 200, businessCode: 200, message: undefined, requestId: null, data } });
       if (req.url === "/photo-albums/albums/get") return ok(Array.from({ length: h.n }, (_, i) => ({ id: i + 1, albumId: 7, imageUrl: i === 1 ? "https://bkt.cos.ap-guangzhou.myqcloud.com/a/" + i + ".jpg" : "https://www.lanmei66.cloud/a/" + i + ".jpg", sortOrder: i, aiTryonStatus: 1, aiTryonReason: "", aiTryonManual: 0 })));
       if (req.url === "/photo-albums/photo") return ok([]);
+      // 工作台下拉刷新会拉取实时权限（2026-11 bugfix）：返回收窄后的权限，用于断言刷新确实更新了入口
+      if (req.url === "/auth/me/permissions") return ok({ role: "merchant", permissions: ["album"] });
       if (req.url === "/shop/parent/list") return ok([]);
       if (req.url === "/booking/slots") return ok([]);
       return ok([]);
@@ -114,21 +116,25 @@ describe("⭐工作台：下拉刷新 + 商家名/角色", () => {
     expect(roleLabel({ role: "other", roleName: "" })).toBe("other");
     expect(roleLabel({ role: "merchant", roleName: "  店长 " })).toBe("店长");
   });
-  it("⭐下拉刷新：重读登录态/权限（资料在别处被更新后，刷新即反映）并反馈「已刷新」；收口 stopPullDownRefresh（变异：不重读/不反馈即红）", async () => {
+  it("⭐下拉刷新：拉取实时权限更新入口并反馈「已刷新」；收口 stopPullDownRefresh（变异：不拉取/不反馈即红）。最小可见时长用假定时器推进（详见 merchant-ux-bugfix2.spec）", async () => {
     const w = mount(HomePage, { global: GLOBAL });
     expect(w.findAll(".entry").length).toBe(4 - 0); // 4 个权限 ⇒ 预约/档期/分类/相册 入口
-    // 模拟权限被收窄（例如重新登录后）：本地资料变更，下拉刷新应反映
-    h.store.set(MERCHANT_PROFILE_KEY, JSON.stringify({ ...PROFILE_OK, permissions: ["album"] }));
+    vi.useFakeTimers();
     h.pulls[0]();
+    await vi.advanceTimersByTimeAsync(800);
+    vi.useRealTimers();
     for (let i = 0; i < 4; i++) await flushPromises();
-    expect(w.findAll(".entry").length).toBe(1);
+    expect(w.findAll(".entry").length).toBe(1); // 服务端实时权限只剩 album
     expect(h.toasts).toContain("已刷新");
     expect(h.stops).toBeGreaterThan(0);
   });
   it("会话已失效时下拉：提示「登录已失效」并露出前往登录占位", async () => {
     const w = mount(HomePage, { global: GLOBAL });
     getMerchantRuntime().logout();
+    vi.useFakeTimers();
     h.pulls[0]();
+    await vi.advanceTimersByTimeAsync(800);
+    vi.useRealTimers();
     for (let i = 0; i < 4; i++) await flushPromises();
     expect(h.toasts).toContain("登录已失效，请重新登录");
     expect(w.find(".hello").exists()).toBe(false);

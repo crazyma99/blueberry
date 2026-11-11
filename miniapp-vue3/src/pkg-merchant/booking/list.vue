@@ -243,7 +243,7 @@ function actionBtnClass(a: MerchantBookingAction): string {
 <template>
   <view class="container">
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
-    <CustomNavBar title="预约管理" transparent />
+    <CustomNavBar title="预约管理" />
 
     <MerchantNeedLogin v-if="needLogin" :expired="loggedIn" />
     <view v-else-if="!canManage" class="empty-state">

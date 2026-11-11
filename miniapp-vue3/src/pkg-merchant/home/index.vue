@@ -7,6 +7,7 @@ import { onShow } from "@dcloudio/uni-app";
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
 import BaseFeedback from "../../ui/BaseFeedback.vue";
 import { createPullRefresh } from "../../composables/use-pull-refresh";
+import { withMinDuration } from "../composables/min-duration";
 import { toast as nativeToast } from "../../platform/uni/feedback";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
@@ -38,12 +39,25 @@ function toast(text: string): void {
 }
 
 /**
- * 下拉刷新：重读登录态/权限并给出反馈（商家无 refresh/logout 接口，登录态与资料都在本地存储里，没有需要重新请求的数据）。
- * 会话已失效 ⇒ 提示并露出「前往登录」占位；已登录 ⇒ 提示「已刷新」（权限变更后需重新登录才会更新——登录响应是权限唯一来源）。
+ * 下拉刷新：重读登录态 + 向服务端拉取**实时权限**（GET /auth/me/permissions，自作用域只读）并更新本地权限快照。
+ *   · 成功 ⇒ 入口按新权限更新，提示「已刷新」；
+ *   · 401 ⇒ client 自愈已作废会话 ⇒ 露出「前往登录」占位并提示；
+ *   · 网络/业务失败 ⇒ 保留旧权限快照并提示原因，不卡住。
+ * 最小可见时长：整个动作至少持续 MIN_REFRESH_VISIBLE_MS（600ms），指示器不会一闪而过（本地读取同步完成时尤其明显）。
+ * 共用的 use-pull-refresh 的 finally 收口（refreshing=false + stopPullDownRefresh）不变；withMinDuration 抛错也会补足时长后再抛。
  */
 async function reloadHome(): Promise<void> {
-  refresh();
-  toast(loggedIn.value ? "已刷新" : "登录已失效，请重新登录");
+  await withMinDuration(async () => {
+    refresh();
+    if (!loggedIn.value) {
+      toast("登录已失效，请重新登录");
+      return;
+    }
+    const r = await rt.refreshPermissions();
+    refresh();
+    if (r.ok) toast("已刷新");
+    else toast(r.message);
+  });
 }
 const { refreshing, indicatorTop } = createPullRefresh({ label: "merchantHome", refresh: () => reloadHome(), hasCustomNav: true });
 
@@ -70,7 +84,7 @@ function onLogout(): void {
 <template>
   <view class="container">
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
-    <CustomNavBar title="商家工作台" transparent />
+    <CustomNavBar title="商家工作台" />
     <MerchantNeedLogin v-if="!loggedIn" />
     <view v-else class="body">
       <view class="hello">

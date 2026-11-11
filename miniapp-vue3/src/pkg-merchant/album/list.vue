@@ -554,7 +554,7 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
 <template>
   <view class="container">
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
-    <CustomNavBar title="相册管理" transparent />
+    <CustomNavBar title="相册管理" />
 
     <MerchantNeedLogin v-if="needLogin" :expired="loggedIn" />
     <view v-else-if="!canManage" class="empty-state">
@@ -633,7 +633,7 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
         <BaseField v-model="fPrice" label="价格(元)" placeholder="0" type="digit" />
         <BaseField v-model="fPackageDesc" label="套餐说明" placeholder="选填" :maxlength="ALBUM_DESC_MAX" show-count />
         <view v-if="formMode === 'create'" class="photos">
-          <text class="pick-label">照片（选填）</text>
+          <text class="field-label">照片（选填）</text>
           <view class="photo-grid">
             <view v-for="(ph, i) in photoState.photos" :key="ph.key" :class="photoClass(i, ph.key === coverKeyEff)" hover-class="press-dim" @click="onSetCover(ph.key)">
               <image class="photo-img" :src="ph.path" mode="aspectFill" />
@@ -920,11 +920,20 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
   align-items: center;
   padding: 24rpx 0;
   border-bottom: 2rpx solid $color-divider;
+  /* 与 BaseField 的字段间距（.base-field margin-bottom: $space-md）对齐：此行不是 BaseField，下面紧跟「价格」字段，缺它就会贴在一起 */
+  margin-bottom: $space-md;
 }
 .pick-label {
   width: 180rpx;
   flex-shrink: 0;
   font-size: $font-size-body;
+  color: $color-text-secondary;
+}
+/* 「堆叠标签」（标签在上、内容在下）：与 BaseField 标签同口径（caption 字号、次要色、下边距 12rpx）。并排行里的标签仍用 .pick-label（固定 180rpx 宽，不得改）。 */
+.field-label {
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: $font-size-caption;
   color: $color-text-secondary;
 }
 .pick-value {

@@ -286,7 +286,7 @@ async function onDeleteTap(c: MerchantCategory): Promise<void> {
 <template>
   <view class="container">
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
-    <CustomNavBar title="分类管理" transparent />
+    <CustomNavBar title="分类管理" />
 
     <MerchantNeedLogin v-if="needLogin" :expired="loggedIn" />
     <view v-else-if="!canManage" class="empty-state">
