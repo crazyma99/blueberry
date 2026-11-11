@@ -638,7 +638,7 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
             <view v-for="(ph, i) in photoState.photos" :key="ph.key" :class="photoClass(i, ph.key === coverKeyEff)" hover-class="press-dim" @click="onSetCover(ph.key)">
               <image class="photo-img" :src="ph.path" mode="aspectFill" />
               <view v-if="ph.key === coverKeyEff" class="photo-badge"><text class="photo-badge-text">封面</text></view>
-              <view v-if="!createBusy" class="photo-remove" @click.stop="onRemovePhoto(ph.key)"><text class="photo-remove-text">×</text></view>
+              <view v-if="!createBusy" class="photo-remove" hover-class="press-dim" @click.stop="onRemovePhoto(ph.key)"><text class="photo-remove-text">×</text></view>
             </view>
             <view v-if="!createBusy && photoState.photos.length < CREATE_PHOTO_MAX" :class="photoClass(photoState.photos.length, false) + ' photo-add'" hover-class="press-dim" @click="onAddPhotos"><text class="photo-add-text">＋</text></view>
           </view>

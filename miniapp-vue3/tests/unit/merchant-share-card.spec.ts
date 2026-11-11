@@ -3,7 +3,7 @@
 // ⇒ 分享缩略**完全靠小程序端 cosThumbJpg 拼万象参数**。硬要求：任何情况下都不得把库里原图 URL 直接交给微信。
 // 变异靶点：①去掉 cosThumbJpg（解析器直传原图）②非白名单域不收口为空串 ③已带 imageMogr2 的 URL 叠加第二段参数 ④解析失败时抛错/卡死
 //          ⑤默认标题被改 ⑥商家 client 带了 authRequired/Authorization ⑦C 端三键默认值/兜底顺序被改。
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createShareCardResolver, DEFAULT_SHARE_CARDS } from "../../src/application/share-card";
 import { cosThumbJpg } from "../../src/application/image-share";
 import { createMerchantShare, MERCHANT_SHARE_THUMB_WIDTH, safeShareImage, sanitizeShareImageSource } from "../../src/pkg-merchant/composables/use-merchant-share";
@@ -129,6 +129,21 @@ describe("⭐解析失败/超时：静默回落默认标题与空图，分享对
     await s.load();
     expect(s.appMessage().path).toBe("/pkg-merchant/login/index");
     expect(s.timeline().query).toBe("");
+  });
+});
+
+describe("超时定时器清理（CR 🟡7）", () => {
+  it("解析先完成 ⇒ 不遗留待触发的超时定时器（变异：不 clearTimeout 即红）", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = mk([{ bizName: "merchantLogin", title: "T", imageUrl: "" }]);
+      const p = s.load();
+      await vi.advanceTimersByTimeAsync(0);
+      await p;
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

@@ -74,12 +74,18 @@ export function createMerchantShare(deps: MerchantShareDeps) {
   async function load(): Promise<ShareCard> {
     if (started) return card;
     started = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     try {
-      const timeout = new Promise<null>((r) => setTimeout(() => r(null), deps.timeoutMs ?? MERCHANT_SHARE_TIMEOUT_MS));
+      const timeout = new Promise<null>((r) => {
+        timer = setTimeout(() => r(null), deps.timeoutMs ?? MERCHANT_SHARE_TIMEOUT_MS);
+      });
       const got = await Promise.race([resolver.resolve("merchantLogin", deps.nextContext()), timeout]);
       if (got != null) card = { title: got.title !== "" ? got.title : DEFAULT_SHARE_CARDS.merchantLogin.title, imageUrl: safeShareImage(got.imageUrl) };
     } catch {
       /* 静默：保持默认卡片 */
+    } finally {
+      // 解析先于超时完成时清掉超时定时器（否则它会在页面生命周期里白白挂 3s）
+      if (timer !== null) clearTimeout(timer);
     }
     return card;
   }

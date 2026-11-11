@@ -35,10 +35,20 @@ const BRAND_NAME = PROFILE.brandName;
 const SLOGAN = SLOGAN_DEFAULT;
 
 const remembered = nameStore.load();
+/**
+ * 「存储里确有记住的账号」的**响应式**状态：决定「不是我的账号？清除」入口是否显示。
+ * 此前入口条件用常量 `remembered` 与输入框比较——清除后用户再输入同名账号，入口会重新出现，但存储其实已清空（显示与事实不符）。
+ * 现在：进页面按存储初始化；点清除置 false（之后输入什么都不再显示）；登录成功写入存储后也置 true（本页生命周期内不会再用到，保持一致）。
+ */
+const hasRemembered = ref(remembered !== "");
 const username = ref(remembered);
 const password = ref("");
-/** 有记住的账号时焦点直接落在密码框（只在首次渲染时聚焦一次） */
+/**
+ * 焦点接线（两个 input 的 :focus 互斥，不会同时为 true）：有记住的账号 ⇒ 进页面焦点落密码框；
+ * 点「清除」后 ⇒ 焦点改落账号框（需重新输入账号）。注意 :focus 只是属性接线，真聚焦以真机为准。
+ */
 const focusPassword = ref(remembered !== "");
+const focusUsername = ref(false);
 const busy = ref(false);
 const errorText = ref("");
 
@@ -73,6 +83,7 @@ async function onSubmit(): Promise<void> {
       return;
     }
     nameStore.save(username.value); // 只记用户名（trim 后非空才存）；密码绝不落盘
+    hasRemembered.value = nameStore.load() !== "";
     password.value = ""; // 成功后立刻清掉内存里的密码
     toast("登录成功");
     enterHome();
@@ -85,9 +96,11 @@ async function onSubmit(): Promise<void> {
 function onForget(): void {
   hapticTap();
   nameStore.clear();
+  hasRemembered.value = false;
   username.value = "";
   password.value = "";
   focusPassword.value = false;
+  focusUsername.value = true; // 清除后焦点回账号框（与「有记住账号时焦点在密码框」互斥）
   errorText.value = "";
 }
 </script>
@@ -117,6 +130,7 @@ function onForget(): void {
               :placeholder-style="INPUT_PLACEHOLDER_STYLE"
               maxlength="64"
               :disabled="busy"
+              :focus="focusUsername"
               :adjust-position="true"
               :cursor-spacing="LOGIN_CURSOR_SPACING"
             />
@@ -138,7 +152,7 @@ function onForget(): void {
               @confirm="onSubmit"
             />
           </view>
-          <view v-if="remembered !== '' && username === remembered" class="forget" hover-class="press-dim" @click="onForget">
+          <view v-if="hasRemembered" class="forget" hover-class="press-dim" @click="onForget">
             <text class="forget-text">不是我的账号？清除</text>
           </view>
           <text v-if="errorText" class="error">{{ errorText }}</text>

@@ -15,7 +15,7 @@ const h = vi.hoisted(() => ({
   store: new Map<string, string>(),
   reLaunches: [] as string[],
   loginResult: { token: "T9", adminId: 7, merchantId: 3, username: "shopA", role: "merchant", displayName: "A", shopList: [], permissions: ["album"] } as Record<string, unknown>,
-  requests: [] as Array<{ url: string; body?: unknown }>,
+  requests: [] as Array<{ url: string; body?: unknown; headers?: Record<string, string> }>,
   shareCard: { type: "share_card", items: [] as unknown[] },
 }));
 vi.mock("@dcloudio/uni-app", () => ({
@@ -26,8 +26,8 @@ vi.mock("@dcloudio/uni-app", () => ({
 }));
 vi.mock("../../src/platform/uni/transport", () => ({
   createUniTransport: () => ({
-    request: async (req: { url: string; body?: unknown }) => {
-      h.requests.push({ url: req.url, body: req.body });
+    request: async (req: { url: string; body?: unknown; headers?: Record<string, string> }) => {
+      h.requests.push({ url: req.url, body: req.body, headers: req.headers });
       const ok = (data: unknown) => ({ ok: true, value: { status: 200, businessCode: 200, message: undefined, requestId: null, data } });
       if (req.url === "/auth/login") return ok(h.loginResult);
       if (req.url === "/api/page-config") return ok([h.shareCard]);
@@ -104,16 +104,17 @@ describe("⭐记住上次账号（只存用户名）", () => {
 });
 
 describe("⭐登录页：回填账号 / 焦点 / 清除 / 密码不落盘", () => {
-  it("有记住的账号：进页面回填、密码框 focus、出现「不是我的账号？清除」（变异：不回填即红）", async () => {
+  it("有记住的账号：进页面回填账号、给密码框接上 focus 属性、出现「不是我的账号？清除」（变异：不回填即红）。⚠️ 仅验证属性接线；真聚焦（键盘是否弹起、光标位置）需真机", async () => {
     h.store.set(MERCHANT_LAST_LOGIN_NAME_KEY, "shopA");
     const w = mount(LoginPage, { global: GLOBAL });
     await flushPromises();
     const inputs = w.findAll(".form-input");
     expect((inputs[0].element as HTMLInputElement).value).toBe("shopA");
-    expect((inputs[1].element as HTMLInputElement).focus).toBe(true); // uni <input focus> 以 DOM 属性绑定（happy-dom 里是 boolean 属性）
+    // 这只是 Vue 把 :focus 写到 <input> 属性上的现象，**不是**真聚焦——happy-dom 没有软键盘/焦点环；真机行为未验
+    expect((inputs[1].element as HTMLInputElement).focus).toBe(true);
     expect(w.find(".forget").exists()).toBe(true);
   });
-  it("无记住账号：不回填、不聚焦密码、无清除入口", async () => {
+  it("无记住账号：不回填、不给密码框接 focus 属性、无清除入口（属性接线，非真聚焦）", async () => {
     const w = mount(LoginPage, { global: GLOBAL });
     const inputs = w.findAll(".form-input");
     expect((inputs[0].element as HTMLInputElement).value).toBe("");
@@ -127,6 +128,39 @@ describe("⭐登录页：回填账号 / 焦点 / 清除 / 密码不落盘", () =
     expect((w.findAll(".form-input")[0].element as HTMLInputElement).value).toBe("");
     expect(h.store.has(MERCHANT_LAST_LOGIN_NAME_KEY)).toBe(false);
     expect(w.find(".forget").exists()).toBe(false);
+  });
+  it("⭐清除后入口不再复现：清除 ⇒ 入口消失；再输入同名账号入口也不再出现（存储已清，显示与事实一致）（变异：入口回到「常量 === 输入」条件即红）", async () => {
+    h.store.set(MERCHANT_LAST_LOGIN_NAME_KEY, "shopA");
+    const w = mount(LoginPage, { global: GLOBAL });
+    expect(w.find(".forget").exists()).toBe(true);
+    await w.find(".forget").trigger("click");
+    expect(w.find(".forget").exists()).toBe(false);
+    await w.findAll(".form-input")[0].setValue("shopA"); // 再输入同名账号
+    expect(w.find(".forget").exists()).toBe(false);
+    expect(h.store.has(MERCHANT_LAST_LOGIN_NAME_KEY)).toBe(false);
+  });
+  it("有记住账号时：用户把输入改成别的名字，入口仍显示（存储里仍有记住账号，点清除可清）", async () => {
+    h.store.set(MERCHANT_LAST_LOGIN_NAME_KEY, "shopA");
+    const w = mount(LoginPage, { global: GLOBAL });
+    await w.findAll(".form-input")[0].setValue("other");
+    expect(w.find(".forget").exists()).toBe(true);
+  });
+  it("⭐焦点接线互斥：有记住账号 ⇒ 密码框 focus、账号框不 focus；点清除 ⇒ 改为账号框 focus、密码框不 focus（仅属性接线，真聚焦需真机）（变异：清除后仍聚焦密码框即红）", async () => {
+    h.store.set(MERCHANT_LAST_LOGIN_NAME_KEY, "shopA");
+    const w = mount(LoginPage, { global: GLOBAL });
+    let inputs = w.findAll(".form-input");
+    expect((inputs[0].element as HTMLInputElement).focus).toBe(false);
+    expect((inputs[1].element as HTMLInputElement).focus).toBe(true);
+    await w.find(".forget").trigger("click");
+    inputs = w.findAll(".form-input");
+    expect((inputs[0].element as HTMLInputElement).focus).toBe(true);
+    expect((inputs[1].element as HTMLInputElement).focus).toBe(false);
+  });
+  it("无记住账号：两个输入框都不 focus（不抢焦点）", () => {
+    const w = mount(LoginPage, { global: GLOBAL });
+    const inputs = w.findAll(".form-input");
+    expect((inputs[0].element as HTMLInputElement).focus).toBe(false);
+    expect((inputs[1].element as HTMLInputElement).focus).toBe(false);
   });
   it("⭐登录成功：存用户名、绝不存密码、密码输入框被清空、跳工作台（变异：存密码/不清密码即红）", async () => {
     const w = mount(LoginPage, { global: GLOBAL });
@@ -199,14 +233,19 @@ describe("⭐分享：按钮 + 回调", () => {
     expect(tl.title).toBe("蓝梅旅拍 · 商家工作台");
     expect(tl.query).toBe("");
   });
-  it("配置下发后（OPS 槽位 merchantLogin）：标题与缩略图生效；请求是公开接口、不带 Authorization/token", async () => {
+  it("配置下发后（OPS 槽位 merchantLogin）：标题与缩略图生效；发给 /api/page-config 的请求不带 Authorization、不带 X-Brand-Id（本用例的 mock 记录了传输层收到的 headers；头部由真实 client 生成的实证另见 merchant-footer.spec.ts:94）", async () => {
     h.shareCard.items = [{ bizName: "merchantLogin", title: "商家工作台 · 登录", imageUrl: "https://bkt.cos.ap-guangzhou.myqcloud.com/a/b.jpg" }];
     mount(LoginPage, { global: GLOBAL });
     for (let i = 0; i < 6; i++) await flushPromises();
     const app = h.share[0]() as { title: string; imageUrl: string };
     expect(app.title).toBe("商家工作台 · 登录");
     expect(app.imageUrl).toBe("https://www.lanmei66.cloud/a/b.jpg?imageMogr2/thumbnail/500x/format/jpg");
-    expect(h.requests.filter((r) => r.url === "/api/page-config").length).toBeGreaterThan(0);
+    const pc = h.requests.filter((r) => r.url === "/api/page-config");
+    expect(pc.length).toBeGreaterThan(0);
+    for (const r of pc) {
+      expect(r.headers?.Authorization, "分享/footer 的公开接口不得带商家 token").toBeUndefined();
+      expect("X-Brand-Id" in (r.headers ?? {})).toBe(false);
+    }
   });
 });
 
