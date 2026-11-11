@@ -53,7 +53,8 @@ describe("S1 · 包内图片体积预算", () => {
 describe("S1 · 静态资源引用完整性", () => {
   const SRC_EXT = new Set([".vue", ".ts", ".json", ".scss", ".css", ".wxss", ".wxml"]);
   // `/static/<path>.<ext>`：路径段只含字母数字 _ . - /（模板拼接/变量不在此列，另有各自测试）
-  const STATIC_REF = /\/static\/([A-Za-z0-9_\-./]+\.(?:png|jpe?g|webp|gif|svg))/g;
+  // 分包静态资源（uni 约定 `<subpackage root>/static/`）形如 `/pkg-merchant/static/x.svg`：前缀 `/pkg-xxx` 捕获后按该分包自己的 static 目录核对（2026-11 商家登录页 logo）
+  const STATIC_REF = /(\/pkg-[A-Za-z0-9_-]+)?\/static\/([A-Za-z0-9_\-./]+\.(?:png|jpe?g|webp|gif|svg))/g;
 
   // 存量「有意的死引用」白名单（须写理由；新增死引用 = 失败）
   const KNOWN_DEAD_REFS = new Set([
@@ -71,11 +72,13 @@ describe("S1 · 静态资源引用完整性", () => {
       const text = readFileSync(abs, "utf-8");
       for (const m of text.matchAll(STATIC_REF)) {
         refCount++;
-        if (KNOWN_DEAD_REFS.has(`/static/${m[1]}`)) continue;
+        const sub = m[1] ?? "";
+        if (sub === "" && KNOWN_DEAD_REFS.has(`/static/${m[2]}`)) continue;
         try {
-          statSync(resolve(root, "src/static", m[1]));
+          // 主包：src/static；分包：src/<pkg-xxx>/static（只算分包自己的目录，防止分包引用悄悄指到主包同名文件）
+          statSync(resolve(root, "src" + sub, "static", m[2]));
         } catch {
-          missing.push(`${relative(root, abs)} → /static/${m[1]}`);
+          missing.push(`${relative(root, abs)} → ${sub}/static/${m[2]}`);
         }
       }
     }

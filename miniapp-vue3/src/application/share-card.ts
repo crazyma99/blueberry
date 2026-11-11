@@ -18,7 +18,7 @@ export interface ShareCard {
 }
 
 /** 分享卡片键（旧端三处调用点：首页 / 客片列表页 / 客片详情页） */
-export type ShareCardKey = "index" | "demoDetail" | "targetPhotoDetail";
+export type ShareCardKey = "index" | "demoDetail" | "targetPhotoDetail" | "merchantLogin";
 
 /** 代码默认卡片：**标题**沿用旧端 `share.uts:13-21` 逐字；**图片不内嵌**——
  *  主人 2026-09-21 订正：「分享图的来源 url 来自于后台配置」⇒ `imageUrl` 以 OPS `share_card` 槽位下发的 URL 为准；
@@ -30,6 +30,8 @@ export const DEFAULT_SHARE_CARDS: Record<ShareCardKey, ShareCard> = {
   index: { title: "一键解锁AI推荐｜AI试衣｜客片展示", imageUrl: "" },
   demoDetail: { title: "点击查看品牌客片展示", imageUrl: "" },
   targetPhotoDetail: { title: "点击查看客片详情信息，也支持一键AI试衣哦～", imageUrl: "" },
+  // 2026-11（商家端登录页分享）：只做增量新增键，不改上面三键的行为/兜底顺序；图留空 ⇒ 微信按页面截图出卡片图（零包体）
+  merchantLogin: { title: "蓝梅旅拍 · 商家工作台", imageUrl: "" },
 };
 
 type PageConfigLike = {
