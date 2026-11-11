@@ -4,13 +4,17 @@
 // 未登录/会话失效 ⇒ 「请从商家专属入口登录」。退出登录只清本地（后端无 logout）。
 import { computed, ref } from "vue";
 import { onShow } from "@dcloudio/uni-app";
+import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
+import BaseFeedback from "../../ui/BaseFeedback.vue";
+import { createPullRefresh } from "../../composables/use-pull-refresh";
+import { toast as nativeToast } from "../../platform/uni/feedback";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
 import MerchantNeedLogin from "../components/MerchantNeedLogin.vue";
 import { getMerchantRuntime } from "../application/merchant-runtime";
 import { hapticTap } from "../../application/haptics";
-import { visibleEntries, type MerchantEntry, type MerchantProfile } from "../domain/merchant-auth";
+import { roleLabel, visibleEntries, type MerchantEntry, type MerchantProfile } from "../domain/merchant-auth";
 import { MERCHANT_LOGIN_URL } from "../../domain/merchant-entry";
 
 const rt = getMerchantRuntime();
@@ -26,7 +30,25 @@ function refresh(): void {
 refresh();
 onShow(refresh);
 
+const feedbackRef = ref<InstanceType<typeof BaseFeedback> | null>(null);
+function toast(text: string): void {
+  const f = feedbackRef.value;
+  if (f != null) f.show(text);
+  else nativeToast(text);
+}
+
+/**
+ * 下拉刷新：重读登录态/权限并给出反馈（商家无 refresh/logout 接口，登录态与资料都在本地存储里，没有需要重新请求的数据）。
+ * 会话已失效 ⇒ 提示并露出「前往登录」占位；已登录 ⇒ 提示「已刷新」（权限变更后需重新登录才会更新——登录响应是权限唯一来源）。
+ */
+async function reloadHome(): Promise<void> {
+  refresh();
+  toast(loggedIn.value ? "已刷新" : "登录已失效，请重新登录");
+}
+const { refreshing, indicatorTop } = createPullRefresh({ label: "merchantHome", refresh: () => reloadHome(), hasCustomNav: true });
+
 const entries = computed<MerchantEntry[]>(() => visibleEntries(profile.value));
+const role = computed(() => roleLabel(profile.value));
 const greeting = computed(() => {
   const p = profile.value;
   if (p == null) return "";
@@ -47,11 +69,13 @@ function onLogout(): void {
 
 <template>
   <view class="container">
+    <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
     <CustomNavBar title="商家工作台" transparent />
     <MerchantNeedLogin v-if="!loggedIn" />
     <view v-else class="body">
       <view class="hello">
         <text class="hello-name">{{ greeting }}</text>
+        <text v-if="role !== ''" class="hello-role">{{ role }}</text>
         <text class="hello-sub">欢迎使用商家工作台</text>
       </view>
       <view v-if="entries.length === 0" class="empty">
@@ -69,6 +93,7 @@ function onLogout(): void {
       </view>
     </view>
     <PageFooter main-line="" :support-line="footer.supportLine.value" variant="bottomdesc" />
+    <BaseFeedback ref="feedbackRef" />
   </view>
 </template>
 
@@ -92,6 +117,15 @@ function onLogout(): void {
 }
 .hello-name {
   font-size: $font-size-title;
+  color: $color-action;
+}
+.hello-role {
+  align-self: flex-start;
+  margin-top: 12rpx;
+  padding: 4rpx 20rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid rgba(241, 205, 145, 0.5);
+  font-size: $font-size-caption;
   color: $color-action;
 }
 .hello-sub {

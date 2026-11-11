@@ -6,7 +6,7 @@
 // ⭐经验（issue #14 M1 真机缺陷）：首屏骨架屏必须有失败/超时出口——加载经 guardedLoad，骨架屏走 shouldShowSkeleton；
 //    模板事件只调具名函数。底部 PageFooter（主行空）。
 import { computed, onUnmounted, ref } from "vue";
-import { onLoad, onShow } from "@dcloudio/uni-app";
+import { onLoad, onReachBottom, onShow } from "@dcloudio/uni-app";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
@@ -36,7 +36,8 @@ import { runStrongDelete } from "../application/merchant-strong-delete";
 import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
 import { useMerchantShop } from "../composables/use-merchant-shop";
-import { ALBUM_DESC_MAX, ALBUM_PAGE_STEP, ALBUM_TITLE_MAX, albumCoverThumb, describeAlbumDelete, describeAlbumFinalConfirm, nextVisibleCount, sliceVisible, type MerchantAlbum } from "../domain/merchant-album";
+import { ALBUM_DESC_MAX, ALBUM_PAGE_STEP, ALBUM_TITLE_MAX, albumCoverThumb, describeAlbumDelete, describeAlbumFinalConfirm, sliceVisible, type MerchantAlbum } from "../domain/merchant-album";
+import { createSegmentLoader } from "../domain/merchant-segment";
 import { cascadeFilterOptions, cascadePathOfSub, cascadeSubOptions, labelOfSub, subIdFromCascadeValue, type CategoryTreeNode } from "../domain/merchant-category-tree";
 import { hasPermission, PERM, type MerchantProfile } from "../domain/merchant-auth";
 import { MERCHANT_PICK_MAX_COUNT, PICK_FAIL_TEXT } from "../domain/merchant-upload";
@@ -187,9 +188,22 @@ onUnmounted(() => {
 });
 const { refreshing, indicatorTop } = createPullRefresh({ label: "merchantAlbums", refresh: () => reload(), hasCustomNav: true });
 
+// 分段渲染（客户端；后端全量返回）：触底自动加载 + 「显示更多」按钮兜底，共用同一加载器（防重复：加载中/弹层/忙碌时忽略，触底带冷却）
+const segment = createSegmentLoader({
+  step: ALBUM_PAGE_STEP,
+  getVisible: () => visibleCount.value,
+  getTotal: () => albums.value.length,
+  setVisible: (n) => {
+    visibleCount.value = n;
+  },
+  isBlocked: () => loading.value || working.value || formShow.value || needLogin.value || !canManage.value,
+});
 function onLoadMore(): void {
-  visibleCount.value = nextVisibleCount(visibleCount.value, albums.value.length);
+  segment.loadMore(false);
 }
+onReachBottom(() => {
+  segment.loadMore(true);
+});
 
 // —— 系列 / 分类筛选 / 搜索 ——
 const shopPickerShow = ref(false);
@@ -580,6 +594,7 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
       <view v-else-if="albums.length === 0" class="empty-state">
         <text class="empty-title">还没有相册</text>
         <text class="empty-desc">点右上角「新建」创建第一个相册</text>
+        <view :class="working ? 'empty-cta is-disabled' : 'empty-cta'" hover-class="press-dim" @click="openCreate"><text class="empty-cta-text">新建相册</text></view>
       </view>
       <view v-else class="list">
         <view v-for="a in visible.items" :key="a.id" class="card">
@@ -620,7 +635,7 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
         <view v-if="formMode === 'create'" class="photos">
           <text class="pick-label">照片（选填）</text>
           <view class="photo-grid">
-            <view v-for="(ph, i) in photoState.photos" :key="ph.key" :class="photoClass(i, ph.key === coverKeyEff)" @click="onSetCover(ph.key)">
+            <view v-for="(ph, i) in photoState.photos" :key="ph.key" :class="photoClass(i, ph.key === coverKeyEff)" hover-class="press-dim" @click="onSetCover(ph.key)">
               <image class="photo-img" :src="ph.path" mode="aspectFill" />
               <view v-if="ph.key === coverKeyEff" class="photo-badge"><text class="photo-badge-text">封面</text></view>
               <view v-if="!createBusy" class="photo-remove" @click.stop="onRemovePhoto(ph.key)"><text class="photo-remove-text">×</text></view>
@@ -778,6 +793,16 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
   font-size: $font-size-caption;
   color: $color-text-muted;
   text-align: center;
+}
+.empty-cta {
+  margin-top: $space-md;
+  padding: 16rpx 56rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);
+}
+.empty-cta-text {
+  font-size: $font-size-body;
+  color: $color-action-text;
 }
 .retry {
   margin-top: $space-md;

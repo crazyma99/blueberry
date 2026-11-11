@@ -233,7 +233,9 @@
 					"path": "home/index",
 					"style": {
 						"navigationStyle": "custom",
-						"navigationBarTitleText": "商家工作台"
+						"navigationBarTitleText": "商家工作台",
+						"enablePullDownRefresh": true,
+						"backgroundTextStyle": "light"
 					}
 				},
 				{

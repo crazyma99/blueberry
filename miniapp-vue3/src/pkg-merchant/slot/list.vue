@@ -5,7 +5,7 @@
 // 改小容量或停用允许、不影响已有预约（确认框明示）。模板需 booking_slot_template 且需 booking_slot。
 // 写操作串行化：任一变更进行中全部入口置灰；失败后刷新列表对齐服务端状态。
 import { computed, ref } from "vue";
-import { onLoad, onShow } from "@dcloudio/uni-app";
+import { onLoad, onReachBottom, onShow } from "@dcloudio/uni-app";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
@@ -24,6 +24,8 @@ import { getMerchantRuntime } from "../application/merchant-runtime";
 import { createMerchantSlotRepository } from "../infrastructure/merchant-slots";
 import { createSlotUseCases, slotPageGates } from "../application/merchant-slot-flow";
 import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
+import { SEGMENT_STEP, createSegmentLoader } from "../domain/merchant-segment";
+import { sliceVisible } from "../domain/merchant-album";
 import {
   SLOT_CAPACITY_MAX,
   SLOT_CAPACITY_MIN,
@@ -83,6 +85,24 @@ const loadError = ref<string | null>(null);
 const working = ref(false);
 /** reload 代次：连续触发（onShow/下拉/写后刷新）时迟到的旧响应不得覆盖新结果 */
 let reloadSeq = 0;
+// 分段渲染（客户端）：触底自动加载 + 「显示更多」按钮兜底
+const visibleCount = ref(SEGMENT_STEP);
+const visible = computed(() => sliceVisible(slots.value, visibleCount.value));
+const segment = createSegmentLoader({
+  step: SEGMENT_STEP,
+  getVisible: () => visibleCount.value,
+  getTotal: () => slots.value.length,
+  setVisible: (n) => {
+    visibleCount.value = n;
+  },
+  isBlocked: () => loading.value || working.value || formShow.value || tplShow.value || needLogin.value || !gates.value.canManage,
+});
+function onLoadMore(): void {
+  segment.loadMore(false);
+}
+onReachBottom(() => {
+  segment.loadMore(true);
+});
 
 function refreshLoginState(): void {
   const s = rt.getState();
@@ -117,6 +137,7 @@ async function reload(): Promise<void> {
     authExpired.value = false;
     loadError.value = null;
     slots.value = r.slots;
+    visibleCount.value = Math.max(SEGMENT_STEP, Math.min(visibleCount.value, r.slots.length));
   } finally {
     if (mySeq === reloadSeq) loading.value = false;
     attempted.value = true; // 无论成功/失败/抛异常/被取代都置位——不会再有无限骨架屏
@@ -362,9 +383,10 @@ function statusMeta(status: number) {
       <view v-else-if="slots.length === 0" class="empty-state">
         <text class="empty-title">还没有档期</text>
         <text class="empty-desc">新增一个时间段，或套用模板一键生成</text>
+        <view :class="working ? 'empty-cta is-disabled' : 'empty-cta'" hover-class="press-dim" @click="openCreate"><text class="empty-cta-text">新增档期</text></view>
       </view>
       <view v-else class="list">
-        <view v-for="s in slots" :key="s.id" class="card">
+        <view v-for="s in visible.items" :key="s.id" class="card">
           <view class="card-main">
             <text class="card-time">{{ s.startTime }} - {{ s.endTime }}</text>
             <text class="card-cap">{{ describeBooked(s) || "容量 " + s.capacity }}</text>
@@ -379,6 +401,7 @@ function statusMeta(status: number) {
             </view>
           </view>
         </view>
+        <view v-if="visible.hasMore" class="more" hover-class="press-dim" @click="onLoadMore"><text class="more-text">显示更多（{{ slots.length - visible.items.length }}）</text></view>
       </view>
     </template>
 
@@ -523,6 +546,16 @@ function statusMeta(status: number) {
   color: $color-text-muted;
   text-align: center;
 }
+.empty-cta {
+  margin-top: $space-md;
+  padding: 16rpx 56rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);
+}
+.empty-cta-text {
+  font-size: $font-size-body;
+  color: $color-action-text;
+}
 .retry {
   margin-top: $space-md;
   padding: 16rpx 48rpx;
@@ -532,6 +565,15 @@ function statusMeta(status: number) {
 .retry-text {
   font-size: $font-size-body;
   color: $color-action;
+}
+.more {
+  display: flex;
+  justify-content: center;
+  padding: $space-md 0;
+}
+.more-text {
+  font-size: $font-size-caption;
+  color: $color-text-muted;
 }
 .list {
   padding: 0 $space-md $space-lg;
