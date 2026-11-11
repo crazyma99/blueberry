@@ -6,7 +6,7 @@
 // ⭐经验（issue #14 M1 真机缺陷）：首屏骨架屏必须有失败/超时出口——加载经 guardedLoad，骨架屏走 shouldShowSkeleton；
 //    模板事件只调具名函数。底部 PageFooter（主行空）。
 import { computed, onUnmounted, ref } from "vue";
-import { onLoad, onShow } from "@dcloudio/uni-app";
+import { onLoad, onReachBottom, onShow } from "@dcloudio/uni-app";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
@@ -36,7 +36,8 @@ import { runStrongDelete } from "../application/merchant-strong-delete";
 import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
 import { useMerchantShop } from "../composables/use-merchant-shop";
-import { ALBUM_DESC_MAX, ALBUM_PAGE_STEP, ALBUM_TITLE_MAX, albumCoverThumb, describeAlbumDelete, describeAlbumFinalConfirm, nextVisibleCount, sliceVisible, type MerchantAlbum } from "../domain/merchant-album";
+import { ALBUM_DESC_MAX, ALBUM_PAGE_STEP, ALBUM_TITLE_MAX, albumCoverThumb, describeAlbumDelete, describeAlbumFinalConfirm, sliceVisible, type MerchantAlbum } from "../domain/merchant-album";
+import { createSegmentLoader } from "../domain/merchant-segment";
 import { cascadeFilterOptions, cascadePathOfSub, cascadeSubOptions, labelOfSub, subIdFromCascadeValue, type CategoryTreeNode } from "../domain/merchant-category-tree";
 import { hasPermission, PERM, type MerchantProfile } from "../domain/merchant-auth";
 import { MERCHANT_PICK_MAX_COUNT, PICK_FAIL_TEXT } from "../domain/merchant-upload";
@@ -187,9 +188,22 @@ onUnmounted(() => {
 });
 const { refreshing, indicatorTop } = createPullRefresh({ label: "merchantAlbums", refresh: () => reload(), hasCustomNav: true });
 
+// 分段渲染（客户端；后端全量返回）：触底自动加载 + 「显示更多」按钮兜底，共用同一加载器（防重复：加载中/弹层/忙碌时忽略，触底带冷却）
+const segment = createSegmentLoader({
+  step: ALBUM_PAGE_STEP,
+  getVisible: () => visibleCount.value,
+  getTotal: () => albums.value.length,
+  setVisible: (n) => {
+    visibleCount.value = n;
+  },
+  isBlocked: () => loading.value || working.value || formShow.value || needLogin.value || !canManage.value,
+});
 function onLoadMore(): void {
-  visibleCount.value = nextVisibleCount(visibleCount.value, albums.value.length);
+  segment.loadMore(false);
 }
+onReachBottom(() => {
+  segment.loadMore(true);
+});
 
 // —— 系列 / 分类筛选 / 搜索 ——
 const shopPickerShow = ref(false);
@@ -540,7 +554,7 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
 <template>
   <view class="container">
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
-    <CustomNavBar title="相册管理" transparent />
+    <CustomNavBar title="相册管理" />
 
     <MerchantNeedLogin v-if="needLogin" :expired="loggedIn" />
     <view v-else-if="!canManage" class="empty-state">
@@ -580,6 +594,7 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
       <view v-else-if="albums.length === 0" class="empty-state">
         <text class="empty-title">还没有相册</text>
         <text class="empty-desc">点右上角「新建」创建第一个相册</text>
+        <view :class="working ? 'empty-cta is-disabled' : 'empty-cta'" hover-class="press-dim" @click="openCreate"><text class="empty-cta-text">新建相册</text></view>
       </view>
       <view v-else class="list">
         <view v-for="a in visible.items" :key="a.id" class="card">
@@ -618,12 +633,12 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
         <BaseField v-model="fPrice" label="价格(元)" placeholder="0" type="digit" />
         <BaseField v-model="fPackageDesc" label="套餐说明" placeholder="选填" :maxlength="ALBUM_DESC_MAX" show-count />
         <view v-if="formMode === 'create'" class="photos">
-          <text class="pick-label">照片（选填）</text>
+          <text class="field-label">照片（选填）</text>
           <view class="photo-grid">
-            <view v-for="(ph, i) in photoState.photos" :key="ph.key" :class="photoClass(i, ph.key === coverKeyEff)" @click="onSetCover(ph.key)">
+            <view v-for="(ph, i) in photoState.photos" :key="ph.key" :class="photoClass(i, ph.key === coverKeyEff)" hover-class="press-dim" @click="onSetCover(ph.key)">
               <image class="photo-img" :src="ph.path" mode="aspectFill" />
               <view v-if="ph.key === coverKeyEff" class="photo-badge"><text class="photo-badge-text">封面</text></view>
-              <view v-if="!createBusy" class="photo-remove" @click.stop="onRemovePhoto(ph.key)"><text class="photo-remove-text">×</text></view>
+              <view v-if="!createBusy" class="photo-remove" hover-class="press-dim" @click.stop="onRemovePhoto(ph.key)"><text class="photo-remove-text">×</text></view>
             </view>
             <view v-if="!createBusy && photoState.photos.length < CREATE_PHOTO_MAX" :class="photoClass(photoState.photos.length, false) + ' photo-add'" hover-class="press-dim" @click="onAddPhotos"><text class="photo-add-text">＋</text></view>
           </view>
@@ -779,6 +794,16 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
   color: $color-text-muted;
   text-align: center;
 }
+.empty-cta {
+  margin-top: $space-md;
+  padding: 16rpx 56rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);
+}
+.empty-cta-text {
+  font-size: $font-size-body;
+  color: $color-action-text;
+}
 .retry {
   margin-top: $space-md;
   padding: 16rpx 48rpx;
@@ -895,11 +920,20 @@ async function onDeleteTap(a: MerchantAlbum): Promise<void> {
   align-items: center;
   padding: 24rpx 0;
   border-bottom: 2rpx solid $color-divider;
+  /* 与 BaseField 的字段间距（.base-field margin-bottom: $space-md）对齐：此行不是 BaseField，下面紧跟「价格」字段，缺它就会贴在一起 */
+  margin-bottom: $space-md;
 }
 .pick-label {
   width: 180rpx;
   flex-shrink: 0;
   font-size: $font-size-body;
+  color: $color-text-secondary;
+}
+/* 「堆叠标签」（标签在上、内容在下）：与 BaseField 标签同口径（caption 字号、次要色、下边距 12rpx）。并排行里的标签仍用 .pick-label（固定 180rpx 宽，不得改）。 */
+.field-label {
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: $font-size-caption;
   color: $color-text-secondary;
 }
 .pick-value {

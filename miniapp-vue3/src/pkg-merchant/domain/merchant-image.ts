@@ -8,6 +8,7 @@
 //   · 上传后异步打标（百度 V3），**新图 aiTryonStatus 初始 0** ⇒ 试衣开关 UI 必须容忍「刚上传显示隐藏、稍后变可展示」；
 //   · 试衣开关 PUT /photo-albums/albums/:id/tryon-status?shopId= body {status:0|1}（后端原为 PATCH，另增 PUT 别名；小程序侧只发 PUT），人工覆盖后系统重判不覆盖。
 import { cosThumb } from "../../application/image";
+import { cosThumbJpg } from "../../application/image-share";
 
 export interface MerchantImage {
   id: number;
@@ -107,4 +108,16 @@ export function describeImageDelete(count: number): { title: string; msg: string
   return count <= 1
     ? { title: "删除图片", msg: "确认删除这张图片吗？删除后不可恢复。" }
     : { title: "批量删除图片", msg: `确认删除选中的 ${count} 张图片吗？删除后不可恢复。` };
+}
+
+/** 大图预览宽度：1080（与 C 端详情首图同口径，观感无损）；**JPG** 而非 WebP——长按「保存图片」到相册时 JPG 兼容性最稳（旧 iOS 对 WebP 保存不友好） */
+export const PREVIEW_WIDTH = 1080;
+
+/**
+ * 预览用地址列表：对相册**全部**图片按顺序生成（左右滑可翻整个相册）；每张经 cosThumbJpg(1080)（COS 源站→CDN 改写 + 万象 JPG 缩略，**库里仍是原图**）。
+ * 返回 urls 与 current 下标（图片 id 不在列表 ⇒ index=-1，调用方不应发起预览）。空 imageUrl 的项保留占位（下标与 images 对齐），由预览适配器过滤。
+ */
+export function buildPreview(images: readonly Pick<MerchantImage, "id" | "imageUrl">[], imageId: number): { urls: string[]; index: number } {
+  const urls = images.map((i) => (i.imageUrl.trim() === "" ? "" : cosThumbJpg(i.imageUrl, PREVIEW_WIDTH)));
+  return { urls, index: images.findIndex((i) => i.id === imageId) };
 }

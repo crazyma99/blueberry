@@ -58,8 +58,36 @@ export function normalizeMerchantLogin(raw: unknown): MerchantLoginResult | null
   };
 }
 
+/** 规整 /auth/me/permissions 响应 data={role, permissions[]}：permissions 非数组 ⇒ null（视为响应异常，不覆盖本地快照） */
+export function normalizeMyPermissions(raw: unknown): { role: string; permissions: string[] } | null {
+  const d = (raw ?? {}) as Record<string, unknown>;
+  if (!Array.isArray(d.permissions)) return null;
+  return { role: toStr(d.role), permissions: d.permissions.filter((p): p is string => typeof p === "string") };
+}
+
 export function createMerchantAuthRepository(deps: { client: ClientLike }) {
   return {
+    /**
+     * 当前账号权限（实时）：GET /auth/me/permissions（只读核对 routes.go / auth.go）——自作用域只读，角色取自 JWT，不接受任何入参，
+     * 仅挂 JWTAuth+Audit、不挂 permCheck ⇒ 任何已登录商家都可调；成功 data={role, permissions[]}。幂等读，可重放。
+     * 用途：下拉刷新工作台时刷新登录快照里的 permissions（角色权限被改后无需重新登录）。
+     */
+    async getMyPermissions(context: RequestContext): Promise<RepoResult<{ role: string; permissions: string[] }>> {
+      const res = await deps.client.request<unknown>({
+        method: "GET",
+        url: "/auth/me/permissions",
+        authRequired: true,
+        replayPolicy: "idempotent",
+        context,
+      });
+      if (!res.ok) return res;
+      const value = normalizeMyPermissions(res.value);
+      if (value == null) {
+        return { ok: false, error: { kind: "UNKNOWN", businessCode: null, message: "", requestId: context.requestId, retryable: false } };
+      }
+      return { ok: true, value };
+    },
+
     async login(
       context: RequestContext,
       credentials: { username: string; password: string },

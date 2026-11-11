@@ -7,7 +7,7 @@
 // ⚠️ 新图 aiTryonStatus 初始 0（上传后异步打标）：试衣开关容忍「刚上传显示未启用、稍后变可用」，下拉刷新可见最新状态。
 // ⭐经验（issue #14 M1 真机缺陷）：首屏骨架屏必须有失败/超时出口——加载经 guardedLoad，骨架屏走 shouldShowSkeleton；模板事件只调具名函数。
 import { computed, onUnmounted, ref } from "vue";
-import { onHide, onLoad, onShow } from "@dcloudio/uni-app";
+import { onHide, onLoad, onReachBottom, onShow } from "@dcloudio/uni-app";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
@@ -26,8 +26,10 @@ import { createAlbumUploader, type AlbumUploader } from "../application/merchant
 import { createMerchantUploadDeps } from "../application/merchant-upload-deps";
 import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
-import { ALBUM_PAGE_STEP, nextVisibleCount, sliceVisible } from "../domain/merchant-album";
-import { canMove, describeImageDelete, describeTryon, imageThumb, pruneSelected, toggleSelected, type MerchantImage } from "../domain/merchant-image";
+import { ALBUM_PAGE_STEP, sliceVisible } from "../domain/merchant-album";
+import { createSegmentLoader } from "../domain/merchant-segment";
+import { createUniImagePreview } from "../../platform/uni/image-preview";
+import { buildPreview, canMove, describeImageDelete, describeTryon, imageThumb, pruneSelected, toggleSelected, type MerchantImage } from "../domain/merchant-image";
 import { MERCHANT_PICK_MAX_COUNT, PICK_FAIL_TEXT, describeQueue, overallPercent, summarizeQueue, type UploadQueueItem } from "../domain/merchant-upload";
 import { hasPermission, PERM, type MerchantProfile } from "../domain/merchant-auth";
 import { isPositiveId } from "../domain/merchant-http";
@@ -135,9 +137,22 @@ onHide(() => abortUpload());
 onUnmounted(() => abortUpload());
 const { refreshing, indicatorTop } = createPullRefresh({ label: "merchantImages", refresh: () => reload(), hasCustomNav: true });
 
+// 分段渲染（客户端）：触底自动加载 + 「显示更多」按钮兜底；防重复：加载中/忙碌/未授权忽略，触底带冷却
+const segment = createSegmentLoader({
+  step: ALBUM_PAGE_STEP * 3,
+  getVisible: () => visibleCount.value,
+  getTotal: () => images.value.length,
+  setVisible: (n) => {
+    visibleCount.value = n;
+  },
+  isBlocked: () => loading.value || working.value || needLogin.value || !canManage.value,
+});
 function onLoadMore(): void {
-  visibleCount.value = nextVisibleCount(visibleCount.value, images.value.length, ALBUM_PAGE_STEP * 3);
+  segment.loadMore(false);
 }
+onReachBottom(() => {
+  segment.loadMore(true);
+});
 
 // —— 上传 ——
 const queue = ref<UploadQueueItem[]>([]);
@@ -253,10 +268,18 @@ function onToggleSelectMode(): void {
   selectMode.value = !selectMode.value;
   if (!selectMode.value) selected.value = [];
 }
-function onTapImage(img: MerchantImage): void {
-  if (!selectMode.value) return;
+const previewer = createUniImagePreview();
+/** 点图：选择模式 ⇒ 勾选；否则打开大图预览（左右滑翻整个相册，长按用微信自带菜单保存）。失败给可读提示，不抛 */
+async function onTapImage(img: MerchantImage): Promise<void> {
   hapticTap();
-  selected.value = toggleSelected(selected.value, img.id);
+  if (selectMode.value) {
+    selected.value = toggleSelected(selected.value, img.id);
+    return;
+  }
+  const p = buildPreview(images.value, img.id);
+  if (p.index < 0) return;
+  const ok = await previewer.preview(p.urls, p.index);
+  if (!ok) toast("图片预览失败，请稍后重试");
 }
 async function deleteIds(ids: readonly number[]): Promise<void> {
   if (working.value || uploading.value || ids.length === 0) return;
@@ -306,7 +329,7 @@ function statusText(it: UploadQueueItem): string {
 <template>
   <view class="container">
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
-    <CustomNavBar :title="albumTitle" transparent />
+    <CustomNavBar :title="albumTitle" />
 
     <MerchantNeedLogin v-if="needLogin" :expired="loggedIn" />
     <view v-else-if="!canManage" class="empty-state">

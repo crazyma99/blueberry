@@ -85,3 +85,17 @@ export const MERCHANT_ENTRIES: readonly MerchantEntry[] = [
 export function visibleEntries(profile: Pick<MerchantProfile, "permissions"> | null): MerchantEntry[] {
   return MERCHANT_ENTRIES.filter((e) => hasPermission(profile, e.perm));
 }
+
+/**
+ * 工作台顶部「角色」展示名：自定义角色名 roleName 优先；其次按内置角色映射（merchant→商家，operator* → 商户运营）；其余原样（trim）。
+ * 纯展示：不参与任何权限判断（安全边界仍是后端）。
+ */
+export function roleLabel(p: Pick<MerchantProfile, "role" | "roleName"> | null): string {
+  if (p == null) return "";
+  const custom = (p.roleName ?? "").trim();
+  if (custom !== "") return custom;
+  const role = (p.role ?? "").trim();
+  if (role === "merchant") return "商家";
+  if (role.startsWith("operator")) return "商户运营";
+  return role;
+}

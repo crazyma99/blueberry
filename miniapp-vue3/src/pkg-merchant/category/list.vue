@@ -5,7 +5,7 @@
 // 同名冲突：后端 message 原样展示。写操作串行；失败/成功都刷新对齐服务端。缺 category 权限：不发请求。
 // ⭐经验（issue #14 M1 真机缺陷）：首屏骨架屏必须有失败/超时出口——加载经 guardedLoad，骨架屏条件走 shouldShowSkeleton。
 import { computed, ref } from "vue";
-import { onLoad, onShow } from "@dcloudio/uni-app";
+import { onLoad, onReachBottom, onShow } from "@dcloudio/uni-app";
 import CustomNavBar from "../../components/CustomNavBar/CustomNavBar.vue";
 import PageFooter from "../../components/PageFooter/PageFooter.vue";
 import PullRefreshIndicator from "../../components/PullRefreshIndicator/PullRefreshIndicator.vue";
@@ -25,6 +25,8 @@ import { createMerchantAlbumRepository } from "../infrastructure/merchant-albums
 import { createCategoryUseCases } from "../application/merchant-category-flow";
 import { runStrongDelete } from "../application/merchant-strong-delete";
 import { guardedLoad, shouldShowSkeleton } from "../composables/load-guard";
+import { SEGMENT_STEP, createSegmentLoader } from "../domain/merchant-segment";
+import { sliceVisible } from "../domain/merchant-album";
 import { useMerchantFooter } from "../composables/use-merchant-footer";
 import { useMerchantShop } from "../composables/use-merchant-shop";
 import { CATEGORY_NAME_MAX, CATEGORY_SORT_MAX, describeDeleteImpact, describeFinalConfirm, type CascadeImpact, type MerchantCategory } from "../domain/merchant-category";
@@ -66,6 +68,24 @@ let reloadSeq = 0;
 const showSkeleton = computed(() =>
   shouldShowSkeleton({ itemCount: list.value.length, hasError: loadError.value !== null, loading: loading.value, attempted: attempted.value }),
 );
+// 分段渲染（客户端）：一次最多渲染 SEGMENT_STEP 条；触底自动加载 + 「显示更多」按钮兜底
+const visibleCount = ref(SEGMENT_STEP);
+const visible = computed(() => sliceVisible(list.value, visibleCount.value));
+const segment = createSegmentLoader({
+  step: SEGMENT_STEP,
+  getVisible: () => visibleCount.value,
+  getTotal: () => list.value.length,
+  setVisible: (n) => {
+    visibleCount.value = n;
+  },
+  isBlocked: () => loading.value || working.value || formShow.value || needLogin.value || !canManage.value,
+});
+function onLoadMore(): void {
+  segment.loadMore(false);
+}
+onReachBottom(() => {
+  segment.loadMore(true);
+});
 const levelTitle = computed(() => (parent.value == null ? "一级分类" : parent.value.name + " · 二级分类"));
 
 function refreshLoginState(): void {
@@ -100,6 +120,7 @@ async function reload(): Promise<void> {
     authExpired.value = false;
     loadError.value = null;
     list.value = r.list;
+    visibleCount.value = Math.max(SEGMENT_STEP, Math.min(visibleCount.value, r.list.length));
   } finally {
     if (mySeq === reloadSeq) loading.value = false;
     attempted.value = true;
@@ -133,6 +154,7 @@ function onShopConfirm(v: (string | number)[]): void {
   shop.select(id);
   parent.value = null;
   list.value = [];
+  visibleCount.value = SEGMENT_STEP;
   loadError.value = null;
   void reload();
 }
@@ -143,6 +165,7 @@ function onEnterParent(c: MerchantCategory): void {
   hapticTap();
   parent.value = c;
   list.value = [];
+  visibleCount.value = SEGMENT_STEP;
   loadError.value = null;
   attempted.value = false;
   void reload();
@@ -152,6 +175,7 @@ function onBackToParents(): void {
   hapticTap();
   parent.value = null;
   list.value = [];
+  visibleCount.value = SEGMENT_STEP;
   loadError.value = null;
   attempted.value = false;
   void reload();
@@ -262,7 +286,7 @@ async function onDeleteTap(c: MerchantCategory): Promise<void> {
 <template>
   <view class="container">
     <PullRefreshIndicator :show="refreshing" :top="indicatorTop" />
-    <CustomNavBar title="分类管理" transparent />
+    <CustomNavBar title="分类管理" />
 
     <MerchantNeedLogin v-if="needLogin" :expired="loggedIn" />
     <view v-else-if="!canManage" class="empty-state">
@@ -297,9 +321,10 @@ async function onDeleteTap(c: MerchantCategory): Promise<void> {
       <view v-else-if="list.length === 0" class="empty-state">
         <text class="empty-title">{{ parent === null ? "还没有一级分类" : "还没有二级分类" }}</text>
         <text class="empty-desc">点右上角「新增」创建</text>
+        <view :class="working ? 'empty-cta is-disabled' : 'empty-cta'" hover-class="press-dim" @click="openCreate"><text class="empty-cta-text">新建分类</text></view>
       </view>
       <view v-else class="list">
-        <view v-for="c in list" :key="c.id" class="card">
+        <view v-for="c in visible.items" :key="c.id" class="card">
           <view class="card-main" hover-class="press-dim" @click="onEnterParent(c)">
             <text class="card-name">{{ c.name }}</text>
             <text class="card-meta">排序 {{ c.sortOrder }}{{ c.depth === 1 ? " · 点击查看二级" : "" }}</text>
@@ -309,6 +334,7 @@ async function onDeleteTap(c: MerchantCategory): Promise<void> {
             <view :class="working ? 'op op--danger is-disabled' : 'op op--danger'" hover-class="press-dim" @click="onDeleteTap(c)"><text class="op-text op-text--danger">删除</text></view>
           </view>
         </view>
+        <view v-if="visible.hasMore" class="more" hover-class="press-dim" @click="onLoadMore"><text class="more-text">显示更多（{{ list.length - visible.items.length }}）</text></view>
       </view>
     </template>
 
@@ -418,6 +444,16 @@ async function onDeleteTap(c: MerchantCategory): Promise<void> {
   color: $color-text-muted;
   text-align: center;
 }
+.empty-cta {
+  margin-top: $space-md;
+  padding: 16rpx 56rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #FFDF9F 0%, #F1CD91 45%, #D9A75C 100%);
+}
+.empty-cta-text {
+  font-size: $font-size-body;
+  color: $color-action-text;
+}
 .retry {
   margin-top: $space-md;
   padding: 16rpx 48rpx;
@@ -427,6 +463,15 @@ async function onDeleteTap(c: MerchantCategory): Promise<void> {
 .retry-text {
   font-size: $font-size-body;
   color: $color-action;
+}
+.more {
+  display: flex;
+  justify-content: center;
+  padding: $space-md 0;
+}
+.more-text {
+  font-size: $font-size-caption;
+  color: $color-text-muted;
 }
 .list {
   padding: 0 $space-md $space-lg;

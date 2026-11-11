@@ -20,6 +20,9 @@ vi.mock("@dcloudio/uni-app", () => ({
   onHide: () => undefined,
   onReachBottom: () => undefined,
   onPullDownRefresh: () => undefined,
+  // 登录页（2026-11 起）注册分享回调
+  onShareAppMessage: () => undefined,
+  onShareTimeline: () => undefined,
 }));
 vi.mock("../../src/platform/uni/transport", () => ({
   createUniTransport: () => ({

@@ -15,6 +15,8 @@ export const MERCHANT_SESSION_KEY = "lm.merchant.session.v1";
 export const MERCHANT_PROFILE_KEY = "lm.merchant.profile.v1";
 /** 上次选择的系列（shopId）：落在商家命名空间之内（lm.merchant.*），与 C 端键空间零交集 */
 export const MERCHANT_LAST_SHOP_KEY = "lm.merchant.lastShop.v1";
+/** 上次登录的**用户名**（只记账号，绝不存密码）：落在商家命名空间之内，与 C 端键空间零交集 */
+export const MERCHANT_LAST_LOGIN_NAME_KEY = "lm.merchant.lastLoginName.v1";
 const MERCHANT_PREFIX = "lm.merchant.";
 const OTHER_PREFIX = "lm.merchant.x.";
 

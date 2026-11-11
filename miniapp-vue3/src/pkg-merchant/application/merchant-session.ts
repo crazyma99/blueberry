@@ -23,6 +23,8 @@ import {
 } from "../infrastructure/merchant-storage";
 import { evaluateMerchantRole, type MerchantProfile } from "../domain/merchant-auth";
 import {
+  isMerchantAuthExpired,
+  MERCHANT_AUTH_EXPIRED_TEXT,
   isMerchantRateLimited,
   merchantErrorMessage,
   MERCHANT_LOGIN_RATE_LIMITED_TEXT,
@@ -143,6 +145,30 @@ export function createMerchantSession(deps: {
     return { ok: true, profile: r.value.profile };
   }
 
+  /**
+   * 刷新权限快照（工作台下拉刷新用）：GET /auth/me/permissions，经商家 client、authRequired:true。
+   *   · 成功：只更新资料里的 permissions（角色/展示名/系列列表保持登录时快照；角色变更走重新登录），返回新资料；
+   *   · 401（含 body.code=401）：client 的 401 自愈已作废本次所用会话 ⇒ 返回 auth-expired（页面走既有失效态）；
+   *   · 其它失败（网络/超时/业务错）：**保留旧快照**，返回 failed + 可读文案；
+   *   · 响应期间会话已被换新（重新登录得到新 token）⇒ 不覆盖新会话的资料（按 token 比对）。
+   */
+  async function refreshPermissions(): Promise<{ ok: true; profile: MerchantProfile } | { ok: false; kind: "auth-expired" | "failed"; message: string }> {
+    const before = readSession();
+    const prof = readProfile();
+    if (before == null || prof == null) return { ok: false, kind: "auth-expired", message: MERCHANT_AUTH_EXPIRED_TEXT };
+    const r = await authRepo.getMyPermissions(ctxFactory.next());
+    if (!r.ok) {
+      if (isMerchantAuthExpired(r.error)) return { ok: false, kind: "auth-expired", message: MERCHANT_AUTH_EXPIRED_TEXT };
+      return { ok: false, kind: "failed", message: merchantErrorMessage(r.error, "刷新失败，请稍后重试") };
+    }
+    const now = readSession();
+    const cur = readProfile();
+    if (now == null || cur == null || now.token !== before.token) return { ok: false, kind: "auth-expired", message: MERCHANT_AUTH_EXPIRED_TEXT };
+    const next: MerchantProfile = { ...cur, permissions: r.value.permissions };
+    storage.set(MERCHANT_PROFILE_KEY, JSON.stringify(next));
+    return { ok: true, profile: next };
+  }
+
   /** 退出登录：只清本地（后端无 logout 接口） */
   function logout(): void {
     coordinator.logout();
@@ -171,6 +197,7 @@ export function createMerchantSession(deps: {
     getToken: (): string => readSession()?.token ?? "",
     login,
     logout,
+    refreshPermissions,
     /** 仅供测试断言隔离键名 */
     keys: { session: MERCHANT_SESSION_KEY, profile: MERCHANT_PROFILE_KEY },
   };
